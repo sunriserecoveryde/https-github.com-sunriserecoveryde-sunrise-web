@@ -17,6 +17,15 @@ import { ReferralTracker } from './pages/ReferralTracker';
 import { BedManagement } from './pages/BedManagement';
 import { AuditCompliance } from './pages/AuditCompliance';
 import { OutcomeTracking } from './pages/OutcomeTracking';
+import { CommandCenter } from './pages/CommandCenter';
+import { Admissions } from './pages/Admissions';
+import { Discharges } from './pages/Discharges';
+import { ChartReview } from './pages/ChartReview';
+import { GroupNotes } from './pages/GroupNotes';
+import { CosignQueue } from './pages/CosignQueue';
+import { RevenueCycle } from './pages/RevenueCycle';
+import { BusinessDevelopment } from './pages/BusinessDevelopment';
+import { Training } from './pages/Training';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export type Screen = 
@@ -74,6 +83,15 @@ function App() {
       case 'BedManagement': return <BedManagement navigate={navigateTo} />;
       case 'AuditCompliance': return <AuditCompliance navigate={navigateTo} />;
       case 'OutcomeTracking': return <OutcomeTracking navigate={navigateTo} />;
+      case 'CommandCenter': return <CommandCenter navigate={navigateTo} />;
+      case 'Admissions': return <Admissions navigate={navigateTo} />;
+      case 'Discharges': return <Discharges navigate={navigateTo} />;
+      case 'ChartReview': return <ChartReview navigate={navigateTo} />;
+      case 'GroupNotes': return <GroupNotes navigate={navigateTo} />;
+      case 'CosignQueue': return <CosignQueue navigate={navigateTo} />;
+      case 'RevenueCycle': return <RevenueCycle navigate={navigateTo} />;
+      case 'BusinessDevelopment': return <BusinessDevelopment navigate={navigateTo} />;
+      case 'Training': return <Training navigate={navigateTo} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow border border-border">
