@@ -1,0 +1,1194 @@
+ /* ============================================================
+  SunriseOS v6 — WEBFLOW CSS
+  Paste into: Webflow > Page Settings > Custom Code > <head>
+  OR: Site Settings > Custom Code > Head Code
+  ============================================================ */
+
+  : root {
+    --sunrise - orange: #F97316;
+    --sunrise - amber: #FBBF24;
+    --sunrise - gold: #D97706;
+    --sunrise - blue: #2563EB;
+--sunrise-blue-light: # 3 B82F6;
+    --navy: #0F172A;
+--navy-mid: # 1E293 B;
+    --navy - light: #334155;
+--slate: # 475569;
+    --slate - light: #64748B;
+--border: # E2E8F0;
+    --bg: #F8FAFC;
+    --white: #FFFFFF;
+    --critical: #DC2626;
+    --critical - bg: #FEF2F2;
+    --critical - border: #FECACA;
+    --high: #EA580C;
+    --high - bg: #FFF7ED;
+    --high - border: #FED7AA;
+    --moderate: #D97706;
+    --moderate - bg: #FFFBEB;
+    --moderate - border: #FDE68A;
+    --routine: #2563EB;
+--routine-bg: # EFF6FF;
+    --routine - border: #BFDBFE;
+    --success: #16A34A;
+--success-bg: # F0FDF4;
+    --success - border: #BBF7D0;
+    --purple: #7C3AED;
+--purple-bg: # F5F3FF;
+    --purple - border: #DDD6FE;
+    --teal: #0D9488;
+--nav-width: 240px;
+--topbar-height: 64px;
+--banner-height: 36px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+background: var(--bg);
+color: var(--navy);
+overflow-x: hidden;
+}
+
+/* ── DEMO BANNER ── */
+.sos-demo-banner {
+position: fixed; top: 0; left: 0; right: 0;
+height: var(--banner-height);
+background: linear-gradient(90deg, # 7 C3AED, #4F46E5);
+color: # fff;
+    display: flex;
+    align - items: center;
+    justify - content: center;
+    font - size: 11 px;
+    font - weight: 700;
+    letter - spacing: .12 em;
+    text - transform: uppercase;
+    z - index: 1000;
+    gap: 8 px;
+  }
+
+  /* ── TOPBAR ── */
+  .sos - topbar {
+    position: fixed;top: var (--banner - height);left: 0;right: 0;
+    height: var (--topbar - height);background: var (--navy);
+    display: flex;align - items: center;padding: 0 16 px 0 0;
+    z - index: 900;gap: 8 px;box - shadow: 0 2 px 10 px rgba(0, 0, 0, .35);
+  }
+  .sos - topbar - brand {
+    width: var (--nav - width);min - width: var (--nav - width);
+    display: flex;align - items: center;padding: 0 14 px;
+    border - right: 1 px solid rgba(255, 255, 255, .1);height: 100 % ;flex - shrink: 0;
+  }
+  .sos - logo - wrap {
+    display: flex;align - items: center;gap: 9 px;
+  }
+  .sos - logo - svg {
+    width: 52 px;height: 44 px;flex - shrink: 0;
+  }
+  .sos - brand - wordmark {
+    font - size: 19 px;
+    font - weight: 800;
+    letter - spacing: -.5 px;
+  }
+  .sos - brand - wordmark.wo {
+    color: #F97316;
+  }
+  .sos - brand - wordmark.wb {
+    color: #3B82F6; }
+.sos-brand-tag { font-size: 8px; color: rgba(255,255,255,.3); letter-spacing: .1em; text-transform: uppercase; margin-top: 2px; }
+.sos-topbar-mid { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.sos-tb-sel {
+background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+color: # fff;padding: 6 px 10 px;border - radius: 6 px;font - size: 12 px;cursor: pointer;outline: none;
+  }
+  .sos - tb - sel option {
+    background: var (--navy - mid);
+  }
+  .sos - tb - search {
+    flex: 1;max - width: 260 px;background: rgba(255, 255, 255, .08);
+    border: 1 px solid rgba(255, 255, 255, .15);color: #fff;
+    padding: 6 px 12 px 6 px 30 px;border - radius: 6 px;font - size: 12 px;outline: none;
+  }
+  .sos - tb - search::placeholder {
+    color: rgba(255, 255, 255, .3);
+  }
+  .sos - tb - icons {
+    display: flex;align - items: center;gap: 6 px;margin - left: auto;flex - shrink: 0;
+  }
+  .sos - tb - icon {
+    width: 34 px;height: 34 px;border - radius: 7 px;
+    background: rgba(255, 255, 255, .08);border: 1 px solid rgba(255, 255, 255, .12);
+    color: rgba(255, 255, 255, .75);display: flex;align - items: center;
+    justify - content: center;cursor: pointer;font - size: 15 px;position: relative;
+  }
+  .sos - nb {
+    position: absolute;top: 4 px;right: 4 px;width: 8 px;height: 8 px;
+    background: var (--critical);border - radius: 50 % ;border: 1.5 px solid
+    var (--navy);
+  }
+  .sos - tb - av {
+    width: 34 px;height: 34 px;border - radius: 50 % ;
+    background: linear - gradient(135 deg,
+      var (--sunrise - orange),
+      var (--sunrise - amber));
+    display: flex;align - items: center;justify - content: center;
+    color: #fff;font - size: 12 px;font - weight: 700;cursor: pointer;
+    border: 2 px solid rgba(255, 255, 255, .2);
+  }
+
+  /* ── ROLE SWITCHER ── */
+  .sos - rs - wrap {
+    position: relative;flex - shrink: 0;
+  }
+  .sos - rs - btn {
+    display: flex;align - items: center;gap: 7 px;
+    background: rgba(249, 115, 22, .15);border: 1 px solid rgba(249, 115, 22, .4);
+    color: var (--sunrise - amber);padding: 6 px 12 px;border - radius: 7 px;
+    font - size: 12 px;font - weight: 700;cursor: pointer;user - select: none;white - space: nowrap;
+  }
+  .sos - rs - btn: hover {
+    background: rgba(249, 115, 22, .25);
+  }
+  .sos - rdot {
+    width: 8 px;height: 8 px;border - radius: 50 % ;flex - shrink: 0;
+  }
+  .sos - rdot.clinical {
+    background: #A78BFA;
+  }
+  .sos - rdot.medical {
+    background: #F87171;
+  }
+  .sos - rdot.nursing {
+    background: #60A5FA; }
+.sos-rdot.therapy { background: # 4 ADE80;
+  }
+  .sos - rs - drop {
+    position: absolute;top: calc(100 % +6 px);right: 0;
+    background: var (--navy - mid);border: 1 px solid rgba(255, 255, 255, .15);
+    border - radius: 10 px;padding: 6 px;min - width: 280 px;z - index: 600;
+    box - shadow: 0 8 px 28 px rgba(0, 0, 0, .5);max - height: 80 vh;overflow - y: auto;display: none;
+  }
+  .sos - rs - drop.open {
+    display: block;
+  }
+  .sos - rs - sec {
+    font - size: 9 px;
+    font - weight: 800;
+    color: rgba(255, 255, 255, .3);
+    text - transform: uppercase;
+    padding: 8 px 12 px 4 px;
+    letter - spacing: .06 em;
+  }
+  .sos - rs - opt {
+    display: flex;align - items: center;gap: 10 px;padding: 9 px 12 px;border - radius: 7 px;cursor: pointer;
+  }
+  .sos - rs - opt: hover {
+    background: rgba(255, 255, 255, .08);
+  }
+  .sos - rs - opt.sel {
+    background: rgba(249, 115, 22, .15);
+  }
+  .sos - rs - opt - name {
+    color: #fff;font - size: 12.5 px;font - weight: 600;
+  }
+  .sos - rs - opt - desc {
+    color: rgba(255, 255, 255, .38);font - size: 10.5 px;margin - top: 1 px;
+  }
+
+  /* ── SIDEBAR ── */
+  .sos - sidebar {
+    position: fixed;top: calc(var (--banner - height) +
+      var (--topbar - height));
+    left: 0;width: var (--nav - width);bottom: 0;background: var (--navy - mid);
+    overflow - y: auto;z - index: 800;border - right: 1 px solid rgba(255, 255, 255, .06);padding: 10 px 0;
+  }
+  .sos - sidebar::-webkit - scrollbar {
+    width: 3 px;
+  }
+  .sos - sidebar::-webkit - scrollbar - thumb {
+    background: rgba(255, 255, 255, .1);
+  }
+  .sos - nav - sec {
+    font - size: 9.5 px;
+    font - weight: 700;
+    letter - spacing: .1 em;
+    text - transform: uppercase;
+    color: rgba(255, 255, 255, .28);
+    padding: 12 px 18 px 5 px;
+  }
+  .sos - nav - item {
+    display: flex;align - items: center;gap: 9 px;padding: 9 px 18 px;
+    color: rgba(255, 255, 255, .58);cursor: pointer;font - size: 13 px;font - weight: 500;
+    border - left: 3 px solid transparent;transition: all .15 s;
+  }
+  .sos - nav - item: hover {
+    background: rgba(255, 255, 255, .05);color: rgba(255, 255, 255, .9);
+  }
+  .sos - nav - item.active {
+    background: rgba(249, 115, 22, .12);color: var (--sunrise - amber);border - left - color: var (--sunrise - orange);
+  }
+  .sos - nav - badge {
+    margin - left: auto;
+    background: var (--critical);
+    color: #fff;
+    font - size: 10 px;
+    font - weight: 700;
+    padding: 1 px 6 px;
+    border - radius: 10 px;
+  }
+  .sos - nav - badge.am {
+    background: var (--moderate);
+  }
+  .sos - nav - badge.bl {
+    background: var (--routine);
+  }
+  .sos - sidebar - ov {
+    display: none;position: fixed;inset: 0;background: rgba(0, 0, 0, .5);z - index: 750;
+  }
+  .sos - sidebar - ov.open {
+    display: block;
+  }
+  .sos - hamburger {
+    display: none;width: 34 px;height: 34 px;background: rgba(255, 255, 255, .08);
+    border: 1 px solid rgba(255, 255, 255, .12);border - radius: 7 px;cursor: pointer;
+    flex - direction: column;align - items: center;justify - content: center;gap: 4 px;flex - shrink: 0;
+  }
+  .sos - hamburger span {
+    display: block;width: 15 px;height: 2 px;background: rgba(255, 255, 255, .8);border - radius: 1 px;
+  }
+
+  /* ── MAIN CONTENT ── */
+  .sos - main {
+    margin - left: var (--nav - width);
+    margin - top: calc(var (--banner - height) +
+      var (--topbar - height));
+    padding: 22 px;
+    min - height: calc(100 vh -
+      var (--banner - height) -
+      var (--topbar - height));
+  }
+  .sos - screen {
+    display: none;
+  }
+  .sos - screen.active {
+    display: block;
+  }
+
+  /* ── PAGE HEADER ── */
+  .sos - page - header {
+    display: flex;align - items: flex - start;justify - content: space - between;
+    margin - bottom: 20 px;gap: 14 px;flex - wrap: wrap;
+  }
+  .sos - page - title {
+    font - size: 21 px;
+    font - weight: 700;
+  }
+  .sos - page - sub {
+    font - size: 12.5 px;
+    color: var (--slate - light);
+    margin - top: 3 px;
+  }
+  .sos - page - actions {
+    display: flex;gap: 7 px;align - items: center;flex - wrap: wrap;
+  }
+
+  /* ── BUTTONS ── */
+  .sos - btn {
+    padding: 7 px 14 px;border - radius: 7 px;font - size: 12.5 px;font - weight: 600;
+    cursor: pointer;border: none;transition: all .15 s;
+    display: inline - flex;align - items: center;gap: 5 px;
+  }
+  .sos - btn - primary {
+    background: linear - gradient(135 deg,
+      var (--sunrise - orange),
+      var (--sunrise - gold));color: #fff;box - shadow: 0 2 px 6 px rgba(249, 115, 22, .3);
+  }
+  .sos - btn - primary: hover {
+    opacity: .9;transform: translateY(-1 px);
+  }
+  .sos - btn - secondary {
+    background: var (--white);color: var (--navy);border: 1 px solid
+    var (--border);
+  }
+  .sos - btn - secondary: hover {
+    background: var (--bg);
+  }
+  .sos - btn - danger {
+    background: var (--critical);color: #fff;
+  }
+  .sos - btn - success {
+    background: var (--success);color: #fff;
+  }
+  .sos - btn - blue {
+    background: var (--routine);color: #fff;
+  }
+  .sos - btn - purple {
+    background: var (--purple);color: #fff;
+  }
+  .sos - btn - ghost {
+    background: transparent;color: var (--sunrise - orange);border: 1 px solid
+    var (--sunrise - orange);
+  }
+  .sos - btn - sm {
+    padding: 5 px 10 px;font - size: 11.5 px;
+  }
+  .sos - btn - xs {
+    padding: 3 px 8 px;font - size: 11 px;
+  }
+
+  /* ── GRID LAYOUTS ── */
+  .sos - grid - 5 {
+    display: grid;grid - template - columns: repeat(5, 1 fr);gap: 14 px;
+  }
+  .sos - grid - 4 {
+    display: grid;grid - template - columns: repeat(4, 1 fr);gap: 14 px;
+  }
+  .sos - grid - 3 {
+    display: grid;grid - template - columns: repeat(3, 1 fr);gap: 14 px;
+  }
+  .sos - grid - 2 {
+    display: grid;grid - template - columns: repeat(2, 1 fr);gap: 14 px;
+  }
+  .sos - grid - 2 - 1 {
+    display: grid;grid - template - columns: 2 fr 1 fr;gap: 16 px;
+  }
+  .sos - sg {
+    margin - bottom: 18 px;
+  }
+
+  /* ── CARDS ── */
+  .sos - card {
+    background: var (--white);border: 1 px solid
+    var (--border);border - radius: 12 px;padding: 18 px;box - shadow: 0 1 px 4 px rgba(0, 0, 0, .04);
+  }
+  .sos - card - hdr {
+    display: flex;align - items: center;justify - content: space - between;margin - bottom: 14 px;
+  }
+  .sos - card - title {
+    font - size: 12.5 px;
+    font - weight: 700;
+    text - transform: uppercase;
+    letter - spacing: .06 em;
+    color: var (--slate);
+  }
+  .sos - card - action {
+    font - size: 12 px;
+    color: var (--sunrise - orange);
+    cursor: pointer;
+    font - weight: 600;
+  }
+
+  /* ── METRIC CARDS ── */
+  .sos - mc {
+    background: var (--white);border: 1 px solid
+    var (--border);border - radius: 12 px;padding: 16 px 18 px;position: relative;overflow: hidden;
+  }
+  .sos - mc::before {
+    content: '';position: absolute;top: 0;left: 0;right: 0;height: 3 px;background: linear - gradient(90 deg,
+      var (--sunrise - orange),
+      var (--sunrise - amber));
+  }
+  .sos - mc.blue::before {
+    background: linear - gradient(90 deg, #2563EB, # 60 A5FA);
+  }
+  .sos - mc.green::before {
+    background: linear - gradient(90 deg, #16A34A, # 4 ADE80);
+  }
+  .sos - mc.purple::before {
+    background: linear - gradient(90 deg, #7C3AED, # A78BFA);
+  }
+  .sos - mc.teal::before {
+    background: linear - gradient(90 deg, #0D9488, # 2 DD4BF);
+  }
+  .sos - mc.rose::before {
+    background: linear - gradient(90 deg, #E11D48, #FB7185);
+  }
+  .sos - mc.amber::before {
+    background: linear - gradient(90 deg, #D97706, #FBBF24);
+  }
+  .sos - ml {
+    font - size: 11 px;
+    font - weight: 600;
+    text - transform: uppercase;
+    letter - spacing: .07 em;
+    color: var (--slate - light);
+    margin - bottom: 7 px;
+  }
+  .sos - mv {
+    font - size: 30 px;
+    font - weight: 800;
+    color: var (--navy);
+    line - height: 1;
+    margin - bottom: 5 px;
+  }
+  .sos - ms {
+    font - size: 11.5 px;
+    color: var (--slate - light);
+  }
+  .sos - mi {
+    position: absolute;top: 14 px;right: 14 px;font - size: 20 px;opacity: .13;
+  }
+  .sos - mtu {
+    color: var (--success);font - weight: 600;
+  }
+  .sos - mtd {
+    color: var (--critical);font - weight: 600;
+  }
+
+  /* ── STAT CARDS ── */
+  .sos - sc {
+    background: var (--white);border: 1 px solid
+    var (--border);border - radius: 10 px;padding: 14 px 16 px;position: relative;overflow: hidden;
+  }
+  .sos - sc::before {
+    content: '';position: absolute;top: 0;left: 0;right: 0;height: 3 px;
+  }
+  .sos - sc.orange::before {
+    background: linear - gradient(90 deg,
+      var (--sunrise - orange),
+      var (--sunrise - amber));
+  }
+  .sos - sc.blue::before {
+    background: linear - gradient(90 deg, #2563EB, # 60 A5FA);
+  }
+  .sos - sc.purple::before {
+    background: linear - gradient(90 deg, #7C3AED, # A78BFA);
+  }
+  .sos - sc.green::before {
+    background: linear - gradient(90 deg, #16A34A, # 4 ADE80);
+  }
+  .sos - sc.teal::before {
+    background: linear - gradient(90 deg, #0D9488, # 2 DD4BF);
+  }
+  .sos - sc.rose::before {
+    background: linear - gradient(90 deg, #E11D48, #FB7185);
+  }
+  .sos - sc.amber::before {
+    background: linear - gradient(90 deg, #D97706, #FBBF24);
+  }
+  .sos - sl {
+    font - size: 10.5 px;
+    font - weight: 700;
+    text - transform: uppercase;
+    letter - spacing: .07 em;
+    color: var (--slate - light);
+    margin - bottom: 5 px;
+  }
+  .sos - sv {
+    font - size: 28 px;
+    font - weight: 800;
+    color: var (--navy);
+    line - height: 1;
+  }
+  .sos - ss {
+    font - size: 11 px;
+    color: var (--slate - light);
+    margin - top: 4 px;
+  }
+
+  /* ── OCCUPANCY RING ── */
+  .sos - occ - card {
+    background: var (--white);border: 1 px solid
+    var (--border);border - radius: 12 px;padding: 18 px;display: flex;flex - direction: column;align - items: center;position: relative;overflow: hidden;
+  }
+  .sos - occ - card::before {
+    content: '';position: absolute;top: 0;left: 0;right: 0;height: 3 px;background: linear - gradient(90 deg,
+      var (--sunrise - orange),
+      var (--sunrise - amber));
+  }
+  .sos - ring - wrap {
+    position: relative;width: 110 px;height: 110 px;margin: 6 px 0;
+  }
+  .sos - ring - svg {
+    transform: rotate(-90 deg);
+  }
+  .sos - ring - bg {
+    fill: none;stroke: #E2E8F0;stroke - width: 10;
+  }
+  .sos - ring - fill {
+    fill: none;stroke: url(#rg2);stroke - width: 10;stroke - linecap: round;stroke - dasharray: 339.3;stroke - dashoffset: 58.4;
+  }
+  .sos - ring - ctr {
+    position: absolute;top: 50 % ;left: 50 % ;transform: translate(-50 % , -50 % );text - align: center;
+  }
+  .sos - ring - pct {
+    font - size: 20 px;
+    font - weight: 800;
+    color: var (--navy);
+  }
+  .sos - ring - lbl {
+    font - size: 9 px;
+    color: var (--slate - light);
+    font - weight: 600;
+  }
+  .sos - occ - row {
+    display: flex;gap: 16 px;margin - top: 6 px;
+  }
+  .sos - occ - item {
+    text - align: center;
+  }
+  .sos - occ - num {
+    font - size: 18 px;
+    font - weight: 700;
+    color: var (--navy);
+  }
+  .sos - occ - lbl {
+    font - size: 10 px;
+    color: var (--slate - light);
+  }
+  .sos - occ - div {
+    width: 1 px;background: var (--border);
+  }
+
+  /* ── PROGRESS BARS ── */
+  .sos - pb - wrap {
+    display: flex;flex - direction: column;gap: 12 px;
+  }
+  .sos - pb - hdr {
+    display: flex;justify - content: space - between;align - items: center;margin - bottom: 5 px;
+  }
+  .sos - pb - lbl {
+    font - size: 12.5 px;
+    font - weight: 600;
+    color: var (--navy);
+  }
+  .sos - pb - meta {
+    font - size: 11.5 px;
+    color: var (--slate - light);
+  }
+  .sos - pb - track {
+    height: 9 px;background: var (--bg);border - radius: 5 px;overflow: hidden;border: 1 px solid
+    var (--border);
+  }
+  .sos - pb - fill {
+    height: 100 % ;border - radius: 5 px;
+  }
+
+  /* ── ALERTS ── */
+  .sos - alert - list {
+    display: flex;flex - direction: column;gap: 9 px;
+  }
+  .sos - ai {
+    display: flex;align - items: flex - start;gap: 10 px;padding: 11 px 13 px;border - radius: 8 px;border - left: 4 px solid;
+  }
+  .sos - ai.critical {
+    background: var (--critical - bg);border - color: var (--critical);
+  }
+  .sos - ai.high {
+    background: var (--high - bg);border - color: var (--high);
+  }
+  .sos - ai.moderate {
+    background: var (--moderate - bg);border - color: var (--moderate);
+  }
+  .sos - ai.routine {
+    background: var (--routine - bg);border - color: var (--routine);
+  }
+  .sos - ab {
+    font - size: 9.5 px;
+    font - weight: 800;
+    text - transform: uppercase;
+    padding: 2 px 6 px;
+    border - radius: 4 px;
+    white - space: nowrap;
+    flex - shrink: 0;
+    margin - top: 1 px;
+  }
+  .sos - ai.critical.sos - ab {
+    background: var (--critical);color: #fff;
+  }
+  .sos - ai.high.sos - ab {
+    background: var (--high);color: #fff;
+  }
+  .sos - ai.moderate.sos - ab {
+    background: var (--moderate);color: #fff;
+  }
+  .sos - ai.routine.sos - ab {
+    background: var (--routine);color: #fff;
+  }
+  .sos - ac {
+    flex: 1;
+  }
+  .sos - at {
+    font - size: 13 px;
+    font - weight: 600;
+    color: var (--navy);
+    margin - bottom: 2 px;
+  }
+  .sos - ad {
+    font - size: 11.5 px;
+    color: var (--slate);
+    line - height: 1.5;
+  }
+  .sos - atm {
+    font - size: 10.5 px;
+    color: var (--slate - light);
+    margin - top: 3 px;
+  }
+
+  /* ── DEADLINE LIST ── */
+  .sos - dl - list {
+    display: flex;flex - direction: column;gap: 7 px;
+  }
+  .sos - dl - item {
+    display: flex;align - items: center;gap: 9 px;padding: 9 px 11 px;background: var (--bg);border - radius: 7 px;border: 1 px solid
+    var (--border);
+  }
+  .sos - dl - dot {
+    width: 7 px;height: 7 px;border - radius: 50 % ;flex - shrink: 0;
+  }
+  .sos - dl - dot.red {
+    background: var (--critical);
+  }
+  .sos - dl - dot.orange {
+    background: var (--high);
+  }
+  .sos - dl - dot.amber {
+    background: var (--moderate);
+  }
+  .sos - dl - dot.blue {
+    background: var (--routine);
+  }
+  .sos - dl - text {
+    flex: 1;font - size: 12.5 px;color: var (--navy);font - weight: 500;
+  }
+  .sos - dl - due {
+    font - size: 11 px;
+    color: var (--slate - light);
+  }
+  .sos - dl - due.urg {
+    color: var (--critical);font - weight: 600;
+  }
+  .sos - dl - due.soon {
+    color: var (--high);font - weight: 600;
+  }
+
+  /* ── OUTCOMES ── */
+  .sos - out - grid {
+    display: grid;grid - template - columns: 1 fr 1 fr;gap: 10 px;
+  }
+  .sos - out - item {
+    background: var (--bg);border: 1 px solid
+    var (--border);border - radius: 8 px;padding: 11 px;
+  }
+  .sos - out - lbl {
+    font - size: 11 px;
+    color: var (--slate - light);
+    font - weight: 600;
+    margin - bottom: 5 px;
+  }
+  .sos - out - val {
+    font - size: 19 px;
+    font - weight: 700;
+    color: var (--navy);
+    margin - bottom: 4 px;
+  }
+  .sos - out - track {
+    height: 5 px;background: var (--border);border - radius: 3 px;overflow: hidden;
+  }
+  .sos - out - fill {
+    height: 100 % ;border - radius: 3 px;background: linear - gradient(90 deg,
+      var (--sunrise - orange),
+      var (--sunrise - amber));
+  }
+
+  /* ── DOC RING ── */
+  .sos - doc - ring - wrap {
+    display: flex;align - items: center;gap: 14 px;
+  }
+  .sos - dr - svg - wrap {
+    position: relative;width: 76 px;height: 76 px;flex - shrink: 0;
+  }
+  .sos - dr - ctr {
+    position: absolute;top: 50 % ;left: 50 % ;transform: translate(-50 % , -50 % );text - align: center;
+  }
+  .sos - dr - pct {
+    font - size: 15 px;
+    font - weight: 800;
+    color: var (--navy);
+  }
+  .sos - dr - lbl {
+    font - size: 8.5 px;
+    color: var (--slate - light);
+  }
+  .sos - dr - fill {
+    fill: none;stroke: var (--success);stroke - width: 8;stroke - linecap: round;stroke - dasharray: 226.2;stroke - dashoffset: 15.8;
+  }
+  .sos - dr - bg {
+    fill: none;stroke: #E2E8F0;stroke - width: 8;
+  }
+  .sos - dr - details {
+    flex: 1;
+  }
+  .sos - dr - row {
+    display: flex;justify - content: space - between;padding: 3 px 0;border - bottom: 1 px solid
+    var (--border);font - size: 12 px;
+  }
+  .sos - dr - row: last - child {
+    border - bottom: none;
+  }
+  .sos - dr - val {
+    font - weight: 600;
+    color: var (--navy);
+  }
+  .sos - dr - val.warn {
+    color: var (--critical);
+  }
+
+  /* ── AI BRIEF ── */
+  .sos - ai - brief {
+    background: linear - gradient(135 deg, #0F172A, # 1E293 B);border: 1 px solid rgba(249, 115, 22, .3);border - radius: 12 px;padding: 20 px;position: relative;overflow: hidden;
+  }
+  .sos - ai - brief::before {
+    content: '';position: absolute;top: 0;left: 0;right: 0;height: 3 px;background: linear - gradient(90 deg,
+        var (--sunrise - orange),
+        var (--sunrise - amber), #7C3AED); }
+.sos-ai-brief-hdr { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.sos-ai-icon { width: 30px; height: 30px; background: linear-gradient(135deg, var(--sunrise-orange), var(--sunrise-amber)); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.sos-ai-brief-title { color: # fff; font - size: 13.5 px; font - weight: 700;
+      }
+      .sos - ai - brief - sub {
+        color: rgba(255, 255, 255, .38);font - size: 10.5 px;
+      }
+      .sos - ai - brief - text {
+        color: rgba(255, 255, 255, .82);font - size: 13.5 px;line - height: 1.75;margin - bottom: 14 px;
+      }
+      .sos - ai - brief - text strong {
+        color: var (--sunrise - amber);
+      }
+      .sos - ai - disc {
+        font - size: 10.5 px;
+        color: rgba(255, 255, 255, .28);
+        margin - bottom: 14 px;
+        font - style: italic;
+      }
+      .sos - btn - vd {
+        background: rgba(249, 115, 22, .15);border: 1 px solid rgba(249, 115, 22, .4);color: var (--sunrise - amber);padding: 8 px 16 px;border - radius: 7 px;font - size: 12.5 px;font - weight: 600;cursor: pointer;display: inline - flex;align - items: center;gap: 5 px;
+      }
+
+      /* ── TIMESTAMP ── */
+      .sos - ts {
+        font - size: 11.5 px;
+        color: var (--slate - light);
+        background: var (--white);
+        border: 1 px solid
+        var (--border);
+        padding: 5 px 11 px;
+        border - radius: 6 px;
+      }
+
+      /* ── ROLE BANNER ── */
+      .sos - role - banner {
+        display: flex;align - items: center;gap: 12 px;padding: 10 px 16 px;border - radius: 10 px;margin - bottom: 18 px;font - size: 13 px;font - weight: 600;border: 1 px solid;
+      }
+      .sos - role - banner.clinical {
+        background: rgba(124, 58, 237, .08);border - color: rgba(124, 58, 237, .25);color: #7C3AED; }
+.sos-role-banner.medical { background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.25); color: var(--critical); }
+.sos-role-banner.nursing { background: rgba(37,99,235,.08); border-color: rgba(37,99,235,.25); color: var(--routine); }
+.sos-role-banner.therapy { background: rgba(22,163,74,.08); border-color: rgba(22,163,74,.25); color: var(--success); }
+.sos-rb-icon { font-size: 18px; }
+.sos-rb-text { flex: 1; }
+.sos-rb-name { font-size: 14px; font-weight: 700; }
+.sos-rb-desc { font-size: 11.5px; opacity: .75; margin-top: 1px; font-weight: 400; }
+
+/* ── BANNERS ── */
+.sos-cosign-banner { background: linear-gradient(90deg, rgba(217,119,6,.12), rgba(251,191,36,.08)); border: 1px solid rgba(217,119,6,.35); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.sos-cosign-count { background: var(--moderate); color: # fff;font - size: 18 px;font - weight: 800;width: 40 px;height: 40 px;border - radius: 10 px;display: flex;align - items: center;justify - content: center;flex - shrink: 0;
+      }
+      .sos - safety - banner {
+        background: linear - gradient(90 deg, rgba(220, 38, 38, .1), rgba(251, 113, 133, .06));border: 1 px solid rgba(220, 38, 38, .3);border - radius: 10 px;padding: 12 px 16 px;display: flex;align - items: center;gap: 12 px;margin - bottom: 16 px;
+      }
+
+      /* ── FILTER BAR ── */
+      .sos - filter - bar {
+        display: flex;align - items: center;gap: 8 px;margin - bottom: 14 px;flex - wrap: wrap;
+      }
+      .sos - fs {
+        flex: 1;min - width: 180 px;max - width: 300 px;padding: 7 px 12 px 7 px 32 px;border: 1 px solid
+        var (--border);border - radius: 7 px;font - size: 12.5 px;background: var (--white);outline: none;
+      }
+      .sos - fs: focus {
+        border - color: var (--sunrise - orange);
+        box - shadow: 0 0 0 3 px rgba(249, 115, 22, .1);
+      }
+      .sos - fsel {
+        padding: 7 px 10 px;border: 1 px solid
+        var (--border);border - radius: 7 px;font - size: 12.5 px;background: var (--white);outline: none;cursor: pointer;color: var (--navy);
+      }
+      .sos - fsel: focus {
+        border - color: var (--sunrise - orange);
+      }
+
+      /* ── TABLE ── */
+      .sos - table - wrap {
+        background: var (--white);border: 1 px solid
+        var (--border);border - radius: 12 px;overflow: hidden;box - shadow: 0 1 px 4 px rgba(0, 0, 0, .04);
+      }
+      .sos - table - hdr {
+        display: flex;align - items: center;justify - content: space - between;padding: 14 px 18 px;border - bottom: 1 px solid
+        var (--border);flex - wrap: wrap;gap: 8 px;
+      }
+      .sos - table - title {
+        font - size: 14 px;
+        font - weight: 700;
+        color: var (--navy);
+      }
+      .sos - table - meta {
+        font - size: 12 px;
+        color: var (--slate - light);
+      }
+      .sos - table {
+        width: 100 % ;border - collapse: collapse;
+      }
+      .sos - table thead th {
+        background: var (--bg);padding: 10 px 14 px;text - align: left;font - size: 11 px;font - weight: 700;text - transform: uppercase;letter - spacing: .06 em;color: var (--slate);border - bottom: 1 px solid
+        var (--border);white - space: nowrap;
+      }
+      .sos - table tbody tr {
+        border - bottom: 1 px solid
+        var (--border);
+        transition: background .12 s;
+        cursor: pointer;
+      }
+      .sos - table tbody tr: last - child {
+        border - bottom: none;
+      }
+      .sos - table tbody tr: hover {
+        background: #FFF7ED;
+      }
+      .sos - table tbody td {
+        padding: 11 px 14 px;font - size: 13 px;color: var (--navy);vertical - align: middle;
+      }
+      .sos - cn - cell {
+        display: flex;align - items: center;gap: 9 px;
+      }
+      .sos - cav {
+        width: 32 px;height: 32 px;border - radius: 50 % ;display: flex;align - items: center;justify - content: center;font - size: 11 px;font - weight: 700;color: #fff;flex - shrink: 0;
+      }
+      .sos - cn {
+        font - weight: 600;
+        font - size: 13.5 px;
+      }
+      .sos - cid {
+        font - size: 10.5 px;
+        color: var (--slate - light);
+      }
+
+      /* ── BADGES ── */
+      .sos - badge {
+        display: inline - flex;align - items: center;padding: 2 px 8 px;border - radius: 20 px;font - size: 11 px;font - weight: 700;white - space: nowrap;
+      }
+      .sos - b - php {
+        background: #FFF7ED;color: var (--high);border: 1 px solid
+        var (--high - border);
+      }
+      .sos - b - iop {
+        background: var (--routine - bg);color: var (--routine);border: 1 px solid
+        var (--routine - border);
+      }
+      .sos - b - op {
+        background: var (--purple - bg);color: var (--purple);border: 1 px solid
+        var (--purple - border);
+      }
+      .sos - b - active {
+        background: var (--success - bg);color: var (--success);border: 1 px solid
+        var (--success - border);
+      }
+      .sos - b - hold {
+        background: var (--moderate - bg);color: var (--moderate);border: 1 px solid
+        var (--moderate - border);
+      }
+      .sos - b - discharged {
+        background: var (--bg);color: var (--slate);border: 1 px solid
+        var (--border);
+      }
+      .sos - b - critical {
+        background: var (--critical - bg);color: var (--critical);border: 1 px solid
+        var (--critical - border);
+      }
+      .sos - b - high {
+        background: var (--high - bg);color: var (--high);border: 1 px solid
+        var (--high - border);
+      }
+      .sos - b - moderate {
+        background: var (--moderate - bg);color: var (--moderate);border: 1 px solid
+        var (--moderate - border);
+      }
+      .sos - b - none {
+        background: var (--success - bg);color: var (--success);border: 1 px solid
+        var (--success - border);
+      }
+      .sos - b - pending {
+        background: var (--purple - bg);color: var (--purple);border: 1 px solid
+        var (--purple - border);
+      }
+      .sos - b - overdue {
+        background: var (--critical - bg);color: var (--critical);border: 1 px solid
+        var (--critical - border);
+      }
+      .sos - b - due {
+        background: var (--moderate - bg);color: var (--moderate);border: 1 px solid
+        var (--moderate - border);
+      }
+      .sos - b - ok {
+        background: var (--success - bg);color: var (--success);border: 1 px solid
+        var (--success - border);
+      }
+      .sos - rdot - sm {
+        width: 7 px;height: 7 px;border - radius: 50 % ;display: inline - block;margin - right: 4 px;
+      }
+      .sos - rdot - sm.critical {
+        background: var (--critical);
+      }
+      .sos - rdot - sm.high {
+        background: var (--high);
+      }
+      .sos - rdot - sm.moderate {
+        background: var (--moderate);
+      }
+      .sos - rdot - sm.none {
+        background: var (--success);
+      }
+
+      /* ── MODALS ── */
+      .sos - modal - ov {
+        display: none;position: fixed;inset: 0;background: rgba(0, 0, 0, .58);z - index: 2000;align - items: flex - start;justify - content: center;padding: 20 px;overflow - y: auto;
+      }
+      .sos - modal - ov.open {
+        display: flex;
+      }
+      .sos - modal {
+        background: var (--white);border - radius: 14 px;padding: 26 px;width: 100 % ;box - shadow: 0 20 px 60 px rgba(0, 0, 0, .25);position: relative;margin: auto;
+      }
+      .sos - modal - close {
+        position: absolute;top: 14 px;right: 14 px;width: 28 px;height: 28 px;border - radius: 50 % ;background: var (--bg);border: 1 px solid
+        var (--border);cursor: pointer;display: flex;align - items: center;justify - content: center;font - size: 15 px;color: var (--slate);
+      }
+      .sos - modal - close: hover {
+        background: var (--border);
+      }
+      .sos - modal - title {
+        font - size: 19 px;
+        font - weight: 700;
+        margin - bottom: 4 px;
+      }
+      .sos - modal - sub {
+        font - size: 12.5 px;
+        color: var (--slate - light);
+        margin - bottom: 20 px;
+      }
+
+      /* ── FORMS ── */
+      .sos - fsec {
+        font - size: 11.5 px;
+        font - weight: 700;
+        text - transform: uppercase;
+        letter - spacing: .07 em;
+        color: var (--slate);
+        margin: 18 px 0 10 px;
+        padding - bottom: 7 px;
+        border - bottom: 1 px solid
+        var (--border);
+      }
+      .sos - fg {
+        display: grid;grid - template - columns: 1 fr 1 fr;gap: 12 px;
+      }
+      .sos - fg.three {
+        grid - template - columns: 1 fr 1 fr 1 fr;
+      }
+      .sos - fgrp {
+        display: flex;flex - direction: column;gap: 4 px;
+      }
+      .sos - fgrp.full {
+        grid - column: 1 / -1;
+      }
+      .sos - label {
+        font - size: 11.5 px;
+        font - weight: 600;
+        color: var (--slate);
+      }
+      .sos - label.req {
+        color: var (--critical);margin - left: 2 px;
+      }
+      .sos - input,
+    .sos - select,
+    .sos - textarea {
+      padding: 8 px 11 px;border: 1 px solid
+      var (--border);border - radius: 7 px;font - size: 13 px;color: var (--navy);background: var (--white);outline: none;font - family: inherit;transition: border - color .15 s;width: 100 % ;
+    }
+    .sos - input: focus,
+    .sos - select: focus,
+    .sos - textarea: focus {
+        border - color: var (--sunrise - orange);
+        box - shadow: 0 0 0 3 px rgba(249, 115, 22, .1);
+      }
+      .sos - textarea {
+        resize: vertical;min - height: 80 px;
+      }
+      .sos - form - disc {
+        background: var (--moderate - bg);border: 1 px solid
+        var (--moderate - border);border - radius: 8 px;padding: 11 px 13 px;font - size: 11.5 px;color: var (--slate);line - height: 1.6;margin: 14 px 0 0;
+      }
+      .sos - form - actions {
+        display: flex;gap: 9 px;justify - content: flex - end;margin - top: 18 px;padding - top: 14 px;border - top: 1 px solid
+        var (--border);
+      }
+
+      /* ── CHART MODAL ── */
+      .sos - chart - hdr {
+        display: flex;align - items: flex - start;gap: 14 px;margin - bottom: 20 px;padding - bottom: 18 px;border - bottom: 1 px solid
+        var (--border);
+      }
+      .sos - chart - av - lg {
+        width: 56 px;height: 56 px;border - radius: 50 % ;display: flex;align - items: center;justify - content: center;font - size: 18 px;font - weight: 700;color: #fff;flex - shrink: 0;
+      }
+      .sos - chart - name {
+        font - size: 19 px;
+        font - weight: 700;
+      }
+      .sos - chart - meta {
+        font - size: 12.5 px;
+        color: var (--slate - light);
+        margin - top: 3 px;
+      }
+      .sos - chart - badges {
+        display: flex;gap: 5 px;margin - top: 7 px;flex - wrap: wrap;
+      }
+      .sos - chart - tabs {
+        display: flex;gap: 0;border - bottom: 2 px solid
+        var (--border);margin - bottom: 18 px;overflow - x: auto;
+      }
+      .sos - chart - tab {
+        padding: 9 px 16 px;font - size: 12.5 px;font - weight: 600;color: var (--slate);cursor: pointer;border - bottom: 2 px solid transparent;margin - bottom: -2 px;white - space: nowrap;transition: all .15 s;
+      }
+      .sos - chart - tab: hover {
+        color: var (--navy);
+      }
+      .sos - chart - tab.active {
+        color: var (--sunrise - orange);border - bottom - color: var (--sunrise - orange);
+      }
+      .sos - chart - panel {
+        display: none;
+      }
+      .sos - chart - panel.active {
+        display: block;
+      }
+
+      /* ── PLACEHOLDER SCREENS ── */
+      .sos - ph - screen {
+        display: flex;flex - direction: column;align - items: center;justify - content: center;min - height: 380 px;text - align: center;gap: 14 px;
+      }
+      .sos - ph - icon {
+        font - size: 52 px;
+        opacity: .28;
+      }
+      .sos - ph - title {
+        font - size: 21 px;
+        font - weight: 700;
+        color: var (--navy);
+      }
+      .sos - ph - desc {
+        font - size: 13.5 px;
+        color: var (--slate - light);
+        max - width: 400 px;
+        line - height: 1.6;
+      }
+      .sos - ph - tag {
+        background: var (--bg);border: 1 px solid
+        var (--border);color: var (--slate);font - size: 12 px;padding: 5 px 13 px;border - radius: 20 px;font - weight: 600;
+      }
+
+      /* ── CHART SVG ── */
+      .sos - chart - wrap {
+        position: relative;height: 170 px;margin - top: 6 px;
+      }
+      .sos - chart - svg {
+        width: 100 % ;height: 100 % ;overflow: visible;
+      }
+      .sos - cgl {
+        stroke: #E2E8F0;stroke - width: 1;stroke - dasharray: 4,
+        4;
+      }
+      .sos - cl {
+        font - size: 9.5 px;
+        fill: var (--slate - light);
+      }
+
+    /* ── RESPONSIVE ── */
+    @media(max - width: 900 px) {
+      .sos - sidebar {
+          transform: translateX(-100 % );transition: transform .25 s;z - index: 850;
+        }
+        .sos - sidebar.open {
+          transform: translateX(0);
+        }
+        .sos - main {
+          margin - left: 0;
+        }
+        .sos - topbar - brand {
+          min - width: auto;
+          border - right: none;
+          padding: 0 10 px;
+        }
+        .sos - hamburger {
+          display: flex;
+        }
+        .sos - grid - 2 - 1 {
+          grid - template - columns: 1 fr;
+        }
+        .sos - grid - 3 {
+          grid - template - columns: repeat(2, 1 fr);
+        }
+        .sos - tb - sel {
+          display: none;
+        }
+        .sos - grid - 5 {
+          grid - template - columns: repeat(2, 1 fr);
+        }
+        .sos - fg {
+          grid - template - columns: 1 fr;
+        }
+        .sos - fg.three {
+          grid - template - columns: 1 fr 1 fr;
+        }
+    }
+    @media(max - width: 640 px) {
+      .sos - main {
+          padding: 14 px;
+        }
+        .sos - grid - 4 {
+          grid - template - columns: 1 fr 1 fr;
+        }
+        .sos - grid - 3 {
+          grid - template - columns: 1 fr;
+        }
+        .sos - grid - 2 {
+          grid - template - columns: 1 fr;
+        }
+        .sos - out - grid {
+          grid - template - columns: 1 fr;
+        }
+        .sos - tb - search {
+          display: none;
+        }
+        .sos - page - header {
+          flex - direction: column;
+        }
+        .sos - filter - bar {
+          flex - direction: column;
+          align - items: stretch;
+        }
+        .sos - fs {
+          max - width: 100 % ;
+        }
+        .sos - fg.three {
+          grid - template - columns: 1 fr;
+        }
+        .sos - chart - hdr {
+          flex - direction: column;
+        }
+        .sos - doc - ring - wrap {
+          flex - direction: column;
+          align - items: flex - start;
+        }
+    } <

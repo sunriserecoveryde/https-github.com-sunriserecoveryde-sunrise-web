@@ -1,0 +1,72 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@theme {
+  --color-sunrise-orange: #F97316;
+  --color-sunrise-amber: #FBBF24;
+  --color-sunrise-gold: #D97706;
+  --color-sunrise-blue: #2563EB;
+  --color-navy: #0F172A;
+  --color-navy-mid: #1E293B;
+  --color-navy-light: #334155;
+  --color-slate: #475569;
+  --color-slate-light: #64748B;
+  --color-border: #E2E8F0;
+  --color-bg: #F8FAFC;
+  --color-white: #FFFFFF;
+  
+  --color-critical: #DC2626;
+  --color-high: #EA580C;
+  --color-moderate: #D97706;
+  --color-routine: #2563EB;
+  --color-success: #16A34A;
+  --color-purple: #7C3AED;
+  --color-teal: #0D9488;
+}
+
+@layer base {
+  :root {
+    --sunrise-orange: #F97316;
+    --sunrise-amber: #FBBF24;
+    --sunrise-gold: #D97706;
+    --sunrise-blue: #2563EB;
+    --navy: #0F172A;
+    --navy-mid: #1E293B;
+    --navy-light: #334155;
+    --slate: #475569;
+    --slate-light: #64748B;
+    --border: #E2E8F0;
+    --bg: #F8FAFC;
+    --white: #FFFFFF;
+    --critical: #DC2626;
+    --high: #EA580C;
+    --moderate: #D97706;
+    --routine: #2563EB;
+    --success: #16A34A;
+    --purple: #7C3AED;
+    --teal: #0D9488;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--navy);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
