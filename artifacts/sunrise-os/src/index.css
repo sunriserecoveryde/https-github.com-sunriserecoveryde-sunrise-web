@@ -2,26 +2,32 @@
 @import 'tw-animate-css';
 
 @theme {
-  --color-sunrise-orange: #F97316;
-  --color-sunrise-amber: #FBBF24;
-  --color-sunrise-gold: #D97706;
-  --color-sunrise-blue: #2563EB;
-  --color-navy: #0F172A;
-  --color-navy-mid: #1E293B;
-  --color-navy-light: #334155;
-  --color-slate: #475569;
-  --color-slate-light: #64748B;
-  --color-border: #E2E8F0;
-  --color-bg: #F8FAFC;
-  --color-white: #FFFFFF;
-  
-  --color-critical: #DC2626;
-  --color-high: #EA580C;
-  --color-moderate: #D97706;
-  --color-routine: #2563EB;
-  --color-success: #16A34A;
-  --color-purple: #7C3AED;
-  --color-teal: #0D9488;
+  --color-sunrise-orange: var(--sunrise-orange);
+  --color-sunrise-amber: var(--sunrise-amber);
+  --color-sunrise-gold: var(--sunrise-gold);
+  --color-sunrise-blue: var(--sunrise-blue);
+  --color-sunrise-blue-light: var(--sunrise-blue-light);
+  --color-navy: var(--navy);
+  --color-navy-mid: var(--navy-mid);
+  --color-navy-light: var(--navy-light);
+  --color-slate: var(--slate);
+  --color-slate-light: var(--slate-light);
+  --color-border: var(--border);
+  --color-bg: var(--bg);
+  --color-white: var(--white);
+  --color-critical: var(--critical);
+  --color-critical-bg: var(--critical-bg);
+  --color-high: var(--high);
+  --color-high-bg: var(--high-bg);
+  --color-moderate: var(--moderate);
+  --color-moderate-bg: var(--moderate-bg);
+  --color-routine: var(--routine);
+  --color-routine-bg: var(--routine-bg);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-purple: var(--purple);
+  --color-purple-bg: var(--purple-bg);
+  --color-teal: var(--teal);
 }
 
 @layer base {
@@ -30,6 +36,7 @@
     --sunrise-amber: #FBBF24;
     --sunrise-gold: #D97706;
     --sunrise-blue: #2563EB;
+    --sunrise-blue-light: #3B82F6;
     --navy: #0F172A;
     --navy-mid: #1E293B;
     --navy-light: #334155;
@@ -39,12 +46,21 @@
     --bg: #F8FAFC;
     --white: #FFFFFF;
     --critical: #DC2626;
+    --critical-bg: #FEF2F2;
     --high: #EA580C;
+    --high-bg: #FFF7ED;
     --moderate: #D97706;
+    --moderate-bg: #FFFBEB;
     --routine: #2563EB;
+    --routine-bg: #EFF6FF;
     --success: #16A34A;
+    --success-bg: #F0FDF4;
     --purple: #7C3AED;
+    --purple-bg: #F5F3FF;
     --teal: #0D9488;
+    --nav-width: 240px;
+    --topbar-height: 64px;
+    --banner-height: 36px;
   }
 
   * {
@@ -56,7 +72,7 @@
   body {
     background-color: var(--bg);
     color: var(--navy);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
   }
 }

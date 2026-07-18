@@ -1,68 +1,110 @@
 import React, { useState } from 'react';
-import Sidebar from '@/components/Sidebar';
-import Topbar from '@/components/Topbar';
-import DemoBanner from '@/components/DemoBanner';
-import Dashboard from '@/pages/Dashboard';
-import PatientList from '@/pages/PatientList';
-import CommandCenter from '@/pages/CommandCenter';
-import PatientDetail from '@/pages/PatientDetail';
-import OrderEntry from '@/pages/OrderEntry';
-import BedManagement from '@/pages/BedManagement';
-import Outcomes from '@/pages/Outcomes';
-import { Patient } from '@/data/mockData';
+import { Sidebar } from './components/layout/Sidebar';
+import { Topbar } from './components/layout/Topbar';
+import { DemoBanner } from './components/layout/DemoBanner';
+import { Dashboard } from './pages/Dashboard';
+import { PatientList } from './pages/PatientList';
+import { CensusBedBoard } from './pages/CensusBedBoard';
+import { PatientDetail } from './pages/PatientDetail';
+import { ASAMAssessments } from './pages/ASAMAssessments';
+import { ProgressNotes } from './pages/ProgressNotes';
+import { TreatmentPlans } from './pages/TreatmentPlans';
+import { AppointmentCalendar } from './pages/AppointmentCalendar';
+import { GroupSchedule } from './pages/GroupSchedule';
+import { RiskDashboard } from './pages/RiskDashboard';
+import { RecoveryEngagementScore } from './pages/RecoveryEngagementScore';
+import { ReferralTracker } from './pages/ReferralTracker';
+import { BedManagement, AuditCompliance, OutcomeTracking } from './pages/Stubs';
+import { AnimatePresence, motion } from 'framer-motion';
 
-export type Screen = 'dashboard' | 'patient-list' | 'command-center' | 'patient-detail' | 'order-entry' | 'bed-management' | 'outcomes';
+export type Screen = 
+  | 'Dashboard' 
+  | 'CommandCenter' 
+  | 'CensusBedBoard' 
+  | 'PatientList' 
+  | 'Admissions' 
+  | 'Discharges' 
+  | 'ChartReview' 
+  | 'ProgressNotes' 
+  | 'TreatmentPlans' 
+  | 'ASAMAssessments' 
+  | 'GroupNotes' 
+  | 'CosignQueue' 
+  | 'AppointmentCalendar' 
+  | 'GroupSchedule' 
+  | 'RiskDashboard' 
+  | 'RecoveryEngagementScore' 
+  | 'OutcomeTracking' 
+  | 'ReferralTracker' 
+  | 'BusinessDevelopment' 
+  | 'BedManagement' 
+  | 'RevenueCycle' 
+  | 'AuditCompliance' 
+  | 'Training' 
+  | 'PatientDetail';
 
 function App() {
-  const [activeScreen, setActiveScreen] = useState<Screen>('dashboard');
+  const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigateTo = (screen: Screen, patientId?: string) => {
     if (patientId) {
       setSelectedPatientId(patientId);
     }
     setActiveScreen(screen);
-    setSidebarOpen(false);
     window.scrollTo(0, 0);
   };
 
   const renderScreen = () => {
     switch (activeScreen) {
-      case 'dashboard':
-        return <Dashboard onPatientClick={(id) => navigateTo('patient-detail', id)} />;
-      case 'patient-list':
-        return <PatientList onPatientClick={(id) => navigateTo('patient-detail', id)} />;
-      case 'command-center':
-        return <CommandCenter />;
-      case 'patient-detail':
-        return <PatientDetail patientId={selectedPatientId} onBack={() => navigateTo('patient-list')} />;
-      case 'order-entry':
-        return <OrderEntry patientId={selectedPatientId} />;
-      case 'bed-management':
-        return <BedManagement />;
-      case 'outcomes':
-        return <Outcomes />;
+      case 'Dashboard': return <Dashboard navigate={navigateTo} />;
+      case 'CensusBedBoard': return <CensusBedBoard navigate={navigateTo} />;
+      case 'PatientList': return <PatientList navigate={navigateTo} />;
+      case 'PatientDetail': return <PatientDetail patientId={selectedPatientId} navigate={navigateTo} />;
+      case 'ASAMAssessments': return <ASAMAssessments navigate={navigateTo} />;
+      case 'ProgressNotes': return <ProgressNotes navigate={navigateTo} />;
+      case 'TreatmentPlans': return <TreatmentPlans navigate={navigateTo} />;
+      case 'AppointmentCalendar': return <AppointmentCalendar navigate={navigateTo} />;
+      case 'GroupSchedule': return <GroupSchedule navigate={navigateTo} />;
+      case 'RiskDashboard': return <RiskDashboard navigate={navigateTo} />;
+      case 'RecoveryEngagementScore': return <RecoveryEngagementScore navigate={navigateTo} />;
+      case 'ReferralTracker': return <ReferralTracker navigate={navigateTo} />;
+      case 'BedManagement': return <BedManagement navigate={navigateTo} />;
+      case 'AuditCompliance': return <AuditCompliance navigate={navigateTo} />;
+      case 'OutcomeTracking': return <OutcomeTracking navigate={navigateTo} />;
       default:
-        return <Dashboard onPatientClick={(id) => navigateTo('patient-detail', id)} />;
+        return (
+          <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow border border-border">
+            <h2 className="text-2xl font-bold text-navy">{activeScreen}</h2>
+            <p className="text-slate mt-2">Module coming soon in Sunrise OS.</p>
+          </div>
+        );
     }
   };
 
   return (
     <div className="min-h-screen bg-bg flex flex-col font-sans">
       <DemoBanner />
-      <Topbar onMenuClick={() => setSidebarOpen(true)} />
+      <Topbar />
       
-      <div className="flex flex-1 pt-[100px]"> {/* 36px banner + 64px topbar */}
+      <div className="flex flex-1 pt-[calc(var(--banner-height)+var(--topbar-height))]">
         <Sidebar 
-          activeScreen={activeScreen} 
-          onNavigate={(screen) => navigateTo(screen)} 
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
+          currentScreen={activeScreen} 
+          navigate={navigateTo} 
         />
         
-        <main className="flex-1 md:ml-[240px] p-4 md:p-6 pb-20 animate-in fade-in duration-300">
-          {renderScreen()}
+        <main className="flex-1 ml-[var(--nav-width)] p-6 pb-20">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeScreen}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {renderScreen()}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </div>

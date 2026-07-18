@@ -1,99 +1,134 @@
 import React, { useState } from 'react';
-import PatientTable from '@/components/PatientTable';
-import { patients } from '@/data/mockData';
-import { Search, Filter, Download } from 'lucide-react';
+import { MOCK_PATIENTS } from '../data/mockPatients';
+import { FlagBadge } from '../components/ui/FlagBadge';
+import { PatientAvatar } from '../components/ui/PatientAvatar';
+import { AcuityBadge } from '../components/ui/AcuityBadge';
+import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
+import { Screen } from '../App';
+import { Search, Filter, Plus } from 'lucide-react';
 
-interface PatientListProps {
-  onPatientClick: (id: string) => void;
-}
-
-const PatientList: React.FC<PatientListProps> = ({ onPatientClick }) => {
+export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) => void }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [acuityFilter, setAcuityFilter] = useState('All');
-  
-  const filteredPatients = patients.filter(p => {
-    if (acuityFilter !== 'All' && p.acuity !== acuityFilter) return false;
-    if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase()) && !p.room.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
-  });
+
+  const filtered = MOCK_PATIENTS.filter(p => 
+    p.firstName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    p.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.mrn.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="flex flex-col gap-5 max-w-[1400px] mx-auto">
-      
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+    <div className="space-y-6">
+      <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-[22px] font-extrabold text-navy">Patient List</h1>
-          <p className="text-[13px] text-slate-light font-medium mt-1">All active and admitted patients across Metro General.</p>
+          <h1 className="text-2xl font-bold text-navy">Patient List</h1>
+          <p className="text-slate text-sm mt-1">Active Census: {MOCK_PATIENTS.length} patients</p>
         </div>
-        <div className="flex gap-2">
-          <button className="bg-white border border-border text-navy px-4 py-2 rounded-lg text-[12.5px] font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2">
-            <Download size={14} />
-            Export List
-          </button>
-          <button className="bg-gradient-to-r from-sunrise-orange to-sunrise-amber text-white px-4 py-2 rounded-lg text-[12.5px] font-bold shadow-[0_2px_6px_rgba(249,115,22,0.3)] hover:opacity-90 transition-opacity">
-            + New Admission
-          </button>
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="bg-white border border-border rounded-xl p-3 flex flex-wrap items-center gap-3 shadow-sm">
-        <div className="relative flex-1 min-w-[200px] max-w-[300px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-light" />
-          <input 
-            type="text" 
-            placeholder="Search name, room, MRN..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-[12.5px] border border-border rounded-lg bg-bg focus:outline-none focus:border-sunrise-orange focus:ring-2 focus:ring-sunrise-orange/10 transition-all"
-          />
-        </div>
-        
-        <div className="h-6 w-px bg-border hidden sm:block mx-1"></div>
-
-        <select 
-          className="px-3 py-2 text-[12.5px] font-medium border border-border rounded-lg bg-white text-navy focus:outline-none focus:border-sunrise-orange cursor-pointer"
-          value={acuityFilter}
-          onChange={(e) => setAcuityFilter(e.target.value)}
-        >
-          <option value="All">All Acuity Levels</option>
-          <option value="Critical">Critical</option>
-          <option value="High">High</option>
-          <option value="Moderate">Moderate</option>
-          <option value="Routine">Routine</option>
-        </select>
-
-        <select className="px-3 py-2 text-[12.5px] font-medium border border-border rounded-lg bg-white text-navy focus:outline-none focus:border-sunrise-orange cursor-pointer hidden sm:block">
-          <option>All Units</option>
-          <option>3-North ICU</option>
-          <option>4-South PCU</option>
-          <option>Med-Surg</option>
-        </select>
-
-        <select className="px-3 py-2 text-[12.5px] font-medium border border-border rounded-lg bg-white text-navy focus:outline-none focus:border-sunrise-orange cursor-pointer hidden md:block">
-          <option>All Providers</option>
-          <option>Dr. S. Patel</option>
-          <option>Dr. K. Lee</option>
-          <option>Dr. J. Chen</option>
-        </select>
-
-        <select className="px-3 py-2 text-[12.5px] font-medium border border-border rounded-lg bg-white text-navy focus:outline-none focus:border-sunrise-orange cursor-pointer hidden lg:block">
-          <option>Active Status</option>
-          <option>On Hold</option>
-          <option>Discharged</option>
-        </select>
-
-        <button className="ml-auto p-2 text-slate hover:bg-slate-100 rounded-lg border border-transparent hover:border-border transition-all">
-          <Filter size={16} />
+        <button className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium flex items-center gap-2 hover:bg-sunrise-blue-light transition-colors shadow-sm">
+          <Plus className="w-4 h-4" /> Admit Patient
         </button>
       </div>
 
-      {/* Patient Table */}
-      <PatientTable patients={filteredPatients} onPatientClick={onPatientClick} />
+      <div className="bg-white rounded-lg shadow-sm border border-border flex flex-col">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-border flex flex-wrap gap-4 items-center justify-between">
+          <div className="relative w-72">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search by name or MRN..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-bg border border-border rounded text-sm focus:outline-none focus:border-sunrise-blue transition-colors"
+            />
+          </div>
+          <div className="flex gap-2">
+            <select className="bg-bg border border-border rounded text-sm px-3 py-2 text-slate font-medium focus:outline-none">
+              <option>All Programs</option>
+              <option>Residential</option>
+              <option>PHP</option>
+              <option>IOP</option>
+            </select>
+            <button className="flex items-center gap-2 text-sm font-medium text-slate border border-border px-3 py-2 rounded hover:bg-slate-50 transition-colors">
+              <Filter className="w-4 h-4" /> More Filters
+            </button>
+          </div>
+        </div>
 
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-bg text-slate-light font-medium uppercase tracking-wider text-[10px]">
+              <tr>
+                <th className="p-4 pl-6 rounded-tl">Flags</th>
+                <th className="p-4">Client</th>
+                <th className="p-4">Program</th>
+                <th className="p-4">Primary Diagnosis</th>
+                <th className="p-4 text-center">LOS</th>
+                <th className="p-4 text-center">Acuity</th>
+                <th className="p-4 text-center">RES</th>
+                <th className="p-4">Counselor</th>
+                <th className="p-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map(p => (
+                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-4 pl-6">
+                    <div className="flex gap-1 max-w-[60px] flex-wrap">
+                      {p.flags.map((f, i) => <FlagBadge key={i} type={f.type} note={f.note} />)}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <PatientAvatar first={p.firstName} last={p.lastName} program={p.program} size="md" />
+                      <div>
+                        <div 
+                          className="font-bold text-navy hover:text-sunrise-blue cursor-pointer"
+                          onClick={() => navigate('PatientDetail', p.id)}
+                        >
+                          {p.firstName} {p.lastName}
+                        </div>
+                        <div className="text-[10px] text-slate font-mono">{p.mrn}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <span className="text-xs font-semibold text-slate bg-slate-100 px-2 py-1 rounded">{p.program}</span>
+                  </td>
+                  <td className="p-4 max-w-[200px] truncate" title={p.primaryDiagnosis}>
+                    {p.primaryDiagnosis}
+                  </td>
+                  <td className="p-4 text-center font-medium">
+                    {p.los}d
+                  </td>
+                  <td className="p-4 text-center">
+                    <AcuityBadge acuity={p.amaRisk === 'High' ? 'Critical' : (p.amaRisk === 'Med' ? 'High' : 'Routine')} />
+                  </td>
+                  <td className="p-4 text-center">
+                    <RecoveryScoreBadge score={p.recoveryScore} />
+                  </td>
+                  <td className="p-4 text-slate">
+                    {p.counselor.split(',')[0]}
+                  </td>
+                  <td className="p-4">
+                    <button 
+                      onClick={() => navigate('PatientDetail', p.id)}
+                      className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-3 py-1.5 rounded"
+                    >
+                      View Chart
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filtered.length === 0 && (
+            <div className="text-center py-12 text-slate">
+              No patients found matching your search.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
-};
-
-export default PatientList;
+}

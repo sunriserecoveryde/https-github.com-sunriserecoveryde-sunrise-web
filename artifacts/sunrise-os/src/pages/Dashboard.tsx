@@ -1,273 +1,183 @@
 import React from 'react';
-import MetricCard from '@/components/MetricCard';
-import AlertItem from '@/components/AlertItem';
-import OccupancyRing from '@/components/OccupancyRing';
-import PatientTable from '@/components/PatientTable';
-import { patients, alerts, deadlines } from '@/data/mockData';
-import { AlertTriangle, Clock, ArrowRight, Zap, Play, FileText } from 'lucide-react';
+import { MOCK_PATIENTS } from '../data/mockPatients';
+import { MetricCard } from '../components/ui/MetricCard';
+import { OccupancyRing } from '../components/ui/OccupancyRing';
+import { AlertTriangle, Clock, Flag as FlagIcon, ChevronRight } from 'lucide-react';
+import { Screen } from '../App';
+import { FlagBadge } from '../components/ui/FlagBadge';
+import { PatientAvatar } from '../components/ui/PatientAvatar';
+import { AcuityBadge } from '../components/ui/AcuityBadge';
+import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 
-interface DashboardProps {
-  onPatientClick: (id: string) => void;
-}
+export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => void }) {
+  const highRiskPatients = MOCK_PATIENTS.filter(p => p.amaRisk === 'High').slice(0, 8);
 
-const Dashboard: React.FC<DashboardProps> = ({ onPatientClick }) => {
   return (
-    <div className="flex flex-col gap-5 max-w-[1400px] mx-auto">
-      
+    <div className="space-y-6">
       {/* Role Banner */}
-      <div className="bg-routine/5 border border-routine/20 rounded-xl p-3 px-4 flex items-center gap-3">
-        <div className="bg-routine/10 text-routine p-2 rounded-lg">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <div className="bg-white border border-border px-4 py-3 rounded-lg shadow-sm flex items-center justify-between">
+        <div className="font-medium text-navy">
+          <span className="text-sunrise-orange font-bold mr-2">Clinical Director</span>
+          Sunrise Recovery Center
         </div>
-        <div className="flex-1">
-          <div className="text-[14px] font-bold text-navy flex items-center gap-2">
-            Charge Nurse — 3-North ICU 
-            <span className="text-slate-light text-[12px] font-medium hidden sm:inline">| Metro General Hospital</span>
-          </div>
-          <div className="text-[12px] text-slate-light mt-0.5">Shift: 07:00–19:00 (4.5 hrs remaining)</div>
-        </div>
-        <div className="hidden sm:flex items-center gap-2">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success"></span>
-          </span>
-          <span className="text-[11px] font-bold text-success uppercase tracking-wider">Shift Active</span>
+        <div className="flex gap-4 text-sm text-slate">
+          <span>Active Census: <strong className="text-navy">18/22</strong></span>
+          <span>Shift: <strong className="text-navy">Day</strong></span>
         </div>
       </div>
 
-      {/* Cosign Banner */}
-      <div className="bg-gradient-to-r from-moderate/10 to-amber-500/5 border border-moderate/30 rounded-xl p-3 px-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="bg-moderate text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold text-[15px] shadow-sm">
-            3
-          </div>
-          <div>
-            <div className="text-[13px] font-bold text-navy flex items-center gap-1.5">
-              <AlertTriangle size={14} className="text-moderate" />
-              Orders Pending Co-Signature
-            </div>
-            <div className="text-[11.5px] text-slate-light">Dr. Patel requested co-sign on high-risk medications</div>
-          </div>
+      {/* Alerts */}
+      <div className="space-y-2">
+        <div className="bg-high-bg border border-high/20 px-4 py-3 rounded-lg flex items-center gap-3 shadow-sm">
+          <AlertTriangle className="w-5 h-5 text-high" />
+          <span className="text-sm font-medium text-navy"><strong>AMA Risk Alert:</strong> 2 clients flagged HIGH for early departure</span>
         </div>
-        <button className="bg-white border border-moderate/30 text-moderate hover:bg-moderate/5 px-4 py-1.5 rounded-lg text-[12px] font-bold transition-colors">
-          Review Now
-        </button>
+        <div className="bg-moderate-bg border border-moderate/20 px-4 py-3 rounded-lg flex items-center gap-3 shadow-sm">
+          <Clock className="w-5 h-5 text-moderate" />
+          <span className="text-sm font-medium text-navy">4 co-sign requests pending from primary counselors</span>
+        </div>
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <MetricCard 
-          label="Unit Census" 
-          value="24/28" 
-          subtext="85.7% Occupancy" 
-          color="orange" 
-        />
-        <MetricCard 
-          label="Critical Alerts" 
-          value="3" 
-          trend="up" 
-          trendValue="+1" 
-          trendGood={false}
-          color="red" 
-        />
-        <MetricCard 
-          label="Pending Orders" 
-          value="7" 
-          color="blue" 
-          subtext="4 STAT, 3 Routine"
-        />
-        <MetricCard 
-          label="Avg LOS (Days)" 
-          value="4.2" 
-          trend="down" 
-          trendValue="-0.3" 
-          color="teal" 
-        />
-        <MetricCard 
-          label="Discharges Today" 
-          value="2" 
-          subtext="1 expected, 1 actual"
-          color="green" 
-        />
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <MetricCard title="Census" value="18/22" subtitle="81.8% Occupancy" color="orange" />
+        <MetricCard title="AMA Risk" value="2" subtitle="High Risk Clients" color="red" />
+        <MetricCard title="Pending Co-signs" value="4" subtitle="Action Required" color="amber" />
+        <MetricCard title="Avg LOS" value="18.4" subtitle="Days" trend={{ value: '1.2', direction: 'down' }} color="blue" />
+        <MetricCard title="Discharges" value="3" subtitle="This Week" color="green" />
       </div>
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        
-        {/* Left Column */}
-        <div className="lg:col-span-1 flex flex-col gap-5">
-          
-          {/* Occupancy Card */}
-          <div className="bg-white border border-border rounded-xl p-5 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate">Bed Status</h3>
-              <button className="text-[11px] font-bold text-sunrise-orange hover:underline">Manage</button>
-            </div>
-            
-            <div className="flex items-center gap-5 mb-6">
-              <OccupancyRing percent={85.7} label="Occupied" />
-              <div className="flex-1 flex flex-col gap-2">
-                <div className="flex justify-between items-center text-[12px]">
-                  <span className="text-slate-light">Occupied</span>
-                  <span className="font-bold text-navy">24</span>
+      {/* Main 2-Col */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-border">
+            <h3 className="font-bold text-navy mb-4">Program Utilization</h3>
+            <div className="flex items-center gap-6 mb-6">
+              <OccupancyRing percentage={81.8} />
+              <div className="flex-1 space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium text-slate">Residential</span>
+                    <span className="text-navy font-bold">8/10</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2">
+                    <div className="bg-sunrise-blue h-2 rounded-full" style={{ width: '80%' }}></div>
+                  </div>
                 </div>
-                <div className="w-full h-1 bg-border rounded-full overflow-hidden">
-                  <div className="h-full bg-sunrise-orange w-[85.7%]"></div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium text-slate">PHP</span>
+                    <span className="text-navy font-bold">5/6</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2">
+                    <div className="bg-sunrise-orange h-2 rounded-full" style={{ width: '83%' }}></div>
+                  </div>
                 </div>
-                
-                <div className="flex justify-between items-center text-[12px] mt-1">
-                  <span className="text-slate-light">Available</span>
-                  <span className="font-bold text-navy">4</span>
-                </div>
-                <div className="w-full h-1 bg-border rounded-full overflow-hidden">
-                  <div className="h-full bg-success w-[14.3%]"></div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium text-slate">IOP</span>
+                    <span className="text-navy font-bold">5/6</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2">
+                    <div className="bg-purple h-2 rounded-full" style={{ width: '83%' }}></div>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <div className="space-y-3">
-              {[
-                { label: 'ICU', current: 8, max: 8, color: 'bg-critical' },
-                { label: 'PCU', current: 6, max: 8, color: 'bg-high' },
-                { label: 'Med-Surg', current: 10, max: 12, color: 'bg-moderate' },
-              ].map(unit => (
-                <div key={unit.label}>
-                  <div className="flex justify-between text-[11px] font-bold text-navy mb-1">
-                    <span>{unit.label}</span>
-                    <span>{unit.current}/{unit.max}</span>
-                  </div>
-                  <div className="w-full h-2 bg-bg border border-border rounded-full overflow-hidden">
-                    <div className={`h-full ${unit.color}`} style={{ width: `${(unit.current/unit.max)*100}%` }}></div>
-                  </div>
-                </div>
-              ))}
+            
+            <h3 className="font-bold text-navy mb-3 mt-8">Recovery Engagement Score</h3>
+            <div className="bg-bg p-4 rounded-md border border-border">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate">Average Score</span>
+                <span className="text-xl font-bold text-navy">72/100</span>
+              </div>
+              <div className="flex h-3 rounded-full overflow-hidden mt-2">
+                <div className="bg-critical" style={{ width: '10%' }} title="Low: 10%"></div>
+                <div className="bg-sunrise-amber" style={{ width: '30%' }} title="Med: 30%"></div>
+                <div className="bg-success" style={{ width: '60%' }} title="High: 60%"></div>
+              </div>
             </div>
           </div>
-
-          {/* Active Alerts */}
-          <div className="bg-white border border-border rounded-xl p-5 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate flex items-center gap-2">
-                <Zap size={14} className="text-critical" />
-                Active Alerts
-              </h3>
-            </div>
-            <div className="flex flex-col gap-2">
-              {alerts.map(a => (
-                <AlertItem key={a.id} {...a} />
-              ))}
-            </div>
-          </div>
-
         </div>
 
-        {/* Right Column */}
-        <div className="lg:col-span-2 flex flex-col gap-5">
-          
-          {/* AI Brief */}
-          <div className="bg-gradient-to-br from-navy to-navy-mid border border-sunrise-orange/30 rounded-xl p-6 relative overflow-hidden shadow-md">
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-sunrise-orange via-sunrise-amber to-purple"></div>
-            
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sunrise-orange to-sunrise-amber flex items-center justify-center text-white">
-                <Zap size={16} className="fill-current" />
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-navy p-6 rounded-lg shadow-sm border-l-4 border-l-sunrise-orange relative overflow-hidden text-white">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinelinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            </div>
+            <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+              <span className="text-sunrise-orange">☀</span> AI Clinical Brief
+            </h3>
+            <p className="text-slate-300 text-sm mb-4">Generated summary of today's critical action items across the census.</p>
+            <div className="space-y-3">
+              <div className="bg-white/10 p-3 rounded text-sm">
+                <strong className="text-sunrise-orange">Marcus Webb (Res):</strong> High AMA risk reported during morning group. Expressed severe cravings. Dr. Chen adjusting Suboxone. Action: Counselor Sarah Jenkins needs to conduct 1:1 check-in before lunch.
               </div>
-              <div>
-                <h3 className="text-[14px] font-bold text-white">AI Shift Summary</h3>
-                <div className="text-[11px] text-white/40 font-medium">Generated 10m ago based on current unit data</div>
+              <div className="bg-white/10 p-3 rounded text-sm">
+                <strong className="text-sunrise-orange">Samantha Choi (Res):</strong> Restricted meals for last 24h. Psychiatric flags active. Action: Schedule immediate consult with Dr. Stone; dietary monitoring required.
+              </div>
+              <div className="bg-white/10 p-3 rounded text-sm">
+                <strong className="text-sunrise-orange">Devon Patel (Res):</strong> Recent UA returned positive for Methamphetamine. Mild paranoia noted in nursing notes. Action: Hold from group therapy today, initiate behavioral protocol.
               </div>
             </div>
-            
-            <p className="text-[14px] text-white/80 leading-relaxed mb-5">
-              Unit is currently running at <strong className="text-sunrise-amber">high capacity (85.7%)</strong> with the ICU fully saturated. 
-              Acuity is trending higher than yesterday, with 3 new critical alerts in the last hour. 
-              <strong className="text-sunrise-amber"> Staffing is balanced</strong>, but closely monitor assignments for S. Jenkins given two high-acuity admissions. 
-              Recommend expediting the two pending discharges to open beds for expected ED transfers.
-            </p>
-            
-            <div className="flex items-center gap-3">
-              <button className="bg-sunrise-orange/15 border border-sunrise-orange/40 text-sunrise-amber hover:bg-sunrise-orange/25 px-4 py-2 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-2">
-                <FileText size={14} />
-                View Detailed Report
+          </div>
+
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-border">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-navy">Priority Clients</h3>
+              <button onClick={() => navigate('PatientList')} className="text-sm text-sunrise-blue font-medium hover:underline flex items-center">
+                View All <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-          </div>
-
-          {/* Grid for Deadlines & Doc Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            
-            {/* Deadlines */}
-            <div className="bg-white border border-border rounded-xl p-5 shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate flex items-center gap-2">
-                  <Clock size={14} />
-                  Upcoming Deadlines
-                </h3>
-              </div>
-              <div className="flex flex-col gap-2">
-                {deadlines.map(d => (
-                  <div key={d.id} className="flex items-center p-2.5 rounded-lg border border-border bg-bg gap-3">
-                    <div className={`w-2 h-2 rounded-full bg-${d.color === 'red' ? 'critical' : d.color === 'orange' ? 'high' : d.color === 'amber' ? 'moderate' : 'routine'}`}></div>
-                    <div className="flex-1 text-[13px] font-semibold text-navy truncate">{d.task}</div>
-                    <div className={`text-[11px] font-bold whitespace-nowrap ${d.status === 'urg' ? 'text-critical' : d.status === 'soon' ? 'text-high' : 'text-slate-light'}`}>
-                      {d.due}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-bg text-slate-light font-medium uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="p-3 pl-4 rounded-tl">Flags</th>
+                    <th className="p-3">Client</th>
+                    <th className="p-3">Prog</th>
+                    <th className="p-3">Acuity</th>
+                    <th className="p-3">RES</th>
+                    <th className="p-3">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {highRiskPatients.map(p => (
+                    <tr key={p.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => navigate('PatientDetail', p.id)}>
+                      <td className="p-3 pl-4">
+                        <div className="flex gap-1">
+                          {p.flags.map((f, i) => <FlagBadge key={i} type={f.type} note={f.note} />)}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <PatientAvatar first={p.firstName} last={p.lastName} program={p.program} size="sm" />
+                          <div>
+                            <div className="font-bold text-navy">{p.firstName} {p.lastName}</div>
+                            <div className="text-[10px] text-slate">{p.mrn}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <span className="text-xs font-semibold text-slate">{p.program}</span>
+                      </td>
+                      <td className="p-3">
+                        <AcuityBadge acuity={p.amaRisk === 'High' ? 'Critical' : 'High'} />
+                      </td>
+                      <td className="p-3">
+                        <RecoveryScoreBadge score={p.recoveryScore} />
+                      </td>
+                      <td className="p-3">
+                        <button className="text-sunrise-blue text-xs font-medium hover:underline">Review Chart</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-
-            {/* Doc Status */}
-            <div className="bg-white border border-border rounded-xl p-5 shadow-sm flex flex-col">
-              <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate mb-4">Documentation Status</h3>
-              <div className="flex items-center gap-5 flex-1">
-                <div className="relative w-[80px] h-[80px] shrink-0">
-                  <svg className="-rotate-90 w-full h-full" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" className="stroke-border" strokeWidth="12" fill="none" />
-                    <circle cx="50" cy="50" r="40" className="stroke-success" strokeWidth="12" fill="none" strokeDasharray="251.2" strokeDashoffset="32.6" strokeLinecap="round" />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-[18px] font-extrabold text-navy leading-none">87%</span>
-                  </div>
-                </div>
-                <div className="flex-1 flex flex-col gap-2">
-                  <div className="flex justify-between items-center text-[12px] border-b border-border pb-1">
-                    <span className="font-semibold text-navy">Assessments</span>
-                    <span className="text-success font-bold">22/24</span>
-                  </div>
-                  <div className="flex justify-between items-center text-[12px] border-b border-border pb-1">
-                    <span className="font-semibold text-navy">Care Plans</span>
-                    <span className="text-success font-bold">20/24</span>
-                  </div>
-                  <div className="flex justify-between items-center text-[12px] pb-1">
-                    <span className="font-semibold text-navy">Education</span>
-                    <span className="text-moderate font-bold">14/24</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </div>
-
         </div>
       </div>
-
-      {/* Patient Table */}
-      <div className="mt-2">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-[16px] font-extrabold text-navy">My Patients</h2>
-          <button 
-            onClick={() => {}} 
-            className="text-[12px] font-bold text-sunrise-blue hover:text-sunrise-blue/80 flex items-center gap-1"
-          >
-            View All Patients <ArrowRight size={14} />
-          </button>
-        </div>
-        <PatientTable patients={patients.slice(0, 8)} onPatientClick={onPatientClick} />
-      </div>
-
     </div>
   );
-};
-
-export default Dashboard;
+}
