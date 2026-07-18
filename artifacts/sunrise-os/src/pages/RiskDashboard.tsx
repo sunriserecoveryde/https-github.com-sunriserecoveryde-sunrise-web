@@ -7,7 +7,7 @@ import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-export function RiskDashboard({ navigate }: { navigate: (s: Screen) => void }) {
+export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: string) => void }) {
   const highRisk = MOCK_PATIENTS.filter(p => p.amaRisk === 'High');
   const medRisk = MOCK_PATIENTS.filter(p => p.amaRisk === 'Med');
 

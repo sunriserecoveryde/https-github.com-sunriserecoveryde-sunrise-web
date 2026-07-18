@@ -5,7 +5,7 @@ import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { TrendingUp, Info, Activity } from 'lucide-react';
 
-export function RecoveryEngagementScore({ navigate }: { navigate: (s: Screen) => void }) {
+export function RecoveryEngagementScore({ navigate }: { navigate: (s: Screen, patientId?: string) => void }) {
   const sortedPatients = [...MOCK_PATIENTS].sort((a, b) => b.recoveryScore - a.recoveryScore);
 
   return (

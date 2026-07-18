@@ -4,7 +4,7 @@ import { LayoutDashboard, Users, UserPlus, LogOut, FileText, ClipboardList, Chec
 
 interface SidebarProps {
   activeScreen: Screen;
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, patientId?: string) => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -56,36 +56,36 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, onNavigate, isOpen, onC
 
         <div className="flex flex-col gap-0.5">
           <SectionLabel label="Overview" />
-          <NavItem screen="dashboard" icon={LayoutDashboard} label="Dashboard" />
-          <NavItem screen="command-center" icon={Activity} label="Command Center" />
+          <NavItem screen="Dashboard" icon={LayoutDashboard} label="Dashboard" />
+          <NavItem screen="Dashboard" icon={Activity} label="Command Center" />
 
           <SectionLabel label="Clinical" />
-          <NavItem screen="patient-list" icon={Users} label="Patient List" badge={24} />
-          <NavItem screen="dashboard" icon={UserPlus} label="Admissions" />
-          <NavItem screen="dashboard" icon={LogOut} label="Discharges" />
+          <NavItem screen="PatientList" icon={Users} label="Patient List" badge={24} />
+          <NavItem screen="Admissions" icon={UserPlus} label="Admissions" />
+          <NavItem screen="Discharges" icon={LogOut} label="Discharges" />
 
           <SectionLabel label="Documentation" />
-          <NavItem screen="patient-detail" icon={FileText} label="Chart Review" />
-          <NavItem screen="order-entry" icon={ClipboardList} label="Order Entry" badge={7} amBadge />
-          <NavItem screen="dashboard" icon={CheckSquare} label="Co-sign Queue" badge={3} />
+          <NavItem screen="ChartReview" icon={FileText} label="Chart Review" />
+          <NavItem screen="ProgressNotes" icon={ClipboardList} label="Progress Notes" badge={7} amBadge />
+          <NavItem screen="CosignQueue" icon={CheckSquare} label="Co-sign Queue" badge={3} />
 
           <SectionLabel label="Operations" />
-          <NavItem screen="bed-management" icon={BedDouble} label="Bed Management" />
-          <NavItem screen="dashboard" icon={UserCheck} label="Staff Assignments" />
-          <NavItem screen="dashboard" icon={AlertTriangle} label="Incident Reports" />
+          <NavItem screen="BedManagement" icon={BedDouble} label="Bed Management" />
+          <NavItem screen="Dashboard" icon={UserCheck} label="Staff Assignments" />
+          <NavItem screen="Dashboard" icon={AlertTriangle} label="Incident Reports" />
 
           <SectionLabel label="Analytics" />
-          <NavItem screen="outcomes" icon={Award} label="Outcomes" />
-          <NavItem screen="dashboard" icon={Activity} label="Quality Metrics" />
+          <NavItem screen="OutcomeTracking" icon={Award} label="Outcomes" />
+          <NavItem screen="RiskDashboard" icon={Activity} label="Risk Dashboard" />
 
           <SectionLabel label="Compliance" />
-          <NavItem screen="dashboard" icon={ShieldCheck} label="Audits" />
-          <NavItem screen="dashboard" icon={BookOpen} label="Training" badge={2} />
+          <NavItem screen="AuditCompliance" icon={ShieldCheck} label="Audits" />
+          <NavItem screen="Training" icon={BookOpen} label="Training" badge={2} />
         </div>
 
         <div className="mt-8 border-t border-white/5 pt-2">
-          <NavItem screen="dashboard" icon={Settings} label="Settings" />
-          <NavItem screen="dashboard" icon={HelpCircle} label="Help & Support" />
+          <NavItem screen="Dashboard" icon={Settings} label="Settings" />
+          <NavItem screen="Dashboard" icon={HelpCircle} label="Help & Support" />
         </div>
       </aside>
     </>
