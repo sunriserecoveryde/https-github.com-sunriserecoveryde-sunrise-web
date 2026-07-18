@@ -14,7 +14,9 @@ import { GroupSchedule } from './pages/GroupSchedule';
 import { RiskDashboard } from './pages/RiskDashboard';
 import { RecoveryEngagementScore } from './pages/RecoveryEngagementScore';
 import { ReferralTracker } from './pages/ReferralTracker';
-import { BedManagement, AuditCompliance, OutcomeTracking } from './pages/Stubs';
+import { BedManagement } from './pages/BedManagement';
+import { AuditCompliance } from './pages/AuditCompliance';
+import { OutcomeTracking } from './pages/OutcomeTracking';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export type Screen = 

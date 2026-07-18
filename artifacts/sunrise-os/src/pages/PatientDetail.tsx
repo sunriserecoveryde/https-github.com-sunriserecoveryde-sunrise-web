@@ -1,47 +1,113 @@
 import React, { useState } from 'react';
 import { MOCK_PATIENTS } from '../data/mockPatients';
+import { getPatientMedications } from '../data/mockMedications';
+import { getPatientVitals } from '../data/mockVitals';
+import { getPatientLabs, LAB_PANEL_ORDER } from '../data/mockLabs';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { FlagBadge } from '../components/ui/FlagBadge';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 import { CustomButtons } from '../components/ui/CustomButtons';
-import { ArrowLeft, Edit, Save, Plus, FileText, Download, Calendar, Activity, Pill, User } from 'lucide-react';
+import {
+  ArrowLeft, Activity, FileText, Pill, Users, HeartPulse,
+  FlaskConical, BookOpen, FolderOpen, CheckCircle2, XCircle,
+  AlertCircle, Clock, Upload, Download
+} from 'lucide-react';
 import { Screen } from '../App';
 
-export function PatientDetail({ patientId, navigate }: { patientId: string | null, navigate: (s: Screen) => void }) {
+export function PatientDetail({ patientId, navigate }: { patientId: string | null; navigate: (s: Screen, id?: string) => void }) {
   const patient = MOCK_PATIENTS.find(p => p.id === patientId) || MOCK_PATIENTS[0];
   const [activeTab, setActiveTab] = useState('Overview');
   const [isComposingNote, setIsComposingNote] = useState(false);
   const [noteFormat, setNoteFormat] = useState('BIRP');
   const [noteContent, setNoteContent] = useState('');
 
-  const handleQuickInsert = (text: string) => {
-    setNoteContent(prev => prev + text);
-  };
+  const meds = getPatientMedications(patient.id);
+  const vitals = getPatientVitals(patient.id);
+  const labs = getPatientLabs(patient.id);
+
+  const handleQuickInsert = (text: string) => setNoteContent(prev => prev + text);
 
   const tabs = [
-    'Overview', 'ASAM Assessment', 'Progress Notes', 'Treatment Plan', 
-    'Medications', 'Group Notes', 'Vitals', 'Labs', 'History', 'Documents'
+    { id: 'Overview', icon: <Activity className="w-3.5 h-3.5" /> },
+    { id: 'ASAM Assessment', icon: <FileText className="w-3.5 h-3.5" /> },
+    { id: 'Progress Notes', icon: <FileText className="w-3.5 h-3.5" /> },
+    { id: 'Treatment Plan', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+    { id: 'Medications', icon: <Pill className="w-3.5 h-3.5" /> },
+    { id: 'Group Notes', icon: <Users className="w-3.5 h-3.5" /> },
+    { id: 'Vitals', icon: <HeartPulse className="w-3.5 h-3.5" /> },
+    { id: 'Labs', icon: <FlaskConical className="w-3.5 h-3.5" /> },
+    { id: 'History', icon: <BookOpen className="w-3.5 h-3.5" /> },
+    { id: 'Documents', icon: <FolderOpen className="w-3.5 h-3.5" /> },
   ];
+
+  // ── Group attendance generated from LOS ──────────────────────────────────
+  const groupSessions = (() => {
+    const groups = [
+      { name: 'Morning Process Group', facilitator: 'Sarah Jenkins, LPC', topic: 'Coping Skills & Triggers', time: '9:00 AM' },
+      { name: 'Psychoeducation', facilitator: 'David Odom, LMFT', topic: 'Disease Model of Addiction', time: '10:30 AM' },
+      { name: 'Relapse Prevention', facilitator: 'Maria Gonzales, LCSW', topic: 'High-Risk Situations', time: '1:00 PM' },
+      { name: 'Evening Reflection', facilitator: 'Sarah Jenkins, LPC', topic: 'Gratitude & Accountability', time: '7:00 PM' },
+      { name: 'Trauma-Informed Care', facilitator: 'Dr. Allen Hughes', topic: 'PTSD & Co-occurring Disorders', time: '2:30 PM' },
+      { name: 'Family Systems', facilitator: 'David Odom, LMFT', topic: 'Communication & Boundaries', time: '11:00 AM' },
+    ];
+    const statuses: Array<'Present' | 'Absent' | 'Excused'> = ['Present', 'Present', 'Present', 'Absent', 'Present', 'Excused', 'Present', 'Present'];
+    const sessions: Array<{ id: string; date: string; name: string; facilitator: string; topic: string; time: string; status: 'Present' | 'Absent' | 'Excused'; note: string }> = [];
+    const admitMs = new Date('2023-10-14').getTime();
+    for (let day = 0; day < Math.min(patient.los, 10); day++) {
+      const d = new Date(admitMs + day * 86400000);
+      const dateStr = d.toISOString().slice(0, 10);
+      const groupsToday = day % 3 === 0 ? [groups[0], groups[2]] : day % 3 === 1 ? [groups[1], groups[3]] : [groups[4]];
+      groupsToday.forEach((g, gi) => {
+        const statusIdx = (day + gi) % statuses.length;
+        sessions.push({
+          id: `gs-${day}-${gi}`,
+          date: dateStr,
+          ...g,
+          status: statuses[statusIdx],
+          note: statuses[statusIdx] === 'Absent'
+            ? 'Client did not attend. BHT noted client remained in room.'
+            : statuses[statusIdx] === 'Excused'
+            ? 'Client excused — medical appointment with Dr. Chen.'
+            : 'Client participated appropriately. Shared regarding cravings.',
+        });
+      });
+    }
+    return sessions.sort((a, b) => b.date.localeCompare(a.date));
+  })();
+
+  const attendedCount = groupSessions.filter(s => s.status === 'Present').length;
+  const attendancePct = groupSessions.length > 0 ? Math.round((attendedCount / groupSessions.length) * 100) : 0;
+
+  // ── Lab panels ────────────────────────────────────────────────────────────
+  const panelsInOrder = LAB_PANEL_ORDER.filter(p => labs.some(l => l.panel === p));
+  const flagColor: Record<string, string> = {
+    Normal: 'text-success bg-success/10',
+    High: 'text-sunrise-amber bg-sunrise-amber/10',
+    Low: 'text-sunrise-blue bg-sunrise-blue/10',
+    Critical: 'text-critical bg-critical/10',
+    Positive: 'text-critical bg-critical/10',
+    Negative: 'text-success bg-success/10',
+    Pending: 'text-slate bg-slate-100',
+  };
 
   return (
     <div className="flex flex-col h-[calc(100vh-var(--topbar-height)-var(--banner-height)-48px)]">
       {/* Header */}
       <div className="bg-gradient-to-r from-navy to-navy-mid rounded-t-lg p-6 text-white shadow-sm flex-shrink-0">
-        <button 
+        <button
           onClick={() => navigate('PatientList')}
           className="flex items-center gap-2 text-slate-300 hover:text-white text-sm font-medium mb-4 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Patient List
         </button>
-        
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-5">
             <PatientAvatar first={patient.firstName} last={patient.lastName} program={patient.program} size="xl" />
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-3xl font-bold">{patient.firstName} {patient.lastName}</h1>
-                <AcuityBadge acuity={patient.amaRisk === 'High' ? 'Critical' : (patient.amaRisk === 'Med' ? 'High' : 'Routine')} />
+                <AcuityBadge acuity={patient.amaRisk === 'High' ? 'Critical' : patient.amaRisk === 'Med' ? 'High' : 'Routine'} />
                 <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded font-semibold border border-white/10">{patient.program}</span>
               </div>
               <div className="flex items-center gap-4 text-sm text-slate-300 font-medium">
@@ -58,66 +124,57 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
               </div>
             </div>
           </div>
-          
           <div className="text-right">
             <div className="mb-2">
               <span className="text-slate-300 text-sm font-medium mr-3">Recovery Engagement Score</span>
               <RecoveryScoreBadge score={patient.recoveryScore} size="lg" />
             </div>
-            <div className="text-sm text-slate-300 font-medium">
-              Exp. Discharge: {patient.expectedDischarge}
-            </div>
+            <div className="text-sm text-slate-300 font-medium">Exp. Discharge: {patient.expectedDischarge}</div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-x border-border px-4 flex gap-6 shadow-sm overflow-x-auto no-scrollbar flex-shrink-0">
+      <div className="bg-white border-b border-x border-border px-4 flex gap-0 shadow-sm overflow-x-auto no-scrollbar flex-shrink-0">
         {tabs.map(tab => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`py-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
-              activeTab === tab 
-                ? 'border-sunrise-orange text-sunrise-orange' 
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 py-3 px-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
+              activeTab === tab.id
+                ? 'border-sunrise-orange text-sunrise-orange'
                 : 'border-transparent text-slate hover:text-navy hover:border-slate-300'
             }`}
           >
-            {tab}
+            {tab.icon} {tab.id}
           </button>
         ))}
       </div>
 
-      {/* Content Area */}
+      {/* Content */}
       <div className="flex-1 bg-white border-x border-b border-border rounded-b-lg p-6 overflow-y-auto no-scrollbar">
+
+        {/* ── OVERVIEW ── */}
         {activeTab === 'Overview' && (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-bg border border-border p-4 rounded-lg">
-                <div className="text-slate-light text-xs font-semibold uppercase tracking-wider mb-1">Current Mood</div>
-                <div className="text-3xl font-bold text-navy">{patient.mood}<span className="text-base text-slate font-medium">/10</span></div>
-              </div>
-              <div className="bg-bg border border-border p-4 rounded-lg">
-                <div className="text-slate-light text-xs font-semibold uppercase tracking-wider mb-1">Cravings</div>
-                <div className="text-3xl font-bold text-navy">{patient.craving}<span className="text-base text-slate font-medium">/10</span></div>
-              </div>
-              <div className="bg-bg border border-border p-4 rounded-lg">
-                <div className="text-slate-light text-xs font-semibold uppercase tracking-wider mb-1">Last UA</div>
-                <div className={`text-lg font-bold ${patient.lastUa === 'Negative' ? 'text-success' : 'text-critical'}`}>
-                  {patient.lastUa}
+              {[
+                { label: 'Current Mood', value: `${patient.mood}/10`, color: patient.mood >= 6 ? 'text-success' : patient.mood >= 4 ? 'text-sunrise-amber' : 'text-critical' },
+                { label: 'Cravings', value: `${patient.craving}/10`, color: patient.craving >= 7 ? 'text-critical' : patient.craving >= 4 ? 'text-sunrise-amber' : 'text-success' },
+                { label: 'Last UA', value: patient.lastUa, color: patient.lastUa === 'Negative' ? 'text-success' : 'text-critical' },
+                { label: 'Next Appt', value: patient.nextAppointment, color: 'text-navy' },
+              ].map(card => (
+                <div key={card.label} className="bg-bg border border-border p-4 rounded-lg">
+                  <div className="text-slate-light text-xs font-semibold uppercase tracking-wider mb-1">{card.label}</div>
+                  <div className={`text-2xl font-bold ${card.color}`}>{card.value}</div>
                 </div>
-              </div>
-              <div className="bg-bg border border-border p-4 rounded-lg">
-                <div className="text-slate-light text-xs font-semibold uppercase tracking-wider mb-1">Next Appt</div>
-                <div className="text-lg font-bold text-navy">{patient.nextAppointment}</div>
-              </div>
+              ))}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
                 <h3 className="text-lg font-bold text-navy mb-4 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-sunrise-blue" />
-                  ASAM Dimensions Summary
+                  <Activity className="w-5 h-5 text-sunrise-blue" /> ASAM Dimensions Summary
                 </h3>
                 <div className="space-y-3">
                   {[
@@ -129,20 +186,11 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
                     { d: 6, label: 'Recovery Environment', score: patient.asam.d6 },
                   ].map(dim => (
                     <div key={dim.d} className="flex items-center gap-4 text-sm">
-                      <div className="w-8 h-8 rounded bg-bg border border-border flex items-center justify-center font-bold text-navy">
-                        D{dim.d}
-                      </div>
+                      <div className="w-8 h-8 rounded bg-bg border border-border flex items-center justify-center font-bold text-navy">D{dim.d}</div>
                       <div className="flex-1 text-slate font-medium">{dim.label}</div>
                       <div className="flex gap-1">
                         {[1, 2, 3, 4].map(s => (
-                          <div 
-                            key={s} 
-                            className={`w-8 h-2 rounded-sm ${
-                              s <= dim.score 
-                                ? (dim.score >= 3 ? 'bg-critical' : dim.score === 2 ? 'bg-sunrise-amber' : 'bg-success')
-                                : 'bg-slate-100'
-                            }`}
-                          />
+                          <div key={s} className={`w-8 h-2 rounded-sm ${s <= dim.score ? (dim.score >= 3 ? 'bg-critical' : dim.score === 2 ? 'bg-sunrise-amber' : 'bg-success') : 'bg-slate-100'}`} />
                         ))}
                       </div>
                     </div>
@@ -153,17 +201,12 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-navy flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-sunrise-blue" />
-                    Recent Notes
+                    <FileText className="w-5 h-5 text-sunrise-blue" /> Recent Notes
                   </h3>
-                  <button 
-                    onClick={() => { setActiveTab('Progress Notes'); setIsComposingNote(true); }}
-                    className="text-sm text-sunrise-blue font-medium hover:underline"
-                  >
+                  <button onClick={() => { setActiveTab('Progress Notes'); setIsComposingNote(true); }} className="text-sm text-sunrise-blue font-medium hover:underline">
                     + Quick Note
                   </button>
                 </div>
-                
                 {patient.notes.length > 0 ? (
                   <div className="space-y-4">
                     {patient.notes.slice(0, 3).map(note => (
@@ -178,15 +221,14 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center p-8 bg-bg rounded-lg border border-dashed border-border text-slate">
-                    No recent notes.
-                  </div>
+                  <div className="text-center p-8 bg-bg rounded-lg border border-dashed border-border text-slate">No recent notes.</div>
                 )}
               </div>
             </div>
           </div>
         )}
 
+        {/* ── ASAM ASSESSMENT ── */}
         {activeTab === 'ASAM Assessment' && (
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-sunrise-blue/10 border border-sunrise-blue/20 p-4 rounded-lg flex items-center justify-between">
@@ -194,19 +236,16 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
                 <h3 className="font-bold text-sunrise-blue text-lg">Recommended Level of Care</h3>
                 <p className="text-slate text-sm">Based on most recent multidimensional assessment</p>
               </div>
-              <div className="text-2xl font-bold text-sunrise-blue bg-white px-4 py-2 rounded shadow-sm">
-                Residential (3.7)
-              </div>
+              <div className="text-2xl font-bold text-sunrise-blue bg-white px-4 py-2 rounded shadow-sm">Residential (3.7)</div>
             </div>
-
             {[
-              { d: 1, label: 'Acute Intoxication & Withdrawal Potential', score: patient.asam.d1, text: "Client indicates moderate to severe withdrawal potential requiring medical monitoring." },
-              { d: 2, label: 'Biomedical Conditions & Complications', score: patient.asam.d2, text: "Stable biomedical conditions. Routine monitoring required." },
-              { d: 3, label: 'Emotional, Behavioral & Cognitive Conditions', score: patient.asam.d3, text: "Significant emotional instability. Diagnosed with Major Depressive Disorder. Symptoms interfere with recovery." },
-              { d: 4, label: 'Readiness to Change', score: patient.asam.d4, text: "Client exhibits external motivation (court-ordered) but internal motivation is currently low to moderate." },
-              { d: 5, label: 'Relapse, Continued Use & Continued Problem Potential', score: patient.asam.d5, text: "High risk of relapse without structured environment. Previous attempts at outpatient treatment have failed." },
-              { d: 6, label: 'Recovery & Living Environment', score: patient.asam.d6, text: "Current living environment is unsupportive of recovery. Substance use prevalent in household." },
-            ].map((dim) => (
+              { d: 1, label: 'Acute Intoxication & Withdrawal Potential', score: patient.asam.d1, text: 'Client indicates moderate to severe withdrawal potential requiring medical monitoring.' },
+              { d: 2, label: 'Biomedical Conditions & Complications', score: patient.asam.d2, text: 'Stable biomedical conditions. Routine monitoring required.' },
+              { d: 3, label: 'Emotional, Behavioral & Cognitive Conditions', score: patient.asam.d3, text: 'Significant emotional instability. Diagnosed with co-occurring psychiatric condition. Symptoms interfere with recovery.' },
+              { d: 4, label: 'Readiness to Change', score: patient.asam.d4, text: 'Client exhibits mixed motivation. Internal motivation is currently low to moderate; external drivers present.' },
+              { d: 5, label: 'Relapse, Continued Use & Continued Problem Potential', score: patient.asam.d5, text: 'High risk of relapse without structured environment. Previous attempts at outpatient treatment have failed.' },
+              { d: 6, label: 'Recovery & Living Environment', score: patient.asam.d6, text: 'Current living environment is unsupportive of recovery. Substance use prevalent in social network.' },
+            ].map(dim => (
               <div key={dim.d} className="border border-border rounded-lg overflow-hidden">
                 <div className="bg-bg px-4 py-3 border-b border-border flex justify-between items-center">
                   <div className="font-bold text-navy flex items-center gap-3">
@@ -214,23 +253,18 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
                     {dim.label}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate">Severity Rating:</span>
-                    <span className={`px-2 py-0.5 rounded text-sm font-bold text-white ${
-                      dim.score >= 3 ? 'bg-critical' : dim.score === 2 ? 'bg-sunrise-amber' : 'bg-success'
-                    }`}>{dim.score}/4</span>
+                    <span className="text-sm font-medium text-slate">Severity:</span>
+                    <span className={`px-2 py-0.5 rounded text-sm font-bold text-white ${dim.score >= 3 ? 'bg-critical' : dim.score === 2 ? 'bg-sunrise-amber' : 'bg-success'}`}>{dim.score}/4</span>
                   </div>
                 </div>
                 <div className="p-4">
-                  <textarea 
-                    className="w-full text-sm text-slate border border-border rounded p-3 focus:outline-none focus:border-sunrise-blue min-h-[100px]"
-                    defaultValue={dim.text}
-                  />
+                  <textarea className="w-full text-sm text-slate border border-border rounded p-3 focus:outline-none focus:border-sunrise-blue min-h-[100px]" defaultValue={dim.text} />
                   <div className="flex gap-4 mt-3">
                     <label className="flex items-center gap-2 text-sm text-slate">
-                      <input type="checkbox" checked={dim.score >= 3} readOnly className="rounded border-border text-sunrise-blue" /> Immediate Risk
+                      <input type="checkbox" checked={dim.score >= 3} readOnly className="rounded" /> Immediate Risk
                     </label>
                     <label className="flex items-center gap-2 text-sm text-slate">
-                      <input type="checkbox" checked={dim.score > 0} readOnly className="rounded border-border text-sunrise-blue" /> Service Required
+                      <input type="checkbox" checked={dim.score > 0} readOnly className="rounded" /> Service Required
                     </label>
                   </div>
                 </div>
@@ -239,31 +273,25 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
           </div>
         )}
 
+        {/* ── PROGRESS NOTES ── */}
         {activeTab === 'Progress Notes' && (
           <div className="flex h-full gap-6">
             <div className={`flex-col h-full ${isComposingNote ? 'w-1/3' : 'w-full'}`}>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-navy">Progress Notes</h2>
                 {!isComposingNote && (
-                  <button 
-                    onClick={() => setIsComposingNote(true)}
-                    className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors"
-                  >
+                  <button onClick={() => setIsComposingNote(true)} className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">
                     + New Note
                   </button>
                 )}
               </div>
-              
               <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                 {patient.notes.map(note => (
                   <div key={note.id} className="border border-border rounded-lg p-4 hover:border-sunrise-blue transition-colors cursor-pointer group">
                     <div className="flex justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-navy group-hover:text-sunrise-blue transition-colors">{note.type} Note</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                          note.status === 'Signed' ? 'bg-success/20 text-success' : 
-                          note.status === 'Draft' ? 'bg-slate-100 text-slate' : 'bg-sunrise-amber/20 text-sunrise-amber'
-                        }`}>{note.status}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${note.status === 'Signed' ? 'bg-success/20 text-success' : note.status === 'Draft' ? 'bg-slate-100 text-slate' : 'bg-sunrise-amber/20 text-sunrise-amber'}`}>{note.status}</span>
                       </div>
                       <span className="text-xs font-medium text-slate">{note.date}</span>
                     </div>
@@ -271,6 +299,9 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
                     <p className="text-sm text-navy line-clamp-3">{note.content}</p>
                   </div>
                 ))}
+                {patient.notes.length === 0 && (
+                  <div className="text-center p-12 border border-dashed border-border rounded-lg bg-bg text-slate">No notes yet. Click "+ New Note" to begin.</div>
+                )}
               </div>
             </div>
 
@@ -279,24 +310,14 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
                 <div className="bg-bg p-4 border-b border-border flex justify-between items-center">
                   <h3 className="font-bold text-navy">Compose Note</h3>
                   <div className="flex gap-2">
-                    <select 
-                      value={noteFormat} 
-                      onChange={e => setNoteFormat(e.target.value)}
-                      className="border border-border rounded px-2 py-1 text-sm text-slate focus:outline-none"
-                    >
+                    <select value={noteFormat} onChange={e => setNoteFormat(e.target.value)} className="border border-border rounded px-2 py-1 text-sm text-slate focus:outline-none">
                       <option value="BIRP">BIRP Format</option>
                       <option value="DAP">DAP Format</option>
                       <option value="Free Text">Free Text</option>
                     </select>
-                    <button 
-                      onClick={() => setIsComposingNote(false)}
-                      className="text-slate hover:text-navy px-2 py-1"
-                    >
-                      Cancel
-                    </button>
+                    <button onClick={() => setIsComposingNote(false)} className="text-slate hover:text-navy px-2 py-1">Cancel</button>
                   </div>
                 </div>
-                
                 <div className="flex-1 flex overflow-hidden">
                   <div className="flex-1 p-4 overflow-y-auto space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -314,51 +335,48 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
                         <input type="datetime-local" className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue" defaultValue={new Date().toISOString().slice(0, 16)} />
                       </div>
                     </div>
-
                     {noteFormat === 'BIRP' && (
                       <>
-                        <div>
-                          <label className="block text-xs font-bold text-navy mb-1 uppercase">Behavior</label>
-                          <textarea 
-                            className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px]"
-                            placeholder="Objective description of client's behavior and presentation..."
-                            value={noteContent}
-                            onChange={(e) => setNoteContent(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-navy mb-1 uppercase">Intervention</label>
-                          <textarea className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px]" placeholder="Counselor's methods and actions..." />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-navy mb-1 uppercase">Response</label>
-                          <textarea className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px]" placeholder="Client's reaction to intervention..." />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-navy mb-1 uppercase">Plan</label>
-                          <textarea className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px]" placeholder="Next steps, assignments, future appointments..." />
-                        </div>
+                        {['Behavior', 'Intervention', 'Response', 'Plan'].map((section, si) => (
+                          <div key={section}>
+                            <label className="block text-xs font-bold text-navy mb-1 uppercase">{section}</label>
+                            <textarea
+                              className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px]"
+                              placeholder={si === 0 ? 'Objective description of client presentation...' : si === 1 ? "Counselor's methods and actions..." : si === 2 ? "Client's reaction to intervention..." : 'Next steps, assignments, future appointments...'}
+                              value={si === 0 ? noteContent : undefined}
+                              onChange={si === 0 ? e => setNoteContent(e.target.value) : undefined}
+                            />
+                          </div>
+                        ))}
                       </>
                     )}
+                    {noteFormat === 'DAP' && (
+                      <>
+                        {['Data', 'Assessment', 'Plan'].map(section => (
+                          <div key={section}>
+                            <label className="block text-xs font-bold text-navy mb-1 uppercase">{section}</label>
+                            <textarea className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px]" placeholder={`${section} section...`} />
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {noteFormat === 'Free Text' && (
+                      <div>
+                        <label className="block text-xs font-bold text-navy mb-1 uppercase">Note</label>
+                        <textarea className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[240px]" placeholder="Free-text note..." />
+                      </div>
+                    )}
                   </div>
-                  
                   <div className="w-64 border-l border-border bg-bg p-4 flex flex-col">
                     <CustomButtons onInsert={handleQuickInsert} />
                   </div>
                 </div>
-
                 <div className="bg-bg border-t border-border p-4 flex justify-between items-center">
                   <div className="text-xs text-slate">Auto-saved at {new Date().toLocaleTimeString()}</div>
                   <div className="flex gap-2">
-                    <button className="px-4 py-2 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 transition-colors">
-                      Save Draft
-                    </button>
-                    <button className="px-4 py-2 border border-sunrise-orange text-sunrise-orange bg-sunrise-orange/10 rounded text-sm font-medium hover:bg-sunrise-orange/20 transition-colors">
-                      Send for Co-sign
-                    </button>
-                    <button className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">
-                      Sign & Lock
-                    </button>
+                    <button className="px-4 py-2 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 transition-colors">Save Draft</button>
+                    <button className="px-4 py-2 border border-sunrise-orange text-sunrise-orange bg-sunrise-orange/10 rounded text-sm font-medium hover:bg-sunrise-orange/20 transition-colors">Send for Co-sign</button>
+                    <button className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">Sign & Lock</button>
                   </div>
                 </div>
               </div>
@@ -366,7 +384,7 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
           </div>
         )}
 
-        {/* Treatment Plan Tab */}
+        {/* ── TREATMENT PLAN ── */}
         {activeTab === 'Treatment Plan' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -376,20 +394,13 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
                 <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Add Goal</button>
               </div>
             </div>
-
             {patient.goals.length > 0 ? (
               <div className="space-y-4">
                 {patient.goals.map(goal => (
                   <div key={goal.id} className="border border-border rounded-lg overflow-hidden shadow-sm">
                     <div className="bg-bg px-4 py-3 border-b border-border flex justify-between items-center">
                       <div className="font-bold text-navy">{goal.category} Goal</div>
-                      <span className={`text-xs px-2 py-1 rounded font-bold ${
-                        goal.status === 'Met' ? 'bg-success/20 text-success' :
-                        goal.status === 'In Progress' ? 'bg-sunrise-blue/20 text-sunrise-blue' :
-                        'bg-slate-100 text-slate'
-                      }`}>
-                        {goal.status}
-                      </span>
+                      <span className={`text-xs px-2 py-1 rounded font-bold ${goal.status === 'Met' ? 'bg-success/20 text-success' : goal.status === 'In Progress' ? 'bg-sunrise-blue/20 text-sunrise-blue' : 'bg-slate-100 text-slate'}`}>{goal.status}</span>
                     </div>
                     <div className="p-4 space-y-4">
                       <div>
@@ -415,19 +426,452 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
               <div className="text-center p-12 border border-dashed border-border rounded-lg bg-bg">
                 <h3 className="font-semibold text-slate mb-2">No Active Goals</h3>
                 <p className="text-sm text-slate-light mb-4">Create a treatment plan to track client progress.</p>
-                <button className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">
-                  Initialize Master Treatment Plan
-                </button>
+                <button className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">Initialize Master Treatment Plan</button>
               </div>
             )}
           </div>
         )}
 
-        {/* Fallback for un-implemented tabs */}
-        {!['Overview', 'ASAM Assessment', 'Progress Notes', 'Treatment Plan'].includes(activeTab) && (
-          <div className="flex flex-col items-center justify-center h-full text-slate">
-            <h3 className="text-xl font-semibold mb-2">{activeTab}</h3>
-            <p>This module is available in the full version of Sunrise OS.</p>
+        {/* ── MEDICATIONS ── */}
+        {activeTab === 'Medications' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-navy flex items-center gap-2"><Pill className="w-5 h-5 text-sunrise-blue" /> Medication Administration Record</h2>
+              <div className="flex gap-2">
+                <button className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Print MAR</button>
+                <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Order Medication</button>
+              </div>
+            </div>
+
+            {/* Class legend */}
+            <div className="flex gap-3 flex-wrap">
+              {[
+                { cls: 'MAT', color: 'bg-purple-100 text-purple-700 border-purple-300' },
+                { cls: 'Psychiatric', color: 'bg-sunrise-blue/10 text-sunrise-blue border-sunrise-blue/30' },
+                { cls: 'Medical', color: 'bg-success/10 text-success border-success/30' },
+                { cls: 'PRN', color: 'bg-sunrise-amber/10 text-sunrise-amber border-sunrise-amber/30' },
+              ].map(c => (
+                <span key={c.cls} className={`text-xs font-bold px-2 py-1 rounded border ${c.color}`}>{c.cls}</span>
+              ))}
+              <span className="text-xs text-slate ml-2 self-center">Medication classification badges</span>
+            </div>
+
+            {/* Active meds */}
+            <div>
+              <h3 className="font-bold text-navy mb-3">Active Medications</h3>
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-bg border-b border-border">
+                      {['Medication', 'Class', 'Dose / Route', 'Frequency', 'Indication', 'Prescriber', 'Start Date', ''].map(h => (
+                        <th key={h} className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-slate">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {meds.filter(m => m.status === 'Active').map(med => {
+                      const clsCls = med.class === 'MAT' ? 'bg-purple-100 text-purple-700 border-purple-200' : med.class === 'Psychiatric' ? 'bg-sunrise-blue/10 text-sunrise-blue border-sunrise-blue/20' : med.class === 'Medical' ? 'bg-success/10 text-success border-success/20' : 'bg-sunrise-amber/10 text-sunrise-amber border-sunrise-amber/20';
+                      return (
+                        <tr key={med.id} className="hover:bg-bg transition-colors">
+                          <td className="px-3 py-3">
+                            <div className="font-semibold text-navy">{med.name}</div>
+                            {med.genericName && <div className="text-xs text-slate">{med.genericName}</div>}
+                          </td>
+                          <td className="px-3 py-3"><span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${clsCls}`}>{med.class}</span></td>
+                          <td className="px-3 py-3 text-slate">{med.dose} <span className="text-slate-light">/ {med.route}</span></td>
+                          <td className="px-3 py-3 text-slate">{med.frequency}</td>
+                          <td className="px-3 py-3 text-slate text-xs max-w-[200px]">{med.indication}</td>
+                          <td className="px-3 py-3 text-slate text-xs">{med.prescriber.split(' ').slice(0, 2).join(' ')}</td>
+                          <td className="px-3 py-3 text-slate text-xs">{med.startDate}</td>
+                          <td className="px-3 py-3"><button className="text-xs text-slate hover:text-sunrise-blue font-medium">Edit</button></td>
+                        </tr>
+                      );
+                    })}
+                    {meds.filter(m => m.status === 'On Hold').map(med => (
+                      <tr key={med.id} className="bg-sunrise-amber/5 hover:bg-sunrise-amber/10 transition-colors">
+                        <td className="px-3 py-3">
+                          <div className="font-semibold text-navy">{med.name}</div>
+                          {med.genericName && <div className="text-xs text-slate">{med.genericName}</div>}
+                        </td>
+                        <td className="px-3 py-3" colSpan={5}>
+                          <span className="text-xs font-bold text-sunrise-amber bg-sunrise-amber/10 border border-sunrise-amber/30 px-2 py-0.5 rounded">ON HOLD</span>
+                          <span className="text-xs text-slate ml-3">{med.indication}</span>
+                        </td>
+                        <td className="px-3 py-3 text-slate text-xs">{med.startDate}</td>
+                        <td className="px-3 py-3"><button className="text-xs text-slate hover:text-sunrise-blue font-medium">Edit</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Discontinued meds */}
+            {meds.filter(m => m.status === 'Discontinued').length > 0 && (
+              <div>
+                <h3 className="font-bold text-slate mb-3 text-sm uppercase tracking-wider">Discontinued</h3>
+                <div className="border border-border rounded-lg overflow-hidden opacity-70">
+                  <table className="w-full text-sm">
+                    <tbody className="divide-y divide-border">
+                      {meds.filter(m => m.status === 'Discontinued').map(med => (
+                        <tr key={med.id} className="bg-slate-50">
+                          <td className="px-3 py-2.5">
+                            <span className="font-semibold text-slate line-through">{med.name}</span>
+                            {med.genericName && <span className="text-xs text-slate-light ml-2">{med.genericName}</span>}
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-slate">{med.dose} / {med.route}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate">D/C: {med.dcDate}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate max-w-[300px]">Reason: {med.dcReason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── GROUP NOTES ── */}
+        {activeTab === 'Group Notes' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-navy flex items-center gap-2"><Users className="w-5 h-5 text-sunrise-blue" /> Group Therapy Attendance</h2>
+              <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Group Note</button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-bg border border-border rounded-lg p-4">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wider mb-1">Sessions This Stay</div>
+                <div className="text-3xl font-bold text-navy">{groupSessions.length}</div>
+              </div>
+              <div className="bg-bg border border-border rounded-lg p-4">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wider mb-1">Attended</div>
+                <div className="text-3xl font-bold text-success">{attendedCount}</div>
+              </div>
+              <div className="bg-bg border border-border rounded-lg p-4">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wider mb-1">Attendance Rate</div>
+                <div className={`text-3xl font-bold ${attendancePct >= 80 ? 'text-success' : attendancePct >= 60 ? 'text-sunrise-amber' : 'text-critical'}`}>{attendancePct}%</div>
+              </div>
+            </div>
+
+            <div className="border border-border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-bg border-b border-border">
+                    {['Date', 'Group', 'Topic', 'Facilitator', 'Status', 'Note'].map(h => (
+                      <th key={h} className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-slate">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {groupSessions.map(session => (
+                    <tr key={session.id} className="hover:bg-bg transition-colors">
+                      <td className="px-3 py-3 text-xs text-slate font-medium whitespace-nowrap">{session.date}<br /><span className="text-slate-light">{session.time}</span></td>
+                      <td className="px-3 py-3 font-semibold text-navy text-xs">{session.name}</td>
+                      <td className="px-3 py-3 text-xs text-slate">{session.topic}</td>
+                      <td className="px-3 py-3 text-xs text-slate">{session.facilitator.split(',')[0]}</td>
+                      <td className="px-3 py-3">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${session.status === 'Present' ? 'bg-success/20 text-success' : session.status === 'Absent' ? 'bg-critical/20 text-critical' : 'bg-sunrise-amber/20 text-sunrise-amber'}`}>
+                          {session.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-xs text-slate max-w-[220px] truncate">{session.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── VITALS ── */}
+        {activeTab === 'Vitals' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-navy flex items-center gap-2"><HeartPulse className="w-5 h-5 text-sunrise-blue" /> Vital Signs</h2>
+              <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Record Vitals</button>
+            </div>
+
+            {/* Latest vitals */}
+            {vitals.length > 0 && (() => {
+              const latest = vitals[0];
+              const cards = [
+                { label: 'Blood Pressure', value: latest.bp, unit: 'mmHg', warn: parseInt(latest.bp) > 140 },
+                { label: 'Heart Rate', value: String(latest.hr), unit: 'bpm', warn: latest.hr > 100 },
+                { label: 'Temperature', value: String(latest.temp), unit: '°F', warn: latest.temp > 99.5 },
+                { label: 'O₂ Saturation', value: String(latest.o2), unit: '%', warn: latest.o2 < 95 },
+                { label: 'Resp. Rate', value: String(latest.rr), unit: '/min', warn: latest.rr > 20 },
+                ...(latest.weight ? [{ label: 'Weight', value: String(latest.weight), unit: 'lbs', warn: false }] : []),
+                ...(latest.cows !== undefined ? [{ label: 'COWS Score', value: String(latest.cows), unit: `${latest.cows >= 13 ? 'Moderate' : latest.cows >= 5 ? 'Mild' : 'Min'}`, warn: latest.cows >= 13 }] : []),
+                ...(latest.ciwa !== undefined ? [{ label: 'CIWA Score', value: String(latest.ciwa), unit: `${latest.ciwa >= 15 ? 'Severe' : latest.ciwa >= 8 ? 'Moderate' : 'Mild'}`, warn: latest.ciwa >= 8 }] : []),
+                { label: 'Pain', value: String(latest.pain), unit: '/10', warn: latest.pain >= 7 },
+              ];
+              return (
+                <div>
+                  <div className="text-xs text-slate mb-3 font-medium">Most Recent: {latest.date} {latest.time} — Recorded by {latest.recordedBy}</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {cards.map(c => (
+                      <div key={c.label} className={`border rounded-lg p-3 ${c.warn ? 'border-sunrise-amber bg-sunrise-amber/5' : 'border-border bg-bg'}`}>
+                        <div className="text-xs font-semibold text-slate uppercase tracking-wider mb-1">{c.label}</div>
+                        <div className={`text-2xl font-bold ${c.warn ? 'text-sunrise-amber' : 'text-navy'}`}>{c.value}</div>
+                        <div className="text-xs text-slate">{c.unit}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* History table */}
+            <div>
+              <h3 className="font-bold text-navy mb-3">Vitals History</h3>
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-bg border-b border-border">
+                      {['Date/Time', 'BP', 'HR', 'Temp', 'O₂', 'RR', 'COWS', 'CIWA', 'Pain', 'Recorded By'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-slate">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {vitals.map(v => (
+                      <tr key={v.id} className="hover:bg-bg transition-colors">
+                        <td className="px-3 py-2 text-xs text-slate font-medium">{v.date} {v.time}</td>
+                        <td className={`px-3 py-2 text-xs font-semibold ${parseInt(v.bp) > 140 ? 'text-sunrise-amber' : 'text-navy'}`}>{v.bp}</td>
+                        <td className={`px-3 py-2 text-xs font-semibold ${v.hr > 100 ? 'text-sunrise-amber' : 'text-navy'}`}>{v.hr}</td>
+                        <td className={`px-3 py-2 text-xs font-semibold ${v.temp > 99.5 ? 'text-critical' : 'text-navy'}`}>{v.temp}</td>
+                        <td className={`px-3 py-2 text-xs font-semibold ${v.o2 < 95 ? 'text-critical' : 'text-navy'}`}>{v.o2}%</td>
+                        <td className="px-3 py-2 text-xs text-slate">{v.rr}</td>
+                        <td className="px-3 py-2 text-xs">
+                          {v.cows !== undefined ? <span className={`font-bold ${v.cows >= 13 ? 'text-critical' : v.cows >= 5 ? 'text-sunrise-amber' : 'text-success'}`}>{v.cows}</span> : <span className="text-slate-light">—</span>}
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {v.ciwa !== undefined ? <span className={`font-bold ${v.ciwa >= 15 ? 'text-critical' : v.ciwa >= 8 ? 'text-sunrise-amber' : 'text-success'}`}>{v.ciwa}</span> : <span className="text-slate-light">—</span>}
+                        </td>
+                        <td className={`px-3 py-2 text-xs font-semibold ${v.pain >= 7 ? 'text-critical' : v.pain >= 4 ? 'text-sunrise-amber' : 'text-success'}`}>{v.pain}/10</td>
+                        <td className="px-3 py-2 text-xs text-slate">{v.recordedBy.split(',')[0]}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── LABS ── */}
+        {activeTab === 'Labs' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-navy flex items-center gap-2"><FlaskConical className="w-5 h-5 text-sunrise-blue" /> Laboratory Results</h2>
+              <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Order Labs</button>
+            </div>
+
+            {/* Critical alerts */}
+            {labs.filter(l => l.flag === 'Critical').map(l => (
+              <div key={l.id} className="bg-critical/10 border border-critical/40 rounded-lg p-3 flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-critical flex-shrink-0" />
+                <div className="text-sm">
+                  <span className="font-bold text-critical">Critical Result: </span>
+                  <span className="text-navy font-semibold">{l.test}</span>
+                  <span className="text-slate"> — {l.result} (ref: {l.refRange}) — ordered by {l.orderedBy}</span>
+                </div>
+              </div>
+            ))}
+
+            {panelsInOrder.map(panel => (
+              <div key={panel}>
+                <h3 className="font-bold text-navy mb-2 text-sm flex items-center gap-2">
+                  <span className="text-xs font-bold bg-navy text-white px-2 py-0.5 rounded">{panel}</span>
+                </h3>
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-bg border-b border-border">
+                        {['Test', 'Result', 'Unit', 'Reference Range', 'Flag', 'Date', 'Ordered By'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-slate">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {labs.filter(l => l.panel === panel).map(lab => (
+                        <tr key={lab.id} className={`hover:bg-bg transition-colors ${lab.flag === 'Critical' ? 'bg-critical/5' : lab.flag === 'Positive' ? 'bg-critical/5' : ''}`}>
+                          <td className="px-3 py-2.5 font-semibold text-navy">{lab.test}</td>
+                          <td className={`px-3 py-2.5 font-bold ${lab.flag === 'Normal' || lab.flag === 'Negative' ? 'text-navy' : lab.flag === 'Critical' || lab.flag === 'Positive' ? 'text-critical' : lab.flag === 'Pending' ? 'text-slate' : 'text-sunrise-amber'}`}>{lab.result}</td>
+                          <td className="px-3 py-2.5 text-slate text-xs">{lab.unit}</td>
+                          <td className="px-3 py-2.5 text-slate text-xs">{lab.refRange}</td>
+                          <td className="px-3 py-2.5">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${flagColor[lab.flag] ?? 'text-slate bg-slate-100'}`}>{lab.flag}</span>
+                          </td>
+                          <td className="px-3 py-2.5 text-slate text-xs">{lab.date}</td>
+                          <td className="px-3 py-2.5 text-slate text-xs">{lab.orderedBy.split(' ').slice(0, 2).join(' ')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── HISTORY ── */}
+        {activeTab === 'History' && (
+          <div className="space-y-8">
+            <h2 className="text-lg font-bold text-navy flex items-center gap-2"><BookOpen className="w-5 h-5 text-sunrise-blue" /> Psychosocial & Treatment History</h2>
+
+            {/* Prior treatment episodes */}
+            <div>
+              <h3 className="font-bold text-navy mb-3 border-b border-border pb-2">Prior Treatment Episodes</h3>
+              <div className="space-y-3">
+                {[
+                  { year: '2021', facility: 'Valley Recovery Center', loc: 'Residential (28d)', reason: 'Voluntary admission — opioid use disorder', dc: 'Completed program', outcome: 'Relapsed within 6 months' },
+                  { year: '2020', facility: 'City Outpatient Services', loc: 'IOP (12 weeks)', reason: 'Outpatient referral from PCP', dc: 'AWOL / AMA discharge', outcome: 'Did not complete; continued use' },
+                  { year: '2019', facility: 'Metro Detox Unit', loc: 'Medical Detox (5d)', reason: 'ER referral — opioid withdrawal', dc: 'Medically cleared', outcome: 'Declined further treatment at time' },
+                ].map((ep, i) => (
+                  <div key={i} className="border border-border rounded-lg p-4 hover:bg-bg transition-colors">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-bold text-navy">{ep.facility}</div>
+                      <span className="text-xs font-bold bg-navy/10 text-navy px-2 py-0.5 rounded">{ep.year}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div><span className="text-xs font-semibold text-slate uppercase">LOC:</span> <span className="text-slate">{ep.loc}</span></div>
+                      <div><span className="text-xs font-semibold text-slate uppercase">Reason:</span> <span className="text-slate">{ep.reason}</span></div>
+                      <div><span className="text-xs font-semibold text-slate uppercase">Discharge:</span> <span className="text-slate">{ep.dc}</span></div>
+                      <div><span className="text-xs font-semibold text-slate uppercase">Outcome:</span> <span className="text-slate">{ep.outcome}</span></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Substance use history */}
+            <div>
+              <h3 className="font-bold text-navy mb-3 border-b border-border pb-2">Substance Use History</h3>
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-bg border-b border-border">
+                      {['Substance', 'Onset', 'Route', 'Frequency / Amount', 'Last Use', 'Longest Abstinence'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-slate">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {[
+                      { sub: 'Heroin / Fentanyl', onset: 'Age 24 (2012)', route: 'IV', freq: 'Daily, ~0.5g/day', last: '2023-10-13', abstinence: '8 months (2020–2021)' },
+                      { sub: 'Alcohol', onset: 'Age 17 (2005)', route: 'PO', freq: 'Weekends, 6–10 drinks', last: '2023-10-10', abstinence: '2 years (2015–2017)' },
+                      { sub: 'Cannabis', onset: 'Age 16 (2004)', route: 'Inhaled', freq: '3–4x/week', last: '2023-10-05', abstinence: 'None significant' },
+                      { sub: 'Benzodiazepines', onset: 'Age 30 (2018)', route: 'PO', freq: 'PRN, prescribed → misuse', last: '2023-10-14', abstinence: '—' },
+                    ].map((row, i) => (
+                      <tr key={i} className="hover:bg-bg">
+                        <td className="px-3 py-2.5 font-semibold text-navy">{row.sub}</td>
+                        <td className="px-3 py-2.5 text-slate text-xs">{row.onset}</td>
+                        <td className="px-3 py-2.5 text-slate text-xs">{row.route}</td>
+                        <td className="px-3 py-2.5 text-slate text-xs">{row.freq}</td>
+                        <td className="px-3 py-2.5 text-slate text-xs">{row.last}</td>
+                        <td className="px-3 py-2.5 text-slate text-xs">{row.abstinence}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Family / Social history */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-bold text-navy mb-3 border-b border-border pb-2">Family History</h3>
+                <div className="space-y-2 text-sm">
+                  {[
+                    { rel: 'Father', note: 'Alcohol Use Disorder — untreated; deceased age 58' },
+                    { rel: 'Mother', note: 'Anxiety/Depression — on medication; no SUD history' },
+                    { rel: 'Sibling (Brother)', note: 'Opioid Use Disorder — currently in recovery, 3 years' },
+                    { rel: 'Paternal Grandfather', note: 'Alcohol Use Disorder — history per family report' },
+                  ].map((f, i) => (
+                    <div key={i} className="flex gap-3 p-3 bg-bg border border-border rounded">
+                      <span className="font-semibold text-navy w-36 flex-shrink-0">{f.rel}:</span>
+                      <span className="text-slate">{f.note}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="font-bold text-navy mb-3 border-b border-border pb-2">Social / Legal History</h3>
+                <div className="space-y-2 text-sm">
+                  {[
+                    { label: 'Employment', value: 'Unemployed — lost job 6 months ago (attendance)' },
+                    { label: 'Housing', value: 'Unstable; staying with family prior to admit' },
+                    { label: 'Relationships', value: 'Divorced; 2 children (limited contact)' },
+                    { label: 'Education', value: 'High school diploma; some college' },
+                    { label: 'Legal', value: 'DUI 2021 (dismissed); current treatment is voluntary' },
+                    { label: 'Trauma', value: 'Reports childhood abuse; PTSD diagnosis active' },
+                    { label: 'Support System', value: 'Limited; brother in recovery is primary support' },
+                  ].map((s, i) => (
+                    <div key={i} className="flex gap-3 p-2.5 border-b border-border last:border-0">
+                      <span className="font-semibold text-slate w-28 flex-shrink-0 text-xs uppercase tracking-wider pt-0.5">{s.label}</span>
+                      <span className="text-slate text-sm">{s.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── DOCUMENTS ── */}
+        {activeTab === 'Documents' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-navy flex items-center gap-2"><FolderOpen className="w-5 h-5 text-sunrise-blue" /> Document Vault</h2>
+              <div className="flex gap-2">
+                <button className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 flex items-center gap-1.5"><Upload className="w-3.5 h-3.5" /> Upload</button>
+              </div>
+            </div>
+
+            {[
+              { category: 'Consents & Agreements', docs: [
+                { name: 'Consent to Treatment', type: 'Consent', date: patient.admitDate, by: 'Amanda Lewis', status: 'Signed', icon: '📋' },
+                { name: '42 CFR Part 2 Confidentiality Disclosure', type: 'Consent', date: patient.admitDate, by: 'Amanda Lewis', status: 'Signed', icon: '🔒' },
+                { name: 'Financial Responsibility Agreement', type: 'Financial', date: patient.admitDate, by: 'Amanda Lewis', status: 'Signed', icon: '💳' },
+                { name: 'Grievance Procedure Acknowledgment', type: 'Consent', date: patient.admitDate, by: 'Amanda Lewis', status: 'Signed', icon: '📋' },
+              ]},
+              { category: 'Insurance & Authorization', docs: [
+                { name: `${patient.insurance} Prior Authorization`, type: 'Insurance', date: patient.admitDate, by: 'Linda Vance', status: 'Active', icon: '🏥' },
+                { name: 'Insurance Card (copy)', type: 'ID', date: patient.admitDate, by: 'Amanda Lewis', status: 'On File', icon: '🪪' },
+                { name: 'UR Communication — Level of Care', type: 'Insurance', date: patient.admitDate, by: 'Linda Vance', status: 'Active', icon: '📄' },
+              ]},
+              { category: 'Identification', docs: [
+                { name: 'Government-Issued Photo ID', type: 'ID', date: patient.admitDate, by: 'Amanda Lewis', status: 'On File', icon: '🪪' },
+                { name: 'Social Security Card', type: 'ID', date: patient.admitDate, by: 'Amanda Lewis', status: 'On File', icon: '🪪' },
+              ]},
+              { category: 'Clinical Records', docs: [
+                { name: 'Referral / Transfer Summary', type: 'Clinical', date: patient.admitDate, by: 'Dr. Robert Chen', status: 'On File', icon: '📄' },
+                { name: 'Medication Reconciliation', type: 'Clinical', date: patient.admitDate, by: 'Jessica Torres, RN', status: 'Signed', icon: '💊' },
+                { name: 'Admission Physical Exam', type: 'Clinical', date: patient.admitDate, by: 'Dr. Robert Chen', status: 'Signed', icon: '🩺' },
+              ]},
+            ].map(section => (
+              <div key={section.category}>
+                <h3 className="font-bold text-slate text-xs uppercase tracking-wider mb-3">{section.category}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {section.docs.map((doc, i) => (
+                    <div key={i} className="border border-border rounded-lg p-4 flex items-start gap-3 hover:bg-bg transition-colors group">
+                      <span className="text-2xl">{doc.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-navy text-sm group-hover:text-sunrise-blue transition-colors truncate">{doc.name}</div>
+                        <div className="text-xs text-slate mt-0.5">{doc.date} · {doc.by}</div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${doc.status === 'Signed' || doc.status === 'Active' ? 'bg-success/20 text-success' : 'bg-slate-100 text-slate'}`}>{doc.status}</span>
+                        <button className="text-xs text-slate hover:text-sunrise-blue flex items-center gap-1"><Download className="w-3 h-3" /> View</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
