@@ -4,6 +4,7 @@ import {
   Animated,
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -160,6 +161,105 @@ function Card({ children, colors, style }: { children: React.ReactNode; colors: 
     </View>
   );
 }
+
+// ─── SwipeableNoteRow ─────────────────────────────────────────────────────────
+
+const SWIPE_OPEN_THRESHOLD = 40;
+const DELETE_BTN_WIDTH = 80;
+
+function SwipeableNoteRow({
+  children,
+  onDelete,
+  onLongPress,
+}: {
+  children: React.ReactNode;
+  onDelete: () => void;
+  onLongPress: () => void;
+}) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const isOpen = useRef(false);
+
+  const snapTo = (toValue: number, cb?: () => void) => {
+    Animated.spring(translateX, {
+      toValue,
+      useNativeDriver: true,
+      damping: 22,
+      stiffness: 220,
+    }).start(cb);
+    isOpen.current = toValue !== 0;
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 6 && Math.abs(gs.dx) > Math.abs(gs.dy),
+      onPanResponderMove: (_, gs) => {
+        // Allow leftward drag (negative) and a small rubber-band rightward
+        const x = isOpen.current ? Math.min(gs.dx - DELETE_BTN_WIDTH, 0) : Math.min(gs.dx, 0);
+        translateX.setValue(x);
+      },
+      onPanResponderRelease: (_, gs) => {
+        const currentX = isOpen.current ? gs.dx - DELETE_BTN_WIDTH : gs.dx;
+        if (currentX < -SWIPE_OPEN_THRESHOLD) {
+          snapTo(-DELETE_BTN_WIDTH);
+        } else {
+          snapTo(0);
+        }
+      },
+    }),
+  ).current;
+
+  const close = () => snapTo(0);
+
+  return (
+    <View style={sw.wrapper}>
+      {/* Red delete button revealed underneath */}
+      <View style={sw.deleteBackground}>
+        <Pressable
+          style={({ pressed }) => [sw.deleteBtn, { opacity: pressed ? 0.75 : 1 }]}
+          onPress={() => {
+            close();
+            onDelete();
+          }}
+        >
+          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Text style={sw.deleteBtnText}>Delete</Text>
+        </Pressable>
+      </View>
+
+      {/* Swipeable card layer */}
+      <Animated.View
+        style={{ transform: [{ translateX }] }}
+        {...panResponder.panHandlers}
+      >
+        <Pressable
+          onLongPress={onLongPress}
+          delayLongPress={400}
+          onPress={() => { if (isOpen.current) snapTo(0); }}
+        >
+          {children}
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
+}
+
+const sw = StyleSheet.create({
+  wrapper: { overflow: 'hidden', borderRadius: 12, marginBottom: 8 },
+  deleteBackground: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: DELETE_BTN_WIDTH,
+    backgroundColor: '#E53E3E',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtn: { alignItems: 'center', justifyContent: 'center', gap: 4, width: DELETE_BTN_WIDTH },
+  deleteBtnText: { color: '#fff', fontSize: 11, fontFamily: 'Inter_700Bold', fontWeight: '700' },
+});
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
@@ -766,32 +866,35 @@ export default function PatientDetailScreen() {
               );
             };
             return (
-              <Pressable
+              <SwipeableNoteRow
                 key={note.id}
+                onDelete={() => handleDeleteNote(note, index)}
                 onLongPress={handleLongPress}
-                delayLongPress={400}
-                style={({ pressed }) => [
-                  s.sessionNote,
-                  { backgroundColor: tc.bg, borderColor: tc.text, opacity: pressed ? 0.75 : 1 },
-                ]}
               >
-                <View style={s.sessionNoteHeader}>
-                  <View style={[s.noteTypeBadge, { backgroundColor: tc.bg, borderColor: tc.text }]}>
-                    <Ionicons name={nt.icon} size={11} color={tc.text} />
-                    <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{nt.label}</Text>
+                <View
+                  style={[
+                    s.sessionNote,
+                    { backgroundColor: tc.bg, borderColor: tc.text, marginBottom: 0 },
+                  ]}
+                >
+                  <View style={s.sessionNoteHeader}>
+                    <View style={[s.noteTypeBadge, { backgroundColor: tc.bg, borderColor: tc.text }]}>
+                      <Ionicons name={nt.icon} size={11} color={tc.text} />
+                      <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{nt.label}</Text>
+                    </View>
+                    <View style={s.sessionNoteMeta}>
+                      <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
+                      {note.editedAt && (
+                        <View style={[s.editedTag, { backgroundColor: colors.muted }]}>
+                          <Text style={[s.editedTagText, { color: colors.mutedForeground }]}>Edited</Text>
+                        </View>
+                      )}
+                      <Ionicons name="ellipsis-horizontal" size={13} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
+                    </View>
                   </View>
-                  <View style={s.sessionNoteMeta}>
-                    <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
-                    {note.editedAt && (
-                      <View style={[s.editedTag, { backgroundColor: colors.muted }]}>
-                        <Text style={[s.editedTagText, { color: colors.mutedForeground }]}>Edited</Text>
-                      </View>
-                    )}
-                    <Ionicons name="ellipsis-horizontal" size={13} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
-                  </View>
+                  <Text style={[s.sessionNoteText, { color: colors.navy }]}>{note.text}</Text>
                 </View>
-                <Text style={[s.sessionNoteText, { color: colors.navy }]}>{note.text}</Text>
-              </Pressable>
+              </SwipeableNoteRow>
             );
           })}
 
