@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Alert,
   Animated,
@@ -21,7 +21,7 @@ import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';
 import { usePatients } from '@/context/PatientContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
-import { useNursingNotes } from '@/context/NursingNotesContext';
+import { useNursingNotes, NursingNote } from '@/context/NursingNotesContext';
 import {
   PATIENTS,
   VITALS,
@@ -172,7 +172,64 @@ export default function PatientDetailScreen() {
   const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
 
   // ─── Add Note state ────────────────────────────────────────────────────────
-  const { getNotesForPatient, addNote: addNoteToStore, updateNote, removeNote } = useNursingNotes();
+  const { getNotesForPatient, addNote: addNoteToStore, updateNote, removeNote, restoreNote } = useNursingNotes();
+
+  // ─── Undo-delete toast ─────────────────────────────────────────────────────
+  const [pendingDelete, setPendingDelete] = useState<{
+    note: NursingNote;
+    patientId: string;
+    originalIndex: number;
+  } | null>(null);
+  const toastAnim = useRef(new Animated.Value(100)).current;
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+    };
+  }, []);
+
+  const dismissToast = () => {
+    Animated.timing(toastAnim, {
+      toValue: 100,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => setPendingDelete(null));
+    deleteTimerRef.current = null;
+  };
+
+  const handleUndo = () => {
+    if (!pendingDelete) return;
+    if (deleteTimerRef.current) {
+      clearTimeout(deleteTimerRef.current);
+      deleteTimerRef.current = null;
+    }
+    restoreNote(pendingDelete.patientId, pendingDelete.note, pendingDelete.originalIndex);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Animated.timing(toastAnim, {
+      toValue: 100,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => setPendingDelete(null));
+  };
+
+  const handleDeleteNote = (note: NursingNote, index: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Commit any in-flight deletion before starting a new one
+    if (deleteTimerRef.current) {
+      clearTimeout(deleteTimerRef.current);
+      deleteTimerRef.current = null;
+    }
+    removeNote(id, note.id);
+    setPendingDelete({ note, patientId: id, originalIndex: index });
+    Animated.spring(toastAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      damping: 20,
+      stiffness: 200,
+    }).start();
+    deleteTimerRef.current = setTimeout(dismissToast, 4000);
+  };
 
   type NoteType = 'observation' | 'med-update' | 'incident';
 
@@ -684,7 +741,7 @@ export default function PatientDetailScreen() {
           </View>
 
           {/* Session notes (persisted in context, most recent first) */}
-          {getNotesForPatient(patient.id).map(note => {
+          {getNotesForPatient(patient.id).map((note, index) => {
             const tc = noteTypeColor(note.noteType);
             const nt = NOTE_TYPES.find(x => x.value === note.noteType)!;
             const handleLongPress = () => {
@@ -703,10 +760,7 @@ export default function PatientDetailScreen() {
                   {
                     text: 'Delete',
                     style: 'destructive',
-                    onPress: () => {
-                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                      removeNote(patient.id, note.id);
-                    },
+                    onPress: () => handleDeleteNote(note, index),
                   },
                 ],
               );
@@ -766,6 +820,21 @@ export default function PatientDetailScreen() {
         </View>
 
       </ScrollView>
+
+      {/* ─── Undo delete toast ─── */}
+      {pendingDelete && (
+        <Animated.View
+          style={[
+            s.undoToast,
+            { bottom: insets.bottom + 16, transform: [{ translateY: toastAnim }] },
+          ]}
+        >
+          <Text style={s.undoToastText}>Note deleted</Text>
+          <Pressable onPress={handleUndo} hitSlop={12} style={s.undoBtn}>
+            <Text style={s.undoBtnText}>Undo</Text>
+          </Pressable>
+        </Animated.View>
+      )}
 
       {/* ─── Discharge confirmation modal ─── */}
       <Modal
@@ -947,4 +1016,16 @@ const s = StyleSheet.create({
   // Note type badge (on submitted notes)
   noteTypeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1 },
   noteTypeBadgeText: { fontSize: 11, fontFamily: 'Inter_700Bold', fontWeight: '700' },
+  // Undo delete toast
+  undoToast: {
+    position: 'absolute', left: 16, right: 16,
+    backgroundColor: '#1C2B3A', borderRadius: 12,
+    paddingVertical: 13, paddingHorizontal: 18,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22, shadowRadius: 12, elevation: 10,
+  },
+  undoToastText: { fontSize: 14, color: '#fff', fontFamily: 'Inter_400Regular' },
+  undoBtn: { paddingVertical: 4, paddingHorizontal: 10 },
+  undoBtnText: { fontSize: 14, fontWeight: '700', color: '#4FC3F7', fontFamily: 'Inter_700Bold' },
 });

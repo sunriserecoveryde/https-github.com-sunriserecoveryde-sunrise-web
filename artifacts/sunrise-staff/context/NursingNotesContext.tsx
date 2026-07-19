@@ -54,6 +54,8 @@ interface NursingNotesContextType {
   updateNote: (patientId: string, noteId: string, text: string, noteType: NoteType) => void;
   /** Remove a single note by id from a patient's note list */
   removeNote: (patientId: string, noteId: string) => void;
+  /** Re-insert a previously removed note at a specific index (for undo) */
+  restoreNote: (patientId: string, note: NursingNote, index: number) => void;
   /** Wipe all notes and clear storage — call on explicit logout / shift-end */
   clearNotes: () => void;
   /** True while loading from storage */
@@ -65,6 +67,7 @@ const NursingNotesContext = createContext<NursingNotesContextType>({
   addNote: () => {},
   updateNote: () => {},
   removeNote: () => {},
+  restoreNote: () => {},
   clearNotes: () => {},
   loading: false,
 });
@@ -150,13 +153,22 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
     }));
   }, []);
 
+  const restoreNote = useCallback((patientId: string, note: NursingNote, index: number) => {
+    setNotesByPatient(prev => {
+      const current = prev[patientId] ?? [];
+      const next = [...current];
+      next.splice(Math.min(index, next.length), 0, note);
+      return { ...prev, [patientId]: next };
+    });
+  }, []);
+
   const clearNotes = useCallback(() => {
     setNotesByPatient({});
     AsyncStorage.removeItem(NOTES_KEY).catch(() => {});
   }, []);
 
   return (
-    <NursingNotesContext.Provider value={{ getNotesForPatient, addNote, updateNote, removeNote, clearNotes, loading }}>
+    <NursingNotesContext.Provider value={{ getNotesForPatient, addNote, updateNote, removeNote, restoreNote, clearNotes, loading }}>
       {children}
     </NursingNotesContext.Provider>
   );
