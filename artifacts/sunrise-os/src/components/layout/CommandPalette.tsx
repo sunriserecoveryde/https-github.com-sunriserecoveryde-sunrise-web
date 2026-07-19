@@ -82,8 +82,12 @@ const ALL_SCREEN_SHORTCUTS: { label: string; screen: Screen; icon: React.ReactNo
   { label: 'Help & Support',            screen: 'HelpSupport',             icon: <LayoutDashboard className="w-4 h-4" />,  category: 'System' },
 ];
 
+// Persists the last non-empty search query for the session so users don't
+// have to retype after switching roles via RoleExplorer and returning.
+let _lastQuery = '';
+
 export function CommandPalette({ onClose, navigate }: Props) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(_lastQuery);
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const { roleId, canAccessScreen } = useRole();
@@ -157,7 +161,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
           <input
             ref={inputRef}
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => { const v = e.target.value; setQuery(v); if (v) _lastQuery = v; }}
             placeholder={canSearchPatients ? "Search patients, screens, or actions…" : "Search screens or actions…"}
             className="flex-1 text-sm focus:outline-none text-navy placeholder:text-slate"
           />
