@@ -270,7 +270,7 @@ function MoodBar({ value, colors }: { value: number; colors: ReturnType<typeof u
   );
 }
 
-function BedCard({ patient, onPress, onNoteBadgePress }: { patient: Patient; onPress: () => void; onNoteBadgePress?: () => void }) {
+function BedCard({ patient, onPress, onNoteBadgePress, onNoteTypeChipPress }: { patient: Patient; onPress: () => void; onNoteBadgePress?: () => void; onNoteTypeChipPress?: (type: 'incident' | 'med-update') => void }) {
   const colors = useColors();
   const { getNotesForPatient } = useNursingNotes();
   const ac = acuityColor(patient.acuity);
@@ -328,16 +328,24 @@ function BedCard({ patient, onPress, onNoteBadgePress }: { patient: Patient; onP
           {showBreakdown ? (
             <View style={styles.noteTypeBreakdownRow}>
               {incidentCount > 0 && (
-                <View style={[styles.noteTypeChip, { backgroundColor: colors.criticalBg, borderColor: colors.critical }]}>
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onNoteTypeChipPress?.('incident'); }}
+                  hitSlop={6}
+                  style={[styles.noteTypeChip, { backgroundColor: colors.criticalBg, borderColor: colors.critical }]}
+                >
                   <Ionicons name="warning-outline" size={10} color={colors.critical} />
                   <Text style={[styles.noteTypeChipText, { color: colors.critical }]}>{incidentCount}</Text>
-                </View>
+                </Pressable>
               )}
               {medUpdateCount > 0 && (
-                <View style={[styles.noteTypeChip, { backgroundColor: colors.moderateBg, borderColor: colors.moderate }]}>
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onNoteTypeChipPress?.('med-update'); }}
+                  hitSlop={6}
+                  style={[styles.noteTypeChip, { backgroundColor: colors.moderateBg, borderColor: colors.moderate }]}
+                >
                   <Ionicons name="medkit-outline" size={10} color={colors.moderate} />
                   <Text style={[styles.noteTypeChipText, { color: colors.moderate }]}>{medUpdateCount}</Text>
-                </View>
+                </Pressable>
               )}
             </View>
           ) : urgentNoteType != null && (() => {
@@ -346,12 +354,16 @@ function BedCard({ patient, onPress, onNoteBadgePress }: { patient: Patient; onP
               : { bg: colors.moderateBg, text: colors.moderate };
             const icon = urgentNoteType === 'incident' ? 'warning-outline' : 'medkit-outline';
             return (
-              <View style={[styles.noteTypePill, { backgroundColor: tc.bg, borderColor: tc.text }]}>
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onNoteTypeChipPress?.(urgentNoteType as 'incident' | 'med-update'); }}
+                hitSlop={6}
+                style={[styles.noteTypePill, { backgroundColor: tc.bg, borderColor: tc.text }]}
+              >
                 <Ionicons name={icon as any} size={10} color={tc.text} />
                 <Text style={[styles.noteTypePillText, { color: tc.text }]} numberOfLines={1}>
                   {formatNoteType(urgentNoteType)}
                 </Text>
-              </View>
+              </Pressable>
             );
           })()}
         </View>
@@ -717,6 +729,11 @@ export default function CensusScreen() {
     router.push(`/patient/${p.id}?scrollTo=notes` as any);
   };
 
+  const openPatientNotesFiltered = (p: Patient, noteType: 'incident' | 'med-update') => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/patient/${p.id}?scrollTo=notes&noteFilter=${noteType}` as any);
+  };
+
   // ─── Shift label (computed once on mount; stable within a session) ─────────
   const [shiftLabel] = useState(getShiftLabel);
 
@@ -903,6 +920,7 @@ export default function CensusScreen() {
               patient={item}
               onPress={() => openPatient(item)}
               onNoteBadgePress={() => openPatientNotes(item)}
+              onNoteTypeChipPress={(type) => openPatientNotesFiltered(item, type)}
             />
           )}
           contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}

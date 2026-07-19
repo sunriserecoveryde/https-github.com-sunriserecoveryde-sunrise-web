@@ -389,7 +389,7 @@ const sw = StyleSheet.create({
 const SWIPE_HINT_KEY = 'swipeHintShown';
 
 export default function PatientDetailScreen() {
-  const { id, scrollTo } = useLocalSearchParams<{ id: string; scrollTo?: string }>();
+  const { id, scrollTo, noteFilter: noteFilterParam } = useLocalSearchParams<{ id: string; scrollTo?: string; noteFilter?: string }>();
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -542,6 +542,14 @@ export default function PatientDetailScreen() {
       case 'incident':    return { bg: colors.criticalBg, text: colors.critical };
     }
   };
+
+  // ─── Per-type note filter (seeded from route param when tapping a census chip) ─
+  const validNoteTypes: NoteType[] = ['observation', 'med-update', 'incident'];
+  const initialNoteTypeFilter: NoteType | null =
+    noteFilterParam && validNoteTypes.includes(noteFilterParam as NoteType)
+      ? (noteFilterParam as NoteType)
+      : null;
+  const [activeNoteTypeFilter, setActiveNoteTypeFilter] = useState<NoteType | null>(initialNoteTypeFilter);
 
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [noteText, setNoteText] = useState('');
@@ -1288,10 +1296,55 @@ export default function PatientDetailScreen() {
             </View>
           </View>
 
+          {/* Note type filter pills — shown when there are session notes */}
+          {getNotesForPatient(patient.id).length > 0 && (() => {
+            const allNotes = getNotesForPatient(patient.id);
+            const typesPresent = NOTE_TYPES.filter(nt => allNotes.some(n => n.noteType === nt.value));
+            if (typesPresent.length < 2) return null; // only show when multiple types exist
+            return (
+              <View style={s.noteFilterRow}>
+                {activeNoteTypeFilter !== null && (
+                  <Pressable
+                    onPress={() => { Haptics.selectionAsync(); setActiveNoteTypeFilter(null); }}
+                    style={[s.noteFilterChip, { backgroundColor: colors.navy }]}
+                  >
+                    <Ionicons name="close-circle" size={11} color="#fff" />
+                    <Text style={[s.noteFilterChipText, { color: '#fff' }]}>All</Text>
+                  </Pressable>
+                )}
+                {typesPresent.map(nt => {
+                  const tc = noteTypeColor(nt.value);
+                  const isActive = activeNoteTypeFilter === nt.value;
+                  return (
+                    <Pressable
+                      key={nt.value}
+                      onPress={() => { Haptics.selectionAsync(); setActiveNoteTypeFilter(isActive ? null : nt.value); }}
+                      style={[
+                        s.noteFilterChip,
+                        { backgroundColor: isActive ? tc.bg : colors.muted, borderColor: isActive ? tc.text : colors.border, borderWidth: isActive ? 1.5 : StyleSheet.hairlineWidth },
+                      ]}
+                    >
+                      <Ionicons name={nt.icon} size={11} color={isActive ? tc.text : colors.mutedForeground} />
+                      <Text style={[s.noteFilterChipText, { color: isActive ? tc.text : colors.mutedForeground }]}>{nt.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            );
+          })()}
+
           {/* Session notes (persisted in context, most recent first) */}
-          {getNotesForPatient(patient.id).map((note, index) => {
-            // Filter by header chip selection; keep original index for undo/restore
-            if (noteTypeFilter != null && note.noteType !== noteTypeFilter) return null;
+          {(() => {
+            const allNotes = getNotesForPatient(patient.id);
+            // Apply both filter sources: header breakdown chip (noteTypeFilter) and
+            // route-param pre-filter from census chip tap (activeNoteTypeFilter)
+            const visibleNotes = allNotes.filter(n =>
+              (noteTypeFilter == null || n.noteType === noteTypeFilter) &&
+              (activeNoteTypeFilter == null || n.noteType === activeNoteTypeFilter)
+            );
+            return visibleNotes.map((note, filteredIndex) => {
+            // Use the original index so undo-restore lands at the right position
+            const index = allNotes.findIndex(n => n.id === note.id);
             const tc = noteTypeColor(note.noteType);
             const nt = NOTE_TYPES.find(x => x.value === note.noteType)!;
             const handleLongPress = () => {
@@ -1373,7 +1426,18 @@ export default function PatientDetailScreen() {
                 </View>
               </SwipeableNoteRow>
             );
-          })}
+          });
+          })()}
+
+          {/* Empty state when type filter yields no results */}
+          {activeNoteTypeFilter != null && getNotesForPatient(patient.id).every(n => n.noteType !== activeNoteTypeFilter) && (
+            <Card colors={colors}>
+              <View style={s.emptyVitals}>
+                <Ionicons name="filter-outline" size={24} color={colors.mutedForeground} />
+                <Text style={[s.emptyText, { color: colors.mutedForeground }]}>No {NOTE_TYPES.find(nt => nt.value === activeNoteTypeFilter)?.label} notes for this patient.</Text>
+              </View>
+            </Card>
+          )}
 
           {/* Original handoff note */}
           {patient.handoffNote ? (
@@ -1713,6 +1777,14 @@ const s = StyleSheet.create({
   flagsList: { gap: 6 },
   flagRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth },
   flagText: { fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1 },
+  // Note type filter pills (inside handoff section)
+  noteFilterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  noteFilterChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  noteFilterChipText: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   // Handoff
   handoffNote: { borderRadius: 12, padding: 14 },
   handoffText: { fontSize: 14, color: '#fff', fontFamily: 'Inter_400Regular', lineHeight: 22 },
