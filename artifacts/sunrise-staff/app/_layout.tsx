@@ -16,6 +16,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { RoleProvider } from '@/context/RoleContext';
 import { PatientProvider } from '@/context/PatientContext';
 import { MdAcknowledgmentProvider } from '@/context/MdAcknowledgmentContext';
+import { NursingNotesProvider } from '@/context/NursingNotesContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -56,7 +57,9 @@ export default function RootLayout() {
               <RoleProvider>
                 <PatientProvider>
                   <MdAcknowledgmentProvider>
-                    <RootLayoutNav />
+                    <NursingNotesProvider>
+                      <RootLayoutNav />
+                    </NursingNotesProvider>
                   </MdAcknowledgmentProvider>
                 </PatientProvider>
               </RoleProvider>

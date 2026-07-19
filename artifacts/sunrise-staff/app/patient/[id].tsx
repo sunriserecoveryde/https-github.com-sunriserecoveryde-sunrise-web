@@ -21,6 +21,7 @@ import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';
 import { usePatients } from '@/context/PatientContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
+import { useNursingNotes } from '@/context/NursingNotesContext';
 import {
   PATIENTS,
   VITALS,
@@ -171,8 +172,9 @@ export default function PatientDetailScreen() {
   const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
 
   // ─── Add Note state ────────────────────────────────────────────────────────
+  const { getNotesForPatient, addNote: addNoteToStore } = useNursingNotes();
+
   type NoteType = 'observation' | 'med-update' | 'incident';
-  interface SessionNote { text: string; type: NoteType }
 
   const NOTE_TYPES: { value: NoteType; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
     { value: 'observation', label: 'Observation', icon: 'eye-outline' },
@@ -191,7 +193,6 @@ export default function PatientDetailScreen() {
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [noteType, setNoteType] = useState<NoteType>('observation');
-  const [sessionNotes, setSessionNotes] = useState<SessionNote[]>([]);
   const slideAnim = useRef(new Animated.Value(400)).current;
 
   const openNoteModal = () => {
@@ -220,7 +221,7 @@ export default function PatientDetailScreen() {
   const submitNote = () => {
     const trimmed = noteText.trim();
     if (!trimmed) return;
-    setSessionNotes(prev => [{ text: trimmed, type: noteType }, ...prev]);
+    addNoteToStore(id, trimmed, noteType);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     closeNoteModal();
   };
@@ -655,18 +656,18 @@ export default function PatientDetailScreen() {
             </Pressable>
           </View>
 
-          {/* Session notes (prepended, most recent first) */}
-          {sessionNotes.map((note, i) => {
-            const tc = noteTypeColor(note.type);
-            const nt = NOTE_TYPES.find(x => x.value === note.type)!;
+          {/* Session notes (persisted in context, most recent first) */}
+          {getNotesForPatient(patient.id).map(note => {
+            const tc = noteTypeColor(note.noteType);
+            const nt = NOTE_TYPES.find(x => x.value === note.noteType)!;
             return (
-              <View key={i} style={[s.sessionNote, { backgroundColor: tc.bg, borderColor: tc.text }]}>
+              <View key={note.id} style={[s.sessionNote, { backgroundColor: tc.bg, borderColor: tc.text }]}>
                 <View style={s.sessionNoteHeader}>
                   <View style={[s.noteTypeBadge, { backgroundColor: tc.bg, borderColor: tc.text }]}>
                     <Ionicons name={nt.icon} size={11} color={tc.text} />
                     <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{nt.label}</Text>
                   </View>
-                  <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session</Text>
+                  <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
                 </View>
                 <Text style={[s.sessionNoteText, { color: colors.navy }]}>{note.text}</Text>
               </View>
@@ -678,7 +679,7 @@ export default function PatientDetailScreen() {
             <View style={[s.handoffNote, { backgroundColor: colors.navyMid }]}>
               <Text style={s.handoffText}>{patient.handoffNote}</Text>
             </View>
-          ) : sessionNotes.length === 0 ? (
+          ) : getNotesForPatient(patient.id).length === 0 ? (
             <Card colors={colors}>
               <View style={s.emptyVitals}>
                 <Ionicons name="document-text-outline" size={24} color={colors.mutedForeground} />
