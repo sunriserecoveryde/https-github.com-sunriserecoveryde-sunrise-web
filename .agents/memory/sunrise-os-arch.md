@@ -1,51 +1,67 @@
 ---
 name: Sunrise OS Architecture
-description: Key architecture decisions, Screen union values, data file field names, and build conventions for the Sunrise OS EHR demo
+description: Screen union (53 values), data files, Sidebar sections, key conventions
 ---
 
-## Artifact
-`artifacts/sunrise-os/` — React + Vite + TypeScript + Tailwind + Recharts
+## Artifact Root
+`artifacts/sunrise-os/src/`
+Workflow: `artifacts/sunrise-os: web` — must be running for preview.
 
-## Screen Union (43 values — as of July 19, 2026 session)
-Dashboard, CommandCenter, CensusBedBoard, PatientList, Admissions, Discharges,
-ChartReview, ProgressNotes, TreatmentPlans, ASAMAssessments, GroupNotes, CosignQueue,
-AppointmentCalendar, GroupSchedule, StaffScheduling, RiskDashboard, RecoveryEngagementScore,
-OutcomeTracking, UADrugTesting, IncidentReporting, ReferralTracker, BusinessDevelopment,
-BedManagement, RevenueCycle, AuditCompliance, Training, Settings, HelpSupport,
-MATManagement, FamilyEngagement, PhysicianOrders, PopulationAnalytics, NursingMAR,
-ShiftHandoff, QualityImprovement, InsuranceAuthorization, AftercarePlanning, MyCaseload,
-BiopsychosocialAssessment, DischargeSummary, CrisisAssessment, AlumniProgram, PatientDetail
+## Screen Union (53 values — current)
+`Dashboard`, `CommandCenter`, `CensusBedBoard`, `PatientList`, `Admissions`, `Discharges`,
+`ChartReview`, `ProgressNotes`, `TreatmentPlans`, `ASAMAssessments`, `GroupNotes`, `CosignQueue`,
+`MyCaseload`, `AppointmentCalendar`, `GroupSchedule`, `StaffScheduling`, `RiskDashboard`,
+`RecoveryEngagementScore`, `OutcomeTracking`, `UADrugTesting`, `IncidentReporting`,
+`ReferralTracker`, `BusinessDevelopment`, `BedManagement`, `InsuranceAuthorization`,
+`AftercarePlanning`, `RevenueCycle`, `AuditCompliance`, `QualityImprovement`, `Training`,
+`Settings`, `HelpSupport`, `MATManagement`, `FamilyEngagement`, `PhysicianOrders`,
+`PopulationAnalytics`, `NursingMAR`, `ShiftHandoff`, `BiopsychosocialAssessment`,
+`DischargeSummary`, `CrisisAssessment`, `AlumniProgram`, `TelehealthConsults`,
+`ClinicalSupervision`, `MedicalRecords`, `PeerSupport`, `FinancialCounseling`,
+`GroupTherapyCurriculum`, `CertificationTracker`, `WaitlistManager`, `SecureMessaging`,
+`FormularyManagement`, `PatientDetail`
 
-**Why:** Every case must be in the App.tsx `renderScreen()` switch; missing cases hit the default fallback.
+## Data Files
+- `data/mockPatients.ts` — `Patient` interface + `MOCK_PATIENTS` (20 patients p1–p20)
+- `data/mockReferrals.ts` — 15 referral sources
+- `data/mockStaff.ts` — 12 staff members
+- `data/mockGroups.ts` — weekly group therapy schedule
+- `data/mockMedications.ts` — MAT/psychiatric/medical/PRN; `getPatientMedications(id)`
+- `data/mockVitals.ts` — COWS/CIWA/vitals; `getPatientVitals(id)`
+- `data/mockLabs.ts` — lab results by panel; `getPatientLabs(id)`, `LAB_PANEL_ORDER`
 
-## Data File Field Names (critical — wrong field name = silent undefined)
-- `patient.los` (not `lengthOfStay`)
-- `patient.craving` (not `cravingScore`)
-- `patient.asam` is an object `{d1,d2,d3,d4,d5,d6}` (not a string)
-- `patient.bed` (optional, not `roomNumber`)
-- `patient.recoveryScore`, `patient.amaRisk`, `patient.mood`, `patient.lastUa`, `patient.flags`, `patient.notes`, `patient.goals`, `patient.coOccurring`
-- No `substanceUseHistory` — derive from `primaryDiagnosis`/`coOccurring`
-- `getPatientMedications(id)`, `getPatientVitals(id)`, `getPatientLabs(id)`, `LAB_PANEL_ORDER`
+## Sidebar Sections (current)
+- OVERVIEW: Dashboard, Command Center
+- CLINICAL: Census & Bed Board, Patient List, Admissions, Discharges, MAT Management, Family Engagement, Physician Orders, Peer Support Program, Telehealth Consults
+- DOCUMENTATION: Chart Review, Progress Notes (5), Treatment Plans (3), ASAM Assessments, Biopsychosocial Intake, Discharge Summary, Medical Records/ROI, Group Notes, Co-sign Queue (4), My Caseload
+- SCHEDULING: Appointment Calendar, Group Schedule, Group Curriculum Library, Staff Scheduling
+- RISK & OUTCOMES: Risk Dashboard, Recovery Engagement Score, Outcome Tracking, Population Analytics, UA/Drug Testing, Incident Reports, Crisis Assessment (C-SSRS)
+- NURSING: Medication MAR, Shift Handoff
+- OPERATIONS: Referral Tracker, Waitlist Manager, Business Development, Bed Management, Insurance Auth/UR, Aftercare Planning, Alumni Program
+- BILLING & COMPLIANCE: Revenue Cycle, Financial Counseling, Audit Readiness, Quality Improvement, Training, Formulary & Drug Ref
+- SUPERVISION: Clinical Supervision, Certification Tracker
+- COMMUNICATIONS: Secure Messaging (badge: 3)
+- Footer: Settings, Help & Support
 
-## Tailwind / CSS Conventions
-- Custom utility classes: `btn-primary`, `card` (defined in `index.css`)
-- Color tokens: `bg-navy`, `bg-orange`/`text-orange`, `text-sunrise-blue`, `bg-success`, `bg-critical`, `bg-purple`, `bg-teal`, `text-slate`, `border-border`, `bg-bg`
-- CSS vars: `--topbar-height`, `--banner-height`, `--nav-width`
+## Key Conventions
+- All pages receive `{ navigate: (s: Screen, patientId?: string) => void }`
+- Screen union declared in `App.tsx`, imported by Sidebar and all pages
+- All lucide-react icons used in Sidebar MUST be explicitly imported in `Sidebar.tsx` — runtime crash if missing (TS won't catch)
+- Recharts throughout for charts — `ResponsiveContainer` + `CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9"`
+- CSS classes: `btn-primary`, `card`, `bg-navy`, `text-orange`/`bg-orange`, `text-sunrise-blue`, `bg-success`, `bg-critical`, `text-slate`, `border-border`, `bg-bg`
+- Color tokens in `tailwind.config.js` — use those, not raw hex
 
-## Sidebar Structure (sections)
-OVERVIEW, CLINICAL, DOCUMENTATION (+ MyCaseload, BiopsychosocialIntake, DischargeSummary),
-SCHEDULING, RISK & OUTCOMES (+ CrisisAssessment), NURSING (+ ShiftHandoff),
-OPERATIONS (+ InsuranceAuth, AftercarePlanning, AlumniProgram), BILLING & COMPLIANCE (+ QualityImprovement),
-HELP + Settings footer
+## Known Pitfalls
+- Apostrophes in JSX string literals (`I've`, `I'd`) break Babel — use `\'` or backtick template strings
+- `Record<string, string | string[]>` on data objects causes TS errors — use explicit interfaces
+- All lucide icons in Sidebar must be in its import line — runtime "X is not defined" if missing (even if TS passes)
+- Duplicate `];` in Sidebar sections array caused a brief Vite error — the sections array `const sections = [...]` must have exactly one closing `];`
+- Replit-cartographer Babel errors are cosmetic (indexer only) — Vite/TypeScript determines build correctness
 
-## Common Pitfalls
-- Strings with apostrophes (`I've`, `I'd`) inside single-quoted string literals break Babel parser — use `\'` or backticks
-- `Record<string, string | string[]>` typed data objects: use typed interfaces when accessing specific keys
-- `Legend` must be explicitly imported from recharts (not auto-included)
-- lucide-react icons must exist in the version installed — if `Download` causes runtime error, swap for a known-good icon
-- The replit-cartographer Babel parse errors are cosmetic (indexer only) — Vite/TypeScript determines actual build correctness
-
-## Key Architectural Decision
-Demo mode only — all state in-memory mock files, no database, no auth.
-**Why:** Pure demo for sales/investment pitches to addiction treatment centers.
-**How to apply:** Never add fetch() calls, database queries, or auth checks. All "saves" are visual only.
+## What's Next (possible additions)
+- Patient messaging / HIPAA inbox from patient portal perspective
+- Outcomes report PDF export
+- Referral intake form in ReferralTracker
+- Crisis stabilization unit board
+- Drug interaction checker (now in FormularyManagement — could deepen)
+- PatientDetail: Vitals tab sparkline trend, Labs tab trending arrows

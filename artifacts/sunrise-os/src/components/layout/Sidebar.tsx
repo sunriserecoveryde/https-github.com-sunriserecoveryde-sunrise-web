@@ -8,7 +8,9 @@ import {
   Receipt, ShieldCheck, GraduationCap, FileBarChart,
   HelpCircle, Settings, Droplets, Siren, UserCog,
   Pill, Heart, Stethoscope, LineChart, Clipboard,
-  ArrowLeftRight, Star, CreditCard, MapPin, BookUser, Download
+  ArrowLeftRight, Star, CreditCard, MapPin, BookUser, Download,
+  Video, UserCheck, FolderOpen, DollarSign, BookOpen, HandHelping,
+  Award, ClipboardCheck, MessageSquare, ListOrdered
 } from 'lucide-react';
 import { Screen } from '../../App';
 
@@ -36,6 +38,8 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
         { id: 'MATManagement', label: 'MAT Management', icon: Pill },
         { id: 'FamilyEngagement', label: 'Family Engagement', icon: Heart },
         { id: 'PhysicianOrders', label: 'Physician Orders', icon: Stethoscope },
+        { id: 'PeerSupport', label: 'Peer Support Program', icon: HandHelping },
+        { id: 'TelehealthConsults', label: 'Telehealth Consults', icon: Video },
       ]
     },
     {
@@ -47,6 +51,7 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
         { id: 'ASAMAssessments', label: 'ASAM Assessments', icon: ListTodo },
         { id: 'BiopsychosocialAssessment', label: 'Biopsychosocial Intake', icon: ClipboardList },
         { id: 'DischargeSummary', label: 'Discharge Summary', icon: Download },
+        { id: 'MedicalRecords', label: 'Medical Records / ROI', icon: FolderOpen },
         { id: 'GroupNotes', label: 'Group Notes', icon: UsersRound },
         { id: 'CosignQueue', label: 'Co-sign Queue', icon: FileWarning, badge: 4 },
         { id: 'MyCaseload', label: 'My Caseload', icon: BookUser },
@@ -57,6 +62,7 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
       items: [
         { id: 'AppointmentCalendar', label: 'Appointment Calendar', icon: CalendarDays },
         { id: 'GroupSchedule', label: 'Group Schedule', icon: CalendarClock },
+        { id: 'GroupTherapyCurriculum', label: 'Group Curriculum Library', icon: BookOpen },
         { id: 'StaffScheduling', label: 'Staff Scheduling', icon: UserCog },
       ]
     },
@@ -83,6 +89,7 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
       title: 'OPERATIONS',
       items: [
         { id: 'ReferralTracker', label: 'Referral Tracker', icon: Network },
+        { id: 'WaitlistManager', label: 'Waitlist Manager', icon: ListOrdered },
         { id: 'BusinessDevelopment', label: 'Business Development', icon: Briefcase },
         { id: 'BedManagement', label: 'Bed Management', icon: Bed },
         { id: 'InsuranceAuthorization', label: 'Insurance Auth / UR', icon: CreditCard },
@@ -94,11 +101,26 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
       title: 'BILLING & COMPLIANCE',
       items: [
         { id: 'RevenueCycle', label: 'Revenue Cycle', icon: Receipt },
+        { id: 'FinancialCounseling', label: 'Financial Counseling', icon: DollarSign },
         { id: 'AuditCompliance', label: 'Audit Readiness', icon: ShieldCheck },
         { id: 'QualityImprovement', label: 'Quality Improvement', icon: Star },
         { id: 'Training', label: 'Training', icon: GraduationCap, badge: 2 },
+        { id: 'FormularyManagement', label: 'Formulary & Drug Ref', icon: ClipboardCheck },
       ]
-    }
+    },
+    {
+      title: 'SUPERVISION',
+      items: [
+        { id: 'ClinicalSupervision', label: 'Clinical Supervision', icon: UserCheck },
+        { id: 'CertificationTracker', label: 'Certification Tracker', icon: Award },
+      ]
+    },
+    {
+      title: 'COMMUNICATIONS',
+      items: [
+        { id: 'SecureMessaging', label: 'Secure Messaging', icon: MessageSquare, badge: 3 },
+      ]
+    },
   ];
 
   return (

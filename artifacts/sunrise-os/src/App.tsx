@@ -45,6 +45,16 @@ import { BiopsychosocialAssessment } from './pages/BiopsychosocialAssessment';
 import { DischargeSummary } from './pages/DischargeSummary';
 import { CrisisAssessment } from './pages/CrisisAssessment';
 import { AlumniProgram } from './pages/AlumniProgram';
+import { TelehealthConsults } from './pages/TelehealthConsults';
+import { ClinicalSupervision } from './pages/ClinicalSupervision';
+import { MedicalRecords } from './pages/MedicalRecords';
+import { PeerSupport } from './pages/PeerSupport';
+import { FinancialCounseling } from './pages/FinancialCounseling';
+import { GroupTherapyCurriculum } from './pages/GroupTherapyCurriculum';
+import { CertificationTracker } from './pages/CertificationTracker';
+import { WaitlistManager } from './pages/WaitlistManager';
+import { SecureMessaging } from './pages/SecureMessaging';
+import { FormularyManagement } from './pages/FormularyManagement';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export type Screen = 
@@ -90,6 +100,16 @@ export type Screen =
   | 'DischargeSummary'
   | 'CrisisAssessment'
   | 'AlumniProgram'
+  | 'TelehealthConsults'
+  | 'ClinicalSupervision'
+  | 'MedicalRecords'
+  | 'PeerSupport'
+  | 'FinancialCounseling'
+  | 'GroupTherapyCurriculum'
+  | 'CertificationTracker'
+  | 'WaitlistManager'
+  | 'SecureMessaging'
+  | 'FormularyManagement'
   | 'PatientDetail';
 
 function App() {
@@ -149,6 +169,16 @@ function App() {
       case 'DischargeSummary': return <DischargeSummary navigate={navigateTo} />;
       case 'CrisisAssessment': return <CrisisAssessment navigate={navigateTo} />;
       case 'AlumniProgram': return <AlumniProgram navigate={navigateTo} />;
+      case 'TelehealthConsults': return <TelehealthConsults navigate={navigateTo} />;
+      case 'ClinicalSupervision': return <ClinicalSupervision navigate={navigateTo} />;
+      case 'MedicalRecords': return <MedicalRecords navigate={navigateTo} />;
+      case 'PeerSupport': return <PeerSupport navigate={navigateTo} />;
+      case 'FinancialCounseling': return <FinancialCounseling navigate={navigateTo} />;
+      case 'GroupTherapyCurriculum': return <GroupTherapyCurriculum navigate={navigateTo} />;
+      case 'CertificationTracker': return <CertificationTracker navigate={navigateTo} />;
+      case 'WaitlistManager': return <WaitlistManager navigate={navigateTo} />;
+      case 'SecureMessaging': return <SecureMessaging navigate={navigateTo} />;
+      case 'FormularyManagement': return <FormularyManagement navigate={navigateTo} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow border border-border">
