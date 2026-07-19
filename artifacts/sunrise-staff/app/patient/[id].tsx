@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Alert,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -13,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';
+import { usePatients } from '@/context/PatientContext';
 import {
   PATIENTS,
   VITALS,
@@ -152,8 +155,11 @@ export default function PatientDetailScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { patients, dischargePatient } = usePatients();
+  const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
 
-  const patient = PATIENTS.find(p => p.id === id);
+  // Look up patient from live roster first, fall back to static data for robustness
+  const patient = patients.find(p => p.id === id) ?? PATIENTS.find(p => p.id === id);
   if (!patient) {
     return (
       <View style={[s.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
@@ -417,7 +423,65 @@ export default function PatientDetailScreen() {
           </View>
         )}
 
+        {/* ─── Discharge ─── */}
+        <View style={s.section}>
+          <Pressable
+            style={[s.dischargeBtn, { borderColor: colors.critical }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setDischargeModalVisible(true);
+            }}
+          >
+            <Ionicons name="exit-outline" size={18} color={colors.critical} />
+            <Text style={[s.dischargeBtnText, { color: colors.critical }]}>Discharge Patient</Text>
+          </Pressable>
+        </View>
+
       </ScrollView>
+
+      {/* ─── Discharge confirmation modal ─── */}
+      <Modal
+        visible={dischargeModalVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setDischargeModalVisible(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={[s.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[s.modalIconWrap, { backgroundColor: colors.criticalBg }]}>
+              <Ionicons name="exit-outline" size={28} color={colors.critical} />
+            </View>
+            <Text style={[s.modalTitle, { color: colors.navy }]}>Discharge Patient?</Text>
+            <Text style={[s.modalBody, { color: colors.mutedForeground }]}>
+              {patient.firstName} {patient.lastName} will be removed from the active census,
+              MAR, and morning check lists. Bed {patient.bed ?? '—'} will be marked available.
+              This cannot be undone from the app.
+            </Text>
+            <View style={s.modalActions}>
+              <Pressable
+                style={[s.modalBtn, s.modalBtnCancel, { backgroundColor: colors.muted }]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setDischargeModalVisible(false);
+                }}
+              >
+                <Text style={[s.modalBtnText, { color: colors.navy }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[s.modalBtn, s.modalBtnConfirm, { backgroundColor: colors.critical }]}
+                onPress={() => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  setDischargeModalVisible(false);
+                  dischargePatient(patient.id);
+                  router.back();
+                }}
+              >
+                <Text style={[s.modalBtnText, { color: '#fff' }]}>Confirm Discharge</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -491,4 +555,29 @@ const s = StyleSheet.create({
   // Handoff
   handoffNote: { borderRadius: 12, padding: 14 },
   handoffText: { fontSize: 14, color: '#fff', fontFamily: 'Inter_400Regular', lineHeight: 22 },
+  // Discharge
+  dischargeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14,
+  },
+  dischargeBtnText: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  // Discharge modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center', padding: 24,
+  },
+  modalCard: {
+    width: '100%', borderRadius: 16, borderWidth: StyleSheet.hairlineWidth,
+    padding: 24, alignItems: 'center', gap: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15, shadowRadius: 20, elevation: 10,
+  },
+  modalIconWrap: { borderRadius: 50, padding: 14, marginBottom: 4 },
+  modalTitle: { fontSize: 18, fontWeight: '700', fontFamily: 'Inter_700Bold', textAlign: 'center' },
+  modalBody: { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 8, width: '100%' },
+  modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
+  modalBtnCancel: {},
+  modalBtnConfirm: {},
+  modalBtnText: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold' },
 });

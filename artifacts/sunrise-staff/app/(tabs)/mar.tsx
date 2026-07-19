@@ -14,7 +14,8 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
-import { RESIDENTIAL_PATIENTS, MEDICATIONS, Patient, Medication } from '@/data/mockData';
+import { usePatients } from '@/context/PatientContext';
+import { MEDICATIONS, Patient, Medication } from '@/data/mockData';
 
 // ── Persistence helpers ────────────────────────────────────────────────────
 
@@ -181,6 +182,7 @@ function PatientMARCard({ patient, adminMap, onToggle, expanded, onExpand }: {
 
 function MARView() {
   const colors = useColors();
+  const { residentialPatients } = usePatients();
   const [adminMap, setAdminMap] = useState<AdminMap>({});
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['p1', 'p4', 'p8']));
   const [loaded, setLoaded] = useState(false);
@@ -216,7 +218,7 @@ function MARView() {
 
   return (
     <FlatList
-      data={RESIDENTIAL_PATIENTS}
+      data={residentialPatients}
       keyExtractor={p => p.id}
       renderItem={({ item }) => (
         <PatientMARCard
@@ -366,8 +368,9 @@ function PatientCheckCard({ patient, check, onChange }: {
 
 function ChecksView() {
   const colors = useColors();
+  const { residentialPatients } = usePatients();
   const defaultCheck: CheckEntry = { mood: 5, cravings: 5, oriented: true, uaCollected: false, completed: false };
-  const defaultChecks = Object.fromEntries(RESIDENTIAL_PATIENTS.map(p => [p.id, { ...defaultCheck }]));
+  const defaultChecks = Object.fromEntries(residentialPatients.map(p => [p.id, { ...defaultCheck }]));
   const [checks, setChecks] = useState<Record<string, CheckEntry>>(defaultChecks);
   const [loaded, setLoaded] = useState(false);
 
@@ -386,11 +389,14 @@ function ChecksView() {
     if (loaded) saveToStorage(CHECKS_KEY, checks);
   }, [checks, loaded]);
 
-  const completedCount = Object.values(checks).filter(c => c.completed).length;
+  // Only count completions for patients currently on the active roster
+  // (avoids stale entries from discharged patients inflating the count)
+  const total = residentialPatients.length;
+  const completedCount = residentialPatients.filter(p => checks[p.id]?.completed).length;
 
   return (
     <FlatList
-      data={RESIDENTIAL_PATIENTS}
+      data={residentialPatients}
       keyExtractor={p => p.id}
       renderItem={({ item }) => (
         <PatientCheckCard
@@ -404,11 +410,11 @@ function ChecksView() {
       ListHeaderComponent={
         <View style={[styles.checksProgress, { backgroundColor: colors.navyMid }]}>
           <Text style={[styles.checksProgressText, { color: '#fff' }]}>
-            {completedCount} / {RESIDENTIAL_PATIENTS.length} complete
+            {completedCount} / {total} complete
           </Text>
           <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
             <View
-              style={[styles.progressFill, { backgroundColor: colors.success, width: `${(completedCount / RESIDENTIAL_PATIENTS.length) * 100}%` as any }]}
+              style={[styles.progressFill, { backgroundColor: colors.success, width: total > 0 ? `${(completedCount / total) * 100}%` as any : '0%' }]}
             />
           </View>
         </View>

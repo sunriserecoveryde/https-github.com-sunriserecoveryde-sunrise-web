@@ -1,11 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   FlatList,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,9 +17,9 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
+import { usePatients } from '@/context/PatientContext';
 import {
   BEDS,
-  PATIENTS,
   VITALS,
   Patient,
   Acuity,
@@ -26,7 +29,7 @@ import {
 type Filter = 'All' | Acuity | 'Available';
 const FILTERS: Filter[] = ['All', 'Critical', 'High', 'Moderate', 'Routine', 'Available'];
 
-// ─── Score helpers ────────────────────────────────────────────────────────────
+// ─── Score helpers ────────────────────────────────────────────────────────────────
 
 function getScoreStyle(score: number, threshold: number, colors: ReturnType<typeof useColors>) {
   if (score >= threshold) return { bg: colors.criticalBg, text: colors.critical };
@@ -65,13 +68,13 @@ function trendColor(trend: Trend, colors: ReturnType<typeof useColors>): string 
 }
 
 // ─── Withdrawal threshold ─────────────────────────────────────────────────────
-const WD_THRESHOLD = 13; // COWS > 12 or CIWA > 12 per facility protocol
+const WD_THRESHOLD = 13;
 
 function isWithdrawalAlert(p: Patient) {
   return (p.cows != null && p.cows >= WD_THRESHOLD) || (p.ciwa != null && p.ciwa >= WD_THRESHOLD);
 }
 
-// ─── Withdrawal alert banner (critical patients) ──────────────────────────────
+// ─── Withdrawal alert banner ──────────────────────────────────────────────────
 
 function WithdrawalAlertBanner({
   patients,
@@ -263,7 +266,6 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
         </View>
       </View>
 
-      {/* Tap hint */}
       <Text style={[styles.tapHint, { color: colors.mutedForeground }]}>Tap for vitals history</Text>
     </Pressable>
   );
@@ -283,6 +285,202 @@ function AvailableBedCard({ bedId, status }: { bedId: string; status: string }) 
   );
 }
 
+// ─── Admit Patient Modal ──────────────────────────────────────────────────────
+
+const ACUITY_OPTIONS: Acuity[] = ['Routine', 'Moderate', 'High', 'Critical'];
+const PROGRAM_OPTIONS = ['Residential', 'PHP', 'IOP', 'OP'] as const;
+
+function AdmitModal({
+  visible,
+  onClose,
+  availableBeds,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  availableBeds: string[];
+}) {
+  const colors = useColors();
+  const { admitPatient } = usePatients();
+
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [bed, setBed] = useState('');
+  const [diagnosis, setDiagnosis] = useState('');
+  const [acuity, setAcuity] = useState<Acuity>('Routine');
+  const [program, setProgram] = useState<typeof PROGRAM_OPTIONS[number]>('Residential');
+
+  function resetForm() {
+    setFirstName('');
+    setLastName('');
+    setBed('');
+    setDiagnosis('');
+    setAcuity('Routine');
+    setProgram('Residential');
+  }
+
+  function handleAdmit() {
+    if (!firstName.trim() || !lastName.trim()) {
+      Alert.alert('Missing fields', 'First name and last name are required.');
+      return;
+    }
+    if (!bed) {
+      Alert.alert('No bed selected', 'Please select an available bed before admitting.');
+      return;
+    }
+    // Guard: bed must still be available at submit time (race condition safety)
+    if (!availableBeds.includes(bed)) {
+      Alert.alert('Bed unavailable', `Bed ${bed} is no longer available. Please choose another.`);
+      setBed('');
+      return;
+    }
+
+    const today = new Date();
+    const admitDate = `${today.getMonth() + 1}/${today.getDate()}`;
+
+    const newPatient: Patient = {
+      id: `p-${Date.now()}`,
+      mrn: `MRN-${Math.floor(10000 + Math.random() * 90000)}`,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      age: 0,
+      gender: 'M',
+      program,
+      primaryDiagnosis: diagnosis.trim() || 'Pending assessment',
+      acuity,
+      bed: bed.trim().toUpperCase(),
+      bedStatus: 'Occupied',
+      flags: [],
+      admitDate,
+      los: 0,
+      counselor: 'TBD',
+      mood: 5,
+      cravings: 5,
+      lastUa: 'Pending',
+      nextAppointment: 'TBD',
+    };
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    admitPatient(newPatient);
+    resetForm();
+    onClose();
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={[modalStyles.container, { backgroundColor: colors.background }]}>
+        {/* Header */}
+        <View style={[modalStyles.header, { backgroundColor: colors.navy }]}>
+          <Pressable onPress={() => { resetForm(); onClose(); }} hitSlop={12}>
+            <Text style={modalStyles.cancelText}>Cancel</Text>
+          </Pressable>
+          <Text style={modalStyles.title}>Admit Patient</Text>
+          <Pressable onPress={handleAdmit} hitSlop={12}>
+            <Text style={[modalStyles.admitText, { color: colors.orange }]}>Admit</Text>
+          </Pressable>
+        </View>
+
+        <ScrollView style={modalStyles.form} contentContainerStyle={{ padding: 20, gap: 20 }}>
+          {/* Name */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={[modalStyles.label, { color: colors.mutedForeground }]}>PATIENT NAME *</Text>
+            <View style={modalStyles.nameRow}>
+              <TextInput
+                style={[modalStyles.input, { flex: 1, backgroundColor: colors.card, color: colors.navy, borderColor: colors.border }]}
+                placeholder="First"
+                placeholderTextColor={colors.mutedForeground}
+                value={firstName}
+                onChangeText={setFirstName}
+                autoCapitalize="words"
+              />
+              <TextInput
+                style={[modalStyles.input, { flex: 1, backgroundColor: colors.card, color: colors.navy, borderColor: colors.border }]}
+                placeholder="Last"
+                placeholderTextColor={colors.mutedForeground}
+                value={lastName}
+                onChangeText={setLastName}
+                autoCapitalize="words"
+              />
+            </View>
+          </View>
+
+          {/* Bed — chip-only to prevent invalid/duplicate assignments */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={[modalStyles.label, { color: colors.mutedForeground }]}>BED ASSIGNMENT *</Text>
+            {availableBeds.length > 0 ? (
+              <View style={modalStyles.bedChips}>
+                {availableBeds.map(b => (
+                  <Pressable
+                    key={b}
+                    onPress={() => { Haptics.selectionAsync(); setBed(b); }}
+                    style={[modalStyles.bedChip, { backgroundColor: bed === b ? colors.orange : colors.successBg, borderColor: bed === b ? colors.orange : colors.success }]}
+                  >
+                    <Text style={[modalStyles.bedChipText, { color: bed === b ? '#fff' : colors.success }]}>{b}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <View style={[modalStyles.noBedsBanner, { backgroundColor: colors.criticalBg, borderColor: colors.critical }]}>
+                <Ionicons name="bed-outline" size={16} color={colors.critical} />
+                <Text style={[modalStyles.noBedsBannerText, { color: colors.critical }]}>
+                  No beds available — discharge or clean a bed first.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Diagnosis */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={[modalStyles.label, { color: colors.mutedForeground }]}>PRIMARY DIAGNOSIS</Text>
+            <TextInput
+              style={[modalStyles.input, { backgroundColor: colors.card, color: colors.navy, borderColor: colors.border }]}
+              placeholder="e.g. Opioid Use Disorder"
+              placeholderTextColor={colors.mutedForeground}
+              value={diagnosis}
+              onChangeText={setDiagnosis}
+              autoCapitalize="words"
+            />
+          </View>
+
+          {/* Program */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={[modalStyles.label, { color: colors.mutedForeground }]}>PROGRAM</Text>
+            <View style={modalStyles.chipRow}>
+              {PROGRAM_OPTIONS.map(p => (
+                <Pressable
+                  key={p}
+                  onPress={() => { Haptics.selectionAsync(); setProgram(p); }}
+                  style={[modalStyles.optionChip, { backgroundColor: program === p ? colors.navy : colors.muted, borderColor: program === p ? colors.navy : colors.border }]}
+                >
+                  <Text style={[modalStyles.optionChipText, { color: program === p ? '#fff' : colors.navy }]}>{p}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Acuity */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={[modalStyles.label, { color: colors.mutedForeground }]}>ACUITY</Text>
+            <View style={modalStyles.chipRow}>
+              {ACUITY_OPTIONS.map(a => {
+                const ac = acuityColor(a);
+                return (
+                  <Pressable
+                    key={a}
+                    onPress={() => { Haptics.selectionAsync(); setAcuity(a); }}
+                    style={[modalStyles.optionChip, { backgroundColor: acuity === a ? ac.bg : colors.muted, borderColor: acuity === a ? ac.border : colors.border }]}
+                  >
+                    <Text style={[modalStyles.optionChipText, { color: acuity === a ? ac.text : colors.navy }]}>{a}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function CensusScreen() {
@@ -292,16 +490,25 @@ export default function CensusScreen() {
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const [filter, setFilter] = useState<Filter>('All');
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [admitVisible, setAdmitVisible] = useState(false);
   const hasFiredHaptic = useRef(false);
 
-  const occupiedCount = BEDS.filter(b => b.status === 'Occupied').length;
-  const availableCount = BEDS.filter(b => b.status === 'Available').length;
-  const cleaningCount = BEDS.filter(b => b.status === 'Cleaning').length;
-  const residentialPatients = PATIENTS.filter(p => p.bed != null);
+  const { patients, bedStatusMap } = usePatients();
+  const residentialPatients = patients.filter(p => p.bed != null);
+
+  // Build bed lists from live data
+  const allBedIds = BEDS.map(b => b.id);
+  const occupiedBedIds = new Set(patients.map(p => p.bed).filter(Boolean));
+  const occupiedCount = occupiedBedIds.size;
+  const nonOccupiedBeds = allBedIds
+    .filter(id => !occupiedBedIds.has(id))
+    .map(id => ({ id, status: bedStatusMap[id] ?? 'Available' }));
+  const availableCount = nonOccupiedBeds.filter(b => b.status === 'Available').length;
+  const cleaningCount = nonOccupiedBeds.filter(b => b.status === 'Cleaning').length;
+  const availableBedIds = nonOccupiedBeds.filter(b => b.status === 'Available').map(b => b.id);
 
   const alertCount = residentialPatients.filter(isWithdrawalAlert).length;
 
-  // Fire heavy haptic once when the screen mounts with active alerts (simulates new threshold crossing)
   useEffect(() => {
     if (alertCount > 0 && !hasFiredHaptic.current) {
       hasFiredHaptic.current = true;
@@ -312,7 +519,6 @@ export default function CensusScreen() {
   const filteredPatients = filter === 'Available'
     ? []
     : residentialPatients.filter(p => filter === 'All' || p.acuity === filter);
-  const nonOccupiedBeds = BEDS.filter(b => b.status !== 'Occupied');
 
   const openPatient = (p: Patient) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -328,7 +534,16 @@ export default function CensusScreen() {
             <Text style={styles.headerTitle}>Census Board</Text>
             <Text style={styles.headerSubtitle}>Jul 19 · Day Shift</Text>
           </View>
-          <RoleToggle />
+          <View style={styles.headerActions}>
+            <Pressable
+              style={[styles.admitBtn, { backgroundColor: colors.orange }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setAdmitVisible(true); }}
+            >
+              <Ionicons name="person-add-outline" size={14} color="#fff" />
+              <Text style={styles.admitBtnText}>Admit</Text>
+            </Pressable>
+            <RoleToggle />
+          </View>
         </View>
         {/* Stats */}
         <View style={styles.statsRow}>
@@ -412,6 +627,11 @@ export default function CensusScreen() {
         }
       />
 
+      <AdmitModal
+        visible={admitVisible}
+        onClose={() => setAdmitVisible(false)}
+        availableBeds={availableBedIds}
+      />
     </View>
   );
 }
@@ -424,6 +644,9 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 },
   headerTitle: { fontSize: 22, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2, fontFamily: 'Inter_400Regular' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  admitBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8 },
+  admitBtnText: { fontSize: 13, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   statsRow: { flexDirection: 'row', marginTop: 12, paddingBottom: 4 },
   statItem: { flex: 1, alignItems: 'center' },
   statValue: { fontSize: 22, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
@@ -485,5 +708,31 @@ const styles = StyleSheet.create({
   footerBeds: { marginTop: 8 },
   emptyState: { alignItems: 'center', gap: 12, paddingTop: 60 },
   emptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
-  // Modal
+});
+
+const modalStyles = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16,
+  },
+  cancelText: { fontSize: 16, color: 'rgba(255,255,255,0.7)', fontFamily: 'Inter_400Regular' },
+  title: { fontSize: 17, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
+  admitText: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  form: { flex: 1 },
+  fieldGroup: { gap: 8 },
+  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, fontFamily: 'Inter_700Bold' },
+  nameRow: { flexDirection: 'row', gap: 10 },
+  input: {
+    borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 15, fontFamily: 'Inter_400Regular',
+  },
+  bedChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  bedChip: { borderRadius: 8, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 6 },
+  bedChipText: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  noBedsBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 10, padding: 12 },
+  noBedsBannerText: { fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  optionChip: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 8 },
+  optionChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
 });
