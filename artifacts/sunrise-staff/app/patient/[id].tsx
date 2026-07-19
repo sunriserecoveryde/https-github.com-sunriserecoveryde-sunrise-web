@@ -400,7 +400,14 @@ export default function PatientDetailScreen() {
   const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
 
   // ─── Add Note state ────────────────────────────────────────────────────────
-  const { getNotesForPatient, addNote: addNoteToStore, updateNote, removeNote, restoreNote } = useNursingNotes();
+  const {
+    getNotesForPatient,
+    addNote: addNoteToStore,
+    updateNote,
+    pendingDelete,
+    startPendingDelete,
+    undoPendingDelete,
+  } = useNursingNotes();
 
   // ─── Scroll-to-section support ────────────────────────────────────────────
   // All three targets share one ScrollView ref (primary call owns it; secondary
@@ -429,13 +436,12 @@ export default function PatientDetailScreen() {
   }, []);
 
   // ─── Undo-delete toast ─────────────────────────────────────────────────────
-  const [pendingDelete, setPendingDelete] = useState<{
-    note: NursingNote;
-    patientId: string;
-    originalIndex: number;
-  } | null>(null);
+  // pendingDelete lives in NursingNotesContext so it survives navigation.
+  // toastVisible / toastAnim are purely local UI state driven by the context value.
+  const [toastVisible, setToastVisible] = useState(false);
   const toastAnim = useRef(new Animated.Value(100)).current;
-  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Tracks which note id is currently animated in, to detect replace-toast transitions.
+  const toastNoteIdRef = useRef<string | null>(null);
 
   // ─── Clipboard-fallback modal (shown when browser blocks clipboard write) ──
   const [clipboardFallbackVisible, setClipboardFallbackVisible] = useState(false);
@@ -469,71 +475,68 @@ export default function PatientDetailScreen() {
 
   useEffect(() => {
     return () => {
-      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
       if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
     };
   }, []);
 
-  const dismissToast = () => {
-    Animated.timing(toastAnim, {
-      toValue: 100,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => setPendingDelete(null));
-    deleteTimerRef.current = null;
-  };
+  // ─── Drive toast animation from context pendingDelete ─────────────────────
+  // pendingDelete lives in context so it persists across navigation.  When the
+  // nurse leaves the chart and comes back the effect fires on mount, sees a
+  // pending delete for this patient, and springs the toast back in with the
+  // time already counting down in context.
+  useEffect(() => {
+    const noteId = pendingDelete?.patientId === id ? pendingDelete.note.id : null;
 
-  const handleUndo = () => {
-    if (!pendingDelete) return;
-    if (deleteTimerRef.current) {
-      clearTimeout(deleteTimerRef.current);
-      deleteTimerRef.current = null;
-    }
-    restoreNote(pendingDelete.patientId, pendingDelete.note, pendingDelete.originalIndex);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Animated.timing(toastAnim, {
-      toValue: 100,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => setPendingDelete(null));
-  };
-
-  const handleDeleteNote = (note: NursingNote, index: number) => {
-    // Guard: if this note is already pending deletion (undo toast visible), do nothing.
-    if (pendingDelete?.note.id === note.id) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Commit any in-flight deletion timer before starting a new one
-    if (deleteTimerRef.current) {
-      clearTimeout(deleteTimerRef.current);
-      deleteTimerRef.current = null;
-    }
-    // Clean up the row ref immediately so no stale ref lingers during the undo window.
-    rowRefsMap.current.delete(note.id);
-    removeNote(id, note.id);
-
-    const showNewToast = () => {
-      setPendingDelete({ note, patientId: id, originalIndex: index });
+    if (noteId !== null && toastNoteIdRef.current === null) {
+      // Fresh show — toast was not visible
+      toastNoteIdRef.current = noteId;
+      setToastVisible(true);
       Animated.spring(toastAnim, {
         toValue: 0,
         useNativeDriver: true,
         damping: 20,
         stiffness: 200,
       }).start();
-      deleteTimerRef.current = setTimeout(dismissToast, 4000);
-    };
-
-    if (pendingDelete) {
-      // A toast is already visible — slide it out first, then slide the new one in.
-      // The first deletion is already committed (removeNote was called when it was
-      // first deleted); we just need to replace the toast smoothly.
+    } else if (noteId !== null && toastNoteIdRef.current !== noteId) {
+      // Replace — a second deletion happened while toast was up; slide out then in
+      toastNoteIdRef.current = noteId;
       Animated.timing(toastAnim, {
         toValue: 100,
         duration: 180,
         useNativeDriver: true,
-      }).start(() => showNewToast());
-    } else {
-      showNewToast();
+      }).start(() => {
+        Animated.spring(toastAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          damping: 20,
+          stiffness: 200,
+        }).start();
+      });
+    } else if (noteId === null && toastNoteIdRef.current !== null) {
+      // Hide — timer expired, undo tapped, or navigated to a different patient
+      toastNoteIdRef.current = null;
+      Animated.timing(toastAnim, {
+        toValue: 100,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => setToastVisible(false));
     }
+  }, [pendingDelete, id]);
+
+  const handleUndo = () => {
+    undoPendingDelete();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const handleDeleteNote = (note: NursingNote, index: number) => {
+    // Guard: if this note is already the one pending deletion, do nothing.
+    if (pendingDelete?.note.id === note.id) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Clean up the row ref immediately so no stale ref lingers during the undo window.
+    rowRefsMap.current.delete(note.id);
+    // startPendingDelete removes the note from the store, sets context state, and
+    // manages the 4-second timer — all in context so navigation doesn't reset it.
+    startPendingDelete(id, note, index);
   };
 
   type NoteType = 'observation' | 'med-update' | 'incident';
@@ -1472,7 +1475,7 @@ export default function PatientDetailScreen() {
       </ScrollView>
 
       {/* ─── Undo delete toast ─── */}
-      {pendingDelete && (
+      {toastVisible && (
         <Animated.View
           style={[
             s.undoToast,

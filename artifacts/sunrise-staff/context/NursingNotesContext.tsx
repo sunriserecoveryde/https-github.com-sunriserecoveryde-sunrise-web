@@ -16,6 +16,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -48,6 +49,15 @@ export interface NursingNote {
   editedBy?: string;
 }
 
+/** Pending-delete intent — kept in context so it survives navigation round-trips */
+export interface PendingDeleteRecord {
+  note: NursingNote;
+  patientId: string;
+  originalIndex: number;
+  /** epoch-ms when the 4-second undo window closes */
+  expiresAt: number;
+}
+
 /** Shape written to AsyncStorage */
 interface PersistedNotes {
   /** YYYY-MM-DD — the shift date these notes belong to */
@@ -76,6 +86,21 @@ interface NursingNotesContextType {
   clearNotes: () => void;
   /** True while loading from storage */
   loading: boolean;
+  /**
+   * Active pending-delete record (survives navigation).  The note has already
+   * been removed from the store; call undoPendingDelete() within the window to
+   * put it back, or let the timer expire to finalise the deletion.
+   */
+  pendingDelete: PendingDeleteRecord | null;
+  /**
+   * Remove a note optimistically and open the 4-second undo window.
+   * Replaces any previously open window (prior deletion is finalised).
+   */
+  startPendingDelete: (patientId: string, note: NursingNote, originalIndex: number) => void;
+  /** Restore the pending note and close the undo window. */
+  undoPendingDelete: () => void;
+  /** Close the undo window without restoring (called when the timer fires). */
+  clearPendingDelete: () => void;
 }
 
 const NursingNotesContext = createContext<NursingNotesContextType>({
@@ -86,12 +111,20 @@ const NursingNotesContext = createContext<NursingNotesContextType>({
   restoreNote: () => {},
   clearNotes: () => {},
   loading: false,
+  pendingDelete: null,
+  startPendingDelete: () => {},
+  undoPendingDelete: () => {},
+  clearPendingDelete: () => {},
 });
 
 export function NursingNotesProvider({ children }: { children: React.ReactNode }) {
   // Map of patientId → notes (newest first)
   const [notesByPatient, setNotesByPatient] = useState<Record<string, NursingNote[]>>({});
   const [loading, setLoading] = useState(true);
+
+  // ─── Persistent pending-delete (survives navigation) ───────────────────────
+  const [pendingDelete, setPendingDelete] = useState<PendingDeleteRecord | null>(null);
+  const pendingDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load persisted notes on mount; discard if they belong to a previous day.
   useEffect(() => {
@@ -212,8 +245,74 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
     AsyncStorage.removeItem(NOTES_KEY).catch(() => {});
   }, []);
 
+  // ─── Pending-delete helpers ────────────────────────────────────────────────
+
+  const clearPendingDelete = useCallback(() => {
+    if (pendingDeleteTimerRef.current) {
+      clearTimeout(pendingDeleteTimerRef.current);
+      pendingDeleteTimerRef.current = null;
+    }
+    setPendingDelete(null);
+  }, []);
+
+  const startPendingDelete = useCallback(
+    (patientId: string, note: NursingNote, originalIndex: number) => {
+      // Cancel any existing window (previous deletion is already committed)
+      if (pendingDeleteTimerRef.current) {
+        clearTimeout(pendingDeleteTimerRef.current);
+        pendingDeleteTimerRef.current = null;
+      }
+      // Remove the note from the store immediately (optimistic)
+      setNotesByPatient(prev => ({
+        ...prev,
+        [patientId]: (prev[patientId] ?? []).filter(n => n.id !== note.id),
+      }));
+      const expiresAt = Date.now() + 4000;
+      setPendingDelete({ note, patientId, originalIndex, expiresAt });
+      pendingDeleteTimerRef.current = setTimeout(() => {
+        setPendingDelete(null);
+        pendingDeleteTimerRef.current = null;
+      }, 4000);
+    },
+    [],
+  );
+
+  const undoPendingDelete = useCallback(() => {
+    if (!pendingDelete) return;
+    if (pendingDeleteTimerRef.current) {
+      clearTimeout(pendingDeleteTimerRef.current);
+      pendingDeleteTimerRef.current = null;
+    }
+    // Re-insert the note in chronological order (newest-first list)
+    const { patientId, note } = pendingDelete;
+    setNotesByPatient(prev => {
+      const current = prev[patientId] ?? [];
+      const next = [...current];
+      const noteTime = new Date(note.createdAt).getTime();
+      let insertAt = next.findIndex(n => new Date(n.createdAt).getTime() < noteTime);
+      if (insertAt === -1) insertAt = next.length;
+      next.splice(insertAt, 0, note);
+      return { ...prev, [patientId]: next };
+    });
+    setPendingDelete(null);
+  }, [pendingDelete]);
+
   return (
-    <NursingNotesContext.Provider value={{ getNotesForPatient, addNote, updateNote, removeNote, restoreNote, clearNotes, loading }}>
+    <NursingNotesContext.Provider
+      value={{
+        getNotesForPatient,
+        addNote,
+        updateNote,
+        removeNote,
+        restoreNote,
+        clearNotes,
+        loading,
+        pendingDelete,
+        startPendingDelete,
+        undoPendingDelete,
+        clearPendingDelete,
+      }}
+    >
       {children}
     </NursingNotesContext.Provider>
   );
