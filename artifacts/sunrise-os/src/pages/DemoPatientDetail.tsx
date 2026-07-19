@@ -4,13 +4,163 @@ import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { FlagBadge } from '../components/ui/FlagBadge';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
-import { getPatientVitals } from '../data/mockVitals';
+import { getPatientVitals, VitalEntry } from '../data/mockVitals';
 import { getPatientMedications, getMARStatus, DEMO_MAR_TIME } from '../data/mockMedications';
 import {
   ArrowLeft, Activity, FileText, CheckCircle2, FlaskConical,
   AlertCircle, Clock, Shield, CalendarDays, Heart, Pill, ChevronDown,
+  TrendingUp, TrendingDown, Minus,
 } from 'lucide-react';
 import { Screen } from '../App';
+
+// ── Inline sparkline SVG ──────────────────────────────────────────────────────
+function Sparkline({
+  values,
+  color,
+  width = 100,
+  height = 32,
+}: {
+  values: number[];
+  color: string;
+  width?: number;
+  height?: number;
+}) {
+  if (values.length < 2) {
+    return <span className="text-slate-300 text-xs">—</span>;
+  }
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const pad = 3;
+  const points = values
+    .map((v, i) => {
+      const x = pad + (i / (values.length - 1)) * (width - pad * 2);
+      const y = pad + ((max - v) / range) * (height - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+  const lastIdx = values.length - 1;
+  const lx = pad + (lastIdx / (values.length - 1)) * (width - pad * 2);
+  const ly = pad + ((max - values[lastIdx]) / range) * (height - pad * 2);
+  return (
+    <svg width={width} height={height} className="inline-block align-middle overflow-visible">
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle cx={lx.toFixed(1)} cy={ly.toFixed(1)} r="2.75" fill={color} />
+    </svg>
+  );
+}
+
+// Parse BP string → systolic number
+function parseSystolic(bp: string): number | null {
+  const m = bp.match(/^(\d+)\//);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+// Determine if a COWS/CIWA trend is worsening (oldest → newest, i.e., reversed array)
+function isWorsening(chronoValues: number[]): boolean {
+  if (chronoValues.length < 2) return false;
+  return chronoValues[chronoValues.length - 1] > chronoValues[0];
+}
+
+interface MetricSpark {
+  label: string;
+  values: number[];    // chronological (oldest first)
+  current: string;
+  color: string;
+  warnIfWorsening?: boolean;
+}
+
+function buildMetricSparks(vitals: VitalEntry[]): MetricSpark[] {
+  // vitals are newest-first; reverse for chronological order
+  const chrono = [...vitals].reverse();
+  const sparks: MetricSpark[] = [];
+
+  // HR
+  sparks.push({
+    label: 'Heart Rate',
+    values: chrono.map(v => v.hr),
+    current: `${vitals[0].hr} bpm`,
+    color: '#ef4444',
+  });
+
+  // BP systolic
+  const bpVals = chrono.map(v => parseSystolic(v.bp)).filter((n): n is number => n !== null);
+  if (bpVals.length >= 2) {
+    sparks.push({
+      label: 'BP (Systolic)',
+      values: bpVals,
+      current: vitals[0].bp,
+      color: '#7c3aed',
+    });
+  }
+
+  // Temp
+  sparks.push({
+    label: 'Temperature',
+    values: chrono.map(v => v.temp),
+    current: `${vitals[0].temp.toFixed(1)} °F`,
+    color: '#f59e0b',
+  });
+
+  // O2
+  sparks.push({
+    label: 'O₂ Sat',
+    values: chrono.map(v => v.o2),
+    current: `${vitals[0].o2}%`,
+    color: '#0ea5e9',
+  });
+
+  // Pain
+  sparks.push({
+    label: 'Pain',
+    values: chrono.map(v => v.pain),
+    current: `${vitals[0].pain}/10`,
+    color: '#6b7280',
+  });
+
+  // COWS (if any entry has it)
+  const cowsSeries = chrono.map(v => v.cows).filter((n): n is number => n !== null && n !== undefined);
+  if (cowsSeries.length >= 2) {
+    const worsening = isWorsening(cowsSeries);
+    sparks.push({
+      label: 'COWS Score',
+      values: cowsSeries,
+      current: `${vitals.find(v => v.cows != null)?.cows ?? '—'}`,
+      color: worsening ? '#ef4444' : '#10b981',
+      warnIfWorsening: true,
+    });
+  }
+
+  // CIWA (if any entry has it)
+  const ciwaSeries = chrono.map(v => v.ciwa).filter((n): n is number => n !== null && n !== undefined);
+  if (ciwaSeries.length >= 2) {
+    const worsening = isWorsening(ciwaSeries);
+    sparks.push({
+      label: 'CIWA Score',
+      values: ciwaSeries,
+      current: `${vitals.find(v => v.ciwa != null)?.ciwa ?? '—'}`,
+      color: worsening ? '#ef4444' : '#10b981',
+      warnIfWorsening: true,
+    });
+  }
+
+  return sparks;
+}
+
+function TrendIcon({ values }: { values: number[] }) {
+  if (values.length < 2) return <Minus className="w-3 h-3 text-slate-400" />;
+  const delta = values[values.length - 1] - values[0];
+  if (delta > 0) return <TrendingUp className="w-3 h-3 text-critical" />;
+  if (delta < 0) return <TrendingDown className="w-3 h-3 text-success" />;
+  return <Minus className="w-3 h-3 text-slate-400" />;
+}
 
 /**
  * Booking URL for the demo CTA footer.
@@ -36,6 +186,7 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
   const nextPatient = currentIndex < DEMO_PATIENTS.length - 1 ? DEMO_PATIENTS[currentIndex + 1] : null;
   const [activeTab, setActiveTab] = useState('Overview');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [expandedVitalId, setExpandedVitalId] = useState<string | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
 
   // Close picker on outside click
@@ -505,10 +656,16 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
               </h2>
             </div>
 
+            <p className="text-xs text-slate mb-3 flex items-center gap-1.5">
+              <Heart className="w-3 h-3 text-sunrise-blue" />
+              Tap any row to see trend sparklines for that visit
+            </p>
+
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-bg border-b border-border text-xs font-semibold text-slate uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left w-4" />
                     <th className="px-3 py-3 text-left">Date</th>
                     <th className="px-3 py-3 text-left">Time</th>
                     <th className="px-3 py-3 text-left">BP</th>
@@ -524,42 +681,111 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {vitals.map((v, i) => (
-                    <tr key={v.id} className={i % 2 === 0 ? 'bg-white' : 'bg-bg'}>
-                      <td className="px-3 py-3 font-medium text-navy whitespace-nowrap">{v.date}</td>
-                      <td className="px-3 py-3 text-slate whitespace-nowrap">{v.time}</td>
-                      <td className="px-3 py-3 font-semibold text-navy whitespace-nowrap">{v.bp}</td>
-                      <td className="px-3 py-3 text-center">
-                        <span className={`font-semibold ${v.hr > 100 ? 'text-critical' : v.hr > 90 ? 'text-sunrise-amber' : 'text-navy'}`}>{v.hr}</span>
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <span className={`font-semibold ${v.temp > 100 ? 'text-critical' : v.temp > 99 ? 'text-sunrise-amber' : 'text-navy'}`}>{v.temp.toFixed(1)}</span>
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <span className={`font-semibold ${v.o2 < 95 ? 'text-critical' : v.o2 < 97 ? 'text-sunrise-amber' : 'text-success'}`}>{v.o2}%</span>
-                      </td>
-                      <td className="px-3 py-3 text-center text-navy">{v.rr}</td>
-                      <td className="px-3 py-3 text-center text-slate">{v.weight ?? '—'}</td>
-                      <td className="px-3 py-3 text-center">
-                        {v.cows != null ? (
-                          <span className={`inline-flex items-center justify-center w-8 h-6 rounded text-xs font-bold text-white ${v.cows >= 25 ? 'bg-critical' : v.cows >= 13 ? 'bg-sunrise-amber' : v.cows >= 5 ? 'bg-sunrise-blue' : 'bg-success'}`}>
-                            {v.cows}
-                          </span>
-                        ) : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        {v.ciwa != null ? (
-                          <span className={`inline-flex items-center justify-center w-8 h-6 rounded text-xs font-bold text-white ${v.ciwa >= 15 ? 'bg-critical' : v.ciwa >= 8 ? 'bg-sunrise-amber' : v.ciwa >= 1 ? 'bg-sunrise-blue' : 'bg-success'}`}>
-                            {v.ciwa}
-                          </span>
-                        ) : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <span className={`font-semibold ${v.pain >= 7 ? 'text-critical' : v.pain >= 4 ? 'text-sunrise-amber' : 'text-success'}`}>{v.pain}/10</span>
-                      </td>
-                      <td className="px-3 py-3 text-slate whitespace-nowrap">{v.recordedBy}</td>
-                    </tr>
-                  ))}
+                  {vitals.map((v, i) => {
+                    const isExpanded = expandedVitalId === v.id;
+                    const metricSparks = isExpanded ? buildMetricSparks(vitals) : [];
+                    const rowBg = isExpanded
+                      ? 'bg-violet-50'
+                      : i % 2 === 0 ? 'bg-white' : 'bg-bg';
+                    return (
+                      <React.Fragment key={v.id}>
+                        <tr
+                          className={`${rowBg} cursor-pointer hover:bg-violet-50 transition-colors group`}
+                          onClick={() => setExpandedVitalId(isExpanded ? null : v.id)}
+                        >
+                          {/* Expand chevron */}
+                          <td className="px-2 py-3 text-slate-400 group-hover:text-violet-500 transition-colors">
+                            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180 text-violet-500' : ''}`} />
+                          </td>
+                          <td className="px-3 py-3 font-medium text-navy whitespace-nowrap">{v.date}</td>
+                          <td className="px-3 py-3 text-slate whitespace-nowrap">{v.time}</td>
+                          <td className="px-3 py-3 font-semibold text-navy whitespace-nowrap">{v.bp}</td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`font-semibold ${v.hr > 100 ? 'text-critical' : v.hr > 90 ? 'text-sunrise-amber' : 'text-navy'}`}>{v.hr}</span>
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`font-semibold ${v.temp > 100 ? 'text-critical' : v.temp > 99 ? 'text-sunrise-amber' : 'text-navy'}`}>{v.temp.toFixed(1)}</span>
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`font-semibold ${v.o2 < 95 ? 'text-critical' : v.o2 < 97 ? 'text-sunrise-amber' : 'text-success'}`}>{v.o2}%</span>
+                          </td>
+                          <td className="px-3 py-3 text-center text-navy">{v.rr}</td>
+                          <td className="px-3 py-3 text-center text-slate">{v.weight ?? '—'}</td>
+                          <td className="px-3 py-3 text-center">
+                            {v.cows != null ? (
+                              <span className={`inline-flex items-center justify-center w-8 h-6 rounded text-xs font-bold text-white ${v.cows >= 25 ? 'bg-critical' : v.cows >= 13 ? 'bg-sunrise-amber' : v.cows >= 5 ? 'bg-sunrise-blue' : 'bg-success'}`}>
+                                {v.cows}
+                              </span>
+                            ) : <span className="text-slate-300">—</span>}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            {v.ciwa != null ? (
+                              <span className={`inline-flex items-center justify-center w-8 h-6 rounded text-xs font-bold text-white ${v.ciwa >= 15 ? 'bg-critical' : v.ciwa >= 8 ? 'bg-sunrise-amber' : v.ciwa >= 1 ? 'bg-sunrise-blue' : 'bg-success'}`}>
+                                {v.ciwa}
+                              </span>
+                            ) : <span className="text-slate-300">—</span>}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`font-semibold ${v.pain >= 7 ? 'text-critical' : v.pain >= 4 ? 'text-sunrise-amber' : 'text-success'}`}>{v.pain}/10</span>
+                          </td>
+                          <td className="px-3 py-3 text-slate whitespace-nowrap">{v.recordedBy}</td>
+                        </tr>
+
+                        {/* ── Expanded sparkline panel ── */}
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={13} className="bg-violet-50 border-t border-violet-100 px-4 py-4">
+                              <div className="mb-2 flex items-center gap-2">
+                                <Heart className="w-3.5 h-3.5 text-violet-500" />
+                                <span className="text-xs font-bold text-violet-700 uppercase tracking-wider">
+                                  Trends across all recorded visits
+                                </span>
+                                <span className="text-xs text-violet-400 ml-1">
+                                  ({vitals.length} {vitals.length === 1 ? 'reading' : 'readings'}, oldest → newest)
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {metricSparks.map(spark => {
+                                  const worsening = spark.warnIfWorsening && isWorsening(spark.values);
+                                  return (
+                                    <div
+                                      key={spark.label}
+                                      className={`bg-white rounded-lg border px-3 py-2.5 ${
+                                        worsening ? 'border-red-200 bg-red-50' : 'border-violet-100'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className={`text-xs font-semibold ${worsening ? 'text-critical' : 'text-slate'}`}>
+                                          {spark.label}
+                                        </span>
+                                        <TrendIcon values={spark.values} />
+                                      </div>
+                                      <div className="flex items-end gap-2">
+                                        <Sparkline
+                                          values={spark.values}
+                                          color={spark.color}
+                                          width={90}
+                                          height={30}
+                                        />
+                                        <span className={`text-xs font-bold ml-auto ${worsening ? 'text-critical' : 'text-navy'}`}>
+                                          {spark.current}
+                                        </span>
+                                      </div>
+                                      {worsening && (
+                                        <div className="mt-1 text-xs text-critical font-medium flex items-center gap-1">
+                                          <TrendingUp className="w-3 h-3" /> Worsening
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

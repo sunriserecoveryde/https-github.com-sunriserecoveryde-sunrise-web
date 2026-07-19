@@ -556,6 +556,8 @@ export default function PatientDetailScreen() {
 
   // Tracks which note's 'Edited' tag is currently expanded to show the edit time
   const [expandedEditId, setExpandedEditId] = useState<string | null>(null);
+  // Tracks which vitals table row is expanded to show trend sparklines
+  const [expandedVitalId, setExpandedVitalId] = useState<string | null>(null);
 
   const toggleEditTime = (noteId: string) => {
     Haptics.selectionAsync();
@@ -678,10 +680,13 @@ export default function PatientDetailScreen() {
 
   // Build sparkline series from vitals (oldest → newest)
   const vitalsAsc = [...vitals].reverse();
-  const cowsSeries = vitalsAsc.map(v => v.cows).filter((v): v is number => v != null);
-  const ciwaSeries = vitalsAsc.map(v => v.ciwa).filter((v): v is number => v != null);
-  const bpSeries   = vitalsAsc.map(v => parseSystolic(v.bp));
-  const hrSeries   = vitalsAsc.map(v => v.hr);
+  const cowsSeries  = vitalsAsc.map(v => v.cows).filter((v): v is number => v != null);
+  const ciwaSeries  = vitalsAsc.map(v => v.ciwa).filter((v): v is number => v != null);
+  const bpSeries    = vitalsAsc.map(v => parseSystolic(v.bp));
+  const hrSeries    = vitalsAsc.map(v => v.hr);
+  const tempSeries  = vitalsAsc.map(v => v.temp);
+  const o2Series    = vitalsAsc.map(v => v.o2);
+  const painSeries  = vitalsAsc.map(v => v.pain);
 
   const hasSparklines = vitalsAsc.length >= 2;
 
@@ -954,31 +959,93 @@ export default function PatientDetailScreen() {
         {/* ─── Vitals table ─── */}
         {vitals.length > 0 && (
           <View style={s.section}>
-            <SectionTitle title="VITAL SIGNS — RECENT READINGS" colors={colors} />
+            <SectionTitle title="VITAL SIGNS — TAP ROW FOR TRENDS" colors={colors} />
             <Card colors={colors} style={{ padding: 0, overflow: 'hidden' }}>
               {/* Header row */}
               <View style={[s.tableRow, s.tableHeaderRow, { backgroundColor: colors.muted }]}>
-                {['Date', 'Time', 'BP', 'HR', 'Temp', 'O₂', 'Pain'].map(h => (
+                <View style={{ width: 18 }} />
+                {['Date', 'BP', 'HR', 'Temp', 'O₂', 'Pain'].map(h => (
                   <Text key={h} style={[s.tableCell, s.tableHeaderCell, { color: colors.mutedForeground }]}>{h}</Text>
                 ))}
               </View>
-              {vitals.map((v, i) => (
-                <View
-                  key={v.id}
-                  style={[
-                    s.tableRow,
-                    i < vitals.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
-                  ]}
-                >
-                  <Text style={[s.tableCell, { color: colors.navy }]}>{v.date}</Text>
-                  <Text style={[s.tableCell, { color: colors.navy }]}>{v.time}</Text>
-                  <Text style={[s.tableCell, { color: colors.navy, fontSize: 11 }]}>{v.bp}</Text>
-                  <Text style={[s.tableCell, { color: v.hr > 100 ? colors.high : colors.navy }]}>{v.hr}</Text>
-                  <Text style={[s.tableCell, { color: v.temp > 99 ? colors.moderate : colors.navy }]}>{v.temp}°</Text>
-                  <Text style={[s.tableCell, { color: v.o2 < 96 ? colors.high : colors.success }]}>{v.o2}%</Text>
-                  <Text style={[s.tableCell, { color: v.pain >= 7 ? colors.critical : v.pain >= 5 ? colors.moderate : colors.success }]}>{v.pain}/10</Text>
-                </View>
-              ))}
+              {vitals.map((v, i) => {
+                const isExpanded = expandedVitalId === v.id;
+                return (
+                  <React.Fragment key={v.id}>
+                    <Pressable
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setExpandedVitalId(isExpanded ? null : v.id);
+                      }}
+                      style={[
+                        s.tableRow,
+                        i < vitals.length - 1 && !isExpanded && { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
+                        isExpanded && { backgroundColor: colors.routineBg },
+                      ]}
+                    >
+                      {/* Expand chevron */}
+                      <Ionicons
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={12}
+                        color={isExpanded ? colors.blue : colors.mutedForeground}
+                        style={{ width: 18 }}
+                      />
+                      <Text style={[s.tableCell, { color: colors.navy, fontSize: 11 }]}>{v.date}</Text>
+                      <Text style={[s.tableCell, { color: colors.navy, fontSize: 11 }]}>{v.bp}</Text>
+                      <Text style={[s.tableCell, { color: v.hr > 100 ? colors.high : colors.navy }]}>{v.hr}</Text>
+                      <Text style={[s.tableCell, { color: v.temp > 99 ? colors.moderate : colors.navy }]}>{v.temp}°</Text>
+                      <Text style={[s.tableCell, { color: v.o2 < 96 ? colors.high : colors.success }]}>{v.o2}%</Text>
+                      <Text style={[s.tableCell, { color: v.pain >= 7 ? colors.critical : v.pain >= 5 ? colors.moderate : colors.success }]}>{v.pain}/10</Text>
+                    </Pressable>
+
+                    {/* ── Inline sparkline panel ── */}
+                    {isExpanded && vitalsAsc.length >= 2 && (
+                      <View style={[s.sparkPanel, { backgroundColor: colors.routineBg, borderTopColor: colors.border, borderBottomColor: i < vitals.length - 1 ? colors.border : 'transparent', borderBottomWidth: i < vitals.length - 1 ? StyleSheet.hairlineWidth : 0 }]}>
+                        <Text style={[s.sparkPanelTitle, { color: colors.blue }]}>
+                          Trends — {vitalsAsc.length} readings, oldest → newest
+                        </Text>
+                        <View style={s.sparkPanelGrid}>
+                          {hrSeries.length >= 2 && (
+                            <View style={s.sparkPanelItem}>
+                              <Sparkline data={hrSeries} color={colors.critical} width={90} height={36} label="HR" unit=" bpm" />
+                            </View>
+                          )}
+                          {bpSeries.length >= 2 && (
+                            <View style={s.sparkPanelItem}>
+                              <Sparkline data={bpSeries} color={colors.purple} width={90} height={36} label="SBP" unit=" mmHg" />
+                            </View>
+                          )}
+                          {tempSeries.length >= 2 && (
+                            <View style={s.sparkPanelItem}>
+                              <Sparkline data={tempSeries} color={colors.moderate} width={90} height={36} label="Temp" unit="°" />
+                            </View>
+                          )}
+                          {o2Series.length >= 2 && (
+                            <View style={s.sparkPanelItem}>
+                              <Sparkline data={o2Series} color={colors.teal} width={90} height={36} label="O₂ Sat" unit="%" />
+                            </View>
+                          )}
+                          {painSeries.length >= 2 && (
+                            <View style={s.sparkPanelItem}>
+                              <Sparkline data={painSeries} color={colors.high} width={90} height={36} label="Pain" unit="/10" />
+                            </View>
+                          )}
+                          {cowsSeries.length >= 2 && (
+                            <View style={s.sparkPanelItem}>
+                              <Sparkline data={cowsSeries} color={withdrawalTrendColor(cowsSeries)} width={90} height={36} label="COWS" />
+                            </View>
+                          )}
+                          {ciwaSeries.length >= 2 && (
+                            <View style={s.sparkPanelItem}>
+                              <Sparkline data={ciwaSeries} color={withdrawalTrendColor(ciwaSeries)} width={90} height={36} label="CIWA" />
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </Card>
           </View>
         )}
@@ -1486,10 +1553,25 @@ const s = StyleSheet.create({
   emptyVitals: { alignItems: 'center', padding: 20, gap: 8 },
   emptyText: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   // Vitals table
-  tableRow: { flexDirection: 'row', paddingVertical: 9, paddingHorizontal: 10 },
+  tableRow: { flexDirection: 'row', paddingVertical: 9, paddingHorizontal: 10, alignItems: 'center' },
   tableHeaderRow: { borderTopLeftRadius: 11, borderTopRightRadius: 11 },
   tableCell: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   tableHeaderCell: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  // Inline sparkline expansion panel
+  sparkPanel: {
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  sparkPanelTitle: {
+    fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold',
+    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8,
+  },
+  sparkPanelGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 10,
+  },
+  sparkPanelItem: {
+    alignItems: 'center',
+  },
   // Medications
   medList: { gap: 8 },
   medCard: { marginBottom: 0 },

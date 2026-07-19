@@ -320,7 +320,7 @@ export default function VitalsScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: totalAlertCount > 0 ? colors.critical : colors.success }]}>{totalAlertCount}</Text>
+            <Text style={[styles.statValue, { color: criticalCount > 0 ? colors.critical : colors.success }]}>{criticalCount}</Text>
             <Text style={styles.statLabel}>{scoreFilter !== 'all' ? 'Alerts (filtered)' : 'Alerts'}</Text>
           </View>
           <View style={styles.statDivider} />
