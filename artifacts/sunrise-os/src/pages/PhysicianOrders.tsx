@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { CheckCircle, Clock, AlertTriangle, Plus, X, ChevronDown } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type OrderType = 'Medication' | 'Lab' | 'Consult' | 'Vital Signs' | 'MAT' | 'Radiology' | 'Nursing';
 type OrderStatus = 'Pending Signature' | 'Active' | 'Completed' | 'Discontinued' | 'On Hold';
@@ -68,7 +69,7 @@ const PRIORITY_STYLE: Record<OrderPriority, string> = {
   Routine: 'text-gray-600 bg-gray-100',
 };
 
-export function PhysicianOrders({ navigate }: Props) {
+export function PhysicianOrders({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Active' | 'Pending' | 'History' | 'New Order'>('Active');
   const [filterType, setFilterType] = useState<OrderType | 'All'>('All');
   const [filterPatient, setFilterPatient] = useState('all');
@@ -94,9 +95,9 @@ export function PhysicianOrders({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Physician Orders</h1>
           <p className="text-slate text-sm mt-0.5">Active orders, pending signatures, medication and lab management</p>
         </div>
-        <button onClick={() => setTab('New Order')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+        <LockedButton locked={readOnly} onClick={() => setTab('New Order')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
           <Plus className="w-4 h-4" /> New Order
-        </button>
+        </LockedButton>
       </div>
 
       {/* Stats */}
@@ -179,14 +180,14 @@ export function PhysicianOrders({ navigate }: Props) {
                     <div className="flex items-center gap-2 shrink-0">
                       {order.status === 'Pending Signature' && (
                         <>
-                          <button className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">Sign Order</button>
-                          <button className="text-xs border border-red-200 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50">Reject</button>
+                          <LockedButton locked={readOnly} className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">Sign Order</LockedButton>
+                          <LockedButton locked={readOnly} className="text-xs border border-red-200 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50">Reject</LockedButton>
                         </>
                       )}
                       {order.status === 'Active' && (
                         <>
-                          <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Modify</button>
-                          <button className="text-xs border border-red-200 text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50"><X className="w-3.5 h-3.5" /></button>
+                          <LockedButton locked={readOnly} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Modify</LockedButton>
+                          <LockedButton locked={readOnly} className="text-xs border border-red-200 text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50"><X className="w-3.5 h-3.5" /></LockedButton>
                         </>
                       )}
                     </div>
@@ -258,7 +259,7 @@ export function PhysicianOrders({ navigate }: Props) {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setTab('Active')} className="border border-border rounded-lg px-5 py-2 text-sm text-slate">Cancel</button>
-              <button onClick={() => setOrderSubmitted(true)} className="btn-primary text-sm px-5 py-2">Place Order</button>
+              <LockedButton locked={readOnly} onClick={() => setOrderSubmitted(true)} className="btn-primary text-sm px-5 py-2">Place Order</LockedButton>
             </div>
           </div>
         </div>

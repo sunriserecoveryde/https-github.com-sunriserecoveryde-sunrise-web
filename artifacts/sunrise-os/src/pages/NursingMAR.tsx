@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { CheckCircle, Clock, AlertTriangle, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type AdminStatus = 'Given' | 'Held' | 'Refused' | 'Missed' | 'N/A' | 'Pending';
 
@@ -153,7 +154,7 @@ const CAT_STYLE: Record<string, string> = {
 
 const SHIFTS = ['0800', '1200', '1400', '1800', '2000', '2100'];
 
-export function NursingMAR({ navigate }: Props) {
+export function NursingMAR({ navigate, readOnly }: Props) {
   const [date] = useState(TODAY);
   const [expandedPatient, setExpandedPatient] = useState<string | null>('p1');
   const [administering, setAdministering] = useState<{ patientId: string; med: string; time: string } | null>(null);
@@ -288,12 +289,13 @@ export function NursingMAR({ navigate }: Props) {
                               const isPast = parseInt(shift) < 1100; // simplistic past check
                               return (
                                 <td key={shift} className="px-3 py-3 text-center">
-                                  <button
+                                  <LockedButton
+                                    locked={readOnly}
                                     onClick={() => setAdministering({ patientId: mar.patientId, med: med.medName, time: shift })}
                                     className={`text-[10px] px-2 py-1 rounded-lg font-medium border ${isPast ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100' : 'border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100'}`}
                                   >
                                     {isPast ? 'MISSED?' : 'GIVE'}
-                                  </button>
+                                  </LockedButton>
                                 </td>
                               );
                             }
@@ -363,7 +365,7 @@ export function NursingMAR({ navigate }: Props) {
             </div>
             <div className="flex gap-3 mt-4">
               <button onClick={() => setAdministering(null)} className="flex-1 border border-border rounded-lg py-2 text-sm text-slate">Cancel</button>
-              <button onClick={() => setAdministering(null)} className="flex-1 btn-primary text-sm py-2">Sign & Save</button>
+              <LockedButton locked={readOnly} onClick={() => setAdministering(null)} className="flex-1 btn-primary text-sm py-2">Sign & Save</LockedButton>
             </div>
           </div>
         </div>

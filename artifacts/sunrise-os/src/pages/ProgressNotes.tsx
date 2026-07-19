@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { Screen } from '../App';
 import { Search, Filter, PenTool, CheckCircle, Clock } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-export function ProgressNotes({ navigate }: { navigate: (s: Screen) => void }) {
+export function ProgressNotes({ navigate, readOnly }: { navigate: (s: Screen) => void; readOnly?: boolean }) {
   const [activeTab, setActiveTab] = useState('All Notes');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -31,9 +32,9 @@ export function ProgressNotes({ navigate }: { navigate: (s: Screen) => void }) {
           <h1 className="text-2xl font-bold text-navy">Progress Notes Queue</h1>
           <p className="text-slate text-sm mt-1">Manage and review all clinical documentation</p>
         </div>
-        <button className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium flex items-center gap-2 hover:bg-sunrise-blue-light shadow-sm transition-colors">
+        <LockedButton locked={readOnly} className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium flex items-center gap-2 hover:bg-sunrise-blue-light shadow-sm transition-colors">
           <PenTool className="w-4 h-4" /> Batch Sign Notes
-        </button>
+        </LockedButton>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-border flex flex-col">
@@ -119,9 +120,12 @@ export function ProgressNotes({ navigate }: { navigate: (s: Screen) => void }) {
                     {n.status === 'Draft' && <span className="text-slate text-xs font-bold">Draft</span>}
                   </td>
                   <td className="p-4 text-right pr-6">
-                    <button className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-3 py-1.5 rounded whitespace-nowrap">
+                    <LockedButton
+                      locked={readOnly && n.status === 'Awaiting Co-sign'}
+                      className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-3 py-1.5 rounded whitespace-nowrap"
+                    >
                       {n.status === 'Awaiting Co-sign' ? 'Review & Sign' : 'View Note'}
-                    </button>
+                    </LockedButton>
                   </td>
                 </tr>
               ))}

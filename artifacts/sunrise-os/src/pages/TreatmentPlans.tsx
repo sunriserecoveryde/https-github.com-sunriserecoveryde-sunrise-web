@@ -3,8 +3,9 @@ import { MOCK_PATIENTS } from '../data/mockPatients';
 import { Screen } from '../App';
 import { Target, CheckCircle2, Clock, Search } from 'lucide-react';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
+import { LockedButton } from '../components/common/LockedButton';
 
-export function TreatmentPlans({ navigate }: { navigate: (s: Screen) => void }) {
+export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) => void; readOnly?: boolean }) {
   const [activeTab, setActiveTab] = useState('Due for Review');
 
   const patientsWithGoals = MOCK_PATIENTS.filter(p => p.goals.length > 0);
@@ -115,7 +116,7 @@ export function TreatmentPlans({ navigate }: { navigate: (s: Screen) => void }) 
                       <span className="px-2 py-1 bg-sunrise-blue/10 text-sunrise-blue text-xs font-bold rounded">Active</span>
                     </td>
                     <td className="p-4 text-right pr-6">
-                      <button className="text-sunrise-blue text-xs font-medium hover:underline">Update Plan</button>
+                      <LockedButton locked={readOnly} className="text-sunrise-blue text-xs font-medium hover:underline">Update Plan</LockedButton>
                     </td>
                   </tr>
                 );

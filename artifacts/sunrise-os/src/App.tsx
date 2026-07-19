@@ -141,6 +141,20 @@ function AppInner() {
     return content;
   };
 
+  /**
+   * For the 5 high-value clinical pages, instead of a global pointer-events-none overlay,
+   * individual action buttons receive readOnly=true and show a lock icon + tooltip.
+   */
+  const withAccessReadOnlyProp = (
+    screen: Screen,
+    renderPage: (readOnly: boolean) => React.ReactNode
+  ): React.ReactNode => {
+    if (screen === 'RoleExplorer') return renderPage(false);
+    const permission = getPermissionForScreen(screen);
+    if (permission === 'none') return <AccessDenied screen={screen} screenLabel={screen} />;
+    return renderPage(permission === 'read');
+  };
+
   const renderScreen = () => {
     switch (activeScreen) {
       case 'Dashboard':               return withAccess('Dashboard',               <Dashboard navigate={navigateTo} />);
@@ -148,8 +162,8 @@ function AppInner() {
       case 'PatientList':             return withAccess('PatientList',             <PatientList navigate={navigateTo} />);
       case 'PatientDetail':           return withAccess('PatientDetail',           <PatientDetail patientId={selectedPatientId} navigate={navigateTo} />);
       case 'ASAMAssessments':         return withAccess('ASAMAssessments',         <ASAMAssessments navigate={navigateTo} />);
-      case 'ProgressNotes':           return withAccess('ProgressNotes',           <ProgressNotes navigate={navigateTo} />);
-      case 'TreatmentPlans':          return withAccess('TreatmentPlans',          <TreatmentPlans navigate={navigateTo} />);
+      case 'ProgressNotes':           return withAccessReadOnlyProp('ProgressNotes',   ro => <ProgressNotes navigate={navigateTo} readOnly={ro} />);
+      case 'TreatmentPlans':          return withAccessReadOnlyProp('TreatmentPlans',  ro => <TreatmentPlans navigate={navigateTo} readOnly={ro} />);
       case 'AppointmentCalendar':     return withAccess('AppointmentCalendar',     <AppointmentCalendar navigate={navigateTo} />);
       case 'GroupSchedule':           return withAccess('GroupSchedule',           <GroupSchedule navigate={navigateTo} />);
       case 'RiskDashboard':           return withAccess('RiskDashboard',           <RiskDashboard navigate={navigateTo} />);
@@ -172,11 +186,11 @@ function AppInner() {
       case 'UADrugTesting':           return withAccess('UADrugTesting',           <UADrugTesting navigate={navigateTo} />);
       case 'IncidentReporting':       return withAccess('IncidentReporting',       <IncidentReporting navigate={navigateTo} />);
       case 'StaffScheduling':         return withAccess('StaffScheduling',         <StaffScheduling navigate={navigateTo} />);
-      case 'MATManagement':           return withAccess('MATManagement',           <MATManagement navigate={navigateTo} />);
+      case 'MATManagement':           return withAccessReadOnlyProp('MATManagement',   ro => <MATManagement navigate={navigateTo} readOnly={ro} />);
       case 'FamilyEngagement':        return withAccess('FamilyEngagement',        <FamilyEngagement navigate={navigateTo} />);
-      case 'PhysicianOrders':         return withAccess('PhysicianOrders',         <PhysicianOrders navigate={navigateTo} />);
+      case 'PhysicianOrders':         return withAccessReadOnlyProp('PhysicianOrders', ro => <PhysicianOrders navigate={navigateTo} readOnly={ro} />);
       case 'PopulationAnalytics':     return withAccess('PopulationAnalytics',     <PopulationAnalytics navigate={navigateTo} />);
-      case 'NursingMAR':              return withAccess('NursingMAR',              <NursingMAR navigate={navigateTo} />);
+      case 'NursingMAR':              return withAccessReadOnlyProp('NursingMAR',      ro => <NursingMAR navigate={navigateTo} readOnly={ro} />);
       case 'ShiftHandoff':            return withAccess('ShiftHandoff',            <ShiftHandoff navigate={navigateTo} />);
       case 'QualityImprovement':      return withAccess('QualityImprovement',      <QualityImprovement navigate={navigateTo} />);
       case 'InsuranceAuthorization':  return withAccess('InsuranceAuthorization',  <InsuranceAuthorization navigate={navigateTo} />);
