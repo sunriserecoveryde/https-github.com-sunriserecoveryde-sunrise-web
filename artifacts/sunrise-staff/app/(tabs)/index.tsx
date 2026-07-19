@@ -579,6 +579,8 @@ export default function CensusScreen() {
   const [filter, setFilter] = useState<Filter>('All');
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [admitVisible, setAdmitVisible] = useState(false);
+  const [shiftEndedToast, setShiftEndedToast] = useState(false);
+  const shiftEndedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasFiredHaptic = useRef(false);
 
   // ─── Live census data from context ────────────────────────────────────────
@@ -668,6 +670,10 @@ export default function CensusScreen() {
                         setBannerDismissed(false);
                         setFilter('All');
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        // Show toast confirmation
+                        if (shiftEndedTimer.current) clearTimeout(shiftEndedTimer.current);
+                        setShiftEndedToast(true);
+                        shiftEndedTimer.current = setTimeout(() => setShiftEndedToast(false), 2000);
                       },
                     },
                   ],
@@ -781,6 +787,16 @@ export default function CensusScreen() {
         onClose={() => setAdmitVisible(false)}
         availableBeds={availableBedIds}
       />
+
+      {/* Shift-ended toast */}
+      {shiftEndedToast && (
+        <View style={styles.toastContainer} pointerEvents="none">
+          <View style={[styles.toast, { backgroundColor: colors.navy }]}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+            <Text style={styles.toastText}>Shift ended — board reset</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -867,6 +883,16 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
   // Loading
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // Shift-ended toast
+  toastContainer: {
+    position: 'absolute', bottom: 100, left: 0, right: 0, alignItems: 'center', zIndex: 999,
+  },
+  toast: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 20, paddingVertical: 12, borderRadius: 24,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 8,
+  },
+  toastText: { fontSize: 14, fontWeight: '600', color: '#fff', fontFamily: 'Inter_600SemiBold' },
 });
 
 const modalStyles = StyleSheet.create({
