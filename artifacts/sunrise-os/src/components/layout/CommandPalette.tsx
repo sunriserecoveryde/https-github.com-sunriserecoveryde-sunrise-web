@@ -87,12 +87,23 @@ const ALL_SCREEN_SHORTCUTS: { label: string; screen: Screen; icon: React.ReactNo
 // have to retype after switching roles via RoleExplorer and returning.
 let _lastQuery = '';
 
+// Persists the last demo search query and nudge so the demo feels
+// personalized when a buyer reopens the palette (session-scoped).
+const DEMO_QUERY_KEY = 'sunrise_demo_query';
+const DEMO_NUDGE_KEY = 'sunrise_demo_nudge';
+let _lastDemoQuery: string = (() => {
+  try { return sessionStorage.getItem(DEMO_QUERY_KEY) ?? ''; } catch { return ''; }
+})();
+let _lastDemoNudge: string | null = (() => {
+  try { return sessionStorage.getItem(DEMO_NUDGE_KEY) ?? null; } catch { return null; }
+})();
+
 export function CommandPalette({ onClose, navigate }: Props) {
   const [query, setQuery] = useState(_lastQuery);
   const [selected, setSelected] = useState(0);
   const [demoMode, setDemoMode] = useState(false);
-  const [demoQuery, setDemoQuery] = useState('');
-  const [demoNudge, setDemoNudge] = useState<string | null>(null);
+  const [demoQuery, setDemoQuery] = useState(_lastDemoQuery);
+  const [demoNudge, setDemoNudge] = useState<string | null>(_lastDemoNudge);
   const inputRef = useRef<HTMLInputElement>(null);
   const demoInputRef = useRef<HTMLInputElement>(null);
   const { roleId, canAccessScreen } = useRole();
@@ -100,7 +111,21 @@ export function CommandPalette({ onClose, navigate }: Props) {
   const roleLabel = getRoleById(roleId)?.label ?? roleId;
 
   useEffect(() => { inputRef.current?.focus(); }, []);
-  useEffect(() => { if (demoMode) { setDemoNudge(null); demoInputRef.current?.focus(); } }, [demoMode]);
+  useEffect(() => { if (demoMode) { demoInputRef.current?.focus(); } }, [demoMode]);
+
+  const updateDemoQuery = (v: string) => {
+    setDemoQuery(v);
+    setDemoNudge(null);
+    _lastDemoQuery = v;
+    _lastDemoNudge = null;
+    try { sessionStorage.setItem(DEMO_QUERY_KEY, v); sessionStorage.removeItem(DEMO_NUDGE_KEY); } catch { /* ignore */ }
+  };
+
+  const updateDemoNudge = (id: string) => {
+    setDemoNudge(id);
+    _lastDemoNudge = id;
+    try { sessionStorage.setItem(DEMO_NUDGE_KEY, id); } catch { /* ignore */ }
+  };
 
   const go = (screen: Screen, patientId?: string) => { navigate(screen, patientId); onClose(); };
 
@@ -195,12 +220,12 @@ export function CommandPalette({ onClose, navigate }: Props) {
             <input
               ref={demoInputRef}
               value={demoQuery}
-              onChange={e => { setDemoQuery(e.target.value); setDemoNudge(null); }}
+              onChange={e => updateDemoQuery(e.target.value)}
               placeholder="Search demo patients by name, MRN, diagnosis, or program…"
               className="flex-1 text-sm focus:outline-none text-navy placeholder:text-slate"
             />
             {demoQuery && (
-              <button onClick={() => setDemoQuery('')} className="p-1 hover:bg-gray-100 rounded">
+              <button onClick={() => updateDemoQuery('')} className="p-1 hover:bg-gray-100 rounded">
                 <X className="w-3.5 h-3.5 text-slate" />
               </button>
             )}
@@ -242,7 +267,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
             {demoResults.map((p, i) => (
               <div
                 key={p.id}
-                onClick={() => setDemoNudge(p.id)}
+                onClick={() => updateDemoNudge(p.id)}
                 className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
               >
                 <div className="w-7 h-7 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center shrink-0">
