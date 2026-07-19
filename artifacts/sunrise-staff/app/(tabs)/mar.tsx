@@ -18,11 +18,27 @@ import { RESIDENTIAL_PATIENTS, MEDICATIONS, Patient, Medication } from '@/data/m
 
 // ── Persistence helpers ────────────────────────────────────────────────────
 
-// Demo date key — in production this would be today's actual date so
-// the MAR resets each shift day automatically.
-const DEMO_DATE = '2026-07-19';
-const MAR_KEY   = `@sunrise_mar_${DEMO_DATE}`;
-const CHECKS_KEY = `@sunrise_checks_${DEMO_DATE}`;
+// Use today's actual calendar date so data auto-expires at midnight —
+// new shift, clean slate. Old day keys are pruned on launch.
+const TODAY_DATE  = new Date().toISOString().slice(0, 10);
+const MAR_KEY     = `@sunrise_mar_${TODAY_DATE}`;
+const CHECKS_KEY  = `@sunrise_checks_${TODAY_DATE}`;
+
+const MAR_KEY_PREFIX    = '@sunrise_mar_';
+const CHECKS_KEY_PREFIX = '@sunrise_checks_';
+
+/** Remove AsyncStorage entries from previous days to avoid unbounded growth. */
+async function pruneStaleKeys(): Promise<void> {
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const stale = allKeys.filter(k => {
+      if (k.startsWith(MAR_KEY_PREFIX))    return k !== MAR_KEY;
+      if (k.startsWith(CHECKS_KEY_PREFIX)) return k !== CHECKS_KEY;
+      return false;
+    });
+    if (stale.length > 0) await AsyncStorage.multiRemove(stale);
+  } catch { /* ignore */ }
+}
 
 async function loadFromStorage<T>(key: string, fallback: T): Promise<T> {
   try {
@@ -408,6 +424,9 @@ export default function MARScreen() {
   const insets = useSafeAreaInsets();
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const { role, setRole } = useRole();
+
+  // Prune stale keys from previous days on every screen mount
+  useEffect(() => { pruneStaleKeys(); }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
