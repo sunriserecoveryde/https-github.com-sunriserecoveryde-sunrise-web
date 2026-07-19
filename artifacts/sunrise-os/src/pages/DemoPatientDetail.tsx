@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { DEMO_PATIENTS } from '../data/mockPatients';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { FlagBadge } from '../components/ui/FlagBadge';
@@ -8,7 +8,7 @@ import { getPatientVitals } from '../data/mockVitals';
 import { getPatientMedications } from '../data/mockMedications';
 import {
   ArrowLeft, Activity, FileText, CheckCircle2, FlaskConical,
-  AlertCircle, Clock, Shield, CalendarDays, Heart, Pill,
+  AlertCircle, Clock, Shield, CalendarDays, Heart, Pill, ChevronDown,
 } from 'lucide-react';
 import { Screen } from '../App';
 
@@ -28,11 +28,32 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
   const prevPatient = currentIndex > 0 ? DEMO_PATIENTS[currentIndex - 1] : null;
   const nextPatient = currentIndex < DEMO_PATIENTS.length - 1 ? DEMO_PATIENTS[currentIndex + 1] : null;
   const [activeTab, setActiveTab] = useState('Overview');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Close picker on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    }
+    if (pickerOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [pickerOpen]);
 
   function goToPatient(id: string) {
     setActiveTab('Overview');
+    setPickerOpen(false);
     navigate('DemoPatientDetail', id);
   }
+
+  const programColors: Record<string, string> = {
+    Residential: 'bg-violet-100 text-violet-700',
+    PHP:         'bg-blue-100 text-blue-700',
+    IOP:         'bg-teal-100 text-teal-700',
+    OP:          'bg-green-100 text-green-700',
+  };
 
   const vitals = getPatientVitals(patient.id);
   const medications = getPatientMedications(patient.id);
@@ -87,9 +108,41 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
           <ArrowLeft className="w-3.5 h-3.5" />
           {prevPatient ? `Patient ${prevPatient.lastName}` : 'First patient'}
         </button>
-        <span className="text-xs text-violet-400 font-medium select-none">
-          {currentIndex + 1} of {DEMO_PATIENTS.length}
-        </span>
+        {/* Patient picker dropdown */}
+        <div className="relative" ref={pickerRef}>
+          <button
+            onClick={() => setPickerOpen(o => !o)}
+            className="flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-900 transition-colors px-2 py-1 rounded hover:bg-violet-100"
+          >
+            {currentIndex + 1} of {DEMO_PATIENTS.length}
+            <ChevronDown className={`w-3 h-3 transition-transform ${pickerOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {pickerOpen && (
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-50 bg-white border border-violet-200 rounded-lg shadow-lg py-1 min-w-[200px]">
+              {DEMO_PATIENTS.map((p, i) => (
+                <button
+                  key={p.id}
+                  onClick={() => goToPatient(p.id)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-violet-50 transition-colors ${
+                    p.id === patient.id ? 'bg-violet-50' : ''
+                  }`}
+                >
+                  <span className="text-xs text-violet-400 font-medium w-4 shrink-0">{i + 1}</span>
+                  <span className="text-sm font-semibold text-navy flex-1">
+                    Patient {p.lastName}
+                  </span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded font-semibold shrink-0 ${programColors[p.program] ?? 'bg-slate-100 text-slate'}`}>
+                    {p.program}
+                  </span>
+                  {p.id === patient.id && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button
           onClick={() => nextPatient && goToPatient(nextPatient.id)}
           disabled={!nextPatient}
