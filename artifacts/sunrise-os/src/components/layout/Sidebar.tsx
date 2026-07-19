@@ -180,7 +180,7 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
                         isActive
                           ? 'bg-sunrise-blue/20 text-white border-r-2 border-sunrise-orange'
                           : isReadOnly
-                            ? 'hover:bg-white/5 hover:text-white/80 border-r-2 border-transparent text-slate-600'
+                            ? 'hover:bg-white/5 hover:text-slate-400 border-r-2 border-transparent text-slate-600'
                             : 'hover:bg-white/5 hover:text-white border-r-2 border-transparent'
                       }`}
                       title={isReadOnly ? `${item.label} — View only` : item.label}
