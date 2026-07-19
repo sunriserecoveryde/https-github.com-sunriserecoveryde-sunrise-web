@@ -32,7 +32,7 @@ const sudOutcomes = [
 ];
 
 const Outcomes: React.FC = () => {
-  const [tab, setTab] = useState<'Overview' | 'Treatment Outcomes' | 'Patient Satisfaction' | 'Quality Measures' | 'Benchmarks'>('Overview');
+  const [tab, setTab] = useState<'Overview' | 'Treatment Outcomes' | 'Patient Satisfaction' | 'Quality Measures' | 'Benchmarks' | 'Report Builder'>('Overview');
 
   return (
     <div className="flex flex-col gap-6 max-w-[1400px] mx-auto">
@@ -46,7 +46,7 @@ const Outcomes: React.FC = () => {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Overview', 'Treatment Outcomes', 'Patient Satisfaction', 'Quality Measures', 'Benchmarks'] as const).map(t => (
+        {(['Overview', 'Treatment Outcomes', 'Patient Satisfaction', 'Quality Measures', 'Benchmarks', 'Report Builder'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -428,6 +428,99 @@ const Outcomes: React.FC = () => {
               </div>
               <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-800">
                 <strong>Performance Summary:</strong> Sunrise outperforms national averages on all tracked metrics and is above national average on 4 of 6 top-quartile comparators. Employment and housing outcomes represent the strongest opportunity for improvement.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Report Builder' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Generate custom outcomes reports for funders, accreditors, and leadership — select metrics, date range, and program filter, then export.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Saved Report Templates</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { name: 'SAMHSA Block Grant Annual Report', last: 'Jul 1, 2026', metrics: 'Retention, completion, abstinence at 6mo', format: 'Excel + PDF' },
+                  { name: 'CARF Accreditation Outcomes Summary', last: 'Apr 15, 2026', metrics: 'LOC completion, AMA rate, 30-day readmit', format: 'PDF' },
+                  { name: 'Board of Directors Quarterly Dashboard', last: 'Jun 30, 2026', metrics: 'Census, revenue, NPS, outcome highlights', format: 'PDF Slides' },
+                  { name: 'Tennessee TDAMHSAS Monthly Data Submission', last: 'Jul 10, 2026', metrics: 'Admissions, discharges, demographics, SUD type', format: 'CSV upload' },
+                  { name: 'Grant Funder — Opioid Response Program', last: 'Jun 15, 2026', metrics: 'OUD admissions, MAT starts, naloxone given', format: 'Word + Excel' },
+                  { name: 'Payer Performance Report (Quarterly)', last: 'Jun 30, 2026', metrics: 'Auth approvals, denials, AR aging, write-offs', format: 'Excel' },
+                ].map(r => (
+                  <div key={r.name} className="border border-border rounded-xl p-3 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-navy">{r.name}</div>
+                      <div className="text-[10px] text-slate mt-0.5">Metrics: {r.metrics}</div>
+                      <div className="text-[10px] text-slate">Format: {r.format} · Last generated: {r.last}</div>
+                    </div>
+                    <button className="shrink-0 text-[10px] font-bold bg-navy text-white px-2 py-1 rounded-lg">Run</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Custom Report Builder</h3>
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <div className="text-slate font-semibold mb-1 uppercase text-[10px] tracking-wide">Date Range</div>
+                    <div className="flex gap-2">
+                      {['Last 30 days', 'Last 90 days', 'YTD', 'Custom'].map(r => (
+                        <button key={r} className={`px-3 py-1.5 rounded-lg border text-[10px] font-semibold ${r === 'Last 90 days' ? 'bg-navy text-white border-navy' : 'border-border text-slate'}`}>{r}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate font-semibold mb-1 uppercase text-[10px] tracking-wide">Program Filter</div>
+                    <div className="flex gap-2 flex-wrap">
+                      {['All', 'Detox', 'Residential', 'PHP', 'IOP', 'OP'].map(p => (
+                        <button key={p} className={`px-3 py-1.5 rounded-lg border text-[10px] font-semibold ${p === 'All' ? 'bg-teal-600 text-white border-teal-600' : 'border-border text-slate'}`}>{p}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate font-semibold mb-1 uppercase text-[10px] tracking-wide">Include Metrics</div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {[
+                        'Completion rate', 'AMA / LWBS rate', '30-day abstinence',
+                        '90-day abstinence', 'MAT continuation', 'Employment at DC',
+                        'Housing stability', '30-day readmission', 'NPS / satisfaction',
+                        'Average LOS', 'Payer mix', 'Revenue per admit',
+                      ].map(m => (
+                        <label key={m} className="flex items-center gap-1.5 cursor-pointer">
+                          <input type="checkbox" defaultChecked className="w-3 h-3 accent-navy" />
+                          <span className="text-navy">{m}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate font-semibold mb-1 uppercase text-[10px] tracking-wide">Export Format</div>
+                    <div className="flex gap-2">
+                      {['PDF', 'Excel', 'CSV', 'Word'].map(f => (
+                        <button key={f} className={`px-3 py-1.5 rounded-lg border text-[10px] font-semibold ${f === 'PDF' ? 'bg-blue-600 text-white border-blue-600' : 'border-border text-slate'}`}>{f}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <button className="w-full bg-navy text-white text-xs font-bold py-2 rounded-xl mt-1">Generate Report</button>
+                </div>
+              </div>
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-2">Recent Exports</h3>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    { name: 'TDAMHSAS_Jul2026.csv', size: '48 KB', date: 'Jul 10' },
+                    { name: 'BoardQtrly_Q2_2026.pdf', size: '2.1 MB', date: 'Jun 30' },
+                    { name: 'CARF_Outcomes_Apr2026.pdf', size: '1.4 MB', date: 'Apr 15' },
+                  ].map(e => (
+                    <div key={e.name} className="flex items-center justify-between border border-border rounded-lg px-3 py-2">
+                      <span className="font-mono text-navy">{e.name}</span>
+                      <span className="text-slate">{e.size} · {e.date}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

@@ -185,7 +185,7 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [filterMode, setFilterMode] = useState<FilterMode>('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'Assessments' | 'Population View' | 'ASAM Reference' | 'Outcome Tracking' | 'Criteria Reference'>('Assessments');
+  const [tab, setTab] = useState<'Assessments' | 'Population View' | 'ASAM Reference' | 'Outcome Tracking' | 'Criteria Reference' | 'Utilization Review'>('Assessments');
 
   const highRiskCount = MOCK_PATIENTS.filter(p => p.asam.d5 >= 3 || p.asam.d3 >= 3).length;
   const overdueCount = MOCK_PATIENTS.filter(p => (NEXT_REVIEW[p.id] ?? '') < TODAY).length;
@@ -247,7 +247,7 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['Assessments', 'Population View', 'ASAM Reference', 'Outcome Tracking', 'Criteria Reference'] as const).map(t => (
+        {(['Assessments', 'Population View', 'ASAM Reference', 'Outcome Tracking', 'Criteria Reference', 'Utilization Review'] as const).map(t => (
           <button key={t} onClick={() => setTab(t as typeof tab)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -679,6 +679,59 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
                     {[r.d1, r.d2, r.d3, r.d4, r.d5, r.d6].map((v, i) => (
                       <td key={i} className={`px-3 py-2 ${v.includes('Severe') || v.includes('Unsafe') ? 'text-red-600 font-semibold' : v.includes('None') || v.includes('Stable') ? 'text-green-600' : 'text-navy'}`}>{v}</td>
                     ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Utilization Review' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Utilization review metrics — auth approval rates, denied days, peer-to-peer outcomes, and concurrent review workflow efficiency.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Auth Approval Rate (30d)', value: '84%', color: 'text-green-600', sub: '47 of 56 requests approved' },
+              { label: 'Peer-to-Peer Wins (30d)', value: '6 / 8', color: 'text-teal-600', sub: '75% success rate' },
+              { label: 'Avg Auth Days Granted', value: '9.2d', color: 'text-navy', sub: 'Residential — all payers' },
+              { label: 'Denied Days (30d)', value: 18, color: 'text-amber-600', sub: 'Under appeal or written off' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Payer Authorization Performance — Last 30 Days</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Payer', 'Requests', 'Approved', 'Denied', 'Pending', 'Approval %', 'Avg Days Granted', 'P2P Offered'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { payer: 'Blue Cross Blue Shield TN', req: 14, appr: 12, den: 1, pend: 1, pct: '86%', days: '10d', p2p: 'Yes (1)' },
+                  { payer: 'Aetna', req: 10, appr: 8, den: 2, pend: 0, pct: '80%', days: '8d', p2p: 'Yes (2)' },
+                  { payer: 'United Healthcare', req: 9, appr: 9, den: 0, pend: 0, pct: '100%', days: '11d', p2p: 'No' },
+                  { payer: 'TennCare (Amerigroup)', req: 11, appr: 10, den: 1, pend: 0, pct: '91%', days: '9d', p2p: 'Yes (1)' },
+                  { payer: 'TennCare (BlueCare)', req: 8, appr: 6, den: 1, pend: 1, pct: '75%', days: '7d', p2p: 'Yes (1)' },
+                  { payer: 'Medicare Part A', req: 4, appr: 2, den: 2, pend: 0, pct: '50%', days: '6d', p2p: 'Yes (3)' },
+                ].map(r => (
+                  <tr key={r.payer} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-semibold text-navy">{r.payer}</td>
+                    <td className="px-3 py-2 text-center text-slate">{r.req}</td>
+                    <td className="px-3 py-2 text-center font-semibold text-green-700">{r.appr}</td>
+                    <td className="px-3 py-2 text-center font-semibold text-red-600">{r.den}</td>
+                    <td className="px-3 py-2 text-center text-amber-600">{r.pend}</td>
+                    <td className="px-3 py-2 font-bold text-navy">{r.pct}</td>
+                    <td className="px-3 py-2 text-slate">{r.days}</td>
+                    <td className="px-3 py-2 text-slate">{r.p2p}</td>
                   </tr>
                 ))}
               </tbody>

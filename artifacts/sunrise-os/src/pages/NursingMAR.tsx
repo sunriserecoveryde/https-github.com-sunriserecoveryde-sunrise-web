@@ -158,7 +158,7 @@ const SHIFTS = ['0800', '1200', '1400', '1800', '2000', '2100'];
 export function NursingMAR({ navigate, readOnly }: Props) {
   const editRoles = getRolesWithEditAccess('NursingMAR');
   const [date] = useState(TODAY);
-  const [marTab, setMarTab] = useState<'MAR' | 'Controlled Log' | 'PRN History' | 'Allergy Registry' | 'Medication Errors'>('MAR');
+  const [marTab, setMarTab] = useState<'MAR' | 'Controlled Log' | 'PRN History' | 'Allergy Registry' | 'Medication Errors' | 'Waste Log'>('MAR');
   const [expandedPatient, setExpandedPatient] = useState<string | null>('p1');
   const [administering, setAdministering] = useState<{ patientId: string; med: string; time: string } | null>(null);
 
@@ -195,7 +195,7 @@ export function NursingMAR({ navigate, readOnly }: Props) {
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['MAR', 'Controlled Log', 'PRN History', 'Allergy Registry', 'Medication Errors'] as const).map(t => (
+        {(['MAR', 'Controlled Log', 'PRN History', 'Allergy Registry', 'Medication Errors', 'Waste Log'] as const).map(t => (
           <button key={t} onClick={() => setMarTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${marTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -609,6 +609,58 @@ export function NursingMAR({ navigate, readOnly }: Props) {
         </div>
       )}
 
+      {marTab === 'Waste Log' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Controlled substance waste documentation — dual-witness entries, discrepancy flags, and DEA compliance records.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Waste Events (Today)', value: 8, color: 'text-navy', sub: 'All dual-witnessed' },
+              { label: 'Discrepancies (30d)', value: 1, color: 'text-amber-600', sub: 'Under investigation — Jul 12' },
+              { label: 'DEA 222 Forms (YTD)', value: 14, color: 'text-navy', sub: 'Controlled substance orders' },
+              { label: 'Audit-Ready', value: 'Yes', color: 'text-green-600', sub: 'All records current' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Waste Log — Today's Shift</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Time', 'Medication', 'Dose Ordered', 'Dose Given', 'Waste Amount', 'Reason', 'Nurse (Primary)', 'Witness', 'DEA Sched'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { time: '06:15', med: 'Morphine IV', ordered: '4mg', given: '2mg', waste: '2mg', reason: 'Partial dose per MD order', nurse: 'J. Torres, RN', witness: 'K. Park, LPN', sched: 'II' },
+                  { time: '08:00', med: 'Lorazepam PO', ordered: '2mg', given: '1mg', waste: '1mg', reason: 'Patient refused remainder', nurse: 'J. Torres, RN', witness: 'M. Hill, RN', sched: 'IV' },
+                  { time: '09:30', med: 'Clonazepam PO', ordered: '1mg', given: '0.5mg', waste: '0.5mg', reason: 'Dose reduction per CIWA protocol', nurse: 'M. Hill, RN', witness: 'J. Torres, RN', sched: 'IV' },
+                  { time: '12:00', med: 'Buprenorphine SL', ordered: '16mg', given: '12mg', waste: '4mg', reason: 'Dose titration — day 3 induction', nurse: 'J. Torres, RN', witness: 'K. Park, LPN', sched: 'III' },
+                  { time: '14:00', med: 'Hydromorphone IV', ordered: '1mg', given: '0.5mg', waste: '0.5mg', reason: 'Adequate pain control at half dose', nurse: 'M. Hill, RN', witness: 'J. Torres, RN', sched: 'II' },
+                ].map(r => (
+                  <tr key={r.time + r.med} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-mono text-slate">{r.time}</td>
+                    <td className="px-3 py-2 font-semibold text-navy">{r.med}</td>
+                    <td className="px-3 py-2 text-slate">{r.ordered}</td>
+                    <td className="px-3 py-2 text-green-700 font-semibold">{r.given}</td>
+                    <td className="px-3 py-2 text-amber-700 font-semibold">{r.waste}</td>
+                    <td className="px-3 py-2 text-slate italic">{r.reason}</td>
+                    <td className="px-3 py-2 text-slate">{r.nurse}</td>
+                    <td className="px-3 py-2 text-slate">{r.witness}</td>
+                    <td className="px-3 py-2 text-center"><span className="text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">Sch {r.sched}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

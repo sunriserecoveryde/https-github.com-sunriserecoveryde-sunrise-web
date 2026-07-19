@@ -91,7 +91,7 @@ const INTERVENTIONS: Record<string, string[]> = {
 
 export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: string) => void }) {
   const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
-  const [tab, setTab] = useState<'Risk Matrix' | 'Factor Analysis' | 'Interventions' | 'Peer Benchmarks' | 'Trend Analysis'>('Risk Matrix');
+  const [tab, setTab] = useState<'Risk Matrix' | 'Factor Analysis' | 'Interventions' | 'Peer Benchmarks' | 'Trend Analysis' | 'Risk Definitions'>('Risk Matrix');
 
   const highRisk = MOCK_PATIENTS.filter(p => RISK_LEVEL(p.id) === 'High');
   const medRisk  = MOCK_PATIENTS.filter(p => RISK_LEVEL(p.id) === 'Med');
@@ -123,7 +123,7 @@ export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: 
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['Risk Matrix', 'Factor Analysis', 'Interventions', 'Peer Benchmarks', 'Trend Analysis'] as const).map(t => (
+        {(['Risk Matrix', 'Factor Analysis', 'Interventions', 'Peer Benchmarks', 'Trend Analysis', 'Risk Definitions'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -608,6 +608,76 @@ export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: 
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Risk Definitions' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Standardized risk factor definitions, scoring rubrics, and clinical thresholds used by the Sunrise Risk Dashboard.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">AMA / AWOL Risk Factors</h3>
+              <div className="space-y-1.5 text-xs">
+                <div className="p-2 bg-red-50 border border-red-200 rounded-xl text-red-800 font-medium text-[10px]">High Risk Threshold: ≥3 factors present → escalate to clinical team</div>
+                {[
+                  { factor: 'Prior AMA discharge (same or other facility)', weight: '+3 pts', rationale: 'Strongest single predictor of current AMA attempt (OR 4.2)' },
+                  { factor: 'Expressed AMA desire in past 48h', weight: '+3 pts', rationale: 'Verbalization is a direct precursor — immediate counselor contact required' },
+                  { factor: 'LOS < 7 days', weight: '+2 pts', rationale: 'Early treatment phase; therapeutic alliance not yet established' },
+                  { factor: 'Court-ordered admission', weight: '+1 pt', rationale: 'Involuntary motivation increases early AMA risk' },
+                  { factor: 'Family conflict / active domestic stressor', weight: '+2 pts', rationale: 'External pull factors are top AMA driver in qualitative studies' },
+                  { factor: 'Missed 2+ groups in past 48h without excuse', weight: '+2 pts', rationale: 'Disengagement predicts AMA with 72% sensitivity' },
+                  { factor: 'Withdrawal score trending up (COWS/CIWA)', weight: '+2 pts', rationale: 'Physical discomfort is a top stated reason for AMA' },
+                  { factor: 'Positive UA for non-prescribed substance (in treatment)', weight: '+1 pt', rationale: 'Continued use may indicate ambivalence about recovery' },
+                ].map(r => (
+                  <div key={r.factor} className="border border-border rounded-lg p-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="font-medium text-navy">{r.factor}</span>
+                      <span className="font-bold text-red-600 shrink-0">{r.weight}</span>
+                    </div>
+                    <div className="text-slate mt-0.5">{r.rationale}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Relapse Risk Factors</h3>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    { factor: 'Positive UA during treatment stay', weight: 'High', color: 'bg-red-100 text-red-700' },
+                    { factor: 'Cravings score ≥8/10 on daily check-in', weight: 'High', color: 'bg-red-100 text-red-700' },
+                    { factor: 'Prior relapse after residential treatment', weight: 'High', color: 'bg-red-100 text-red-700' },
+                    { factor: 'Housing instability at discharge', weight: 'High', color: 'bg-red-100 text-red-700' },
+                    { factor: 'No MAT despite OUD/AUD diagnosis', weight: 'Moderate', color: 'bg-amber-100 text-amber-700' },
+                    { factor: 'Limited sober support network', weight: 'Moderate', color: 'bg-amber-100 text-amber-700' },
+                    { factor: 'Co-occurring untreated psychiatric disorder', weight: 'Moderate', color: 'bg-amber-100 text-amber-700' },
+                    { factor: 'Unemployment at discharge', weight: 'Moderate', color: 'bg-amber-100 text-amber-700' },
+                    { factor: 'Missing family therapy sessions', weight: 'Low', color: 'bg-blue-100 text-blue-700' },
+                  ].map(r => (
+                    <div key={r.factor} className="flex items-center justify-between border border-border rounded-lg px-2.5 py-1.5">
+                      <span className="text-navy">{r.factor}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ml-2 ${r.color}`}>{r.weight}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-2">Overdose Risk Thresholds</h3>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    { level: 'Critical', desc: 'Fentanyl-positive UA + opioid tolerance break (recent detox or incarceration). Naloxone must be on person at discharge.', color: 'bg-red-100 text-red-800 border-red-300' },
+                    { level: 'High', desc: 'OUD with prior non-fatal overdose. Naloxone prescribed, STOP-BANG ≥5, or CIWA/COWS previously ≥15.', color: 'bg-amber-100 text-amber-800 border-amber-300' },
+                    { level: 'Moderate', desc: 'Polysubstance use including opioids. Alcohol + benzodiazepine combination. No prior OD but high cravings.', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+                  ].map(r => (
+                    <div key={r.level} className={`border rounded-lg p-2 ${r.color}`}>
+                      <div className="font-bold">{r.level}</div>
+                      <div className="mt-0.5 opacity-90">{r.desc}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

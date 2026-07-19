@@ -89,7 +89,7 @@ export function CommandCenter({ navigate, readOnly }: Props) {
     low: 'text-slate bg-gray-50 border-border',
   };
 
-  const [ccTab, setCcTab] = useState<'Shift View' | 'Quality Metrics' | 'Ops Dashboard' | 'Capacity Forecast'>('Shift View');
+  const [ccTab, setCcTab] = useState<'Shift View' | 'Quality Metrics' | 'Ops Dashboard' | 'Capacity Forecast' | 'Alert Management' | 'Critical Events'>('Shift View');
 
   return (
     <div className="space-y-6">
@@ -120,7 +120,7 @@ export function CommandCenter({ navigate, readOnly }: Props) {
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['Shift View', 'Quality Metrics', 'Ops Dashboard', 'Capacity Forecast'] as const).map(t => (
+        {(['Shift View', 'Quality Metrics', 'Ops Dashboard', 'Capacity Forecast', 'Alert Management', 'Critical Events'] as const).map(t => (
           <button key={t} onClick={() => setCcTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${ccTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -610,6 +610,112 @@ export function CommandCenter({ navigate, readOnly }: Props) {
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block"></span> 75–89% (blue)</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span> &lt;75% (green)</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {ccTab === 'Alert Management' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Active clinical and operational alerts requiring supervisor acknowledgment — sort by priority and assign to on-call staff.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Open Alerts', value: 7, color: 'text-red-600', sub: 'Requiring acknowledgment' },
+              { label: 'Critical (P1)', value: 2, color: 'text-red-700', sub: 'Immediate response needed' },
+              { label: 'Acknowledged (Today)', value: 11, color: 'text-green-600', sub: 'Resolved or assigned' },
+              { label: 'Avg Response Time', value: '8 min', color: 'text-navy', sub: 'P1 alerts — 24h rolling' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Active Alert Queue</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Priority', 'Alert Type', 'Patient / Location', 'Generated', 'Assigned To', 'Status', 'Action Required'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { p: 'P1', type: 'CIWA Score ≥18', loc: 'Rm 4B — M. Delgado', gen: '11:42 AM', assign: 'Dr. Chen (on-call)', status: 'Active', action: 'MD bedside eval within 15 min' },
+                  { p: 'P1', type: 'AMA Request', loc: 'Rm 9A — T. Barnes', gen: '12:05 PM', assign: 'S. Jenkins, LPC', status: 'Active', action: 'Counselor contact; AMA form if needed' },
+                  { p: 'P2', type: 'Missed Medication (3 doses)', loc: 'Rm 6C — K. Walsh', gen: '10:30 AM', assign: 'J. Torres, RN', status: 'In Progress', action: 'Nursing assessment; document reason' },
+                  { p: 'P2', type: 'Positive UA (Fentanyl)', loc: 'Rm 11D — R. Patel', gen: '09:15 AM', assign: 'D. Odom, LMFT', status: 'In Progress', action: 'Counselor session; update treatment plan' },
+                  { p: 'P3', type: 'Group No-Show (2 sessions)', loc: 'Rm 3A — A. Monroe', gen: '08:00 AM', assign: 'T. Osei, CADC', status: 'Pending', action: 'Check-in and document reason' },
+                  { p: 'P3', type: 'Auth Expiring in 48h', loc: 'Rm 7B — L. Carter', gen: '07:00 AM', assign: 'Billing — B. Hughes', status: 'Pending', action: 'Submit concurrent review to BCBS' },
+                  { p: 'P3', type: 'Pending Co-sign >24h', loc: 'Progress Note — 3 docs', gen: '06:00 AM', assign: 'Supervisor — D. Reyes', status: 'Pending', action: 'Review and co-sign in ChartReview' },
+                ].map(r => (
+                  <tr key={r.type + r.loc} className="hover:bg-gray-50">
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.p === 'P1' ? 'bg-red-100 text-red-700' : r.p === 'P2' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{r.p}</span></td>
+                    <td className="px-3 py-2 font-semibold text-navy">{r.type}</td>
+                    <td className="px-3 py-2 text-slate">{r.loc}</td>
+                    <td className="px-3 py-2 text-slate font-mono text-[10px]">{r.gen}</td>
+                    <td className="px-3 py-2 text-slate">{r.assign}</td>
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.status === 'Active' ? 'bg-red-100 text-red-700' : r.status === 'In Progress' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{r.status}</span></td>
+                    <td className="px-3 py-2 text-slate italic text-[10px]">{r.action}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {ccTab === 'Critical Events' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">30-day log of critical clinical events — overdoses, AMA discharges, medical emergencies, and code responses.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Critical Events (30d)', value: 6, color: 'text-navy', sub: 'Any P1 incident logged' },
+              { label: 'Medical Emergencies', value: 2, color: 'text-red-600', sub: 'EMS called' },
+              { label: 'AMA Discharges', value: 3, color: 'text-amber-600', sub: 'Against medical advice' },
+              { label: 'Overdose Events', value: 1, color: 'text-red-700', sub: 'Naloxone administered' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Critical Event Log — Last 30 Days</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Date', 'Event Type', 'Patient (Initials)', 'LOC', 'Response', 'Outcome', 'Root Cause', 'QAPI Filed'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { date: 'Jul 14', type: 'AMA Discharge', pt: 'T.B.', loc: 'Residential', resp: 'Counselor session; AMA form signed', outcome: 'Discharged against advice', rc: 'Family conflict / external pull', qapi: 'Yes' },
+                  { date: 'Jul 10', type: 'Medical Emergency (Seizure)', pt: 'M.D.', loc: 'Detox', resp: 'RN + MD response; EMS called', outcome: 'Transported; returned 48h', rc: 'Alcohol withdrawal — CIWA under-scored', qapi: 'Yes' },
+                  { date: 'Jul 5', type: 'Naloxone Administration', pt: 'R.C.', loc: 'Residential', resp: 'RN Narcan 4mg IN; EMS standby', outcome: 'Full recovery; no transport', rc: 'Contraband fentanyl — room not searched', qapi: 'Yes' },
+                  { date: 'Jun 29', type: 'AMA Discharge', pt: 'K.W.', loc: 'PHP', resp: 'Counselor session; refused', outcome: 'Discharged against advice', rc: 'Cravings score ≥9 — not escalated', qapi: 'Yes' },
+                  { date: 'Jun 21', type: 'Medical Emergency (Chest Pain)', pt: 'A.S.', loc: 'Residential', resp: 'RN assessment; EMS called', outcome: 'Hospital eval; ruled out MI; returned', rc: 'Pre-existing cardiac history', qapi: 'No — medical only' },
+                  { date: 'Jun 18', type: 'AMA Discharge', pt: 'L.P.', loc: 'Detox', resp: 'Counselor + MD conversation', outcome: 'Discharged against advice', rc: 'Work/family pressure; LOS < 5 days', qapi: 'Yes' },
+                ].map(r => (
+                  <tr key={r.date + r.type} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-slate font-mono">{r.date}</td>
+                    <td className="px-3 py-2 font-semibold text-navy">{r.type}</td>
+                    <td className="px-3 py-2 text-slate font-mono">{r.pt}</td>
+                    <td className="px-3 py-2 text-slate">{r.loc}</td>
+                    <td className="px-3 py-2 text-slate">{r.resp}</td>
+                    <td className="px-3 py-2 text-slate">{r.outcome}</td>
+                    <td className="px-3 py-2 text-slate italic">{r.rc}</td>
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.qapi === 'Yes' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{r.qapi}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

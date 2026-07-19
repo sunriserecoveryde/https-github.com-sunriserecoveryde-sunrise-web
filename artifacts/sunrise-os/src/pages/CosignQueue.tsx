@@ -100,7 +100,7 @@ export function CosignQueue({ navigate, readOnly }: Props) {
   const [selected, setSelected] = useState<CosignItem | null>(QUEUE[0]);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [comments, setComments] = useState('');
-  const [cosignTab, setCosignTab] = useState<'Queue' | 'Analytics' | 'Supervision Notes' | 'Compliance Report'>('Queue');
+  const [cosignTab, setCosignTab] = useState<'Queue' | 'Analytics' | 'Supervision Notes' | 'Compliance Report' | 'Timeout Alerts' | 'Supervisor Directory'>('Queue');
 
   const pending = QUEUE.filter(q => !completedIds.includes(q.id));
   const urgent = pending.filter(q => q.priority === 'Urgent').length;
@@ -136,7 +136,7 @@ export function CosignQueue({ navigate, readOnly }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Queue', 'Analytics', 'Supervision Notes', 'Compliance Report'] as const).map(t => (
+        {(['Queue', 'Analytics', 'Supervision Notes', 'Compliance Report', 'Timeout Alerts', 'Supervisor Directory'] as const).map(t => (
           <button key={t} onClick={() => setCosignTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${cosignTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t === 'Analytics' ? 'Co-sign Analytics' : t}</button>
         ))}
       </div>
@@ -446,6 +446,93 @@ export function CosignQueue({ navigate, readOnly }: Props) {
                     <td className="px-3 py-2 text-center">
                       {r.overdue > 0 ? <span className="font-bold text-amber-600">{r.overdue}</span> : <span className="text-green-600">0</span>}
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {cosignTab === 'Timeout Alerts' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Documents approaching or past the co-sign deadline — state licensure requires co-sign within 24h for supervised clinicians in residential settings.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Past Deadline', value: 3, color: 'text-red-600', sub: '>24h without co-sign' },
+              { label: 'Due Within 4h', value: 4, color: 'text-amber-600', sub: 'Approaching deadline' },
+              { label: 'Due Within 8h', value: 6, color: 'text-blue-600', sub: 'Monitor closely' },
+              { label: 'On-Time Rate (30d)', value: '91%', color: 'text-green-600', sub: 'Target: ≥95%' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Documents Past or Approaching Co-sign Deadline</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Status', 'Document', 'Clinician', 'Patient', 'Written At', 'Deadline', 'Overdue By', 'Supervisor'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { status: 'Past Deadline', doc: 'Individual Progress Note', clin: 'M. Gonzales, LCSW', pt: 'R. Coleman', written: 'Jul 18 09:00', deadline: 'Jul 19 09:00', over: '3h 14min', sup: 'D. Reyes, LPC-S' },
+                  { status: 'Past Deadline', doc: 'Group Note (AM Session)', clin: 'T. Osei, CADC', pt: 'Group — 7 pts', written: 'Jul 18 11:00', deadline: 'Jul 19 11:00', over: '1h 22min', sup: 'S. Jenkins, LPC-S' },
+                  { status: 'Past Deadline', doc: 'BPS Assessment — New Admit', clin: 'R. Patel, CADC-II', pt: 'M. Torres', written: 'Jul 17 16:00', deadline: 'Jul 18 16:00', over: '19h 36min', sup: 'D. Reyes, LPC-S' },
+                  { status: 'Due in 2h', doc: 'Individual Progress Note', clin: 'L. Washington, LCAS', pt: 'K. Walsh', written: 'Jul 19 10:15', deadline: 'Jul 20 10:15', over: '—', sup: 'S. Jenkins, LPC-S' },
+                  { status: 'Due in 3h', doc: 'Discharge Summary Draft', clin: 'M. Gonzales, LCSW', pt: 'A. Santos', written: 'Jul 19 09:30', deadline: 'Jul 20 09:30', over: '—', sup: 'D. Reyes, LPC-S' },
+                ].map(r => (
+                  <tr key={r.doc + r.clin} className="hover:bg-gray-50">
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.status === 'Past Deadline' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{r.status}</span></td>
+                    <td className="px-3 py-2 font-medium text-navy">{r.doc}</td>
+                    <td className="px-3 py-2 text-slate">{r.clin}</td>
+                    <td className="px-3 py-2 text-slate">{r.pt}</td>
+                    <td className="px-3 py-2 text-slate font-mono text-[10px]">{r.written}</td>
+                    <td className="px-3 py-2 text-slate font-mono text-[10px]">{r.deadline}</td>
+                    <td className="px-3 py-2 font-bold text-red-600">{r.over}</td>
+                    <td className="px-3 py-2 text-slate">{r.sup}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {cosignTab === 'Supervisor Directory' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Clinical supervisors authorized to co-sign — scope, credentials, and current queue load.</div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Authorized Co-signing Supervisors</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Supervisor', 'Credential', 'Can Sign For', 'Queue (Open)', 'Avg Turnaround', 'Current Status'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'D. Reyes, LPC-S', cred: 'LPC-MHSP, NCC', signs: 'LPC, CADC-II, MS Interns', queue: 5, avg: '3.2h', status: 'On Site' },
+                  { name: 'S. Jenkins, LPC-S', cred: 'LPC-MHSP', signs: 'CADC, CADC-II, Counseling Interns', queue: 4, avg: '2.8h', status: 'On Site' },
+                  { name: 'Dr. R. Chen, MD', cred: 'MD, ABAM', signs: 'Nursing notes, MAT orders, Medical notes', queue: 2, avg: '1.1h', status: 'On Site' },
+                  { name: 'Dr. A. Hughes, MD', cred: 'MD, Psychiatry', signs: 'Psychiatric notes, medication orders', queue: 1, avg: '0.9h', status: 'Off Site (On-Call)' },
+                ].map(r => (
+                  <tr key={r.name} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-semibold text-navy">{r.name}</td>
+                    <td className="px-3 py-2 text-slate">{r.cred}</td>
+                    <td className="px-3 py-2 text-slate">{r.signs}</td>
+                    <td className="px-3 py-2 text-center font-bold text-navy">{r.queue}</td>
+                    <td className="px-3 py-2 text-slate">{r.avg}</td>
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.status === 'On Site' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{r.status}</span></td>
                   </tr>
                 ))}
               </tbody>

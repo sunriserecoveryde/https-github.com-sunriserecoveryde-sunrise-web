@@ -84,7 +84,7 @@ const COUNSELOR_PERF = [
 
 export function ChartReview({ navigate, readOnly }: Props) {
   const editRoles = getRolesWithEditAccess('ChartReview');
-  const [activeTab, setActiveTab] = useState<'Deficiencies' | 'Chart Completeness' | 'Documentation Trends' | 'Peer Review' | 'Coding Audit'>('Deficiencies');
+  const [activeTab, setActiveTab] = useState<'Deficiencies' | 'Chart Completeness' | 'Documentation Trends' | 'Peer Review' | 'Coding Audit' | 'Provider Scorecard'>('Deficiencies');
   const [typeFilter, setTypeFilter] = useState<DefType | 'All'>('All');
   const [priorityFilter, setPriorityFilter] = useState<'Critical' | 'High' | 'Moderate' | 'All'>('All');
   const [counselorFilter, setCounselorFilter] = useState<string>('All');
@@ -119,7 +119,7 @@ export function ChartReview({ navigate, readOnly }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Deficiencies', 'Chart Completeness', 'Documentation Trends', 'Peer Review', 'Coding Audit'] as const).map(t => (
+        {(['Deficiencies', 'Chart Completeness', 'Documentation Trends', 'Peer Review', 'Coding Audit', 'Provider Scorecard'] as const).map(t => (
           <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -441,6 +441,47 @@ export function ChartReview({ navigate, readOnly }: Props) {
                     <td className="px-3 py-2 text-center text-navy">{r.acc}</td>
                     <td className="px-3 py-2 text-center"><span className={`font-bold ${r.pct === 100 ? 'text-green-600' : r.pct >= 90 ? 'text-blue-600' : 'text-amber-600'}`}>{r.pct}%</span></td>
                     <td className="px-3 py-2 text-slate italic">{r.err}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Provider Scorecard' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Individual clinician documentation quality metrics — timeliness, deficiency rate, co-sign compliance, and supervisor quality scores.</div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Clinician Documentation Scorecard — 30-Day Rolling</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Clinician', 'Credential', 'Notes (30d)', 'On-Time %', 'Deficiency Rate', 'Co-sign Rate', 'Avg Quality Score', 'Top Deficiency', 'Trend'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'S. Jenkins', cred: 'LPC', notes: 48, ontime: '96%', def: '4%', cosign: '100%', quality: 94, top: 'Missing TP link', trend: '↑' },
+                  { name: 'D. Odom', cred: 'LMFT', notes: 41, ontime: '93%', def: '7%', cosign: '100%', quality: 91, top: 'Vague response content', trend: '→' },
+                  { name: 'M. Gonzales', cred: 'LCSW', notes: 55, ontime: '89%', def: '11%', cosign: '87%', quality: 83, top: 'Missing co-sign + late notes', trend: '↓' },
+                  { name: 'T. Osei', cred: 'CADC', notes: 32, ontime: '100%', def: '3%', cosign: '100%', quality: 97, top: 'None identified', trend: '↑' },
+                  { name: 'R. Patel', cred: 'CADC-II', notes: 29, ontime: '97%', def: '3%', cosign: '100%', quality: 95, top: 'Missing crisis plan link', trend: '↑' },
+                  { name: 'L. Washington', cred: 'LCAS', notes: 44, ontime: '86%', def: '14%', cosign: '91%', quality: 79, top: 'Late entries + vague content', trend: '↓' },
+                  { name: 'J. Torres', cred: 'RN, CARN', notes: 67, ontime: '98%', def: '2%', cosign: 'N/A', quality: 96, top: 'Rare: missing VS reference', trend: '→' },
+                ].map(r => (
+                  <tr key={r.name} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-semibold text-navy">{r.name}</td>
+                    <td className="px-3 py-2 text-slate">{r.cred}</td>
+                    <td className="px-3 py-2 text-center text-slate">{r.notes}</td>
+                    <td className="px-3 py-2 font-semibold text-green-700">{r.ontime}</td>
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${parseFloat(r.def) < 5 ? 'bg-green-100 text-green-700' : parseFloat(r.def) < 10 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{r.def}</span></td>
+                    <td className="px-3 py-2 text-slate">{r.cosign}</td>
+                    <td className="px-3 py-2 font-bold text-navy">{r.quality}/100</td>
+                    <td className="px-3 py-2 text-slate italic">{r.top}</td>
+                    <td className="px-3 py-2 text-center text-lg font-bold">{r.trend}</td>
                   </tr>
                 ))}
               </tbody>

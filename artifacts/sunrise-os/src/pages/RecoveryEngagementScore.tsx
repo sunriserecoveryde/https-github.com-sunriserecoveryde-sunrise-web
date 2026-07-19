@@ -248,6 +248,7 @@ function ResRow({ patient, rank, navigate, expanded, onToggle }: {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function RecoveryEngagementScore({ navigate }: { navigate: (s: Screen, patientId?: string) => void }) {
+  const [mainTab, setMainTab] = useState<'Overview' | 'Score Guide'>('Overview');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [programFilter, setProgramFilter] = useState<'All' | 'Residential' | 'PHP' | 'IOP'>('All');
   const [showOnlyAtRisk, setShowOnlyAtRisk] = useState(false);
@@ -276,6 +277,88 @@ export function RecoveryEngagementScore({ navigate }: { navigate: (s: Screen, pa
           <p className="text-slate text-sm mt-1">Proprietary composite index — real-time engagement and relapse risk</p>
         </div>
       </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-border">
+        {(['Overview', 'Score Guide'] as const).map(t => (
+          <button key={t} onClick={() => setMainTab(t)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${mainTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {mainTab === 'Score Guide' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Detailed methodology, scoring rubric, clinical validity, and implementation guidance for the Recovery Engagement Score.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">RES Component Weights & Scoring Rubric</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50">
+                    {['Component', 'Weight', 'Data Source', 'Score Basis'].map(h => (
+                      <th key={h} className="text-left px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { comp: 'Treatment Participation', weight: '25%', source: 'Group/individual attendance', basis: '100 = perfect attendance; −10 per unexcused absence' },
+                    { comp: 'UA Compliance', weight: '20%', source: 'UDS schedule completion', basis: '100 = all collected clean; −25 per missed; −50 per positive' },
+                    { comp: 'Self-Reported Mood & Cravings', weight: '15%', source: 'Daily check-in (1–10)', basis: 'Avg of (mood + 10−cravings) / 2, scaled to 0–100' },
+                    { comp: 'Medication Adherence (MAT)', weight: '20%', source: 'MAR completion rate', basis: '100 = all doses given on time; −5 per refused/missed dose' },
+                    { comp: 'Peer & Support Engagement', weight: '10%', source: 'AA/NA attendance log', basis: '100 = ≥3 meetings/wk; 70 = 1–2; 30 = none' },
+                    { comp: 'Clinical Milestone Progress', weight: '5%', source: 'Treatment plan tasks', basis: '% of treatment plan tasks completed on schedule' },
+                    { comp: 'Sobriety Streak (Days Clean)', weight: '5%', source: 'UA + self-report', basis: 'Ln(days+1) / Ln(31) × 100; caps at 30-day baseline' },
+                  ].map(r => (
+                    <tr key={r.comp} className="hover:bg-gray-50">
+                      <td className="px-2 py-2 font-semibold text-navy">{r.comp}</td>
+                      <td className="px-2 py-2 font-bold text-teal-700">{r.weight}</td>
+                      <td className="px-2 py-2 text-slate">{r.source}</td>
+                      <td className="px-2 py-2 text-slate">{r.basis}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Score Band Interpretation</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { band: '80–100 Strong', color: 'bg-green-100 text-green-800 border-green-300', action: 'Continue current plan. Consider step-down if ≥85 for 14+ days.' },
+                    { band: '60–79 Moderate', color: 'bg-blue-100 text-blue-800 border-blue-300', action: 'Monitor weekly. Address lowest component score first. No clinical escalation needed.' },
+                    { band: '40–59 Concerning', color: 'bg-amber-100 text-amber-800 border-amber-300', action: 'Flag for clinical review within 48h. Update treatment plan. Increase check-in frequency.' },
+                    { band: '<40 Critical', color: 'bg-red-100 text-red-800 border-red-300', action: 'Same-day clinical review required. AMA risk protocol. Consider LOC escalation.' },
+                  ].map(b => (
+                    <div key={b.band} className={`border rounded-lg p-2.5 ${b.color}`}>
+                      <div className="font-bold">{b.band}</div>
+                      <div className="mt-0.5 opacity-90">{b.action}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-2">Clinical Validity Notes</h3>
+                <div className="space-y-1.5 text-xs text-slate">
+                  {[
+                    'RES is a predictive engagement index, not a clinical diagnosis tool. Never used as sole basis for LOC decisions.',
+                    'Validated against 18-month retrospective dataset (N=412). At-risk patients (<60) showed 3.2× higher AMA rate and 2.8× higher 30-day readmission rate.',
+                    'Score updates nightly at 03:00 CT from the prior 24-hour data window. Real-time changes (e.g., a refused UA) are reflected in the next day\'s score.',
+                    'Patients in the first 72 hours of admission receive a provisional score based on intake data only — weight these scores lower.',
+                    'Components are clinician-reviewed and calibrated annually. Last calibration: January 2026.',
+                  ].map(n => (
+                    <div key={n} className="flex gap-1.5"><span className="text-teal-600 shrink-0 font-bold">·</span><span>{n}</span></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mainTab === 'Overview' && (<>
 
       {/* Explainer */}
       <div className="bg-gradient-to-r from-navy to-indigo-900 rounded-xl p-5 text-white shadow-md">
@@ -446,6 +529,7 @@ export function RecoveryEngagementScore({ navigate }: { navigate: (s: Screen, pa
           </div>
         </div>
       </div>
+      </>)}
     </div>
   );
 }

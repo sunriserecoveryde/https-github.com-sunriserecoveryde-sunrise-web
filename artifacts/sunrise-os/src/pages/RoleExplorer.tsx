@@ -71,6 +71,7 @@ const PERM_CELL: Record<Permission, React.ReactNode> = {
 
 export function RoleExplorer({ navigate: _navigate }: Props) {
   const { roleId, setRoleId } = useRole();
+  const [mainTab, setMainTab] = useState<'Permission Matrix' | 'Role Descriptions' | 'Access Summary'>('Permission Matrix');
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState<RoleCategory | 'All'>('All');
   const [filterSection, setFilterSection] = useState<string>('All');
@@ -99,6 +100,96 @@ export function RoleExplorer({ navigate: _navigate }: Props) {
           <span className="flex items-center gap-1"><Minus className="w-3 h-3 text-gray-400" />No access</span>
         </div>
       </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-border">
+        {(['Permission Matrix', 'Role Descriptions', 'Access Summary'] as const).map(t => (
+          <button key={t} onClick={() => setMainTab(t)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${mainTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {mainTab === 'Role Descriptions' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Scope of practice, typical responsibilities, and documentation authority for each role configured in Sunrise OS.</div>
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            {[
+              { role: 'Administrator', cred: 'Facility Admin / COO', scope: 'Full system access including settings, user management, billing, and all clinical data in read mode. Primary contact for audits.', doc: 'No clinical documentation authority. Can view all records.', screens: 'All screens — full admin' },
+              { role: 'Medical Director', cred: 'MD / DO', scope: 'Oversees all clinical programming, MAT protocols, and medical policy. Full prescribing authority. Signs off on treatment plans and medical orders.', doc: 'All clinical notes, orders, and MAT documentation. Final co-sign authority.', screens: 'All clinical and medical screens' },
+              { role: 'Attending Physician', cred: 'MD / DO', scope: 'Direct patient medical care, physical exams, withdrawal management, MAT prescribing, and medical clearance.', doc: 'Medical notes, orders, MAT orders, physical assessments.', screens: 'All clinical screens; full prescribing' },
+              { role: 'Psychiatrist', cred: 'MD / DO — Psychiatry', scope: 'Psychiatric evaluation and diagnosis, medication management for co-occurring disorders, crisis consultation.', doc: 'Psychiatric evaluations, medication orders, crisis notes.', screens: 'Clinical + psychiatric/medication screens' },
+              { role: 'Nurse Practitioner', cred: 'NP — PMHNP / FNP', scope: 'Collaborative prescribing, MAT management, psychiatric medication management under MD supervision or independent (state-dependent).', doc: 'Nursing notes, NP orders, MAT documentation. Requires MD cosign per state law.', screens: 'Clinical + medication screens' },
+              { role: 'RN / Charge Nurse', cred: 'RN, CARN', scope: 'Medication administration, vital signs, withdrawal scoring (COWS/CIWA), nursing assessments, shift supervision.', doc: 'Nursing notes, MAR, vitals, incident reports. Requires MD/NP order for medications.', screens: 'Nursing, clinical, MAR, shift handoff' },
+              { role: 'LPN', cred: 'LPN', scope: 'Medication administration under RN supervision, vital signs, basic nursing care, ADL support.', doc: 'MAR entries, basic nursing notes. Cannot independently assess or diagnose.', screens: 'MAR, vitals — supervised access' },
+              { role: 'Licensed Counselor', cred: 'LPC, LCSW, LMFT', scope: 'Individual and group therapy, treatment plan development, discharge planning, co-occurring disorder treatment.', doc: 'Progress notes, group notes, treatment plans, BPS assessments, discharge summaries. Requires supervisor cosign if still under supervision.', screens: 'All documentation and clinical screens' },
+              { role: 'CADC / CADC-II', cred: 'CADC, CADC-II, LCAS', scope: 'Substance use counseling, group facilitation, 12-step facilitation, case management under clinical supervision.', doc: 'Progress notes, group notes under supervision. CADC-II may write more independently per state.', screens: 'Documentation, groups, caseload — supervised' },
+              { role: 'CPRS / Peer Specialist', cred: 'CPRS (Certified Peer Recovery Specialist)', scope: 'Peer mentorship, recovery coaching, 12-step sponsorship support, alumni outreach. Not a clinical role — cannot diagnose or prescribe.', doc: 'Peer contact notes, outreach logs.', screens: 'Peer support, census (read), messaging' },
+              { role: 'Case Manager', cred: 'BSW, BA, or experience-based', scope: 'Housing coordination, benefits enrollment, insurance navigation, community resource linkage, discharge logistics.', doc: 'Case management notes, aftercare plan entries, referral documentation.', screens: 'Aftercare, referrals, census (read)' },
+              { role: 'Billing / Compliance', cred: 'CPC, COC, or experience-based', scope: 'Claims submission, authorization management, revenue cycle, audit readiness, compliance monitoring.', doc: 'No clinical documentation. Full access to billing, auth, and compliance records.', screens: 'Billing, auth, compliance — no clinical docs' },
+            ].map(r => (
+              <div key={r.role} className="card">
+                <div className="font-bold text-navy text-sm">{r.role}</div>
+                <div className="text-[10px] text-slate uppercase tracking-wide mt-0.5 mb-2">{r.cred}</div>
+                <div className="space-y-1.5">
+                  <div><span className="font-semibold text-navy">Scope: </span><span className="text-slate">{r.scope}</span></div>
+                  <div><span className="font-semibold text-navy">Documentation: </span><span className="text-slate">{r.doc}</span></div>
+                  <div><span className="font-semibold text-navy">Screens: </span><span className="text-slate italic">{r.screens}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {mainTab === 'Access Summary' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">High-level access summary by role — count of screens with full, read-only, and no access.</div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Permission Count by Role</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Role', 'Category', 'Full Access', 'Read Only', 'No Access', 'Coverage %', 'Notes'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {ROLES.map(r => {
+                  const full = fullCount(r.id);
+                  const read = readCount(r.id);
+                  const none = ALL_SCREENS.length - full - read;
+                  const cov = Math.round(((full + read) / ALL_SCREENS.length) * 100);
+                  return (
+                    <tr key={r.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 font-semibold text-navy">{r.shortLabel}</td>
+                      <td className="px-3 py-2 text-slate">{r.category}</td>
+                      <td className="px-3 py-2 font-bold text-green-700">{full}</td>
+                      <td className="px-3 py-2 font-bold text-blue-700">{read}</td>
+                      <td className="px-3 py-2 text-slate">{none}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-gray-200 rounded-full">
+                            <div className="h-1.5 rounded-full bg-navy" style={{ width: `${cov}%` }} />
+                          </div>
+                          <span className="font-semibold text-navy w-8 text-right">{cov}%</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-slate italic text-[10px]">
+                        {full === ALL_SCREENS.length ? 'Full system access' : none === ALL_SCREENS.length ? 'No access configured' : full > 40 ? 'Broad clinical access' : read > 20 ? 'Primarily read-only' : 'Targeted access'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {mainTab === 'Permission Matrix' && (<div className="space-y-5">
 
       {/* Role summary cards */}
       <div className="grid grid-cols-4 gap-3">
@@ -194,6 +285,7 @@ export function RoleExplorer({ navigate: _navigate }: Props) {
           </table>
         </div>
       </div>
+      </div>)}
     </div>
   );
 }

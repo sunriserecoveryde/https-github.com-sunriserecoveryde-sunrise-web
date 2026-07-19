@@ -79,7 +79,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(new Set(['presenting']));
   const [completedSections, setCompletedSections] = useState<Set<SectionKey>>(new Set(['presenting', 'substances', 'medical', 'psychiatric', 'legal', 'family', 'social', 'trauma', 'strengths', 'diagnostic', 'summary']));
   const [saved, setSaved] = useState(false);
-  const [bpsTab, setBpsTab] = useState<'Assessment' | 'Population Summary' | 'SUD Epidemiology' | 'Diagnostic Coding' | 'Assessment Quality'>('Assessment');
+  const [bpsTab, setBpsTab] = useState<'Assessment' | 'Population Summary' | 'SUD Epidemiology' | 'Diagnostic Coding' | 'Assessment Quality' | 'Screening Tools'>('Assessment');
 
   const p = MOCK_PATIENTS.find(pt => pt.id === selectedPatient) ?? MOCK_PATIENTS[0];
 
@@ -109,7 +109,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['Assessment', 'Population Summary', 'SUD Epidemiology', 'Diagnostic Coding', 'Assessment Quality'] as const).map(t => (
+        {(['Assessment', 'Population Summary', 'SUD Epidemiology', 'Diagnostic Coding', 'Assessment Quality', 'Screening Tools'] as const).map(t => (
           <button key={t} onClick={() => setBpsTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${bpsTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -724,6 +724,7 @@ function AssessmentQualityTab() {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 }

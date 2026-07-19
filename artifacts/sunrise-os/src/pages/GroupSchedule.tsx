@@ -229,7 +229,7 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
   const dayLabels = ['Mon 7/14', 'Tue 7/15', 'Wed 7/16', 'Thu 7/17', 'Fri 7/18'];
   const timeSlots = ['08:00 AM', '09:30 AM', '11:00 AM', '01:00 PM', '02:30 PM', '04:00 PM', '07:00 PM'];
   const [selectedGroup, setSelectedGroup] = useState<GroupWithDay | null>(null);
-  const [tab, setTab] = useState<'Schedule' | 'Analytics' | 'Curriculum Map' | 'Room Assignments' | 'Attendance Trends'>('Schedule');
+  const [tab, setTab] = useState<'Schedule' | 'Analytics' | 'Curriculum Map' | 'Room Assignments' | 'Attendance Trends' | 'Facilitator Load'>('Schedule');
 
   const getGroupsForSlot = (day: string, time: string) =>
     MOCK_GROUPS.filter(g => g.days.includes(day) && g.time === time);
@@ -249,7 +249,7 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['Schedule', 'Analytics', 'Curriculum Map', 'Room Assignments', 'Attendance Trends'] as const).map(t => (
+        {(['Schedule', 'Analytics', 'Curriculum Map', 'Room Assignments', 'Attendance Trends', 'Facilitator Load'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -599,6 +599,65 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Facilitator Load' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Facilitator workload distribution — groups per clinician per week, caseload overlap, and burnout risk indicators.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Avg Groups / Clinician / Week', value: 6.2, color: 'text-navy', sub: 'Target: ≤8' },
+              { label: 'Highest Load', value: 9, color: 'text-amber-600', sub: 'S. Jenkins, LPC — monitor' },
+              { label: 'Lowest Load', value: 4, color: 'text-green-600', sub: 'T. Osei, CADC — capacity' },
+              { label: 'Facilitators at or Over Target', value: 2, color: 'text-red-600', sub: 'Need redistribution review' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Facilitator Workload Matrix — Current Week</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Facilitator', 'Credential', 'Groups / Week', 'Avg Attendance', 'Individual Caseload', 'Total Clinical Hrs', 'Load Status'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'S. Jenkins', cred: 'LPC', groups: 9, att: 7.2, cases: 14, hrs: 38, status: 'At Limit' },
+                  { name: 'D. Odom', cred: 'LMFT', groups: 7, att: 6.8, cases: 12, hrs: 34, status: 'Normal' },
+                  { name: 'M. Gonzales', cred: 'LCSW', groups: 8, att: 7.0, cases: 13, hrs: 36, status: 'High' },
+                  { name: 'T. Osei', cred: 'CADC', groups: 4, att: 8.1, cases: 8, hrs: 24, status: 'Under' },
+                  { name: 'R. Patel', cred: 'CADC-II', groups: 5, att: 7.5, cases: 9, hrs: 28, status: 'Normal' },
+                  { name: 'L. Washington', cred: 'LCAS', groups: 9, att: 6.4, cases: 15, hrs: 40, status: 'At Limit' },
+                ].map(r => (
+                  <tr key={r.name} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-semibold text-navy">{r.name}</td>
+                    <td className="px-3 py-2 text-slate">{r.cred}</td>
+                    <td className="px-3 py-2 text-center font-bold text-navy">{r.groups}</td>
+                    <td className="px-3 py-2 text-center text-slate">{r.att}</td>
+                    <td className="px-3 py-2 text-center text-slate">{r.cases}</td>
+                    <td className="px-3 py-2 text-center text-slate">{r.hrs}h</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                        r.status === 'At Limit' ? 'bg-red-100 text-red-700' :
+                        r.status === 'High' ? 'bg-amber-100 text-amber-700' :
+                        r.status === 'Under' ? 'bg-blue-100 text-blue-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>{r.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

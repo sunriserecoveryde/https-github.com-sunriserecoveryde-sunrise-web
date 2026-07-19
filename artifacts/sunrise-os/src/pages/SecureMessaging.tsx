@@ -147,7 +147,7 @@ export function SecureMessaging({ navigate, readOnly }: Props) {
   const [newMessage, setNewMessage] = useState('');
   const [showCompose, setShowCompose] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [msgTab, setMsgTab] = useState<'Inbox' | 'Announcements' | 'Notifications' | 'Quick Templates' | 'Message Analytics'>('Inbox');
+  const [msgTab, setMsgTab] = useState<'Inbox' | 'Announcements' | 'Notifications' | 'Quick Templates' | 'Message Analytics' | 'Compliance Log'>('Inbox');
 
   const threads = MESSAGES.filter(m => m.id === m.id && !m.id.endsWith('r'));
   const filteredThreads = threads.filter(m =>
@@ -181,7 +181,7 @@ export function SecureMessaging({ navigate, readOnly }: Props) {
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['Inbox', 'Announcements', 'Notifications', 'Quick Templates', 'Message Analytics'] as const).map(t => (
+        {(['Inbox', 'Announcements', 'Notifications', 'Quick Templates', 'Message Analytics', 'Compliance Log'] as const).map(t => (
           <button key={t} onClick={() => setMsgTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${msgTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -550,6 +550,58 @@ export function SecureMessaging({ navigate, readOnly }: Props) {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {msgTab === 'Compliance Log' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Audit trail of all secure messages — 42 CFR Part 2 compliance, message retention, and PHI transmission log.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Messages (30d)', value: 847, color: 'text-navy', sub: 'Total sent/received' },
+              { label: 'PHI Transmissions', value: 112, color: 'text-amber-600', sub: 'Encrypted; logged for audit' },
+              { label: 'Retention Policy', value: '7 Years', color: 'text-navy', sub: '42 CFR Part 2 minimum' },
+              { label: 'Compliance Status', value: 'Current', color: 'text-green-600', sub: 'All records archived' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">PHI Transmission Log — Last 30 Days (Sample)</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Date', 'From', 'To', 'Message Type', 'PHI Category', 'Encryption', '42 CFR Consent', 'Status'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { date: 'Jul 19', from: 'J. Torres, RN', to: 'Dr. Chen, MD', type: 'Clinical Alert', phi: 'Vital signs + CIWA score', enc: 'TLS 1.3', consent: 'Internal — N/A', status: 'Delivered' },
+                  { date: 'Jul 19', from: 'S. Jenkins, LPC', to: 'D. Reyes (Probation)', type: 'Compliance Letter', phi: 'Treatment participation', enc: 'TLS 1.3', consent: '42 CFR consent on file', status: 'Delivered' },
+                  { date: 'Jul 18', from: 'Billing — B. Hughes', to: 'BCBS Claims', type: 'Auth Documentation', phi: 'Diagnosis + treatment dates', enc: 'TLS 1.3', consent: 'Insurance exemption', status: 'Delivered' },
+                  { date: 'Jul 18', from: 'M. Gonzales, LCSW', to: 'Primary Care — Dr. Lee', type: 'Discharge Summary', phi: 'Full discharge summary', enc: 'TLS 1.3', consent: '42 CFR consent on file', status: 'Read Confirmed' },
+                  { date: 'Jul 17', from: 'Admissions', to: 'Drug Court Coordinator', type: 'Admission Notification', phi: 'Admission date + program', enc: 'TLS 1.3', consent: '42 CFR consent on file', status: 'Delivered' },
+                ].map(r => (
+                  <tr key={r.date + r.from + r.to} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-slate font-mono">{r.date}</td>
+                    <td className="px-3 py-2 text-slate">{r.from}</td>
+                    <td className="px-3 py-2 text-slate">{r.to}</td>
+                    <td className="px-3 py-2 font-medium text-navy">{r.type}</td>
+                    <td className="px-3 py-2 text-slate">{r.phi}</td>
+                    <td className="px-3 py-2 text-teal-700 font-mono text-[10px]">{r.enc}</td>
+                    <td className="px-3 py-2 text-slate">{r.consent}</td>
+                    <td className="px-3 py-2"><span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">{r.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

@@ -6,7 +6,7 @@ const OrderEntry: React.FC<{ patientId?: string | null }> = ({ patientId }) => {
   const patient = patients.find(p => p.id === patientId) || patients[0];
   const [showModal, setShowModal] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [oeTab, setOeTab] = useState<'New Order' | 'Active Orders' | 'Order History' | 'Order Sets' | 'Drug Reference'>('New Order');
+  const [oeTab, setOeTab] = useState<'New Order' | 'Active Orders' | 'Order History' | 'Order Sets' | 'Drug Reference' | 'Pending Co-sign'>('New Order');
 
   const categories = [
     { name: "Medications", count: 142 },
@@ -44,7 +44,7 @@ const OrderEntry: React.FC<{ patientId?: string | null }> = ({ patientId }) => {
 
       {/* Tab Bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['New Order', 'Active Orders', 'Order History', 'Order Sets', 'Drug Reference'] as const).map(t => (
+        {(['New Order', 'Active Orders', 'Order History', 'Order Sets', 'Drug Reference', 'Pending Co-sign'] as const).map(t => (
           <button key={t} onClick={() => setOeTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${oeTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -350,6 +350,57 @@ const OrderEntry: React.FC<{ patientId?: string | null }> = ({ patientId }) => {
                     <td className="px-2 py-2 text-red-700 font-medium">{r.max}</td>
                     <td className="px-2 py-2 text-slate">{r.int}</td>
                     <td className="px-2 py-2 text-slate">{r.mon}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {oeTab === 'Pending Co-sign' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Orders written by supervised clinicians or non-prescribers awaiting physician or NP co-signature before activation.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Pending Co-sign', value: 4, color: 'text-amber-600', sub: 'Orders not yet active' },
+              { label: 'Past 4h Threshold', value: 1, color: 'text-red-600', sub: 'Requires immediate MD review' },
+              { label: 'Avg Co-sign Time', value: '1.4h', color: 'text-navy', sub: 'MD orders — rolling 30d' },
+              { label: 'On-Call MD', value: 'Dr. Chen', color: 'text-green-600', sub: 'Available via Secure Msg' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Orders Awaiting Co-sign</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Urgency', 'Order', 'Patient', 'Written By', 'Written At', 'Awaiting MD', 'Waiting Time', 'Notes'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { urg: 'STAT', order: 'Diazepam 10mg IV PRN (CIWA ≥15)', pt: 'M. Delgado — Rm 4B', by: 'J. Torres, RN', at: '11:42 AM', md: 'Dr. Chen', wait: '4h 21min', note: 'CIWA 18 — past 4h threshold' },
+                  { urg: 'Routine', order: 'Buprenorphine 8mg SL QD', pt: 'T. Barnes — Rm 9A', by: 'P. Wright, NP', at: '10:00 AM', md: 'Dr. Chen', wait: '2h 05min', note: 'MAT induction day 1' },
+                  { urg: 'Routine', order: 'Melatonin 5mg PO QHS', pt: 'K. Walsh — Rm 6C', by: 'J. Torres, RN', at: '09:30 AM', md: 'Dr. Hughes', wait: '2h 35min', note: 'Sleep hygiene protocol' },
+                  { urg: 'Routine', order: 'Thiamine 100mg PO QD × 7d', pt: 'R. Patel — Rm 11D', by: 'J. Torres, RN', at: '08:15 AM', wait: '3h 50min', md: 'Dr. Chen', note: 'AUD — nutritional support' },
+                ].map(r => (
+                  <tr key={r.order + r.pt} className="hover:bg-gray-50">
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.urg === 'STAT' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{r.urg}</span></td>
+                    <td className="px-3 py-2 font-semibold text-navy">{r.order}</td>
+                    <td className="px-3 py-2 text-slate">{r.pt}</td>
+                    <td className="px-3 py-2 text-slate">{r.by}</td>
+                    <td className="px-3 py-2 text-slate font-mono text-[10px]">{r.at}</td>
+                    <td className="px-3 py-2 text-slate">{r.md}</td>
+                    <td className="px-3 py-2 font-bold text-amber-700">{r.wait}</td>
+                    <td className="px-3 py-2 text-slate italic text-[10px]">{r.note}</td>
                   </tr>
                 ))}
               </tbody>

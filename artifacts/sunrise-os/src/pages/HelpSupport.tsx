@@ -102,7 +102,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export function HelpSupport({ navigate }: Props) {
-  const [activeTab, setActiveTab] = useState<'Quick Reference' | 'Keyboard Shortcuts' | 'Contact Support' | 'Training Resources' | 'Release Notes'>('Quick Reference');
+  const [activeTab, setActiveTab] = useState<'Quick Reference' | 'Keyboard Shortcuts' | 'Contact Support' | 'Training Resources' | 'Release Notes' | 'System Status'>('Quick Reference');
   const [selected, setSelected] = useState<HelpArticle | null>(ARTICLES[0]);
   const [search, setSearch] = useState('');
 
@@ -122,7 +122,7 @@ export function HelpSupport({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Quick Reference', 'Keyboard Shortcuts', 'Contact Support', 'Training Resources', 'Release Notes'] as const).map(t => (
+        {(['Quick Reference', 'Keyboard Shortcuts', 'Contact Support', 'Training Resources', 'Release Notes', 'System Status'] as const).map(t => (
           <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -423,6 +423,83 @@ export function HelpSupport({ navigate }: Props) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'System Status' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Real-time system health, scheduled maintenance windows, and incident history for Sunrise OS and integrated services.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Overall Status', value: 'Operational', color: 'text-green-600', sub: 'All systems normal' },
+              { label: 'Uptime (30d)', value: '99.97%', color: 'text-navy', sub: '13 min downtime total' },
+              { label: 'Active Incidents', value: 0, color: 'text-green-600', sub: 'No open incidents' },
+              { label: 'Next Maintenance', value: 'Aug 3', color: 'text-amber-600', sub: '2:00–4:00 AM CT' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Service Health — Current</h3>
+            <div className="space-y-2 text-xs">
+              {[
+                { service: 'Sunrise OS Web App', status: 'Operational', latency: '142ms', uptime: '99.98%' },
+                { service: 'API Server', status: 'Operational', latency: '88ms', uptime: '99.97%' },
+                { service: 'Authentication (Session)', status: 'Operational', latency: '34ms', uptime: '100%' },
+                { service: 'Document Storage', status: 'Operational', latency: '210ms', uptime: '99.95%' },
+                { service: 'Secure Messaging', status: 'Operational', latency: '65ms', uptime: '99.99%' },
+                { service: 'HL7 / ADT Integration', status: 'Operational', latency: '320ms', uptime: '99.91%' },
+                { service: 'Clearinghouse (Claims)', status: 'Degraded', latency: '1,420ms', uptime: '99.42%' },
+                { service: 'Telehealth Platform (Doxy)', status: 'Operational', latency: '180ms', uptime: '99.96%' },
+                { service: 'e-Prescribing (EPCS)', status: 'Operational', latency: '280ms', uptime: '99.88%' },
+              ].map(s => (
+                <div key={s.service} className="flex items-center justify-between border border-border rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${s.status === 'Operational' ? 'bg-green-500' : s.status === 'Degraded' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                    <span className="font-medium text-navy">{s.service}</span>
+                  </div>
+                  <div className="flex gap-4 text-slate text-[10px]">
+                    <span className={`font-bold ${s.status === 'Operational' ? 'text-green-600' : 'text-amber-600'}`}>{s.status}</span>
+                    <span>Latency: {s.latency}</span>
+                    <span>Uptime: {s.uptime}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Recent Incident History</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Date', 'Service', 'Severity', 'Duration', 'Description', 'Resolution'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { date: 'Jul 14', service: 'Clearinghouse', sev: 'Minor', dur: '38 min', desc: 'Elevated claim submission latency', res: 'Vendor restarted ingestion queue' },
+                  { date: 'Jun 28', service: 'API Server', sev: 'Minor', dur: '12 min', desc: 'Increased error rate on /vitals endpoint', res: 'Database connection pool expanded' },
+                  { date: 'Jun 10', service: 'Document Storage', sev: 'Major', dur: '2h 14min', desc: 'File upload failures — storage provider outage', res: 'Failover to secondary region; files recovered' },
+                  { date: 'May 22', service: 'HL7 Integration', sev: 'Minor', dur: '55 min', desc: 'ADT feed from hospital partner dropped', res: 'Interface engine restarted; no data loss' },
+                ].map(r => (
+                  <tr key={r.date + r.service} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-slate font-mono">{r.date}</td>
+                    <td className="px-3 py-2 font-medium text-navy">{r.service}</td>
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.sev === 'Major' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{r.sev}</span></td>
+                    <td className="px-3 py-2 text-slate">{r.dur}</td>
+                    <td className="px-3 py-2 text-slate">{r.desc}</td>
+                    <td className="px-3 py-2 text-slate italic">{r.res}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

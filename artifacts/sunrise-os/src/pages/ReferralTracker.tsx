@@ -123,7 +123,7 @@ const OUTCOME_COLORS: Record<string, string> = {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-type ViewTab = 'Pipeline' | 'Partners' | 'Analytics' | 'Outreach' | 'Outcomes';
+type ViewTab = 'Pipeline' | 'Partners' | 'Analytics' | 'Outreach' | 'Outcomes' | 'ROI Analysis';
 
 export function ReferralTracker({ navigate, readOnly }: { navigate: (s: Screen) => void; readOnly?: boolean }) {
   const [activeTab, setActiveTab] = useState<ViewTab>('Pipeline');
@@ -198,7 +198,7 @@ export function ReferralTracker({ navigate, readOnly }: { navigate: (s: Screen) 
       {/* Tabs */}
       <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
         <div className="flex border-b border-border">
-          {(['Pipeline', 'Partners', 'Analytics', 'Outreach', 'Outcomes'] as ViewTab[]).map(tab => (
+          {(['Pipeline', 'Partners', 'Analytics', 'Outreach', 'Outcomes', 'ROI Analysis'] as ViewTab[]).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -440,6 +440,60 @@ export function ReferralTracker({ navigate, readOnly }: { navigate: (s: Screen) 
                       <td className="px-3 py-2.5 text-center">
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.tier === 'Platinum' ? 'bg-purple-100 text-purple-700' : r.tier === 'Gold' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-slate'}`}>{r.tier}</span>
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'ROI Analysis' && (
+          <div className="space-y-5">
+            <div className="text-sm text-slate">Return-on-investment analysis for referral relationships — cost per admit, revenue attributed, and outreach program efficiency.</div>
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { label: 'Avg Cost per Admit', value: '$420', color: 'text-navy', sub: 'All referral sources blended' },
+                { label: 'Revenue per Referred Admit', value: '$18,240', color: 'text-green-600', sub: 'Avg 28-day Residential stay' },
+                { label: 'Outreach ROI (YTD)', value: '43×', color: 'text-teal-600', sub: 'Revenue / outreach spend' },
+                { label: 'Top ROI Source', value: 'ER Liaisons', color: 'text-blue-600', sub: '$210 avg cost per admit' },
+              ].map(k => (
+                <div key={k.label} className="card">
+                  <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                  <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                  <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">ROI by Referral Source — YTD</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50">
+                    {['Source', 'Admits', 'Outreach Spend', 'Cost / Admit', 'Revenue Attributed', 'ROI', 'Avg LOS', 'Completion %'].map(h => (
+                      <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { source: 'ER Liaisons', admits: 38, spend: '$7,980', cpa: '$210', rev: '$692,800', roi: '86×', los: '29d', comp: '74%' },
+                    { source: 'Physician Referrals', admits: 27, spend: '$8,100', cpa: '$300', rev: '$492,400', roi: '60×', los: '27d', comp: '70%' },
+                    { source: 'Court / Drug Court', admits: 19, spend: '$9,500', cpa: '$500', rev: '$346,500', roi: '36×', los: '31d', comp: '79%' },
+                    { source: 'Detox Partners', admits: 22, spend: '$7,700', cpa: '$350', rev: '$401,200', roi: '52×', los: '28d', comp: '68%' },
+                    { source: 'Insurance EAP', admits: 14, spend: '$8,400', cpa: '$600', rev: '$255,400', roi: '30×', los: '26d', comp: '64%' },
+                    { source: 'Digital / Web', admits: 11, spend: '$12,100', cpa: '$1,100', rev: '$200,600', roi: '16×', los: '25d', comp: '60%' },
+                    { source: 'Self / Family', admits: 16, spend: '$0', cpa: '$0', rev: '$291,800', roi: '∞', los: '27d', comp: '66%' },
+                  ].map(r => (
+                    <tr key={r.source} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 font-medium text-navy">{r.source}</td>
+                      <td className="px-3 py-2 text-center text-slate">{r.admits}</td>
+                      <td className="px-3 py-2 text-slate">{r.spend}</td>
+                      <td className="px-3 py-2 text-slate">{r.cpa}</td>
+                      <td className="px-3 py-2 font-semibold text-green-700">{r.rev}</td>
+                      <td className="px-3 py-2 font-bold text-teal-700">{r.roi}</td>
+                      <td className="px-3 py-2 text-slate">{r.los}</td>
+                      <td className="px-3 py-2 text-navy">{r.comp}</td>
                     </tr>
                   ))}
                 </tbody>

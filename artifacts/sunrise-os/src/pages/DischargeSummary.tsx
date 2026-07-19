@@ -117,7 +117,7 @@ const GOAL_STATUS_STYLE: Record<string, string> = {
 
 export function DischargeSummary({ navigate, readOnly }: Props) {
   const [selectedPatient, setSelectedPatient] = useState('p4');
-  const [tab, setTab] = useState<'Draft' | 'Print Preview' | 'Continuity of Care' | 'Distribution Log'>('Draft');
+  const [tab, setTab] = useState<'Draft' | 'Print Preview' | 'Continuity of Care' | 'Distribution Log' | 'Legal & Court Docs'>('Draft');
   const [saved, setSaved] = useState(false);
 
   const p = MOCK_PATIENTS.find(pt => pt.id === selectedPatient) ?? MOCK_PATIENTS[0];
@@ -141,7 +141,7 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['Draft', 'Print Preview', 'Continuity of Care', 'Distribution Log'] as const).map(t => (
+        {(['Draft', 'Print Preview', 'Continuity of Care', 'Distribution Log', 'Legal & Court Docs'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}</div>
 
@@ -556,6 +556,77 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Legal & Court Docs' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Court-ordered treatment documentation, legal release forms, and probation/drug-court compliance letters for this discharge.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Court-Ordered Status', value: 'Active', color: 'text-amber-600', sub: 'Supervision continues post-discharge' },
+              { label: 'Compliance Letters Sent', value: 3, color: 'text-navy', sub: 'To court / probation officer' },
+              { label: 'Next Court Date', value: 'Nov 14', color: 'text-blue-600', sub: 'Estimated from admission paperwork' },
+              { label: 'Drug Court Program', value: 'Track B', color: 'text-teal-600', sub: 'Intensive outpatient track' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Required Legal Documents — Discharge Checklist</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Document', 'Required By', 'Status', 'Sent To', 'Date Sent', 'Notes'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { doc: 'Discharge Compliance Letter', req: 'Drug Court', status: 'Sent', to: 'Judge M. Harrison', date: '10/25', notes: 'Confirms 28-day completion' },
+                  { doc: 'Urinalysis Summary (30-day)', req: 'Probation Office', status: 'Sent', to: 'Officer D. Reyes', date: '10/25', notes: 'All results attached' },
+                  { doc: 'Aftercare Plan Confirmation', req: 'Court Order', status: 'Sent', to: 'Drug Court Coordinator', date: '10/26', notes: 'IOP enrollment confirmed' },
+                  { doc: 'Attendance Record', req: 'Probation Office', status: 'Pending', to: '—', date: '—', notes: 'Awaiting final group sign-off' },
+                  { doc: 'MAT Continuation Letter', req: 'Drug Court', status: 'Pending', to: '—', date: '—', notes: 'MD signature needed' },
+                  { doc: '42 CFR Part 2 Re-disclosure Consent', req: 'HIPAA / Legal', status: 'Signed', to: 'Chart', date: '10/14', notes: 'Signed on admission' },
+                ].map(r => (
+                  <tr key={r.doc} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium text-navy">{r.doc}</td>
+                    <td className="px-3 py-2 text-slate">{r.req}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.status === 'Sent' || r.status === 'Signed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{r.status}</span>
+                    </td>
+                    <td className="px-3 py-2 text-slate">{r.to}</td>
+                    <td className="px-3 py-2 text-slate">{r.date}</td>
+                    <td className="px-3 py-2 text-slate italic">{r.notes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Drug Court / Probation Contact Directory</h3>
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              {[
+                { role: 'Presiding Drug Court Judge', name: 'Hon. M. Harrison', phone: '615-555-0301', email: 'drug.court@tncourt.gov', notes: 'CC all compliance letters' },
+                { role: 'Probation Officer', name: 'D. Reyes, USPO', phone: '615-555-0302', email: 'd.reyes@uspo.gov', notes: 'Monthly check-in required' },
+                { role: 'Drug Court Coordinator', name: 'T. Kwan, MSW', phone: '615-555-0303', email: 't.kwan@drugcourt.gov', notes: 'Aftercare plan point of contact' },
+              ].map(c => (
+                <div key={c.role} className="border border-border rounded-xl p-3">
+                  <div className="font-semibold text-navy">{c.name}</div>
+                  <div className="text-[10px] text-slate uppercase tracking-wide mt-0.5 mb-1">{c.role}</div>
+                  <div className="text-blue-700 font-mono">{c.phone}</div>
+                  <div className="text-blue-700">{c.email}</div>
+                  <div className="text-slate italic mt-1">{c.notes}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

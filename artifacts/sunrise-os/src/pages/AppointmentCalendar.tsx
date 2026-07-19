@@ -74,7 +74,7 @@ const CURRENT_HOUR = 14; // 2:00 PM
 // ─── Component ────────────────────────────────────────────────────────────
 
 export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Screen) => void; readOnly?: boolean }) {
-  const [view, setView] = useState<'Week' | 'Day' | 'Analytics' | 'Waitlist' | 'Provider Schedules'>('Week');
+  const [view, setView] = useState<'Week' | 'Day' | 'Analytics' | 'Waitlist' | 'Provider Schedules' | 'No-Show Tracker'>('Week');
   const [selectedDay, setSelectedDay] = useState(CURRENT_DAY);
   const [typeFilter, setTypeFilter] = useState<Appointment['type'] | 'All'>('All');
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
@@ -102,7 +102,7 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
         </div>
         <div className="flex gap-3">
           <div className="flex bg-white rounded border border-border shadow-sm p-1">
-            {(['Week', 'Day', 'Analytics', 'Waitlist', 'Provider Schedules'] as const).map(v => (
+            {(['Week', 'Day', 'Analytics', 'Waitlist', 'Provider Schedules', 'No-Show Tracker'] as const).map(v => (
               <button
                 key={v}
                 onClick={() => setView(v)}
@@ -502,6 +502,71 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {view === 'No-Show Tracker' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">No-show and late-cancel analytics — by patient, appointment type, provider, and day of week. Used for scheduling policy decisions.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'No-Show Rate (30d)', value: '11%', color: 'text-amber-600', sub: '14 of 127 appointments' },
+              { label: 'Late Cancels (<24h)', value: 8, color: 'text-amber-600', sub: '6% of total scheduled' },
+              { label: 'Highest No-Show Type', value: 'Family', color: 'text-red-600', sub: '22% no-show rate' },
+              { label: 'Highest No-Show Day', value: 'Monday', color: 'text-red-600', sub: '18% — likely weekend disruption' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">No-Show Rate by Appointment Type</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { type: 'Family Session', rate: 22, color: 'bg-red-500' },
+                  { type: 'Individual Therapy', rate: 9, color: 'bg-amber-500' },
+                  { type: 'Medical / MD Appt', rate: 7, color: 'bg-amber-400' },
+                  { type: 'Group Therapy', rate: 5, color: 'bg-blue-400' },
+                  { type: 'Intake / Admission', rate: 4, color: 'bg-blue-300' },
+                  { type: 'Discharge Planning', rate: 3, color: 'bg-green-400' },
+                ].map(r => (
+                  <div key={r.type}>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-navy">{r.type}</span>
+                      <span className="font-bold text-slate">{r.rate}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full">
+                      <div className={`h-2 rounded-full ${r.color}`} style={{ width: `${r.rate * 4}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Repeat No-Show Patients — 30d</h3>
+              <div className="space-y-1.5 text-xs">
+                {[
+                  { pt: 'T. Barnes', loc: 'Rm 9A', count: 3, types: 'Family (x2), Individual (x1)', action: 'Counselor check-in scheduled' },
+                  { pt: 'K. Walsh', loc: 'Rm 6C', count: 2, types: 'Medical (x2)', action: 'MD follow-up required' },
+                  { pt: 'A. Monroe', loc: 'Rm 3A', count: 2, types: 'Individual (x1), Family (x1)', action: 'Engagement review in caseload' },
+                  { pt: 'R. Patel (pt)', loc: 'PHP', count: 2, types: 'Group (x2)', action: 'RES at-risk flag triggered' },
+                ].map(r => (
+                  <div key={r.pt} className="border border-border rounded-xl p-2.5">
+                    <div className="flex justify-between items-start">
+                      <span className="font-semibold text-navy">{r.pt} <span className="font-normal text-slate text-[10px]">({r.loc})</span></span>
+                      <span className="text-[9px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">{r.count} no-shows</span>
+                    </div>
+                    <div className="text-slate mt-0.5">{r.types}</div>
+                    <div className="text-blue-700 italic mt-0.5">{r.action}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

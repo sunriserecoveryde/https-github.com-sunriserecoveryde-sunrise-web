@@ -96,7 +96,7 @@ export function BedManagement({ navigate, readOnly }: Props) {
   const [unit, setUnit] = useState<Unit>('All');
   const [statusFilter, setStatusFilter] = useState<BedStatus | 'All'>('All');
   const [selected, setSelected] = useState<BedRecord | null>(null);
-  const [bedTab, setBedTab] = useState<'Board' | 'Housekeeping Queue' | 'Capacity Forecast' | 'Maintenance Log' | 'Occupancy Trends'>('Board');
+  const [bedTab, setBedTab] = useState<'Board' | 'Housekeeping Queue' | 'Capacity Forecast' | 'Maintenance Log' | 'Occupancy Trends' | 'Vendor Contacts'>('Board');
 
   const UNITS: Unit[] = ['All', 'Detox', 'Residential A', 'Residential B', 'Flex'];
   const STATUSES: (BedStatus | 'All')[] = ['All', 'Occupied', 'Available', 'Housekeeping', 'Maintenance', 'Blocked'];
@@ -146,7 +146,7 @@ export function BedManagement({ navigate, readOnly }: Props) {
 
       {/* Tab Bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['Board', 'Housekeeping Queue', 'Capacity Forecast', 'Maintenance Log', 'Occupancy Trends'] as const).map(t => (
+        {(['Board', 'Housekeeping Queue', 'Capacity Forecast', 'Maintenance Log', 'Occupancy Trends', 'Vendor Contacts'] as const).map(t => (
           <button key={t} onClick={() => setBedTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${bedTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -462,6 +462,63 @@ export function BedManagement({ navigate, readOnly }: Props) {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {bedTab === 'Vendor Contacts' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Facility maintenance, housekeeping, and equipment vendors — contacts, contract terms, and response SLAs.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Maintenance & Facilities Vendors</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { vendor: 'ProCare HVAC Services', category: 'HVAC', contact: 'Mike R. — 615-555-0401', contract: 'Annual service contract — Q1/Q3 PM visits', sla: '4h emergency response', status: 'Active' },
+                  { vendor: 'Bright Light Electrical', category: 'Electrical', contact: 'T. Nguyen — 615-555-0402', contract: 'On-call as needed; 30-day net billing', sla: '2h emergency; 48h standard', status: 'Active' },
+                  { vendor: 'FlowRight Plumbing', category: 'Plumbing', contact: 'D. Carter — 615-555-0403', contract: 'On-call as needed', sla: '2h emergency; 24h standard', status: 'Active' },
+                  { vendor: 'SecureLock Systems', category: 'Security / Access Control', contact: 'A. Kim — 615-555-0404', contract: 'Monthly monitoring + annual hardware review', sla: '1h for access failure; 24h for other', status: 'Active' },
+                  { vendor: 'MedEquip Southeast', category: 'Medical Equipment', contact: 'L. Morris — 615-555-0405', contract: 'Preventive maintenance semiannually; repair on-call', sla: '4h critical; 72h standard', status: 'Active' },
+                ].map(r => (
+                  <div key={r.vendor} className="border border-border rounded-xl p-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-semibold text-navy">{r.vendor}</div>
+                        <div className="text-[10px] text-slate uppercase tracking-wide mt-0.5">{r.category}</div>
+                      </div>
+                      <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">{r.status}</span>
+                    </div>
+                    <div className="text-blue-700 mt-1">{r.contact}</div>
+                    <div className="text-slate mt-0.5">Contract: {r.contract}</div>
+                    <div className="text-teal-700 font-medium mt-0.5">SLA: {r.sla}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Housekeeping & Laundry Vendors</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { vendor: 'CleanCare Commercial Services', category: 'Housekeeping', contact: 'S. Okafor — 615-555-0410', contract: 'Mon–Sat daily service; Sunday on-call', sla: '2h for biohazard; daily standard', status: 'Active' },
+                  { vendor: 'Linx Linen & Laundry', category: 'Linen Supply', contact: 'P. Thompson — 615-555-0411', contract: 'Twice-weekly delivery; soiled linen pickup', sla: '24h emergency linen delivery', status: 'Active' },
+                  { vendor: 'BioShield Remediation', category: 'Biohazard / Remediation', contact: 'T. Carver — 615-555-0412', contract: 'On-call; per-incident billing', sla: '1h response for active biohazard', status: 'Active' },
+                  { vendor: 'Greenway Pest Control', category: 'Pest Control', contact: 'K. Williams — 615-555-0413', contract: 'Monthly preventive service', sla: '48h for active infestation', status: 'Active' },
+                ].map(r => (
+                  <div key={r.vendor} className="border border-border rounded-xl p-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-semibold text-navy">{r.vendor}</div>
+                        <div className="text-[10px] text-slate uppercase tracking-wide mt-0.5">{r.category}</div>
+                      </div>
+                      <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">{r.status}</span>
+                    </div>
+                    <div className="text-blue-700 mt-1">{r.contact}</div>
+                    <div className="text-slate mt-0.5">Contract: {r.contract}</div>
+                    <div className="text-teal-700 font-medium mt-0.5">SLA: {r.sla}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

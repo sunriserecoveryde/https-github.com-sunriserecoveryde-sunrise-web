@@ -201,7 +201,7 @@ type AcuityFilter = 'All' | Acuity;
 
 export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string) => void }) {
   const [acuityFilter, setAcuityFilter] = useState<AcuityFilter>('All');
-  const [boardTab, setBoardTab] = useState<'Bed Board' | 'Occupancy Analytics' | 'Discharge Forecast' | 'Bed Utilization Report'>('Bed Board');
+  const [boardTab, setBoardTab] = useState<'Bed Board' | 'Occupancy Analytics' | 'Discharge Forecast' | 'Bed Utilization Report' | 'Admission Queue' | 'Transfer Coordination'>('Bed Board');
 
   const residentialPatients = MOCK_PATIENTS.filter(p => p.program === 'Residential' && p.bed);
   const phpPatients        = MOCK_PATIENTS.filter(p => p.program === 'PHP' && p.bed);
@@ -258,7 +258,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-border">
-        {(['Bed Board', 'Occupancy Analytics', 'Discharge Forecast', 'Bed Utilization Report'] as const).map(t => (
+        {(['Bed Board', 'Occupancy Analytics', 'Discharge Forecast', 'Bed Utilization Report', 'Admission Queue', 'Transfer Coordination'] as const).map(t => (
           <button key={t} onClick={() => setBoardTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${boardTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -637,6 +637,116 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                     <td className="px-3 py-2 text-center text-slate">{r.dc}</td>
                     <td className="px-3 py-2 text-center text-slate">{r.turn > 0 ? `${r.turn}h` : '—'}</td>
                     <td className="px-3 py-2 font-semibold text-teal-600">{r.rev}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {boardTab === 'Admission Queue' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Incoming admissions awaiting bed assignment — pending pre-authorizations, detox holds, and transfer arrivals.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Pending Admits', value: 5, color: 'text-amber-600', sub: 'Awaiting bed assignment' },
+              { label: 'Auth Received', value: 3, color: 'text-green-600', sub: 'Ready to place' },
+              { label: 'Auth Pending', value: 2, color: 'text-red-600', sub: 'Holding for payer approval' },
+              { label: 'Avg Hold Time', value: '4.2h', color: 'text-navy', sub: 'Time from call to placement' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Admission Queue — Current</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Name', 'DOB', 'SUD Type', 'LOC Requested', 'Referral Source', 'Auth Status', 'Arrival ETA', 'Assigned Bed', 'Notes'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'M. Carver', dob: '09/14/1988', sud: 'OUD', loc: 'Residential', source: 'ER — Vanderbilt', auth: 'Approved', eta: '2:30 PM', bed: 'Rm 12A', notes: 'Suboxone candidate; needs MAT eval on arrival' },
+                  { name: 'T. Nguyen', dob: '03/22/1975', sud: 'AUD', loc: 'Detox', source: 'Self / Family', auth: 'Pending', eta: '4:00 PM', bed: '—', notes: 'CIWA risk — awaiting Blue Cross auth' },
+                  { name: 'S. Okafor', dob: '07/01/1993', sud: 'Meth + AUD', loc: 'Residential', source: 'Probation', auth: 'Approved', eta: '3:15 PM', bed: 'Rm 7B', notes: 'Drug court Track B; compliance letter required on admit' },
+                  { name: 'R. Delgado', dob: '11/30/1981', sud: 'OUD', loc: 'PHP', source: 'Step-down — Franklin TN', auth: 'Approved', eta: '5:00 PM', bed: 'PHP Unit', notes: 'Transferring from residential; Suboxone 16mg continued' },
+                  { name: 'L. Morris', dob: '04/17/2000', sud: 'Stimulant', loc: 'Residential', source: 'Physician referral', auth: 'Pending', eta: 'TBD', bed: '—', notes: 'Aetna auth call placed at 11:20 AM; awaiting callback' },
+                ].map(r => (
+                  <tr key={r.name} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-semibold text-navy">{r.name}</td>
+                    <td className="px-3 py-2 text-slate font-mono text-[10px]">{r.dob}</td>
+                    <td className="px-3 py-2 text-slate">{r.sud}</td>
+                    <td className="px-3 py-2 text-slate">{r.loc}</td>
+                    <td className="px-3 py-2 text-slate">{r.source}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.auth === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{r.auth}</span>
+                    </td>
+                    <td className="px-3 py-2 font-semibold text-navy">{r.eta}</td>
+                    <td className="px-3 py-2 text-slate">{r.bed}</td>
+                    <td className="px-3 py-2 text-slate italic text-[10px]">{r.notes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {boardTab === 'Transfer Coordination' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Active and completed patient transfers — step-down to lower LOC, step-up to higher LOC, and inter-facility transfers.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Active Transfers', value: 3, color: 'text-amber-600', sub: 'In progress today' },
+              { label: 'Step-Downs (30d)', value: 18, color: 'text-green-600', sub: 'Residential → PHP/IOP' },
+              { label: 'Step-Ups (30d)', value: 4, color: 'text-red-600', sub: 'LOC escalation required' },
+              { label: 'Avg Transfer Lag', value: '1.8d', color: 'text-navy', sub: 'Decision to placement' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Transfer Log — Active & Recent</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Patient', 'From LOC', 'To LOC', 'Direction', 'Reason', 'Auth Status', 'Transfer Date', 'Receiving Facility', 'Status'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'J. Brantley', from: 'Residential', to: 'PHP', dir: 'Step-Down', reason: 'Clinical criteria met at 28 days; strong RES', auth: 'Approved', date: 'Today', recv: 'Sunrise PHP Unit', status: 'In Transit' },
+                  { name: 'K. Williams', from: 'PHP', to: 'Residential', dir: 'Step-Up', reason: 'Positive UA + missed 3 groups — LOC escalation', auth: 'Approved', date: 'Today', recv: 'Sunrise Residential', status: 'Pending Bed' },
+                  { name: 'A. Santos', from: 'Detox', to: 'Residential', dir: 'Step-Down', reason: 'Medical stability achieved; COWS < 8', auth: 'Approved', date: 'Yesterday', recv: 'Sunrise Residential', status: 'Completed' },
+                  { name: 'P. Thompson', from: 'Residential', to: 'IOP', dir: 'Step-Down', reason: '30-day completion; housing secured', auth: 'Pending', date: 'Aug 1', recv: 'TBD — awaiting auth', status: 'Planning' },
+                  { name: 'M. Reyes', from: 'Residential', to: 'External Detox', dir: 'Transfer Out', reason: 'Medical need beyond scope — seizure risk', auth: 'Approved', date: 'Jul 17', recv: 'Vanderbilt Medical Center', status: 'Completed' },
+                ].map(r => (
+                  <tr key={r.name} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-semibold text-navy">{r.name}</td>
+                    <td className="px-3 py-2 text-slate">{r.from}</td>
+                    <td className="px-3 py-2 text-slate">{r.to}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.dir === 'Step-Up' ? 'bg-red-100 text-red-700' : r.dir === 'Transfer Out' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>{r.dir}</span>
+                    </td>
+                    <td className="px-3 py-2 text-slate">{r.reason}</td>
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.auth === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{r.auth}</span></td>
+                    <td className="px-3 py-2 text-slate">{r.date}</td>
+                    <td className="px-3 py-2 text-slate">{r.recv}</td>
+                    <td className="px-3 py-2 font-medium text-navy">{r.status}</td>
                   </tr>
                 ))}
               </tbody>

@@ -89,7 +89,7 @@ export function GroupNotes({ navigate, readOnly }: Props) {
   const [selected, setSelected] = useState<GroupSession | null>(SESSIONS[0]);
   const [noteText, setNoteText] = useState('');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
-  const [view, setView] = useState<'Sessions' | 'Attendance' | 'Group Analytics' | 'Facilitator Stats' | 'Curriculum Map'>('Sessions');
+  const [view, setView] = useState<'Sessions' | 'Attendance' | 'Group Analytics' | 'Facilitator Stats' | 'Curriculum Map' | 'Documentation Standards'>('Sessions');
 
   const todaySessions = SESSIONS.filter(s => s.date === selectedDate);
   const todayComplete = todaySessions.filter(s => s.status === 'Completed').length;
@@ -117,7 +117,7 @@ export function GroupNotes({ navigate, readOnly }: Props) {
 
       {/* View Toggle */}
       <div className="flex gap-1 border-b border-border">
-        {(['Sessions', 'Attendance', 'Group Analytics', 'Facilitator Stats', 'Curriculum Map'] as const).map(v => (
+        {(['Sessions', 'Attendance', 'Group Analytics', 'Facilitator Stats', 'Curriculum Map', 'Documentation Standards'] as const).map(v => (
           <button key={v} onClick={() => setView(v)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${view === v ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{v === 'Attendance' ? 'Attendance Sheet' : v}</button>
         ))}
       </div>
@@ -572,6 +572,73 @@ export function GroupNotes({ navigate, readOnly }: Props) {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {view === 'Documentation Standards' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Group therapy documentation standards — required elements, format guidance, and common documentation errors.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Required Elements in Every Group Note</h3>
+              <div className="space-y-1.5 text-xs">
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 font-medium text-[10px]">CARF QI.M.3 requires group notes within 24h of session; state licensure requires within same business day for residential.</div>
+                {[
+                  { item: 'Group name, date, and session start/end time', req: true },
+                  { item: 'Topic / curriculum unit covered', req: true },
+                  { item: 'Attendance roster with each patient\'s participation level', req: true },
+                  { item: 'Facilitator name and credentials', req: true },
+                  { item: 'Co-facilitator / observer name (if applicable)', req: false },
+                  { item: 'Patient-specific behavioral observation (per-patient note or group narrative)', req: true },
+                  { item: 'Therapeutic interventions used during session (MI techniques, CBT, etc.)', req: true },
+                  { item: 'Patient response to interventions', req: true },
+                  { item: 'Any safety concerns raised and action taken', req: true },
+                  { item: 'Link to treatment plan goal addressed', req: true },
+                  { item: 'Facilitator signature and date/time', req: true },
+                ].map(r => (
+                  <div key={r.item} className="flex items-start gap-2 border border-border rounded-lg px-2.5 py-2">
+                    <span className={`font-bold mt-0.5 shrink-0 ${r.req ? 'text-green-500' : 'text-slate'}`}>{r.req ? '✓' : '○'}</span>
+                    <span className="text-navy">{r.item}</span>
+                    {r.req && <span className="text-[8px] font-bold bg-red-100 text-red-700 px-1 py-0.5 rounded ml-auto shrink-0">Required</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Group Note Format — DAP Example</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { label: 'Data', content: 'Group met for 60 minutes, 7/8 patients in attendance. Session topic: Relapse Prevention — Identifying High-Risk Situations. Patient W. presented concrete examples of triggers (work stress, social isolation). Patient R. remained quiet but engaged nonverbally. Patient F. disclosed a near-relapse scenario and received group support.' },
+                    { label: 'Assessment', content: 'Overall group engagement was moderate-high. Patient W. demonstrated strong insight; addressed in treatment plan Goal 2 (coping skills development). Patient F.\'s disclosure indicates progress in willingness to be vulnerable; Goal 3 (peer trust) advancing. Patient R. consistent with avoidant pattern — will address in individual session.' },
+                    { label: 'Plan', content: 'Next session: High-Risk Situations — Coping Strategies Practice (curriculum Week 4, Day 3). Individual follow-up scheduled with Patient F. regarding disclosure. Patient R. discussed with primary counselor — increased individual contact planned.' },
+                  ].map(s => (
+                    <div key={s.label} className="border border-border rounded-xl p-2.5">
+                      <div className="font-bold text-navy uppercase text-[10px] tracking-wider mb-1">{s.label}</div>
+                      <div className="text-slate leading-relaxed">{s.content}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-2">Common Documentation Errors to Avoid</h3>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    '"Patient participated appropriately" — too vague; describe specific behaviors observed',
+                    'Copying the same note for multiple patients — each patient needs individualized observation',
+                    'Missing link to a treatment plan goal — every note must tie to at least one goal',
+                    'Omitting safety-relevant content raised in group (e.g., suicidal ideation disclosure)',
+                    'Late documentation — notes entered >24h after session require late entry notation',
+                  ].map(e => (
+                    <div key={e} className="flex gap-1.5 border border-red-100 bg-red-50 rounded-lg px-2.5 py-2">
+                      <span className="text-red-400 shrink-0 font-bold">✗</span>
+                      <span className="text-red-800">{e}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

@@ -273,7 +273,7 @@ type FilterTab = 'All' | 'Due for Review' | 'Overdue' | 'Needs Goals';
 export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) => void; readOnly?: boolean }) {
   const editRoles = getRolesWithEditAccess('TreatmentPlans');
   const [activeTab, setActiveTab] = useState<FilterTab>('All');
-  const [planView, setPlanView] = useState<'Plans' | 'Goal Analytics' | 'Plan Templates' | 'Outcomes'>('Plans');
+  const [planView, setPlanView] = useState<'Plans' | 'Goal Analytics' | 'Plan Templates' | 'Outcomes' | 'Evidence Base' | 'Compliance Checklist'>('Plans');
   const [search, setSearch] = useState('');
   const [goalStatuses, setGoalStatuses] = useState<Record<string, TreatmentGoal['status']>>({});
 
@@ -351,7 +351,7 @@ export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) =
 
       {/* View Switcher */}
       <div className="flex gap-1 border-b border-border">
-        {(['Plans', 'Goal Analytics', 'Plan Templates', 'Outcomes'] as const).map(v => (
+        {(['Plans', 'Goal Analytics', 'Plan Templates', 'Outcomes', 'Evidence Base', 'Compliance Checklist'] as const).map(v => (
           <button key={v} onClick={() => setPlanView(v)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${planView === v ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{v}</button>
         ))}
       </div>
@@ -590,6 +590,91 @@ export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) =
                   <div className="h-1.5 bg-gray-100 rounded-full">
                     <div className={`h-1.5 rounded-full ${d.color}`} style={{ width: `${d.met}%` }} />
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {planView === 'Evidence Base' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Evidence-based treatment modalities used at Sunrise — efficacy summaries, appropriate populations, and clinical implementation guidance.</div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Treatment Modality Reference</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50">
+                  {['Modality', 'Applies To', 'Evidence Level', 'Typical Duration', 'Key Outcomes', 'Who Delivers'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { m: 'Motivational Interviewing (MI)', applies: 'All SUD, ambivalent patients', ev: 'Level I (RCT)', dur: 'Ongoing — 1–4 sessions per focus area', out: 'Engagement, retention, readiness to change', who: 'Counselors, CPRS' },
+                  { m: 'Cognitive Behavioral Therapy (CBT)', applies: 'AUD, OUD, stimulant use; co-occurring MDD', ev: 'Level I (RCT)', dur: '12–16 sessions individual or group', out: 'Reduced use, relapse prevention, coping skills', who: 'Licensed counselors (LPC, LCSW, LMFT)' },
+                  { m: 'Dialectical Behavior Therapy (DBT)', applies: 'BPD co-occurring, emotional dysregulation, self-harm history', ev: 'Level I', dur: '6–12 month structured program', out: 'Emotional regulation, distress tolerance, interpersonal effectiveness', who: 'DBT-trained clinicians' },
+                  { m: 'Contingency Management (CM)', applies: 'Stimulant use disorder, cannabis, polysubstance', ev: 'Level I', dur: '12–24 weeks; incentive-based', out: 'Abstinence rates, treatment attendance', who: 'Counselors with CM protocol training' },
+                  { m: 'Seeking Safety', applies: 'Co-occurring PTSD/SUD', ev: 'Level II', dur: '25 session curriculum (individual or group)', out: 'PTSD symptom reduction, substance use reduction', who: 'Trauma-trained counselors' },
+                  { m: 'EMDR', applies: 'Trauma history; PTSD with SUD', ev: 'Level I (PTSD); Level II (SUD)', dur: '8–12 sessions individual', out: 'Trauma resolution, reduced craving to trauma cues', who: 'EMDR-certified clinicians only' },
+                  { m: 'Twelve-Step Facilitation (TSF)', applies: 'All SUD, particularly AUD/OUD', ev: 'Level I', dur: '12–15 structured sessions + ongoing AA/NA', out: '12-step affiliation, long-term abstinence', who: 'Counselors; supported by CPRS' },
+                  { m: 'CRAFT (Community Reinforcement and Family Training)', applies: 'Families of resistant patients', ev: 'Level I', dur: '12–20 sessions', out: 'Treatment entry rates, family wellbeing', who: 'CRAFT-trained family counselors' },
+                ].map(r => (
+                  <tr key={r.m} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-semibold text-navy">{r.m}</td>
+                    <td className="px-3 py-2 text-slate">{r.applies}</td>
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.ev.startsWith('Level I (') || r.ev === 'Level I' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{r.ev}</span></td>
+                    <td className="px-3 py-2 text-slate">{r.dur}</td>
+                    <td className="px-3 py-2 text-slate">{r.out}</td>
+                    <td className="px-3 py-2 text-slate">{r.who}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {planView === 'Compliance Checklist' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">CARF and state licensure documentation requirements for treatment plans — use as a pre-completion checklist before signing.</div>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: 'Plans Meeting All Criteria', value: '18 / 22', color: 'text-green-600', sub: '82% compliance rate' },
+              { label: 'Missing Signatures', value: 3, color: 'text-amber-600', sub: 'Counselor or MD cosign needed' },
+              { label: 'Overdue for Review', value: 4, color: 'text-red-600', sub: '30-day update window exceeded' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Required Elements — CARF Standard QI.M.1 / TDAMHSAS Licensure</h3>
+            <div className="space-y-1.5 text-xs">
+              {[
+                { item: 'Problem/need statement grounded in biopsychosocial assessment', req: 'CARF + State', done: true },
+                { item: 'Measurable, time-limited goals with target dates', req: 'CARF + State', done: true },
+                { item: 'Specific, observable objectives for each goal', req: 'CARF + State', done: true },
+                { item: 'Interventions linked to each objective (with modality and frequency)', req: 'CARF + State', done: true },
+                { item: 'Person-served input documented and signature obtained', req: 'CARF + State', done: false },
+                { item: 'Legal guardian signature (if applicable — minors/court-ordered)', req: 'State only', done: true },
+                { item: 'Counselor signature and credentials', req: 'CARF + State', done: false },
+                { item: 'MD/DO review and cosign (within 72h of admission)', req: 'State only', done: true },
+                { item: 'Crisis plan / safety plan linked or embedded', req: 'CARF', done: true },
+                { item: 'Cultural/linguistic needs addressed', req: 'CARF', done: true },
+                { item: 'Review frequency specified (minimum 30-day residential)', req: 'State only', done: false },
+                { item: '30-day review completed and documented with progress rating', req: 'State only', done: true },
+              ].map(r => (
+                <div key={r.item} className="flex items-center justify-between border border-border rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm ${r.done ? 'text-green-500' : 'text-red-400'}`}>{r.done ? '✓' : '✗'}</span>
+                    <span className={r.done ? 'text-navy' : 'text-red-700 font-medium'}>{r.item}</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-slate bg-gray-100 px-1.5 py-0.5 rounded shrink-0 ml-2">{r.req}</span>
                 </div>
               ))}
             </div>
