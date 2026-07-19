@@ -785,6 +785,19 @@ export default function CensusScreen() {
         style={[styles.filterScroll, { backgroundColor: colors.navyMid }]}
         contentContainerStyle={styles.filterContent}
       >
+        {acuityFilter !== 'All' && noteFilter != null && (
+          <Pressable
+            style={[styles.filterChip, styles.clearAllChip, { backgroundColor: colors.orange }]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setAcuityFilter('All');
+              setNoteFilter(null);
+            }}
+          >
+            <Ionicons name="close-circle" size={12} color="#fff" style={{ marginRight: 4 }} />
+            <Text style={[styles.filterChipText, { color: '#fff' }]}>2 filters · Clear</Text>
+          </Pressable>
+        )}
         {ACUITY_FILTERS.map(f => {
           const isAll = f === 'All';
           // "All" is active only when both dimensions are reset
@@ -954,6 +967,7 @@ const styles = StyleSheet.create({
   filterCountBadge: { marginLeft: 5, borderRadius: 9, paddingHorizontal: 6, paddingVertical: 1, minWidth: 18, alignItems: 'center' },
   filterCountBadgeText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   filterDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 4, alignSelf: 'stretch' },
+  clearAllChip: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   // Bed cards
   listContent: { padding: 12, gap: 10 },
   bedCard: {
