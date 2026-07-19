@@ -31,8 +31,16 @@ import {
   acuityColor,
 } from '@/data/mockData';
 
-type Filter = 'All' | Acuity | 'Available';
-const FILTERS: Filter[] = ['All', 'Critical', 'High', 'Moderate', 'Routine', 'Available'];
+type NoteFilter = 'observation' | 'med-update' | 'incident';
+type Filter = 'All' | Acuity | 'Available' | NoteFilter;
+
+const ACUITY_FILTERS: Filter[] = ['All', 'Critical', 'High', 'Moderate', 'Routine', 'Available'];
+const NOTE_TYPE_FILTERS: { value: NoteFilter; label: string }[] = [
+  { value: 'observation', label: 'Observation' },
+  { value: 'med-update', label: 'Med Update' },
+  { value: 'incident', label: 'Incident' },
+];
+const NOTE_FILTER_VALUES: string[] = NOTE_TYPE_FILTERS.map(n => n.value);
 
 // ─── Shift label ──────────────────────────────────────────────────────────────
 // Day:     07:00 – 14:59
@@ -587,7 +595,7 @@ export default function CensusScreen() {
 
   // ─── Live census data from context ────────────────────────────────────────
   const { patients, bedStatusMap, refreshFromApi } = usePatients();
-  const { clearNotes } = useNursingNotes();
+  const { clearNotes, getNotesForPatient } = useNursingNotes();
   const { clearAcknowledgments } = useMdAcknowledgment();
   const residentialPatients = patients.filter(p => p.bed != null);
 
@@ -639,7 +647,13 @@ export default function CensusScreen() {
 
   const filteredPatients = filter === 'Available'
     ? []
-    : residentialPatients.filter(p => filter === 'All' || p.acuity === filter);
+    : residentialPatients.filter(p => {
+        if (NOTE_FILTER_VALUES.includes(filter as string)) {
+          const notes = getNotesForPatient(p.id);
+          return notes.some(n => n.noteType === filter);
+        }
+        return filter === 'All' || p.acuity === filter;
+      });
 
   const openPatient = (p: Patient) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -747,13 +761,29 @@ export default function CensusScreen() {
         style={[styles.filterScroll, { backgroundColor: colors.navyMid }]}
         contentContainerStyle={styles.filterContent}
       >
-        {FILTERS.map(f => (
+        {ACUITY_FILTERS.map(f => (
           <Pressable
             key={f}
             style={[styles.filterChip, filter === f && { backgroundColor: colors.orange }]}
             onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
           >
             <Text style={[styles.filterChipText, { color: filter === f ? '#fff' : colors.slateLight }]}>{f}</Text>
+          </Pressable>
+        ))}
+        <View style={styles.filterDivider} />
+        {NOTE_TYPE_FILTERS.map(({ value, label }) => (
+          <Pressable
+            key={value}
+            style={[styles.filterChip, filter === value && { backgroundColor: colors.orange }]}
+            onPress={() => { Haptics.selectionAsync(); setFilter(prev => prev === value ? 'All' : value); }}
+          >
+            <Ionicons
+              name="document-text-outline"
+              size={11}
+              color={filter === value ? '#fff' : colors.slateLight}
+              style={{ marginRight: 3 }}
+            />
+            <Text style={[styles.filterChipText, { color: filter === value ? '#fff' : colors.slateLight }]}>{label}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -863,8 +893,9 @@ const styles = StyleSheet.create({
   // Filters
   filterScroll: {},
   filterContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)' },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', alignItems: 'center' },
   filterChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  filterDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 4, alignSelf: 'stretch' },
   // Bed cards
   listContent: { padding: 12, gap: 10 },
   bedCard: {

@@ -14,6 +14,8 @@ const PATIENTS_KEY = '@sunrise_patients_v1';
 /** Written once after the first admit/discharge so we can distinguish
  *  "never interacted" (fall back to seeds) from "intentionally empty". */
 const PATIENTS_SEEDED_KEY = '@sunrise_patients_seeded_v1';
+/** IDs of patients locally discharged this session — never re-add from API. */
+const DISCHARGED_IDS_KEY = '@sunrise_discharged_ids_v1';
 
 // ── Bed helpers ────────────────────────────────────────────────────────────────
 
@@ -68,25 +70,36 @@ const PatientContext = createContext<PatientContextValue | null>(null);
 export function PatientProvider({ children }: { children: React.ReactNode }) {
   const [patients, setPatients] = useState<Patient[]>(PATIENTS);
   const [loading, setLoading] = useState(true);
+  /** IDs discharged locally — never re-added from API refresh. */
+  const dischargedIds = React.useRef<Set<string>>(new Set());
 
   // Load persisted patient list on mount.
   // We use a sentinel key to distinguish "never saved" from "saved as empty":
   // once the user has ever admitted/discharged, we trust the stored array
   // even if it is empty (fully-discharged census).
   useEffect(() => {
-    AsyncStorage.multiGet([PATIENTS_KEY, PATIENTS_SEEDED_KEY]).then(([[, raw], [, seeded]]) => {
-      if (seeded === 'true' && raw !== null) {
-        try {
-          const saved = JSON.parse(raw) as Patient[];
-          if (Array.isArray(saved)) {
-            setPatients(saved);
+    AsyncStorage.multiGet([PATIENTS_KEY, PATIENTS_SEEDED_KEY, DISCHARGED_IDS_KEY])
+      .then(([[, raw], [, seeded], [, discharged]]) => {
+        if (seeded === 'true' && raw !== null) {
+          try {
+            const saved = JSON.parse(raw) as Patient[];
+            if (Array.isArray(saved)) {
+              setPatients(saved);
+            }
+          } catch {
+            // ignore corrupt data — fall back to mock
           }
-        } catch {
-          // ignore corrupt data — fall back to mock
         }
-      }
-      setLoading(false);
-    });
+        if (discharged !== null) {
+          try {
+            const ids = JSON.parse(discharged) as string[];
+            if (Array.isArray(ids)) {
+              dischargedIds.current = new Set(ids);
+            }
+          } catch { /* ignore */ }
+        }
+        setLoading(false);
+      });
   }, []);
 
   // Persist whenever the list changes (skip initial load).
@@ -102,6 +115,8 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   }, [patients, loading]);
 
   const dischargePatient = useCallback((id: string) => {
+    dischargedIds.current.add(id);
+    AsyncStorage.setItem(DISCHARGED_IDS_KEY, JSON.stringify([...dischargedIds.current])).catch(() => {});
     setPatients(prev => prev.filter(p => p.id !== id));
   }, []);
 
@@ -112,9 +127,24 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   const refreshFromApi = useCallback(async () => {
     try {
       const data = await fetchCensus();
-      if (Array.isArray(data.patients) && data.patients.length > 0) {
-        setPatients(data.patients);
-      }
+      if (!Array.isArray(data.patients) || data.patients.length === 0) return;
+      setPatients(prev => {
+        const apiById = new Map<string, Patient>(data.patients.map((p: Patient) => [p.id, p]));
+
+        // Start with API patients, excluding any locally discharged
+        const merged: Patient[] = data.patients.filter(
+          (p: Patient) => !dischargedIds.current.has(p.id),
+        );
+
+        // Add locally-admitted patients that aren't in the API response
+        for (const p of prev) {
+          if (!apiById.has(p.id) && !dischargedIds.current.has(p.id)) {
+            merged.push(p);
+          }
+        }
+
+        return merged;
+      });
     } catch {
       // Silent failure — keep showing existing local data
     }
