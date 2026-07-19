@@ -55,32 +55,37 @@ import { CertificationTracker } from './pages/CertificationTracker';
 import { WaitlistManager } from './pages/WaitlistManager';
 import { SecureMessaging } from './pages/SecureMessaging';
 import { FormularyManagement } from './pages/FormularyManagement';
+import { RoleExplorer } from './pages/RoleExplorer';
+import { AccessDenied } from './components/common/AccessDenied';
+import { ReadOnlyBanner } from './components/common/ReadOnlyBanner';
+import { RoleProvider } from './context/RoleContext';
+import { useRole } from './context/RoleContext';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export type Screen = 
-  | 'Dashboard' 
-  | 'CommandCenter' 
-  | 'CensusBedBoard' 
-  | 'PatientList' 
-  | 'Admissions' 
-  | 'Discharges' 
-  | 'ChartReview' 
-  | 'ProgressNotes' 
-  | 'TreatmentPlans' 
-  | 'ASAMAssessments' 
-  | 'GroupNotes' 
-  | 'CosignQueue' 
-  | 'AppointmentCalendar' 
-  | 'GroupSchedule' 
-  | 'RiskDashboard' 
-  | 'RecoveryEngagementScore' 
-  | 'OutcomeTracking' 
-  | 'ReferralTracker' 
-  | 'BusinessDevelopment' 
-  | 'BedManagement' 
-  | 'RevenueCycle' 
-  | 'AuditCompliance' 
-  | 'Training' 
+export type Screen =
+  | 'Dashboard'
+  | 'CommandCenter'
+  | 'CensusBedBoard'
+  | 'PatientList'
+  | 'Admissions'
+  | 'Discharges'
+  | 'ChartReview'
+  | 'ProgressNotes'
+  | 'TreatmentPlans'
+  | 'ASAMAssessments'
+  | 'GroupNotes'
+  | 'CosignQueue'
+  | 'AppointmentCalendar'
+  | 'GroupSchedule'
+  | 'RiskDashboard'
+  | 'RecoveryEngagementScore'
+  | 'OutcomeTracking'
+  | 'ReferralTracker'
+  | 'BusinessDevelopment'
+  | 'BedManagement'
+  | 'RevenueCycle'
+  | 'AuditCompliance'
+  | 'Training'
   | 'Settings'
   | 'HelpSupport'
   | 'UADrugTesting'
@@ -110,75 +115,88 @@ export type Screen =
   | 'WaitlistManager'
   | 'SecureMessaging'
   | 'FormularyManagement'
-  | 'PatientDetail';
+  | 'PatientDetail'
+  | 'RoleExplorer';
 
-function App() {
+// ─── Inner app (needs RoleContext) ──────────────────────────────────────────
+
+function AppInner() {
   const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const { getPermissionForScreen } = useRole();
 
   const navigateTo = (screen: Screen, patientId?: string) => {
-    if (patientId) {
-      setSelectedPatientId(patientId);
-    }
+    if (patientId) setSelectedPatientId(patientId);
     setActiveScreen(screen);
     window.scrollTo(0, 0);
   };
 
+  /** Wrap page content with access gate */
+  const withAccess = (screen: Screen, content: React.ReactNode): React.ReactNode => {
+    // RoleExplorer is always accessible (demo tool)
+    if (screen === 'RoleExplorer') return content;
+    const permission = getPermissionForScreen(screen);
+    if (permission === 'none') return <AccessDenied screen={screen} screenLabel={screen} />;
+    if (permission === 'read') return <ReadOnlyBanner screen={screen}>{content}</ReadOnlyBanner>;
+    return content;
+  };
+
   const renderScreen = () => {
     switch (activeScreen) {
-      case 'Dashboard': return <Dashboard navigate={navigateTo} />;
-      case 'CensusBedBoard': return <CensusBedBoard navigate={navigateTo} />;
-      case 'PatientList': return <PatientList navigate={navigateTo} />;
-      case 'PatientDetail': return <PatientDetail patientId={selectedPatientId} navigate={navigateTo} />;
-      case 'ASAMAssessments': return <ASAMAssessments navigate={navigateTo} />;
-      case 'ProgressNotes': return <ProgressNotes navigate={navigateTo} />;
-      case 'TreatmentPlans': return <TreatmentPlans navigate={navigateTo} />;
-      case 'AppointmentCalendar': return <AppointmentCalendar navigate={navigateTo} />;
-      case 'GroupSchedule': return <GroupSchedule navigate={navigateTo} />;
-      case 'RiskDashboard': return <RiskDashboard navigate={navigateTo} />;
-      case 'RecoveryEngagementScore': return <RecoveryEngagementScore navigate={navigateTo} />;
-      case 'ReferralTracker': return <ReferralTracker navigate={navigateTo} />;
-      case 'BedManagement': return <BedManagement navigate={navigateTo} />;
-      case 'AuditCompliance': return <AuditCompliance navigate={navigateTo} />;
-      case 'OutcomeTracking': return <OutcomeTracking navigate={navigateTo} />;
-      case 'CommandCenter': return <CommandCenter navigate={navigateTo} />;
-      case 'Admissions': return <Admissions navigate={navigateTo} />;
-      case 'Discharges': return <Discharges navigate={navigateTo} />;
-      case 'ChartReview': return <ChartReview navigate={navigateTo} />;
-      case 'GroupNotes': return <GroupNotes navigate={navigateTo} />;
-      case 'CosignQueue': return <CosignQueue navigate={navigateTo} />;
-      case 'RevenueCycle': return <RevenueCycle navigate={navigateTo} />;
-      case 'BusinessDevelopment': return <BusinessDevelopment navigate={navigateTo} />;
-      case 'Training': return <Training navigate={navigateTo} />;
-      case 'Settings': return <Settings navigate={navigateTo} />;
-      case 'HelpSupport': return <HelpSupport navigate={navigateTo} />;
-      case 'UADrugTesting': return <UADrugTesting navigate={navigateTo} />;
-      case 'IncidentReporting': return <IncidentReporting navigate={navigateTo} />;
-      case 'StaffScheduling': return <StaffScheduling navigate={navigateTo} />;
-      case 'MATManagement': return <MATManagement navigate={navigateTo} />;
-      case 'FamilyEngagement': return <FamilyEngagement navigate={navigateTo} />;
-      case 'PhysicianOrders': return <PhysicianOrders navigate={navigateTo} />;
-      case 'PopulationAnalytics': return <PopulationAnalytics navigate={navigateTo} />;
-      case 'NursingMAR': return <NursingMAR navigate={navigateTo} />;
-      case 'ShiftHandoff': return <ShiftHandoff navigate={navigateTo} />;
-      case 'QualityImprovement': return <QualityImprovement navigate={navigateTo} />;
-      case 'InsuranceAuthorization': return <InsuranceAuthorization navigate={navigateTo} />;
-      case 'AftercarePlanning': return <AftercarePlanning navigate={navigateTo} />;
-      case 'MyCaseload': return <MyCaseload navigate={navigateTo} />;
-      case 'BiopsychosocialAssessment': return <BiopsychosocialAssessment navigate={navigateTo} />;
-      case 'DischargeSummary': return <DischargeSummary navigate={navigateTo} />;
-      case 'CrisisAssessment': return <CrisisAssessment navigate={navigateTo} />;
-      case 'AlumniProgram': return <AlumniProgram navigate={navigateTo} />;
-      case 'TelehealthConsults': return <TelehealthConsults navigate={navigateTo} />;
-      case 'ClinicalSupervision': return <ClinicalSupervision navigate={navigateTo} />;
-      case 'MedicalRecords': return <MedicalRecords navigate={navigateTo} />;
-      case 'PeerSupport': return <PeerSupport navigate={navigateTo} />;
-      case 'FinancialCounseling': return <FinancialCounseling navigate={navigateTo} />;
-      case 'GroupTherapyCurriculum': return <GroupTherapyCurriculum navigate={navigateTo} />;
-      case 'CertificationTracker': return <CertificationTracker navigate={navigateTo} />;
-      case 'WaitlistManager': return <WaitlistManager navigate={navigateTo} />;
-      case 'SecureMessaging': return <SecureMessaging navigate={navigateTo} />;
-      case 'FormularyManagement': return <FormularyManagement navigate={navigateTo} />;
+      case 'Dashboard':               return withAccess('Dashboard',               <Dashboard navigate={navigateTo} />);
+      case 'CensusBedBoard':          return withAccess('CensusBedBoard',          <CensusBedBoard navigate={navigateTo} />);
+      case 'PatientList':             return withAccess('PatientList',             <PatientList navigate={navigateTo} />);
+      case 'PatientDetail':           return withAccess('PatientDetail',           <PatientDetail patientId={selectedPatientId} navigate={navigateTo} />);
+      case 'ASAMAssessments':         return withAccess('ASAMAssessments',         <ASAMAssessments navigate={navigateTo} />);
+      case 'ProgressNotes':           return withAccess('ProgressNotes',           <ProgressNotes navigate={navigateTo} />);
+      case 'TreatmentPlans':          return withAccess('TreatmentPlans',          <TreatmentPlans navigate={navigateTo} />);
+      case 'AppointmentCalendar':     return withAccess('AppointmentCalendar',     <AppointmentCalendar navigate={navigateTo} />);
+      case 'GroupSchedule':           return withAccess('GroupSchedule',           <GroupSchedule navigate={navigateTo} />);
+      case 'RiskDashboard':           return withAccess('RiskDashboard',           <RiskDashboard navigate={navigateTo} />);
+      case 'RecoveryEngagementScore': return withAccess('RecoveryEngagementScore', <RecoveryEngagementScore navigate={navigateTo} />);
+      case 'ReferralTracker':         return withAccess('ReferralTracker',         <ReferralTracker navigate={navigateTo} />);
+      case 'BedManagement':           return withAccess('BedManagement',           <BedManagement navigate={navigateTo} />);
+      case 'AuditCompliance':         return withAccess('AuditCompliance',         <AuditCompliance navigate={navigateTo} />);
+      case 'OutcomeTracking':         return withAccess('OutcomeTracking',         <OutcomeTracking navigate={navigateTo} />);
+      case 'CommandCenter':           return withAccess('CommandCenter',           <CommandCenter navigate={navigateTo} />);
+      case 'Admissions':              return withAccess('Admissions',              <Admissions navigate={navigateTo} />);
+      case 'Discharges':              return withAccess('Discharges',              <Discharges navigate={navigateTo} />);
+      case 'ChartReview':             return withAccess('ChartReview',             <ChartReview navigate={navigateTo} />);
+      case 'GroupNotes':              return withAccess('GroupNotes',              <GroupNotes navigate={navigateTo} />);
+      case 'CosignQueue':             return withAccess('CosignQueue',             <CosignQueue navigate={navigateTo} />);
+      case 'RevenueCycle':            return withAccess('RevenueCycle',            <RevenueCycle navigate={navigateTo} />);
+      case 'BusinessDevelopment':     return withAccess('BusinessDevelopment',     <BusinessDevelopment navigate={navigateTo} />);
+      case 'Training':                return withAccess('Training',                <Training navigate={navigateTo} />);
+      case 'Settings':                return withAccess('Settings',                <Settings navigate={navigateTo} />);
+      case 'HelpSupport':             return withAccess('HelpSupport',             <HelpSupport navigate={navigateTo} />);
+      case 'UADrugTesting':           return withAccess('UADrugTesting',           <UADrugTesting navigate={navigateTo} />);
+      case 'IncidentReporting':       return withAccess('IncidentReporting',       <IncidentReporting navigate={navigateTo} />);
+      case 'StaffScheduling':         return withAccess('StaffScheduling',         <StaffScheduling navigate={navigateTo} />);
+      case 'MATManagement':           return withAccess('MATManagement',           <MATManagement navigate={navigateTo} />);
+      case 'FamilyEngagement':        return withAccess('FamilyEngagement',        <FamilyEngagement navigate={navigateTo} />);
+      case 'PhysicianOrders':         return withAccess('PhysicianOrders',         <PhysicianOrders navigate={navigateTo} />);
+      case 'PopulationAnalytics':     return withAccess('PopulationAnalytics',     <PopulationAnalytics navigate={navigateTo} />);
+      case 'NursingMAR':              return withAccess('NursingMAR',              <NursingMAR navigate={navigateTo} />);
+      case 'ShiftHandoff':            return withAccess('ShiftHandoff',            <ShiftHandoff navigate={navigateTo} />);
+      case 'QualityImprovement':      return withAccess('QualityImprovement',      <QualityImprovement navigate={navigateTo} />);
+      case 'InsuranceAuthorization':  return withAccess('InsuranceAuthorization',  <InsuranceAuthorization navigate={navigateTo} />);
+      case 'AftercarePlanning':       return withAccess('AftercarePlanning',       <AftercarePlanning navigate={navigateTo} />);
+      case 'MyCaseload':              return withAccess('MyCaseload',              <MyCaseload navigate={navigateTo} />);
+      case 'BiopsychosocialAssessment': return withAccess('BiopsychosocialAssessment', <BiopsychosocialAssessment navigate={navigateTo} />);
+      case 'DischargeSummary':        return withAccess('DischargeSummary',        <DischargeSummary navigate={navigateTo} />);
+      case 'CrisisAssessment':        return withAccess('CrisisAssessment',        <CrisisAssessment navigate={navigateTo} />);
+      case 'AlumniProgram':           return withAccess('AlumniProgram',           <AlumniProgram navigate={navigateTo} />);
+      case 'TelehealthConsults':      return withAccess('TelehealthConsults',      <TelehealthConsults navigate={navigateTo} />);
+      case 'ClinicalSupervision':     return withAccess('ClinicalSupervision',     <ClinicalSupervision navigate={navigateTo} />);
+      case 'MedicalRecords':          return withAccess('MedicalRecords',          <MedicalRecords navigate={navigateTo} />);
+      case 'PeerSupport':             return withAccess('PeerSupport',             <PeerSupport navigate={navigateTo} />);
+      case 'FinancialCounseling':     return withAccess('FinancialCounseling',     <FinancialCounseling navigate={navigateTo} />);
+      case 'GroupTherapyCurriculum':  return withAccess('GroupTherapyCurriculum',  <GroupTherapyCurriculum navigate={navigateTo} />);
+      case 'CertificationTracker':    return withAccess('CertificationTracker',    <CertificationTracker navigate={navigateTo} />);
+      case 'WaitlistManager':         return withAccess('WaitlistManager',         <WaitlistManager navigate={navigateTo} />);
+      case 'SecureMessaging':         return withAccess('SecureMessaging',         <SecureMessaging navigate={navigateTo} />);
+      case 'FormularyManagement':     return withAccess('FormularyManagement',     <FormularyManagement navigate={navigateTo} />);
+      case 'RoleExplorer':            return <RoleExplorer navigate={navigateTo} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow border border-border">
@@ -193,13 +211,13 @@ function App() {
     <div className="min-h-screen bg-bg flex flex-col font-sans">
       <DemoBanner />
       <Topbar navigate={navigateTo} currentScreen={activeScreen} />
-      
+
       <div className="flex flex-1 pt-[calc(var(--banner-height)+var(--topbar-height))]">
-        <Sidebar 
-          currentScreen={activeScreen} 
-          navigate={navigateTo} 
+        <Sidebar
+          currentScreen={activeScreen}
+          navigate={navigateTo}
         />
-        
+
         <main className="flex-1 ml-[var(--nav-width)] p-6 pb-20">
           <AnimatePresence mode="wait">
             <motion.div
@@ -215,6 +233,16 @@ function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+// ─── Root app wrapped with providers ────────────────────────────────────────
+
+function App() {
+  return (
+    <RoleProvider>
+      <AppInner />
+    </RoleProvider>
   );
 }
 

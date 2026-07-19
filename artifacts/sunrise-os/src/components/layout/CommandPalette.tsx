@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, User, LayoutDashboard, FileText, Activity, DollarSign, Users, Calendar, AlertTriangle } from 'lucide-react';
+import {
+  Search, X, User, LayoutDashboard, FileText, Activity, DollarSign,
+  Users, Calendar, AlertTriangle, Pill, Heart, Stethoscope, Clipboard,
+  TrendingUp, BarChart3, Network, Briefcase, Receipt, ShieldCheck,
+  GraduationCap, MessageSquare, Video, UserCheck, Award, ListOrdered,
+  Droplets, Siren, UserCog, CreditCard, MapPin, BookUser, Download,
+  FolderOpen, BookOpen, ClipboardCheck, LineChart, ArrowLeftRight,
+  Star, CheckSquare, ListTodo, ClipboardList, Bed, Grid3X3
+} from 'lucide-react';
 import { Screen } from '../../App';
 import { MOCK_PATIENTS } from '../../data/mockPatients';
+import { useRole } from '../../context/RoleContext';
 
 interface Props {
   onClose: () => void;
@@ -16,60 +25,86 @@ interface SearchResult {
   action: () => void;
 }
 
-const SCREEN_SHORTCUTS: { label: string; screen: Screen; icon: React.ReactNode; category: string }[] = [
-  { label: 'Dashboard', screen: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, category: 'Overview' },
-  { label: 'Command Center', screen: 'CommandCenter', icon: <Activity className="w-4 h-4" />, category: 'Overview' },
-  { label: 'Census & Bed Board', screen: 'CensusBedBoard', icon: <Users className="w-4 h-4" />, category: 'Clinical' },
-  { label: 'Patient List', screen: 'PatientList', icon: <User className="w-4 h-4" />, category: 'Clinical' },
-  { label: 'Admissions / Intake', screen: 'Admissions', icon: <User className="w-4 h-4" />, category: 'Clinical' },
-  { label: 'Discharges', screen: 'Discharges', icon: <User className="w-4 h-4" />, category: 'Clinical' },
-  { label: 'Progress Notes', screen: 'ProgressNotes', icon: <FileText className="w-4 h-4" />, category: 'Documentation' },
-  { label: 'Treatment Plans', screen: 'TreatmentPlans', icon: <FileText className="w-4 h-4" />, category: 'Documentation' },
-  { label: 'Chart Review', screen: 'ChartReview', icon: <FileText className="w-4 h-4" />, category: 'Documentation' },
-  { label: 'Co-sign Queue', screen: 'CosignQueue', icon: <FileText className="w-4 h-4" />, category: 'Documentation' },
-  { label: 'ASAM Assessments', screen: 'ASAMAssessments', icon: <Activity className="w-4 h-4" />, category: 'Documentation' },
-  { label: 'Group Notes', screen: 'GroupNotes', icon: <FileText className="w-4 h-4" />, category: 'Documentation' },
-  { label: 'Appointment Calendar', screen: 'AppointmentCalendar', icon: <Calendar className="w-4 h-4" />, category: 'Scheduling' },
-  { label: 'Group Schedule', screen: 'GroupSchedule', icon: <Calendar className="w-4 h-4" />, category: 'Scheduling' },
-  { label: 'Staff Scheduling', screen: 'StaffScheduling', icon: <Calendar className="w-4 h-4" />, category: 'Scheduling' },
-  { label: 'Risk Dashboard', screen: 'RiskDashboard', icon: <AlertTriangle className="w-4 h-4" />, category: 'Risk & Outcomes' },
-  { label: 'Recovery Engagement Score', screen: 'RecoveryEngagementScore', icon: <Activity className="w-4 h-4" />, category: 'Risk & Outcomes' },
-  { label: 'Outcome Tracking', screen: 'OutcomeTracking', icon: <Activity className="w-4 h-4" />, category: 'Risk & Outcomes' },
-  { label: 'UA / Drug Testing', screen: 'UADrugTesting', icon: <Activity className="w-4 h-4" />, category: 'Risk & Outcomes' },
-  { label: 'Incident Reports', screen: 'IncidentReporting', icon: <AlertTriangle className="w-4 h-4" />, category: 'Risk & Outcomes' },
-  { label: 'Referral Tracker', screen: 'ReferralTracker', icon: <Users className="w-4 h-4" />, category: 'Operations' },
-  { label: 'Business Development', screen: 'BusinessDevelopment', icon: <Users className="w-4 h-4" />, category: 'Operations' },
-  { label: 'Bed Management', screen: 'BedManagement', icon: <Users className="w-4 h-4" />, category: 'Operations' },
-  { label: 'Revenue Cycle', screen: 'RevenueCycle', icon: <DollarSign className="w-4 h-4" />, category: 'Billing' },
-  { label: 'Audit Compliance', screen: 'AuditCompliance', icon: <FileText className="w-4 h-4" />, category: 'Compliance' },
-  { label: 'Training', screen: 'Training', icon: <Users className="w-4 h-4" />, category: 'Operations' },
-  { label: 'Settings', screen: 'Settings', icon: <LayoutDashboard className="w-4 h-4" />, category: 'System' },
-  { label: 'Help & Support', screen: 'HelpSupport', icon: <LayoutDashboard className="w-4 h-4" />, category: 'System' },
+const ALL_SCREEN_SHORTCUTS: { label: string; screen: Screen; icon: React.ReactNode; category: string }[] = [
+  { label: 'Dashboard',                  screen: 'Dashboard',               icon: <LayoutDashboard className="w-4 h-4" />,  category: 'Overview' },
+  { label: 'Command Center',             screen: 'CommandCenter',           icon: <Activity className="w-4 h-4" />,         category: 'Overview' },
+  { label: 'Role Explorer',              screen: 'RoleExplorer',            icon: <Grid3X3 className="w-4 h-4" />,          category: 'Overview' },
+  { label: 'Census & Bed Board',         screen: 'CensusBedBoard',          icon: <Bed className="w-4 h-4" />,              category: 'Clinical' },
+  { label: 'Patient List',              screen: 'PatientList',             icon: <Users className="w-4 h-4" />,            category: 'Clinical' },
+  { label: 'Admissions / Intake',        screen: 'Admissions',              icon: <User className="w-4 h-4" />,             category: 'Clinical' },
+  { label: 'Discharges',                screen: 'Discharges',              icon: <User className="w-4 h-4" />,             category: 'Clinical' },
+  { label: 'Bed Management',            screen: 'BedManagement',           icon: <Bed className="w-4 h-4" />,              category: 'Clinical' },
+  { label: 'MAT Management',            screen: 'MATManagement',           icon: <Pill className="w-4 h-4" />,             category: 'Clinical' },
+  { label: 'Family Engagement',         screen: 'FamilyEngagement',        icon: <Heart className="w-4 h-4" />,            category: 'Clinical' },
+  { label: 'Physician Orders',          screen: 'PhysicianOrders',         icon: <Stethoscope className="w-4 h-4" />,      category: 'Clinical' },
+  { label: 'Peer Support Program',      screen: 'PeerSupport',             icon: <Users className="w-4 h-4" />,            category: 'Clinical' },
+  { label: 'Telehealth Consults',       screen: 'TelehealthConsults',      icon: <Video className="w-4 h-4" />,            category: 'Clinical' },
+  { label: 'Chart Review',              screen: 'ChartReview',             icon: <FileText className="w-4 h-4" />,         category: 'Documentation' },
+  { label: 'Progress Notes',            screen: 'ProgressNotes',           icon: <ClipboardList className="w-4 h-4" />,    category: 'Documentation' },
+  { label: 'Treatment Plans',           screen: 'TreatmentPlans',          icon: <CheckSquare className="w-4 h-4" />,      category: 'Documentation' },
+  { label: 'ASAM Assessments',          screen: 'ASAMAssessments',         icon: <ListTodo className="w-4 h-4" />,         category: 'Documentation' },
+  { label: 'Biopsychosocial Intake',    screen: 'BiopsychosocialAssessment', icon: <ClipboardList className="w-4 h-4" />,  category: 'Documentation' },
+  { label: 'Discharge Summary',         screen: 'DischargeSummary',        icon: <Download className="w-4 h-4" />,         category: 'Documentation' },
+  { label: 'Medical Records / ROI',     screen: 'MedicalRecords',          icon: <FolderOpen className="w-4 h-4" />,       category: 'Documentation' },
+  { label: 'Group Notes',               screen: 'GroupNotes',              icon: <FileText className="w-4 h-4" />,         category: 'Documentation' },
+  { label: 'Co-sign Queue',             screen: 'CosignQueue',             icon: <FileText className="w-4 h-4" />,         category: 'Documentation' },
+  { label: 'My Caseload',               screen: 'MyCaseload',              icon: <BookUser className="w-4 h-4" />,         category: 'Documentation' },
+  { label: 'Appointment Calendar',      screen: 'AppointmentCalendar',     icon: <Calendar className="w-4 h-4" />,         category: 'Scheduling' },
+  { label: 'Group Schedule',            screen: 'GroupSchedule',           icon: <Calendar className="w-4 h-4" />,         category: 'Scheduling' },
+  { label: 'Group Curriculum Library',  screen: 'GroupTherapyCurriculum',  icon: <BookOpen className="w-4 h-4" />,         category: 'Scheduling' },
+  { label: 'Staff Scheduling',          screen: 'StaffScheduling',         icon: <UserCog className="w-4 h-4" />,          category: 'Scheduling' },
+  { label: 'Risk Dashboard',            screen: 'RiskDashboard',           icon: <AlertTriangle className="w-4 h-4" />,    category: 'Risk & Outcomes' },
+  { label: 'Recovery Engagement Score', screen: 'RecoveryEngagementScore', icon: <TrendingUp className="w-4 h-4" />,       category: 'Risk & Outcomes' },
+  { label: 'Outcome Tracking',          screen: 'OutcomeTracking',         icon: <BarChart3 className="w-4 h-4" />,        category: 'Risk & Outcomes' },
+  { label: 'Population Analytics',      screen: 'PopulationAnalytics',     icon: <LineChart className="w-4 h-4" />,        category: 'Risk & Outcomes' },
+  { label: 'UA / Drug Testing',         screen: 'UADrugTesting',           icon: <Droplets className="w-4 h-4" />,         category: 'Risk & Outcomes' },
+  { label: 'Incident Reports',          screen: 'IncidentReporting',       icon: <Siren className="w-4 h-4" />,            category: 'Risk & Outcomes' },
+  { label: 'Crisis Assessment',         screen: 'CrisisAssessment',        icon: <AlertTriangle className="w-4 h-4" />,    category: 'Risk & Outcomes' },
+  { label: 'Medication MAR',            screen: 'NursingMAR',              icon: <Clipboard className="w-4 h-4" />,        category: 'Nursing' },
+  { label: 'Shift Handoff',             screen: 'ShiftHandoff',            icon: <ArrowLeftRight className="w-4 h-4" />,   category: 'Nursing' },
+  { label: 'Referral Tracker',          screen: 'ReferralTracker',         icon: <Network className="w-4 h-4" />,          category: 'Operations' },
+  { label: 'Waitlist Manager',          screen: 'WaitlistManager',         icon: <ListOrdered className="w-4 h-4" />,      category: 'Operations' },
+  { label: 'Business Development',      screen: 'BusinessDevelopment',     icon: <Briefcase className="w-4 h-4" />,        category: 'Operations' },
+  { label: 'Insurance Auth / UR',       screen: 'InsuranceAuthorization',  icon: <CreditCard className="w-4 h-4" />,       category: 'Operations' },
+  { label: 'Aftercare Planning',        screen: 'AftercarePlanning',       icon: <MapPin className="w-4 h-4" />,           category: 'Operations' },
+  { label: 'Alumni Program',            screen: 'AlumniProgram',           icon: <Heart className="w-4 h-4" />,            category: 'Operations' },
+  { label: 'Clinical Supervision',      screen: 'ClinicalSupervision',     icon: <UserCheck className="w-4 h-4" />,        category: 'Supervision' },
+  { label: 'Certification Tracker',     screen: 'CertificationTracker',    icon: <Award className="w-4 h-4" />,            category: 'Supervision' },
+  { label: 'Secure Messaging',          screen: 'SecureMessaging',         icon: <MessageSquare className="w-4 h-4" />,    category: 'Communications' },
+  { label: 'Revenue Cycle',             screen: 'RevenueCycle',            icon: <Receipt className="w-4 h-4" />,          category: 'Billing & Compliance' },
+  { label: 'Financial Counseling',      screen: 'FinancialCounseling',     icon: <DollarSign className="w-4 h-4" />,       category: 'Billing & Compliance' },
+  { label: 'Audit Readiness',           screen: 'AuditCompliance',         icon: <ShieldCheck className="w-4 h-4" />,      category: 'Billing & Compliance' },
+  { label: 'Quality Improvement',       screen: 'QualityImprovement',      icon: <Star className="w-4 h-4" />,             category: 'Billing & Compliance' },
+  { label: 'Formulary & Drug Ref',      screen: 'FormularyManagement',     icon: <ClipboardCheck className="w-4 h-4" />,   category: 'Billing & Compliance' },
+  { label: 'Training',                  screen: 'Training',                icon: <GraduationCap className="w-4 h-4" />,    category: 'Billing & Compliance' },
+  { label: 'Settings',                  screen: 'Settings',                icon: <LayoutDashboard className="w-4 h-4" />,  category: 'System' },
+  { label: 'Help & Support',            screen: 'HelpSupport',             icon: <LayoutDashboard className="w-4 h-4" />,  category: 'System' },
 ];
 
 export function CommandPalette({ onClose, navigate }: Props) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const { canAccessScreen } = useRole();
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   const go = (screen: Screen, patientId?: string) => { navigate(screen, patientId); onClose(); };
 
+  // Only show screens the current role can access
+  const accessibleScreens = ALL_SCREEN_SHORTCUTS.filter(s =>
+    s.screen === 'RoleExplorer' || canAccessScreen(s.screen)
+  );
+
   const results: SearchResult[] = query.trim() === ''
-    ? [
-        // Default: recent/quick actions
-        ...SCREEN_SHORTCUTS.slice(0, 6).map(s => ({
-          type: 'screen' as const,
-          label: s.label,
-          sublabel: s.category,
-          icon: s.icon,
-          action: () => go(s.screen),
-        })),
-      ]
+    ? accessibleScreens.slice(0, 6).map(s => ({
+        type: 'screen' as const,
+        label: s.label,
+        sublabel: s.category,
+        icon: s.icon,
+        action: () => go(s.screen),
+      }))
     : [
-        // Patient matches
         ...MOCK_PATIENTS.filter(p =>
           `${p.firstName} ${p.lastName}`.toLowerCase().includes(query.toLowerCase()) ||
           p.mrn.toLowerCase().includes(query.toLowerCase()) ||
@@ -86,11 +121,10 @@ export function CommandPalette({ onClose, navigate }: Props) {
           ),
           action: () => go('PatientDetail', p.id),
         })),
-        // Screen matches
-        ...SCREEN_SHORTCUTS.filter(s =>
+        ...accessibleScreens.filter(s =>
           s.label.toLowerCase().includes(query.toLowerCase()) ||
           s.category.toLowerCase().includes(query.toLowerCase())
-        ).slice(0, 6).map(s => ({
+        ).slice(0, 8).map(s => ({
           type: 'screen' as const,
           label: s.label,
           sublabel: s.category,
@@ -134,14 +168,14 @@ export function CommandPalette({ onClose, navigate }: Props) {
           </div>
         </div>
 
-        <div ref={listRef} className="overflow-y-auto max-h-80">
+        <div className="overflow-y-auto max-h-80">
           {query.trim() === '' && (
             <div className="px-4 pt-3 pb-1">
               <span className="text-xs font-semibold text-slate uppercase tracking-wide">Quick Navigation</span>
             </div>
           )}
           {results.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-slate">No results for "{query}"</div>
+            <div className="px-4 py-8 text-center text-sm text-slate">No results for &quot;{query}&quot;</div>
           )}
           {results.map((r, i) => (
             <div
@@ -160,17 +194,17 @@ export function CommandPalette({ onClose, navigate }: Props) {
                 <span className={`text-xs px-1.5 py-0.5 rounded ${r.type === 'patient' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-slate'}`}>
                   {r.type === 'patient' ? 'Patient' : 'Screen'}
                 </span>
-                {i === selected && <kbd className="text-xs bg-orange/20 text-orange border border-orange/30 rounded px-1">↵</kbd>}
+                {i === selected && <kbd className="text-xs bg-orange/20 text-orange border border-orange/30 rounded px-1">&#8629;</kbd>}
               </div>
             </div>
           ))}
         </div>
 
         <div className="px-4 py-2.5 border-t border-border bg-gray-50 flex items-center gap-4 text-xs text-slate">
-          <div className="flex items-center gap-1"><kbd className="bg-white border border-gray-200 rounded px-1">↑↓</kbd> navigate</div>
-          <div className="flex items-center gap-1"><kbd className="bg-white border border-gray-200 rounded px-1">↵</kbd> open</div>
+          <div className="flex items-center gap-1"><kbd className="bg-white border border-gray-200 rounded px-1">&#8593;&#8595;</kbd> navigate</div>
+          <div className="flex items-center gap-1"><kbd className="bg-white border border-gray-200 rounded px-1">&#8629;</kbd> open</div>
           <div className="flex items-center gap-1"><kbd className="bg-white border border-gray-200 rounded px-1">Esc</kbd> close</div>
-          <div className="ml-auto">20 patients · {SCREEN_SHORTCUTS.length} screens</div>
+          <div className="ml-auto">20 patients &middot; {accessibleScreens.length} screens accessible</div>
         </div>
       </div>
     </div>
