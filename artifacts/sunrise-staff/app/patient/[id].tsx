@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';
+import { useSwipeHint } from '@/hooks/useSwipeHint';
 import { usePatients } from '@/context/PatientContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
 import { useNursingNotes, NursingNote, NoteHistoryEntry } from '@/context/NursingNotesContext';
@@ -262,15 +263,21 @@ const SwipeableNoteRow = React.forwardRef<
     onDelete: () => void;
     onLongPress: () => void;
     onOpen: () => void;
-    playHint?: boolean;
+    /** Unique key passed to useSwipeHint; omit to disable the hint on this row. */
+    hintKey?: string;
   }
->(function SwipeableNoteRow({ children, onDelete, onLongPress, onOpen, playHint = false }, ref) {
+>(function SwipeableNoteRow({ children, onDelete, onLongPress, onOpen, hintKey }, ref) {
   const translateX = useRef(new Animated.Value(0)).current;
   const isOpen = useRef(false);
   const onOpenRef = useRef(onOpen);
   onOpenRef.current = onOpen;
 
-  // One-time left-nudge hint so nurses discover the swipe gesture
+  // One-time left-nudge hint so nurses discover the swipe gesture.
+  // useSwipeHint persists the flag via AsyncStorage so it only plays once
+  // across all app launches. Omitting hintKey (undefined) disables the hint
+  // entirely and never touches AsyncStorage.
+  const { playHint } = useSwipeHint(hintKey);
+
   useEffect(() => {
     if (!playHint) return;
     const delay = setTimeout(() => {
@@ -408,23 +415,6 @@ export default function PatientDetailScreen() {
     }, 350);
     return () => clearTimeout(timer);
   }, [scrollTo]);
-
-  // ─── Swipe hint (runs once ever, persisted across app restarts) ───────────
-  // `swipeHintReady` is true only after AsyncStorage confirms the hint has never been shown.
-  // `swipeHintShown` is a ref used as an in-render guard so only the first row plays the hint.
-  const [swipeHintReady, setSwipeHintReady] = useState(false);
-  const swipeHintShown = useRef(false);
-
-  useEffect(() => {
-    AsyncStorage.getItem(SWIPE_HINT_KEY)
-      .then(val => {
-        if (!val) {
-          // Flag has never been written — allow the hint to play once.
-          setSwipeHintReady(true);
-        }
-      })
-      .catch(() => {/* fail silently; hint simply won't show */});
-  }, []);
 
   // ─── Swipe-to-delete: one-row-at-a-time + tap-outside-to-close ───────────
   const openRowRef = useRef<SwipeableNoteRowHandle | null>(null);
@@ -1251,13 +1241,6 @@ export default function PatientDetailScreen() {
                 ],
               );
             };
-            // Only the very first note gets the hint, and only once ever (persisted via AsyncStorage)
-            const shouldPlayHint = index === 0 && swipeHintReady && !swipeHintShown.current;
-            if (shouldPlayHint) {
-              swipeHintShown.current = true; // in-render guard: prevent other rows from also playing
-              AsyncStorage.setItem(SWIPE_HINT_KEY, 'true').catch(() => {});
-            }
-
             return (
               <SwipeableNoteRow
                 key={note.id}
@@ -1267,7 +1250,7 @@ export default function PatientDetailScreen() {
                 }}
                 onDelete={() => { handleDeleteNote(note, index); closeOpenRow(); }}
                 onLongPress={handleLongPress}
-                playHint={shouldPlayHint}
+                hintKey={index === 0 ? 'nursing-notes' : undefined}
                 onOpen={() => handleRowOpen(note.id)}
               >
                 <View
