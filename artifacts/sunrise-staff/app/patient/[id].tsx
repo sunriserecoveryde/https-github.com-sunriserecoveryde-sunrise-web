@@ -420,9 +420,36 @@ export default function PatientDetailScreen() {
   const toastAnim = useRef(new Animated.Value(100)).current;
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ─── Copied-to-clipboard toast ─────────────────────────────────────────────
+  const [copiedToastVisible, setCopiedToastVisible] = useState(false);
+  const copiedToastAnim = useRef(new Animated.Value(100)).current;
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showCopiedToast = () => {
+    setCopiedToastVisible(true);
+    Animated.spring(copiedToastAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      damping: 20,
+      stiffness: 200,
+    }).start();
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    copiedTimerRef.current = setTimeout(() => {
+      Animated.timing(copiedToastAnim, {
+        toValue: 100,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => {
+        setCopiedToastVisible(false);
+        copiedTimerRef.current = null;
+      });
+    }, 2500);
+  };
+
   useEffect(() => {
     return () => {
       if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
     };
   }, []);
 
@@ -593,8 +620,23 @@ export default function PatientDetailScreen() {
       lines.push('');
     }
 
+    const exportText = lines.join('\n').trim();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Share.share({ message: lines.join('\n').trim() });
+
+    // On web, fall back to clipboard when the native share sheet isn't available
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && !navigator.share) {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(exportText).then(() => {
+          showCopiedToast();
+        }).catch(() => {
+          // Clipboard write was denied — nothing more we can do silently here
+        });
+      }
+      // If clipboard API is also absent, fail gracefully with no crash
+      return;
+    }
+
+    Share.share({ message: exportText });
   };
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -1208,6 +1250,19 @@ export default function PatientDetailScreen() {
           <Pressable onPress={handleUndo} hitSlop={12} style={s.undoBtn}>
             <Text style={s.undoBtnText}>Undo</Text>
           </Pressable>
+        </Animated.View>
+      )}
+
+      {/* ─── Copied-to-clipboard toast (web fallback) ─── */}
+      {copiedToastVisible && (
+        <Animated.View
+          style={[
+            s.undoToast,
+            { bottom: Math.max(insets.bottom, 8) + 16, transform: [{ translateY: copiedToastAnim }] },
+          ]}
+        >
+          <Ionicons name="checkmark-circle-outline" size={18} color="#4FC3F7" style={{ marginRight: 8 }} />
+          <Text style={[s.undoToastText, { flex: 1 }]}>Notes copied to clipboard</Text>
         </Animated.View>
       )}
 
