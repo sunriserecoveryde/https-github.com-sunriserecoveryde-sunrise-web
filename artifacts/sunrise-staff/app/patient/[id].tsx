@@ -386,8 +386,6 @@ const sw = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-const SWIPE_HINT_KEY = 'swipeHintShown';
-
 export default function PatientDetailScreen() {
   const { id, scrollTo } = useLocalSearchParams<{ id: string; scrollTo?: string }>();
   const router = useRouter();
