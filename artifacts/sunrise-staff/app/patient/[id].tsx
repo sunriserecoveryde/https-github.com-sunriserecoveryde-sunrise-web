@@ -24,6 +24,7 @@ import { useColors } from '@/hooks/useColors';
 import { usePatients } from '@/context/PatientContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
 import { useNursingNotes, NursingNote, NoteHistoryEntry } from '@/context/NursingNotesContext';
+import { useRole } from '@/context/RoleContext';
 import {
   PATIENTS,
   VITALS,
@@ -269,6 +270,8 @@ export default function PatientDetailScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { role } = useRole();
+  const nurseDisplayName = role === 'bht' ? 'James T., BHT' : 'Sarah M., RN';
   const { patients, dischargePatient } = usePatients();
   const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
 
@@ -420,7 +423,7 @@ export default function PatientDetailScreen() {
     const trimmed = noteText.trim();
     if (!trimmed) return;
     if (editingNoteId) {
-      updateNote(id, editingNoteId, trimmed, noteType);
+      updateNote(id, editingNoteId, trimmed, noteType, nurseDisplayName);
     } else {
       addNoteToStore(id, trimmed, noteType);
     }
@@ -967,9 +970,10 @@ export default function PatientDetailScreen() {
                     </View>
                     <View style={s.sessionNoteMeta}>
                       <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
-                      {note.editedAt && (() => {
+                      {(note.history && note.history.length > 0) && (() => {
+                        const lastEdit = note.history![note.history!.length - 1];
                         const isExpanded = expandedEditId === note.id;
-                        const editTime = new Date(note.editedAt).toLocaleTimeString([], {
+                        const editTime = new Date(lastEdit.savedAt).toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit',
                           hour12: true,
@@ -1093,6 +1097,11 @@ export default function PatientDetailScreen() {
                         {isOldest ? 'Original · ' : 'Version · '}{formatHistoryTimestamp(entry.savedAt)}
                       </Text>
                     </View>
+                    {entry.editedBy ? (
+                      <Text style={[s.historyByLine, { color: colors.mutedForeground }]}>
+                        Edited by {entry.editedBy} at {formatHistoryTimestamp(entry.savedAt)}
+                      </Text>
+                    ) : null}
                     <Text style={[s.historyEntryText, { color: colors.navy }]}>{entry.text}</Text>
                   </View>
                 );
@@ -1325,6 +1334,7 @@ const s = StyleSheet.create({
   historyEntry: { borderRadius: 10, padding: 10, borderWidth: StyleSheet.hairlineWidth },
   historyEntryText: { fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 19 },
   historyTimestamp: { fontSize: 10, fontFamily: 'Inter_400Regular' },
+  historyByLine: { fontSize: 10, fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginBottom: 4 },
   historyCurrentBadge: { borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 },
   historyCurrentBadgeText: { fontSize: 10, fontFamily: 'Inter_700Bold', fontWeight: '700', color: '#fff' },
 });

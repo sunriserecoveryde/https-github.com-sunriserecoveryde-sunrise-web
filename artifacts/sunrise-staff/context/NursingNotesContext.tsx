@@ -28,6 +28,8 @@ export interface NoteHistoryEntry {
   noteType: NoteType;
   /** ISO timestamp of when this version was saved (i.e. when the edit happened) */
   savedAt: string;
+  /** Display name of the nurse who made this edit */
+  editedBy: string;
 }
 
 export interface NursingNote {
@@ -61,7 +63,7 @@ interface NursingNotesContextType {
   getNotesForPatient: (patientId: string) => NursingNote[];
   addNote: (patientId: string, text: string, noteType: NoteType) => void;
   /** Update text and/or type of an existing note in-place (preserves id and timestamp) */
-  updateNote: (patientId: string, noteId: string, text: string, noteType: NoteType) => void;
+  updateNote: (patientId: string, noteId: string, text: string, noteType: NoteType, editedBy: string) => void;
   /** Remove a single note by id from a patient's note list */
   removeNote: (patientId: string, noteId: string) => void;
   /** Re-insert a previously removed note at a specific index (for undo) */
@@ -145,7 +147,7 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const updateNote = useCallback(
-    (patientId: string, noteId: string, text: string, noteType: NoteType) => {
+    (patientId: string, noteId: string, text: string, noteType: NoteType, editedBy: string) => {
       const savedAt = new Date().toISOString();
       setNotesByPatient(prev => ({
         ...prev,
@@ -156,6 +158,7 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
             text: n.text,
             noteType: n.noteType,
             savedAt,
+            editedBy,
           };
           return {
             ...n,
