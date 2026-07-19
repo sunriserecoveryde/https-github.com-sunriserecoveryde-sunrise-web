@@ -306,7 +306,7 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
                               <div className="flex-1">
                                 <div className={`text-sm ${isDone ? 'line-through text-slate' : 'text-navy font-medium'}`}>{item.task}</div>
                                 <div className="flex items-center gap-3 mt-0.5 text-xs text-slate">
-                                  {item.dueBy && <span className={isDone ? '' : new Date(item.dueBy) < new Date(TODAY) ? 'text-red-500 font-medium' : 'text-amber-600'}>Due: {item.dueBy}</span>}
+                                  {item.dueBy && <span className={isDone ? '' : new Date(item.dueBy) < new Date() ? 'text-red-500 font-medium' : 'text-amber-600'}>Due: {item.dueBy}</span>}
                                   {item.assignedTo && <span>Assigned: {item.assignedTo}</span>}
                                 </div>
                                 {item.notes && <div className="text-xs text-slate italic mt-0.5">{item.notes}</div>}
