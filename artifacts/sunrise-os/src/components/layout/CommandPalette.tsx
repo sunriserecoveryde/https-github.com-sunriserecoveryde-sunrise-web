@@ -11,6 +11,7 @@ import {
 import { Screen } from '../../App';
 import { MOCK_PATIENTS } from '../../data/mockPatients';
 import { useRole } from '../../context/RoleContext';
+import { getPermission } from '../../data/mockRoles';
 
 interface Props {
   onClose: () => void;
@@ -85,7 +86,8 @@ export function CommandPalette({ onClose, navigate }: Props) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { canAccessScreen } = useRole();
+  const { roleId, canAccessScreen } = useRole();
+  const canSearchPatients = getPermission(roleId, 'PatientDetail') !== 'none';
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -105,7 +107,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
         action: () => go(s.screen),
       }))
     : [
-        ...MOCK_PATIENTS.filter(p =>
+        ...(canSearchPatients ? MOCK_PATIENTS.filter(p =>
           `${p.firstName} ${p.lastName}`.toLowerCase().includes(query.toLowerCase()) ||
           p.mrn.toLowerCase().includes(query.toLowerCase()) ||
           p.primaryDiagnosis.toLowerCase().includes(query.toLowerCase()) ||
@@ -120,7 +122,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
             </div>
           ),
           action: () => go('PatientDetail', p.id),
-        })),
+        })) : []),
         ...accessibleScreens.filter(s =>
           s.label.toLowerCase().includes(query.toLowerCase()) ||
           s.category.toLowerCase().includes(query.toLowerCase())
@@ -155,7 +157,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search patients, screens, or actions…"
+            placeholder={canSearchPatients ? "Search patients, screens, or actions…" : "Search screens or actions…"}
             className="flex-1 text-sm focus:outline-none text-navy placeholder:text-slate"
           />
           <div className="flex items-center gap-2">
@@ -204,7 +206,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
           <div className="flex items-center gap-1"><kbd className="bg-white border border-gray-200 rounded px-1">&#8593;&#8595;</kbd> navigate</div>
           <div className="flex items-center gap-1"><kbd className="bg-white border border-gray-200 rounded px-1">&#8629;</kbd> open</div>
           <div className="flex items-center gap-1"><kbd className="bg-white border border-gray-200 rounded px-1">Esc</kbd> close</div>
-          <div className="ml-auto">20 patients &middot; {accessibleScreens.length} screens accessible</div>
+          <div className="ml-auto">{canSearchPatients ? `${MOCK_PATIENTS.length} patients · ` : ''}{accessibleScreens.length} screens accessible</div>
         </div>
       </div>
     </div>
