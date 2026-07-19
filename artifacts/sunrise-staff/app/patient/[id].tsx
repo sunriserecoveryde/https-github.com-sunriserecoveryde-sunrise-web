@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Alert,
+  Animated,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -166,6 +170,43 @@ export default function PatientDetailScreen() {
   const { patients, dischargePatient } = usePatients();
   const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
 
+  // ─── Add Note state ────────────────────────────────────────────────────────
+  const [noteModalVisible, setNoteModalVisible] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [sessionNotes, setSessionNotes] = useState<string[]>([]);
+  const slideAnim = useRef(new Animated.Value(400)).current;
+
+  const openNoteModal = () => {
+    setNoteModalVisible(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      damping: 20,
+      stiffness: 200,
+    }).start();
+  };
+
+  const closeNoteModal = () => {
+    Animated.timing(slideAnim, {
+      toValue: 400,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => {
+      setNoteModalVisible(false);
+      setNoteText('');
+    });
+  };
+
+  const submitNote = () => {
+    const trimmed = noteText.trim();
+    if (!trimmed) return;
+    setSessionNotes(prev => [trimmed, ...prev]);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    closeNoteModal();
+  };
+  // ──────────────────────────────────────────────────────────────────────────
+
   // Look up patient from live roster first, fall back to static data for robustness
   const patient = patients.find(p => p.id === id) ?? PATIENTS.find(p => p.id === id);
   if (!patient) {
@@ -259,6 +300,76 @@ export default function PatientDetailScreen() {
           </View>
         </View>
       </View>
+
+      {/* ─── Add Note Modal ─── */}
+      <Modal
+        visible={noteModalVisible}
+        transparent
+        animationType="none"
+        onRequestClose={closeNoteModal}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableWithoutFeedback onPress={closeNoteModal}>
+            <View style={s.noteOverlay} />
+          </TouchableWithoutFeedback>
+          <Animated.View
+            style={[
+              s.bottomSheet,
+              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+              { transform: [{ translateY: slideAnim }] },
+            ]}
+          >
+            {/* Sheet handle */}
+            <View style={[s.sheetHandle, { backgroundColor: colors.border }]} />
+
+            <View style={s.sheetHeader}>
+              <Text style={[s.sheetTitle, { color: colors.navy }]}>Add Nursing Note</Text>
+              <Pressable onPress={closeNoteModal} hitSlop={12}>
+                <Ionicons name="close" size={22} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+
+            <Text style={[s.sheetPatientName, { color: colors.mutedForeground }]}>
+              {patient.firstName} {patient.lastName} · {patient.bed ?? patient.program}
+            </Text>
+
+            <TextInput
+              style={[
+                s.noteInput,
+                {
+                  backgroundColor: colors.muted,
+                  color: colors.navy,
+                  borderColor: colors.border,
+                },
+              ]}
+              placeholder="Type nursing note here…"
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+              value={noteText}
+              onChangeText={setNoteText}
+              autoFocus
+            />
+
+            <Pressable
+              onPress={submitNote}
+              style={({ pressed }) => [
+                s.submitBtn,
+                { backgroundColor: colors.navy, opacity: pressed ? 0.85 : 1 },
+                !noteText.trim() && { opacity: 0.4 },
+              ]}
+              disabled={!noteText.trim()}
+            >
+              <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+              <Text style={s.submitBtnText}>Save Note</Text>
+            </Pressable>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       <ScrollView style={s.scroll} contentContainerStyle={[s.content, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false}>
 
@@ -480,14 +591,46 @@ export default function PatientDetailScreen() {
         )}
 
         {/* ─── Handoff note ─── */}
-        {patient.handoffNote && (
-          <View style={s.section}>
+        <View style={s.section}>
+          <View style={s.handoffSectionHeader}>
             <SectionTitle title="NURSING HANDOFF NOTE" colors={colors} />
+            <Pressable
+              onPress={openNoteModal}
+              style={({ pressed }) => [
+                s.addNoteBtn,
+                { backgroundColor: colors.navy, opacity: pressed ? 0.8 : 1 },
+              ]}
+            >
+              <Ionicons name="add" size={14} color="#fff" />
+              <Text style={s.addNoteBtnText}>Add Note</Text>
+            </Pressable>
+          </View>
+
+          {/* Session notes (prepended, most recent first) */}
+          {sessionNotes.map((note, i) => (
+            <View key={i} style={[s.sessionNote, { backgroundColor: colors.successBg, borderColor: colors.success }]}>
+              <View style={s.sessionNoteHeader}>
+                <Ionicons name="create-outline" size={13} color={colors.success} />
+                <Text style={[s.sessionNoteLabel, { color: colors.success }]}>Added this session</Text>
+              </View>
+              <Text style={[s.sessionNoteText, { color: colors.navy }]}>{note}</Text>
+            </View>
+          ))}
+
+          {/* Original handoff note */}
+          {patient.handoffNote ? (
             <View style={[s.handoffNote, { backgroundColor: colors.navyMid }]}>
               <Text style={s.handoffText}>{patient.handoffNote}</Text>
             </View>
-          </View>
-        )}
+          ) : sessionNotes.length === 0 ? (
+            <Card colors={colors}>
+              <View style={s.emptyVitals}>
+                <Ionicons name="document-text-outline" size={24} color={colors.mutedForeground} />
+                <Text style={[s.emptyText, { color: colors.mutedForeground }]}>No handoff note on file. Tap "Add Note" to create one.</Text>
+              </View>
+            </Card>
+          ) : null}
+        </View>
 
         {/* ─── Discharge ─── */}
         <View style={s.section}>
@@ -655,4 +798,23 @@ const s = StyleSheet.create({
   mdAckMeta: { fontSize: 12, fontFamily: 'Inter_400Regular' },
   mdAckButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, borderRadius: 8, paddingVertical: 10 },
   mdAckButtonText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
+  // Handoff / Add Note
+  handoffSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  addNoteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  addNoteBtnText: { color: '#fff', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  // Session notes
+  sessionNote: { borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1 },
+  sessionNoteHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 },
+  sessionNoteLabel: { fontSize: 11, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
+  sessionNoteText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
+  // Note bottom sheet
+  noteOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  bottomSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingTop: 10, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 12 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  sheetTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', fontWeight: '700' },
+  sheetPatientName: { fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 14 },
+  noteInput: { borderRadius: 10, borderWidth: 1, padding: 12, fontSize: 15, fontFamily: 'Inter_400Regular', minHeight: 120, marginBottom: 14 },
+  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, padding: 14 },
+  submitBtnText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
 });
