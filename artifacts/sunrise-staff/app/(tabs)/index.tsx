@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Platform,
@@ -35,20 +35,27 @@ function getScoreStyle(score: number, threshold: number, colors: ReturnType<type
   return { bg: colors.successBg, text: colors.success };
 }
 
+// ─── Withdrawal threshold ─────────────────────────────────────────────────────
+const WD_THRESHOLD = 13; // COWS > 12 or CIWA > 12 per facility protocol
+
+function isWithdrawalAlert(p: Patient) {
+  return (p.cows != null && p.cows >= WD_THRESHOLD) || (p.ciwa != null && p.ciwa >= WD_THRESHOLD);
+}
+
 // ─── Withdrawal alert banner (critical patients) ──────────────────────────────
 
 function WithdrawalAlertBanner({
   patients,
   colors,
   onSelectPatient,
+  onDismiss,
 }: {
   patients: Patient[];
   colors: ReturnType<typeof useColors>;
   onSelectPatient: (p: Patient) => void;
+  onDismiss: () => void;
 }) {
-  const alertPatients = patients.filter(
-    p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
-  );
+  const alertPatients = patients.filter(isWithdrawalAlert);
   if (alertPatients.length === 0) return null;
 
   return (
@@ -61,8 +68,8 @@ function WithdrawalAlertBanner({
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.alertChips}>
             {alertPatients.map(p => {
-              const isCiwa = (p.ciwa ?? 0) >= 15;
-              const score = isCiwa ? p.ciwa! : p.cows!;
+              const showCiwa = (p.ciwa ?? 0) >= WD_THRESHOLD;
+              const score = showCiwa ? p.ciwa! : p.cows!;
               return (
                 <Pressable
                   key={p.id}
@@ -70,7 +77,7 @@ function WithdrawalAlertBanner({
                   style={[styles.alertChip, { backgroundColor: colors.critical }]}
                 >
                   <Text style={styles.alertChipText}>
-                    {p.bed}: {p.lastName} · {isCiwa ? 'CIWA' : 'COWS'} {score}
+                    {p.bed}: {p.lastName} · {showCiwa ? 'CIWA' : 'COWS'} {score}
                   </Text>
                 </Pressable>
               );
@@ -78,6 +85,13 @@ function WithdrawalAlertBanner({
           </View>
         </ScrollView>
       </View>
+      <Pressable
+        onPress={() => { Haptics.selectionAsync(); onDismiss(); }}
+        style={styles.alertDismiss}
+        hitSlop={8}
+      >
+        <Ionicons name="close" size={16} color={colors.critical} />
+      </Pressable>
     </View>
   );
 }
@@ -141,7 +155,7 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
   const ac = acuityColor(patient.acuity);
   const showCows = patient.cows != null && patient.cows > 0;
   const showCiwa = patient.ciwa != null && patient.ciwa > 0;
-  const isAlert = (showCows && patient.cows! >= 13) || (showCiwa && patient.ciwa! >= 15);
+  const isAlert = isWithdrawalAlert(patient);
 
   return (
     <Pressable
@@ -231,15 +245,23 @@ export default function CensusScreen() {
   const router = useRouter();
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const [filter, setFilter] = useState<Filter>('All');
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const hasFiredHaptic = useRef(false);
 
   const occupiedCount = BEDS.filter(b => b.status === 'Occupied').length;
   const availableCount = BEDS.filter(b => b.status === 'Available').length;
   const cleaningCount = BEDS.filter(b => b.status === 'Cleaning').length;
   const residentialPatients = PATIENTS.filter(p => p.bed != null);
 
-  const alertCount = residentialPatients.filter(
-    p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
-  ).length;
+  const alertCount = residentialPatients.filter(isWithdrawalAlert).length;
+
+  // Fire heavy haptic once when the screen mounts with active alerts (simulates new threshold crossing)
+  useEffect(() => {
+    if (alertCount > 0 && !hasFiredHaptic.current) {
+      hasFiredHaptic.current = true;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+  }, [alertCount]);
 
   const filteredPatients = filter === 'Available'
     ? []
@@ -287,11 +309,14 @@ export default function CensusScreen() {
       </View>
 
       {/* Withdrawal alert banner */}
-      <WithdrawalAlertBanner
-        patients={residentialPatients}
-        colors={colors}
-        onSelectPatient={openPatient}
-      />
+      {!bannerDismissed && (
+        <WithdrawalAlertBanner
+          patients={residentialPatients}
+          colors={colors}
+          onSelectPatient={openPatient}
+          onDismiss={() => setBannerDismissed(true)}
+        />
+      )}
 
       {/* Filter Chips */}
       <ScrollView
@@ -365,6 +390,7 @@ const styles = StyleSheet.create({
   alertChips: { flexDirection: 'row', gap: 6 },
   alertChip: { borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
   alertChipText: { fontSize: 11, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
+  alertDismiss: { padding: 2, alignSelf: 'flex-start' },
   // Filters
   filterScroll: {},
   filterContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },

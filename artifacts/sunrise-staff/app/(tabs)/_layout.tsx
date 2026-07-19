@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform, StyleSheet, useColorScheme, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
+import { PATIENTS } from '@/data/mockData';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -45,6 +46,11 @@ function ClassicTabLayout() {
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
 
+  const residentialPatients = PATIENTS.filter(p => p.bed != null);
+  const alertCount = residentialPatients.filter(
+    p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 13)
+  ).length;
+
   return (
     <Tabs
       screenOptions={{
@@ -79,6 +85,8 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: 'Census',
+          tabBarBadge: alertCount > 0 ? alertCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.critical, fontSize: 11 },
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="bed.double" tintColor={color} size={22} />

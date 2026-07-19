@@ -154,9 +154,9 @@ export const PATIENTS: Patient[] = [
     bed: '4B', bedStatus: 'Occupied',
     flags: ['Hypertension', 'CIWA Protocol'],
     admitDate: '10/21', los: 5, counselor: 'D. Odom, LMFT',
-    ciwa: 9, mood: 4, cravings: 6, lastUa: 'Negative',
+    ciwa: 17, mood: 4, cravings: 6, lastUa: 'Negative',
     nextAppointment: 'Today 5:00 PM',
-    handoffNote: 'CIWA 9, BP 158/96. MD notified at 0800. Librium PRN given x1. Repeat BP at 1400.',
+    handoffNote: 'CIWA 17 — MD notified. Librium 25mg PRN given x2. BP 162/100. Hold oral fluids. Repeat CIWA q1h.',
   },
   {
     id: 'p9', mrn: 'MRN-11029', firstName: 'Christine', lastName: "O'Brien",
