@@ -172,7 +172,7 @@ export default function PatientDetailScreen() {
   const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
 
   // ─── Add Note state ────────────────────────────────────────────────────────
-  const { getNotesForPatient, addNote: addNoteToStore } = useNursingNotes();
+  const { getNotesForPatient, addNote: addNoteToStore, removeNote } = useNursingNotes();
 
   type NoteType = 'observation' | 'med-update' | 'incident';
 
@@ -672,17 +672,46 @@ export default function PatientDetailScreen() {
           {getNotesForPatient(patient.id).map(note => {
             const tc = noteTypeColor(note.noteType);
             const nt = NOTE_TYPES.find(x => x.value === note.noteType)!;
+            const handleLongPress = () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              Alert.alert(
+                'Delete Note?',
+                'This note will be permanently removed.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                      removeNote(patient.id, note.id);
+                    },
+                  },
+                ],
+              );
+            };
             return (
-              <View key={note.id} style={[s.sessionNote, { backgroundColor: tc.bg, borderColor: tc.text }]}>
+              <Pressable
+                key={note.id}
+                onLongPress={handleLongPress}
+                delayLongPress={400}
+                style={({ pressed }) => [
+                  s.sessionNote,
+                  { backgroundColor: tc.bg, borderColor: tc.text, opacity: pressed ? 0.75 : 1 },
+                ]}
+              >
                 <View style={s.sessionNoteHeader}>
                   <View style={[s.noteTypeBadge, { backgroundColor: tc.bg, borderColor: tc.text }]}>
                     <Ionicons name={nt.icon} size={11} color={tc.text} />
                     <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{nt.label}</Text>
                   </View>
-                  <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
+                  <View style={s.sessionNoteMeta}>
+                    <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
+                    <Ionicons name="trash-outline" size={13} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
+                  </View>
                 </View>
                 <Text style={[s.sessionNoteText, { color: colors.navy }]}>{note.text}</Text>
-              </View>
+              </Pressable>
             );
           })}
 
@@ -876,7 +905,8 @@ const s = StyleSheet.create({
   addNoteBtnText: { color: '#fff', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   // Session notes
   sessionNote: { borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1 },
-  sessionNoteHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 },
+  sessionNoteHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },
+  sessionNoteMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   sessionNoteLabel: { fontSize: 11, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
   sessionNoteText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
   // Note bottom sheet
