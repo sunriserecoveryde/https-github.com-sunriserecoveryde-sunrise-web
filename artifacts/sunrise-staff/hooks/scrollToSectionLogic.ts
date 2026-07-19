@@ -9,7 +9,7 @@
  */
 export interface ScrollToSectionState {
   /** Ref to the ScrollView (nullable until it mounts). */
-  scrollViewRef: { current: { scrollTo(opts: { y: number; animated: boolean }): void } | null };
+  scrollViewRef: { readonly current: { scrollTo(opts: { y: number; animated: boolean }): void } | null };
   /** Y-coordinate of the target section once layout has fired. */
   sectionY: { current: number | null };
   /** True when a scroll was requested before layout had fired. */

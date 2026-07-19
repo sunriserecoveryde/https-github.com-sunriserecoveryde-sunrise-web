@@ -36,7 +36,7 @@ export function useScrollToSection(
   const pendingScroll = useRef(false);
 
   const state: ScrollToSectionState = {
-    scrollViewRef: scrollViewRef as ScrollToSectionState['scrollViewRef'],
+    scrollViewRef,
     sectionY,
     pendingScroll,
   };
