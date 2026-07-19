@@ -12,8 +12,15 @@ import {
 } from 'lucide-react';
 import { Screen } from '../App';
 
-/** Update this URL to point to your scheduling page (e.g. Calendly, HubSpot, etc.) */
-const DEMO_BOOKING_URL = 'mailto:demo@sunrisehealth.com?subject=Schedule%20a%20Live%20Demo';
+/**
+ * Booking URL for the demo CTA footer.
+ * Set VITE_DEMO_BOOKING_URL in your .env file to point to your scheduling page
+ * (e.g. a Calendly link, HubSpot Meetings URL, etc.).
+ * Falls back to a mailto link if the variable is not set.
+ */
+const DEMO_BOOKING_URL =
+  import.meta.env.VITE_DEMO_BOOKING_URL ||
+  'mailto:demo@sunrisehealth.com?subject=Schedule%20a%20Live%20Demo';
 
 interface Props {
   patientId: string | null;
