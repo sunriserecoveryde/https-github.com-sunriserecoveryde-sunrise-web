@@ -330,11 +330,11 @@ export default function VitalsScreen() {
       {/* Score filter bar */}
       <View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         {([
-          { key: 'all', label: 'All' },
-          { key: 'cows', label: 'COWS Only' },
-          { key: 'ciwa', label: 'CIWA Only' },
-          { key: 'alerts', label: 'Alerts' },
-        ] as { key: typeof scoreFilter; label: string }[]).map(opt => {
+          { key: 'all', label: 'All', count: allPatientsWithScores.length },
+          { key: 'cows', label: 'COWS Only', count: allPatientsWithScores.filter(p => p.cows != null && p.cows > 0).length },
+          { key: 'ciwa', label: 'CIWA Only', count: allPatientsWithScores.filter(p => p.ciwa != null && p.ciwa > 0).length },
+          { key: 'alerts', label: 'Alerts', count: allPatientsWithScores.filter(p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)).length },
+        ] as { key: typeof scoreFilter; label: string; count: number }[]).map(opt => {
           const active = scoreFilter === opt.key;
           return (
             <Pressable
@@ -358,6 +358,16 @@ export default function VitalsScreen() {
               >
                 {opt.label}
               </Text>
+              <View style={[
+                styles.filterChipBadge,
+                active
+                  ? { backgroundColor: 'rgba(255,255,255,0.25)' }
+                  : { backgroundColor: colors.muted },
+              ]}>
+                <Text style={[styles.filterChipBadgeText, { color: active ? '#fff' : colors.mutedForeground }]}>
+                  {opt.count}
+                </Text>
+              </View>
             </Pressable>
           );
         })}
@@ -524,10 +534,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   filterChip: {
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
     borderWidth: 1,
   },
   filterChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  filterChipBadge: { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1, minWidth: 20, alignItems: 'center' },
+  filterChipBadgeText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   emptyState: {
     alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 28, borderRadius: 12, borderWidth: 1,
