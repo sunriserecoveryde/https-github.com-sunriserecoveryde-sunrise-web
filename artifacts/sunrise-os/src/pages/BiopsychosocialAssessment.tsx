@@ -3,6 +3,7 @@ import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { CheckCircle, ChevronDown, ChevronRight, AlertTriangle, FileText, Save, Printer } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -73,6 +74,7 @@ Z63.0  — Relationship Distress with Spouse or Intimate Partner`,
 };
 
 export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
+  const editRoles = getRolesWithEditAccess('BiopsychosocialAssessment');
   const [selectedPatient, setSelectedPatient] = useState('p1');
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(new Set(['presenting']));
   const [completedSections, setCompletedSections] = useState<Set<SectionKey>>(new Set(['presenting', 'substances', 'medical', 'psychiatric', 'legal', 'family', 'social', 'trauma', 'strengths', 'diagnostic', 'summary']));
@@ -101,7 +103,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
         </div>
         <div className="flex gap-2">
           <button className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><Printer className="w-4 h-4" /> Print / PDF</button>
-          <LockedButton locked={readOnly} onClick={() => !readOnly && setSaved(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Save className="w-4 h-4" />{saved ? 'Saved ✓' : 'Save Assessment'}</LockedButton>
+          <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && setSaved(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Save className="w-4 h-4" />{saved ? 'Saved ✓' : 'Save Assessment'}</LockedButton>
         </div>
       </div>
 
@@ -304,6 +306,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
                     <button onClick={() => toggleSection(key)} className="text-sm border border-border text-slate px-4 py-2 rounded-lg hover:bg-gray-50">Close</button>
                     <LockedButton
                       locked={readOnly}
+                      editRoles={editRoles}
                       onClick={() => {
                         if (readOnly) return;
                         setCompletedSections(prev => new Set([...prev, key]));
@@ -335,7 +338,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
             </div>
           </div>
           <div className="ml-auto flex gap-2">
-            <LockedButton locked={readOnly} onClick={() => !readOnly && navigate('CosignQueue')} className="text-sm border border-green-300 text-green-700 bg-white px-4 py-2 rounded-lg hover:bg-green-50">Send to Co-sign Queue</LockedButton>
+            <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && navigate('CosignQueue')} className="text-sm border border-green-300 text-green-700 bg-white px-4 py-2 rounded-lg hover:bg-green-50">Send to Co-sign Queue</LockedButton>
             <button className="btn-primary text-sm px-4 py-2">Print Assessment</button>
           </div>
         </div>

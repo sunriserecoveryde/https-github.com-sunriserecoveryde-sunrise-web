@@ -10,6 +10,7 @@ import { LockedButton } from '../components/common/LockedButton';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip
 } from 'recharts';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 // ─── ASAM Dimension Metadata ─────────────────────────────────────────────────
 
@@ -146,6 +147,7 @@ function AssessmentDetail({ patient, readOnly }: { patient: Patient; readOnly?: 
               </div>
             );
           })}
+
         </div>
       </div>
 
@@ -177,6 +179,7 @@ type SortKey = 'd1' | 'd2' | 'd3' | 'd4' | 'd5' | 'd6' | 'name';
 type FilterMode = 'All' | 'Overdue' | 'High Risk' | 'Review Due';
 
 export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, id?: string) => void; readOnly?: boolean }) {
+  const editRoles = getRolesWithEditAccess('ASAMAssessments');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('d5');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -450,7 +453,7 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
                       </td>
                       <td className="p-4 text-right pr-6">
                         <div className="flex items-center justify-end gap-2">
-                          <LockedButton locked={readOnly} className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-2 py-1 rounded">
+                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-2 py-1 rounded">
                             Update
                           </LockedButton>
                           {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}

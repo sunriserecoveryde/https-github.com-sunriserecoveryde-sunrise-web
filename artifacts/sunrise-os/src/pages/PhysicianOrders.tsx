@@ -3,6 +3,7 @@ import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { CheckCircle, Clock, AlertTriangle, Plus, X, ChevronDown } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -70,6 +71,7 @@ const PRIORITY_STYLE: Record<OrderPriority, string> = {
 };
 
 export function PhysicianOrders({ navigate, readOnly }: Props) {
+  const editRoles = getRolesWithEditAccess('PhysicianOrders');
   const [tab, setTab] = useState<'Active' | 'Pending' | 'History' | 'New Order' | 'Standing Orders' | 'Order Analytics' | 'Lab Reference'>('Active');
   const [filterType, setFilterType] = useState<OrderType | 'All'>('All');
   const [filterPatient, setFilterPatient] = useState('all');
@@ -95,7 +97,7 @@ export function PhysicianOrders({ navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy">Physician Orders</h1>
           <p className="text-slate text-sm mt-0.5">Active orders, pending signatures, medication and lab management</p>
         </div>
-        <LockedButton locked={readOnly} onClick={() => setTab('New Order')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+        <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => setTab('New Order')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
           <Plus className="w-4 h-4" /> New Order
         </LockedButton>
       </div>
@@ -180,14 +182,14 @@ export function PhysicianOrders({ navigate, readOnly }: Props) {
                     <div className="flex items-center gap-2 shrink-0">
                       {order.status === 'Pending Signature' && (
                         <>
-                          <LockedButton locked={readOnly} className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">Sign Order</LockedButton>
-                          <LockedButton locked={readOnly} className="text-xs border border-red-200 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50">Reject</LockedButton>
+                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">Sign Order</LockedButton>
+                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs border border-red-200 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50">Reject</LockedButton>
                         </>
                       )}
                       {order.status === 'Active' && (
                         <>
-                          <LockedButton locked={readOnly} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Modify</LockedButton>
-                          <LockedButton locked={readOnly} className="text-xs border border-red-200 text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50"><X className="w-3.5 h-3.5" /></LockedButton>
+                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Modify</LockedButton>
+                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs border border-red-200 text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50"><X className="w-3.5 h-3.5" /></LockedButton>
                         </>
                       )}
                     </div>
@@ -259,7 +261,7 @@ export function PhysicianOrders({ navigate, readOnly }: Props) {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setTab('Active')} className="border border-border rounded-lg px-5 py-2 text-sm text-slate">Cancel</button>
-              <LockedButton locked={readOnly} onClick={() => setOrderSubmitted(true)} className="btn-primary text-sm px-5 py-2">Place Order</LockedButton>
+              <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => setOrderSubmitted(true)} className="btn-primary text-sm px-5 py-2">Place Order</LockedButton>
             </div>
           </div>
         </div>

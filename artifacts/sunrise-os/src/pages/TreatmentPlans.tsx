@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { LockedButton } from '../components/common/LockedButton';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 // ─── Extended mock goals for patients that have none ────────────────────────
 
@@ -270,6 +271,7 @@ function PatientPlanCard({
 type FilterTab = 'All' | 'Due for Review' | 'Overdue' | 'Needs Goals';
 
 export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) => void; readOnly?: boolean }) {
+  const editRoles = getRolesWithEditAccess('TreatmentPlans');
   const [activeTab, setActiveTab] = useState<FilterTab>('All');
   const [planView, setPlanView] = useState<'Plans' | 'Goal Analytics' | 'Plan Templates' | 'Outcomes'>('Plans');
   const [search, setSearch] = useState('');

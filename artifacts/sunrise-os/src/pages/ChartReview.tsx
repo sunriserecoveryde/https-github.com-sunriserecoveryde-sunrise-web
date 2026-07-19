@@ -3,6 +3,7 @@ import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { LockedButton } from '../components/common/LockedButton';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -82,6 +83,7 @@ const COUNSELOR_PERF = [
 ];
 
 export function ChartReview({ navigate, readOnly }: Props) {
+  const editRoles = getRolesWithEditAccess('ChartReview');
   const [activeTab, setActiveTab] = useState<'Deficiencies' | 'Chart Completeness' | 'Documentation Trends' | 'Peer Review' | 'Coding Audit'>('Deficiencies');
   const [typeFilter, setTypeFilter] = useState<DefType | 'All'>('All');
   const [priorityFilter, setPriorityFilter] = useState<'Critical' | 'High' | 'Moderate' | 'All'>('All');
@@ -281,7 +283,7 @@ export function ChartReview({ navigate, readOnly }: Props) {
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <LockedButton locked={readOnly} onClick={() => !readOnly && navigate('CosignQueue')} className="text-xs bg-white border border-current px-3 py-1.5 rounded-lg font-medium hover:opacity-80 transition-opacity">Resolve</LockedButton>
+                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && navigate('CosignQueue')} className="text-xs bg-white border border-current px-3 py-1.5 rounded-lg font-medium hover:opacity-80 transition-opacity">Resolve</LockedButton>
                     <button onClick={() => navigate('PatientDetail', d.patientId)} className="text-xs bg-white border border-current px-3 py-1.5 rounded-lg font-medium hover:opacity-80 transition-opacity">Open Chart</button>
                   </div>
                 </div>

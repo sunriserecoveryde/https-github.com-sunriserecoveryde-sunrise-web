@@ -339,6 +339,11 @@ export function canAccess(roleId: string, screen: string): boolean {
   return getPermission(roleId, screen) !== 'none';
 }
 
+/** Returns labels of all roles that have 'full' (write) access to a screen */
+export function getRolesWithEditAccess(screen: string): string[] {
+  return ROLES.filter(r => (r.permissions[screen] ?? 'none') === 'full').map(r => r.label);
+}
+
 export const ROLE_CATEGORIES: RoleCategory[] = [
   'Clinical', 'Medical', 'Nursing & Direct Care', 'Operations', 'Administrative', 'Leadership', 'IT & Security',
 ];

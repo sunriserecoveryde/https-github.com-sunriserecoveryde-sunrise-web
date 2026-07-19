@@ -3,6 +3,7 @@ import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { CheckCircle, Clock, AlertTriangle, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -155,6 +156,7 @@ const CAT_STYLE: Record<string, string> = {
 const SHIFTS = ['0800', '1200', '1400', '1800', '2000', '2100'];
 
 export function NursingMAR({ navigate, readOnly }: Props) {
+  const editRoles = getRolesWithEditAccess('NursingMAR');
   const [date] = useState(TODAY);
   const [marTab, setMarTab] = useState<'MAR' | 'Controlled Log' | 'PRN History' | 'Allergy Registry' | 'Medication Errors'>('MAR');
   const [expandedPatient, setExpandedPatient] = useState<string | null>('p1');
@@ -301,6 +303,7 @@ export function NursingMAR({ navigate, readOnly }: Props) {
                                 <td key={shift} className="px-3 py-3 text-center">
                                   <LockedButton
                                     locked={readOnly}
+                                    editRoles={editRoles}
                                     onClick={() => setAdministering({ patientId: mar.patientId, med: med.medName, time: shift })}
                                     className={`text-[10px] px-2 py-1 rounded-lg font-medium border ${isPast ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100' : 'border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100'}`}
                                   >
@@ -375,7 +378,7 @@ export function NursingMAR({ navigate, readOnly }: Props) {
             </div>
             <div className="flex gap-3 mt-4">
               <button onClick={() => setAdministering(null)} className="flex-1 border border-border rounded-lg py-2 text-sm text-slate">Cancel</button>
-              <LockedButton locked={readOnly} onClick={() => setAdministering(null)} className="flex-1 btn-primary text-sm py-2">Sign & Save</LockedButton>
+              <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => setAdministering(null)} className="flex-1 btn-primary text-sm py-2">Sign & Save</LockedButton>
             </div>
           </div>
         </div>

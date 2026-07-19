@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { LockedButton } from '../components/common/LockedButton';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -95,6 +96,7 @@ const PRIORITY_COLORS = {
 };
 
 export function CosignQueue({ navigate, readOnly }: Props) {
+  const editRoles = getRolesWithEditAccess('CosignQueue');
   const [selected, setSelected] = useState<CosignItem | null>(QUEUE[0]);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [comments, setComments] = useState('');
@@ -330,8 +332,8 @@ export function CosignQueue({ navigate, readOnly }: Props) {
                     className="w-full border border-border rounded-lg p-3 text-sm min-h-[72px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50"
                   />
                   <div className="flex gap-2 mt-3">
-                    <LockedButton locked={readOnly} onClick={() => !readOnly && handleApprove(selected.id)} className="btn-primary text-sm px-6 py-2 flex-1">✓ Co-sign &amp; Approve</LockedButton>
-                    <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2 text-amber-700 border-amber-300 hover:bg-amber-50">Request Revision</LockedButton>
+                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && handleApprove(selected.id)} className="btn-primary text-sm px-6 py-2 flex-1">✓ Co-sign &amp; Approve</LockedButton>
+                    <LockedButton locked={readOnly} editRoles={editRoles} className="btn-outline text-sm px-4 py-2 text-amber-700 border-amber-300 hover:bg-amber-50">Request Revision</LockedButton>
                     <button onClick={() => navigate('PatientDetail', selected.patientId)} className="btn-outline text-sm px-4 py-2">Open Chart</button>
                   </div>
                   <p className="text-xs text-slate mt-2">By co-signing, you attest that you have reviewed this note and it meets clinical documentation standards.</p>

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { LockedButton } from '../components/common/LockedButton';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 // ─── Extended mock notes ─────────────────────────────────────────────────────
 
@@ -288,6 +289,7 @@ function NewNoteForm({ onClose }: { onClose: () => void }) {
 type NoteTab = 'All Notes' | 'Awaiting Co-sign' | 'Drafts' | 'My Notes' | 'Templates';
 
 export function ProgressNotes({ navigate, readOnly }: { navigate: (s: Screen) => void; readOnly?: boolean }) {
+  const editRoles = getRolesWithEditAccess('ProgressNotes');
   const [activeTab, setActiveTab] = useState<NoteTab>('All Notes');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('All Types');
@@ -322,6 +324,7 @@ export function ProgressNotes({ navigate, readOnly }: { navigate: (s: Screen) =>
         </div>
         <LockedButton
           locked={readOnly}
+          editRoles={editRoles}
           onClick={() => setShowNewForm(s => !s)}
           className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium flex items-center gap-2 hover:bg-sunrise-blue-light shadow-sm transition-colors text-sm"
         >

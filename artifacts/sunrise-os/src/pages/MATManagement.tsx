@@ -4,6 +4,7 @@ import { MOCK_PATIENTS } from '../data/mockPatients';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { CheckCircle, AlertTriangle, Clock, TrendingDown } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -67,6 +68,7 @@ const INDUCTION_COLORS: Record<string, string> = {
 };
 
 export function MATManagement({ navigate, readOnly }: Props) {
+  const editRoles = getRolesWithEditAccess('MATManagement');
   const [tab, setTab] = useState<'Active' | 'Pending' | 'Analytics' | 'Protocols' | 'Education' | 'PDMP Alerts' | 'Outcome Data'>('Active');
   const [filter, setFilter] = useState('All');
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -86,7 +88,7 @@ export function MATManagement({ navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy">MAT Management</h1>
           <p className="text-slate text-sm mt-0.5">Medication-Assisted Treatment — buprenorphine, naltrexone, and adjunct medications</p>
         </div>
-        <LockedButton locked={readOnly} onClick={() => setShowOrderModal(true)} className="btn-primary text-sm px-4 py-2">+ New MAT Order</LockedButton>
+        <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => setShowOrderModal(true)} className="btn-primary text-sm px-4 py-2">+ New MAT Order</LockedButton>
       </div>
 
       {/* Stats */}
@@ -180,7 +182,7 @@ export function MATManagement({ navigate, readOnly }: Props) {
                       <td className="px-4 py-3 max-w-[180px]">
                         <div className="text-[10px] text-slate line-clamp-2">{r.notes}</div>
                         <div className="flex gap-1 mt-1.5">
-                          <LockedButton locked={readOnly} className="text-[10px] text-orange hover:underline">Adjust</LockedButton>
+                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-[10px] text-orange hover:underline">Adjust</LockedButton>
                           <span className="text-gray-300">·</span>
                           <button className="text-[10px] text-slate hover:text-navy" onClick={() => navigate('PatientDetail', r.patientId)}>Chart</button>
                         </div>
@@ -223,8 +225,8 @@ export function MATManagement({ navigate, readOnly }: Props) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <LockedButton locked={readOnly} className="text-xs border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg font-medium">Start MAT Order</LockedButton>
-                    <LockedButton locked={readOnly} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Defer / Decline</LockedButton>
+                    <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg font-medium">Start MAT Order</LockedButton>
+                    <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Defer / Decline</LockedButton>
                   </div>
                 </div>
               </div>
@@ -242,7 +244,7 @@ export function MATManagement({ navigate, readOnly }: Props) {
                     </div>
                     <div className="text-xs text-slate">{p.program} · {p.primaryDiagnosis.split(' ').slice(0,4).join(' ')}</div>
                   </div>
-                  <LockedButton locked={readOnly} className="text-xs text-orange hover:underline">Evaluate for MAT</LockedButton>
+                  <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs text-orange hover:underline">Evaluate for MAT</LockedButton>
                 </div>
               ))}
             </div>
@@ -361,7 +363,7 @@ export function MATManagement({ navigate, readOnly }: Props) {
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setShowOrderModal(false)} className="flex-1 border border-border rounded-lg py-2 text-sm text-slate">Cancel</button>
-              <LockedButton locked={readOnly} onClick={() => setShowOrderModal(false)} className="flex-1 btn-primary text-sm py-2">Place MAT Order</LockedButton>
+              <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => setShowOrderModal(false)} className="flex-1 btn-primary text-sm py-2">Place MAT Order</LockedButton>
             </div>
           </div>
         </div>
