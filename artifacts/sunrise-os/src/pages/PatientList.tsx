@@ -5,8 +5,12 @@ import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 import { Screen } from '../App';
-import { Search, Plus, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle, TrendingUp, Users, Lock } from 'lucide-react';
+import { Search, Plus, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle, TrendingUp, Users, Lock, CalendarDays } from 'lucide-react';
 import { useRole } from '../context/RoleContext';
+
+const DEMO_BOOKING_URL =
+  import.meta.env.VITE_DEMO_BOOKING_URL ||
+  'mailto:demo@sunrisehealth.com?subject=Schedule%20a%20Live%20Demo';
 
 type SortField = 'name' | 'los' | 'acuity' | 'recovery' | 'craving' | 'program';
 type SortDir = 'asc' | 'desc';
@@ -483,6 +487,23 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
           </div>
         </div>
       )}
+
+      {/* Demo CTA strip */}
+      <div className="flex items-center justify-between gap-4 px-5 py-3 bg-violet-600 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2 text-violet-100 text-sm">
+          <CalendarDays className="w-4 h-4 shrink-0 opacity-80" />
+          <span>Exploring Sunrise? Talk to our team and see it live in your environment.</span>
+        </div>
+        <a
+          href={DEMO_BOOKING_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0 flex items-center gap-2 bg-white text-violet-700 hover:bg-violet-50 transition-colors text-sm font-semibold px-4 py-1.5 rounded shadow-sm"
+        >
+          <CalendarDays className="w-3.5 h-3.5" />
+          Schedule a live demo →
+        </a>
+      </div>
     </div>
   );
 }

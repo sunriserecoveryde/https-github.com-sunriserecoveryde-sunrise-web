@@ -2,8 +2,12 @@ import React from 'react';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { MetricCard } from '../components/ui/MetricCard';
 import { OccupancyRing } from '../components/ui/OccupancyRing';
-import { AlertTriangle, Clock, ChevronRight, UserPlus, FileText, Droplets, DollarSign, TrendingUp, BarChart3, Users } from 'lucide-react';
+import { AlertTriangle, Clock, ChevronRight, UserPlus, FileText, Droplets, DollarSign, TrendingUp, BarChart3, Users, CalendarDays } from 'lucide-react';
 import { Screen } from '../App';
+
+const DEMO_BOOKING_URL =
+  import.meta.env.VITE_DEMO_BOOKING_URL ||
+  'mailto:demo@sunrisehealth.com?subject=Schedule%20a%20Live%20Demo';
 import { FlagBadge } from '../components/ui/FlagBadge';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
@@ -681,6 +685,23 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
           </div>
         </>
       )}
+
+      {/* Demo CTA strip */}
+      <div className="flex items-center justify-between gap-4 px-5 py-3 bg-violet-600 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2 text-violet-100 text-sm">
+          <CalendarDays className="w-4 h-4 shrink-0 opacity-80" />
+          <span>Exploring Sunrise? Talk to our team and see it live in your environment.</span>
+        </div>
+        <a
+          href={DEMO_BOOKING_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0 flex items-center gap-2 bg-white text-violet-700 hover:bg-violet-50 transition-colors text-sm font-semibold px-4 py-1.5 rounded shadow-sm"
+        >
+          <CalendarDays className="w-3.5 h-3.5" />
+          Schedule a live demo →
+        </a>
+      </div>
     </div>
   );
 }
