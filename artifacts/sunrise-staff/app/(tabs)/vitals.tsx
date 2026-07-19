@@ -267,15 +267,30 @@ export default function VitalsScreen() {
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const { bannerDismissed, dismissBanner } = useWithdrawalFilters();
+  const { bannerDismissed, dismissBanner, scoreFilter, setScoreFilter } = useWithdrawalFilters();
 
   const residentialPatients = PATIENTS.filter(p => p.program === 'Residential');
-  const patientsWithScores = residentialPatients.filter(p =>
+  const allPatientsWithScores = residentialPatients.filter(p =>
     (p.cows != null && p.cows > 0) || (p.ciwa != null && p.ciwa > 0)
   );
   const patientsWithoutScores = residentialPatients.filter(p =>
     !(p.cows != null && p.cows > 0) && !(p.ciwa != null && p.ciwa > 0)
   );
+
+  const patientsWithScores = (() => {
+    switch (scoreFilter) {
+      case 'cows':
+        return allPatientsWithScores.filter(p => p.cows != null && p.cows > 0);
+      case 'ciwa':
+        return allPatientsWithScores.filter(p => p.ciwa != null && p.ciwa > 0);
+      case 'alerts':
+        return allPatientsWithScores.filter(p =>
+          (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
+        );
+      default:
+        return allPatientsWithScores;
+    }
+  })();
 
   const criticalCount = patientsWithScores.filter(p =>
     (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
@@ -312,6 +327,42 @@ export default function VitalsScreen() {
         </View>
       </View>
 
+      {/* Score filter bar */}
+      <View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        {([
+          { key: 'all', label: 'All' },
+          { key: 'cows', label: 'COWS Only' },
+          { key: 'ciwa', label: 'CIWA Only' },
+          { key: 'alerts', label: 'Alerts' },
+        ] as { key: typeof scoreFilter; label: string }[]).map(opt => {
+          const active = scoreFilter === opt.key;
+          return (
+            <Pressable
+              key={opt.key}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setScoreFilter(opt.key);
+              }}
+              style={[
+                styles.filterChip,
+                active
+                  ? { backgroundColor: colors.navy, borderColor: colors.navy }
+                  : { backgroundColor: colors.background, borderColor: colors.border },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  { color: active ? '#fff' : colors.mutedForeground },
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       {/* Alert banner — dismissable; cleared on shift handoff */}
       {criticalCount > 0 && !bannerDismissed && (
         <View style={[styles.alertBanner, { backgroundColor: '#FEF2F2', borderBottomColor: colors.critical }]}>
@@ -346,21 +397,26 @@ export default function VitalsScreen() {
         </View>
 
         {/* Patients with active scores */}
-        {patientsWithScores.length > 0 && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
-              ACTIVE WITHDRAWAL PROTOCOLS ({patientsWithScores.length})
-            </Text>
-            {patientsWithScores.map(p => (
-              <PatientScoreRow
-                key={p.id}
-                patient={p}
-                onPress={() => openModal(p)}
-                colors={colors}
-              />
-            ))}
-          </View>
-        )}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            ACTIVE WITHDRAWAL PROTOCOLS ({patientsWithScores.length}{scoreFilter !== 'all' ? ` of ${allPatientsWithScores.length}` : ''})
+          </Text>
+          {patientsWithScores.length > 0 ? patientsWithScores.map(p => (
+            <PatientScoreRow
+              key={p.id}
+              patient={p}
+              onPress={() => openModal(p)}
+              colors={colors}
+            />
+          )) : (
+            <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Ionicons name="checkmark-circle-outline" size={28} color={colors.success} />
+              <Text style={[styles.emptyStateText, { color: colors.mutedForeground }]}>
+                No patients match this filter
+              </Text>
+            </View>
+          )}
+        </View>
 
         {/* Patients without active WD scores */}
         {patientsWithoutScores.length > 0 && (
@@ -463,4 +519,18 @@ const styles = StyleSheet.create({
   vitalsCell: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   noteCard: { borderRadius: 10, padding: 14 },
   noteText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
+  filterBar: {
+    flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  filterChip: {
+    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
+    borderWidth: 1,
+  },
+  filterChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  emptyState: {
+    alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 28, borderRadius: 12, borderWidth: 1,
+  },
+  emptyStateText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
 });
