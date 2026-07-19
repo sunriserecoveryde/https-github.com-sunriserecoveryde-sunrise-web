@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useImperativeHandle, useCallback } from 'react';
 import {
   Alert,
   Animated,
@@ -170,19 +170,24 @@ const SWIPE_OPEN_THRESHOLD = 40;
 const DELETE_BTN_WIDTH = 80;
 const HINT_NUDGE = -28; // px to slide left for the discovery hint
 
-function SwipeableNoteRow({
-  children,
-  onDelete,
-  onLongPress,
-  playHint = false,
-}: {
-  children: React.ReactNode;
-  onDelete: () => void;
-  onLongPress: () => void;
-  playHint?: boolean;
-}) {
+interface SwipeableNoteRowHandle {
+  close: () => void;
+}
+
+const SwipeableNoteRow = React.forwardRef<
+  SwipeableNoteRowHandle,
+  {
+    children: React.ReactNode;
+    onDelete: () => void;
+    onLongPress: () => void;
+    onOpen: () => void;
+    playHint?: boolean;
+  }
+>(function SwipeableNoteRow({ children, onDelete, onLongPress, onOpen, playHint = false }, ref) {
   const translateX = useRef(new Animated.Value(0)).current;
   const isOpen = useRef(false);
+  const onOpenRef = useRef(onOpen);
+  onOpenRef.current = onOpen;
 
   // One-time left-nudge hint so nurses discover the swipe gesture
   useEffect(() => {
@@ -206,7 +211,7 @@ function SwipeableNoteRow({
     return () => clearTimeout(delay);
   }, [playHint]);
 
-  const snapTo = (toValue: number, cb?: () => void) => {
+  const snapTo = useCallback((toValue: number, cb?: () => void) => {
     Animated.spring(translateX, {
       toValue,
       useNativeDriver: true,
@@ -214,7 +219,9 @@ function SwipeableNoteRow({
       stiffness: 220,
     }).start(cb);
     isOpen.current = toValue !== 0;
-  };
+  }, [translateX]);
+
+  useImperativeHandle(ref, () => ({ close: () => snapTo(0) }), [snapTo]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -229,6 +236,7 @@ function SwipeableNoteRow({
         const currentX = isOpen.current ? gs.dx - DELETE_BTN_WIDTH : gs.dx;
         if (currentX < -SWIPE_OPEN_THRESHOLD) {
           snapTo(-DELETE_BTN_WIDTH);
+          onOpenRef.current();
         } else {
           snapTo(0);
         }
@@ -269,7 +277,7 @@ function SwipeableNoteRow({
       </Animated.View>
     </View>
   );
-}
+});
 
 const sw = StyleSheet.create({
   wrapper: { overflow: 'hidden', borderRadius: 12, marginBottom: 8 },
@@ -305,6 +313,23 @@ export default function PatientDetailScreen() {
 
   // ─── Swipe hint (runs once per session when notes exist) ──────────────────
   const swipeHintShown = useRef(false);
+
+  // ─── Swipe-to-delete: one-row-at-a-time + tap-outside-to-close ───────────
+  const openRowRef = useRef<SwipeableNoteRowHandle | null>(null);
+  const rowRefsMap = useRef<Map<string, SwipeableNoteRowHandle>>(new Map());
+
+  const handleRowOpen = useCallback((noteId: string) => {
+    // Close the previously open row (if different)
+    const prev = openRowRef.current;
+    const next = rowRefsMap.current.get(noteId) ?? null;
+    if (prev && prev !== next) prev.close();
+    openRowRef.current = next;
+  }, []);
+
+  const closeOpenRow = useCallback(() => {
+    openRowRef.current?.close();
+    openRowRef.current = null;
+  }, []);
 
   // ─── Undo-delete toast ─────────────────────────────────────────────────────
   const [pendingDelete, setPendingDelete] = useState<{
@@ -538,7 +563,14 @@ export default function PatientDetailScreen() {
   };
 
   return (
-    <View style={[s.container, { backgroundColor: colors.background }]}>
+    <View
+      style={[s.container, { backgroundColor: colors.background }]}
+      onStartShouldSetResponderCapture={() => {
+        // Close any open swipe-delete row on every touch, then let the event pass through
+        if (openRowRef.current) closeOpenRow();
+        return false;
+      }}
+    >
       {/* ─── Header ─── */}
       <View style={[s.header, { backgroundColor: colors.navy, paddingTop: topPad }]}>
         <View style={s.headerRow}>
@@ -996,9 +1028,14 @@ export default function PatientDetailScreen() {
             return (
               <SwipeableNoteRow
                 key={note.id}
-                onDelete={() => handleDeleteNote(note, index)}
+                ref={(r) => {
+                  if (r) rowRefsMap.current.set(note.id, r);
+                  else rowRefsMap.current.delete(note.id);
+                }}
+                onDelete={() => { handleDeleteNote(note, index); closeOpenRow(); }}
                 onLongPress={handleLongPress}
                 playHint={shouldPlayHint}
+                onOpen={() => handleRowOpen(note.id)}
               >
                 <View
                   style={[
