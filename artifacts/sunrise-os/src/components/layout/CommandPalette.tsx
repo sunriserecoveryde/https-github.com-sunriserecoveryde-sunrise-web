@@ -98,6 +98,19 @@ let _lastDemoNudge: string | null = (() => {
   try { return sessionStorage.getItem(DEMO_NUDGE_KEY) ?? null; } catch { return null; }
 })();
 
+// Persists the last few demo search queries for the session so buyers can
+// quickly jump back to a recent one. Cleared on page reload.
+const _recentDemoQueries: string[] = [];
+
+function addRecentDemoQuery(q: string) {
+  const trimmed = q.trim();
+  if (!trimmed) return;
+  const idx = _recentDemoQueries.indexOf(trimmed);
+  if (idx !== -1) _recentDemoQueries.splice(idx, 1);
+  _recentDemoQueries.unshift(trimmed);
+  if (_recentDemoQueries.length > 3) _recentDemoQueries.length = 3;
+}
+
 export function CommandPalette({ onClose, navigate }: Props) {
   const [query, setQuery] = useState(_lastQuery);
   const [selected, setSelected] = useState(0);
@@ -220,7 +233,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
             <input
               ref={demoInputRef}
               value={demoQuery}
-              onChange={e => updateDemoQuery(e.target.value)}
+              onChange={e => { updateDemoQuery(e.target.value); addRecentDemoQuery(e.target.value); }}
               placeholder="Search demo patients by name, MRN, diagnosis, or program…"
               className="flex-1 text-sm focus:outline-none text-navy placeholder:text-slate"
             />
@@ -257,6 +270,21 @@ export function CommandPalette({ onClose, navigate }: Props) {
                 <span className="text-xs font-semibold text-slate uppercase tracking-wide">
                   {DEMO_PATIENTS.length} anonymized patients · try searching by name, diagnosis, or program
                 </span>
+                {_recentDemoQueries.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                    <span className="text-[10px] text-slate uppercase tracking-wide font-semibold">Recent:</span>
+                    {_recentDemoQueries.map(q => (
+                      <button
+                        key={q}
+                        onClick={() => { setDemoQuery(q); setDemoNudge(null); }}
+                        className="flex items-center gap-1 text-[11px] font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-full px-2.5 py-0.5 transition-colors"
+                      >
+                        <Search className="w-2.5 h-2.5" />
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {demoResults.length === 0 && (
