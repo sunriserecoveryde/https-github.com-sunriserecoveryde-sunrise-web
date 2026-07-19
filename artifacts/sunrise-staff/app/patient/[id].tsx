@@ -148,6 +148,86 @@ function getScoreStyle(score: number, threshold: number, colors: ReturnType<type
   return { bg: colors.successBg, text: colors.success };
 }
 
+// ─── Word-level diff ──────────────────────────────────────────────────────────
+
+type DiffToken = { type: 'equal' | 'remove' | 'add'; text: string };
+
+function wordDiff(oldText: string, newText: string): DiffToken[] {
+  const oldWords = oldText.split(/\s+/).filter(Boolean);
+  const newWords = newText.split(/\s+/).filter(Boolean);
+  const m = oldWords.length;
+  const n = newWords.length;
+
+  // Build LCS table
+  const dp: number[][] = [];
+  for (let i = 0; i <= m; i++) {
+    dp[i] = new Array(n + 1).fill(0);
+  }
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (oldWords[i - 1] === newWords[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  // Backtrack to produce tokens
+  const tokens: DiffToken[] = [];
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldWords[i - 1] === newWords[j - 1]) {
+      tokens.unshift({ type: 'equal', text: oldWords[i - 1] });
+      i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      tokens.unshift({ type: 'add', text: newWords[j - 1] });
+      j--;
+    } else {
+      tokens.unshift({ type: 'remove', text: oldWords[i - 1] });
+      i--;
+    }
+  }
+  return tokens;
+}
+
+function DiffText({
+  tokens,
+  baseStyle,
+}: {
+  tokens: DiffToken[];
+  baseStyle?: object;
+}) {
+  return (
+    <Text style={baseStyle}>
+      {tokens.map((token, idx) => {
+        const spacer = idx < tokens.length - 1 ? ' ' : '';
+        if (token.type === 'remove') {
+          return (
+            <Text
+              key={idx}
+              style={{ color: '#C53030', textDecorationLine: 'line-through' }}
+            >
+              {token.text}{spacer}
+            </Text>
+          );
+        }
+        if (token.type === 'add') {
+          return (
+            <Text
+              key={idx}
+              style={{ color: '#276749', textDecorationLine: 'underline' }}
+            >
+              {token.text}{spacer}
+            </Text>
+          );
+        }
+        return <Text key={idx}>{token.text}{spacer}</Text>;
+      })}
+    </Text>
+  );
+}
+
 // ─── Section components ───────────────────────────────────────────────────────
 
 function SectionTitle({ title, colors }: { title: string; colors: ReturnType<typeof useColors> }) {
@@ -1052,8 +1132,8 @@ export default function PatientDetailScreen() {
                       <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
                       {note.history && note.history.length > 0 && (() => {
                         const isExpanded = expandedEditId === note.id;
-                        const lastEdit = note.history[note.history.length - 1];
-                        const editTime = new Date(lastEdit.savedAt).toLocaleTimeString([], {
+                        const lastHistory = note.history[note.history.length - 1];
+                        const editTime = new Date(lastHistory.savedAt).toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit',
                           hour12: true,
@@ -1068,8 +1148,8 @@ export default function PatientDetailScreen() {
                             <Ionicons name="pencil-outline" size={10} color={isExpanded ? colors.blue : colors.mutedForeground} />
                             <Text style={[s.editedTagText, { color: isExpanded ? colors.blue : colors.mutedForeground }]}>
                               {isExpanded
-                                ? lastEdit.editedBy
-                                  ? `Edited by ${lastEdit.editedBy} at ${editTime}`
+                                ? lastHistory.editedBy
+                                  ? `Edited by ${lastHistory.editedBy} at ${editTime}`
                                   : `Edited at ${editTime}`
                                 : 'Edited'}
                             </Text>
@@ -1155,41 +1235,68 @@ export default function PatientDetailScreen() {
 
             {/* Prior versions — oldest first */}
             <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
-              {[...historyEntries].reverse().map((entry, i) => {
-                const tc = (() => {
-                  switch (entry.noteType) {
-                    case 'observation': return { bg: colors.routineBg,  text: colors.blue };
-                    case 'med-update':  return { bg: colors.moderateBg, text: colors.moderate };
-                    case 'incident':    return { bg: colors.criticalBg, text: colors.critical };
-                  }
-                })();
-                const isOldest = i === historyEntries.length - 1;
-                return (
-                  <View
-                    key={i}
-                    style={[
-                      s.historyEntry,
-                      { borderColor: colors.border, backgroundColor: colors.muted },
-                      i < historyEntries.length - 1 && { marginBottom: 8 },
-                    ]}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <View style={[s.noteTypeBadge, { backgroundColor: tc.bg, borderColor: tc.text }]}>
-                        <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{entry.noteType}</Text>
+              {(() => {
+                const reversed = [...historyEntries].reverse();
+                return reversed.map((entry, i) => {
+                  const tc = (() => {
+                    switch (entry.noteType) {
+                      case 'observation': return { bg: colors.routineBg,  text: colors.blue };
+                      case 'med-update':  return { bg: colors.moderateBg, text: colors.moderate };
+                      case 'incident':    return { bg: colors.criticalBg, text: colors.critical };
+                    }
+                  })();
+                  // reversed is newest-first: reversed[0]=most-recent-prior, reversed[N-1]=original
+                  const isOldest = i === reversed.length - 1;
+                  // Diff this version against the version that came after it chronologically.
+                  // The next newer version is at a lower index in the reversed array.
+                  // For the most-recent prior version (i===0), diff against current text.
+                  const nextText = i > 0 ? reversed[i - 1].text : historyNoteText;
+                  const diffTokens = wordDiff(entry.text, nextText);
+                  const hasDiff = diffTokens.some(t => t.type !== 'equal');
+                  return (
+                    <View
+                      key={i}
+                      style={[
+                        s.historyEntry,
+                        { borderColor: colors.border, backgroundColor: colors.muted },
+                        i < reversed.length - 1 && { marginBottom: 8 },
+                      ]}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                        <View style={[s.noteTypeBadge, { backgroundColor: tc.bg, borderColor: tc.text }]}>
+                          <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{entry.noteType}</Text>
+                        </View>
+                        <Text style={[s.historyTimestamp, { color: colors.mutedForeground }]}>
+                          {isOldest ? 'Original · ' : 'Version · '}{formatHistoryTimestamp(entry.savedAt)}
+                        </Text>
                       </View>
-                      <Text style={[s.historyTimestamp, { color: colors.mutedForeground }]}>
-                        {isOldest ? 'Original · ' : 'Version · '}{formatHistoryTimestamp(entry.savedAt)}
-                      </Text>
+                      {hasDiff ? (
+                        <DiffText
+                          tokens={diffTokens}
+                          baseStyle={[s.historyEntryText, { color: colors.navy }]}
+                        />
+                      ) : (
+                        <Text style={[s.historyEntryText, { color: colors.navy }]}>{entry.text}</Text>
+                      )}
+                      {hasDiff && (
+                        <View style={s.diffLegend}>
+                          <View style={s.diffLegendItem}>
+                            <Text style={s.diffLegendRemoved}>removed</Text>
+                          </View>
+                          <View style={s.diffLegendItem}>
+                            <Text style={s.diffLegendAdded}>added in next</Text>
+                          </View>
+                        </View>
+                      )}
+                      {entry.editedBy ? (
+                        <Text style={[s.historyByLine, { color: colors.mutedForeground }]}>
+                          Edited by {entry.editedBy} at {formatHistoryTimestamp(entry.savedAt)}
+                        </Text>
+                      ) : null}
                     </View>
-                    {entry.editedBy ? (
-                      <Text style={[s.historyByLine, { color: colors.mutedForeground }]}>
-                        Edited by {entry.editedBy} at {formatHistoryTimestamp(entry.savedAt)}
-                      </Text>
-                    ) : null}
-                    <Text style={[s.historyEntryText, { color: colors.navy }]}>{entry.text}</Text>
-                  </View>
-                );
-              })}
+                  );
+                });
+              })()}
 
               {/* Current version */}
               <View style={[s.historyEntry, { borderColor: colors.navy, backgroundColor: colors.card, borderWidth: 1.5 }]}>
@@ -1424,4 +1531,9 @@ const s = StyleSheet.create({
   historyByLine: { fontSize: 10, fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginBottom: 4 },
   historyCurrentBadge: { borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 },
   historyCurrentBadgeText: { fontSize: 10, fontFamily: 'Inter_700Bold', fontWeight: '700', color: '#fff' },
+  // Diff legend
+  diffLegend: { flexDirection: 'row', gap: 10, marginTop: 6 },
+  diffLegendItem: { flexDirection: 'row', alignItems: 'center' },
+  diffLegendRemoved: { fontSize: 10, fontFamily: 'Inter_400Regular', color: '#C53030', textDecorationLine: 'line-through' },
+  diffLegendAdded: { fontSize: 10, fontFamily: 'Inter_400Regular', color: '#276749', textDecorationLine: 'underline' },
 });
