@@ -23,6 +23,7 @@ import { useRole } from '@/context/RoleContext';
 import { usePatients } from '@/context/PatientContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
 import { useNursingNotes } from '@/context/NursingNotesContext';
+import { useCensusFilters } from '@/context/CensusFiltersContext';
 import {
   BEDS,
   VITALS,
@@ -33,6 +34,9 @@ import {
 
 type NoteFilter = 'observation' | 'med-update' | 'incident';
 type AcuityFilter = 'All' | Acuity | 'Available';
+// NoteFilter and AcuityFilter are also exported from CensusFiltersContext — keep local
+// definitions so the rest of this file stays self-contained (the context's types are
+// structurally identical; TypeScript will accept them interchangeably).
 
 const ACUITY_FILTERS: AcuityFilter[] = ['All', 'Critical', 'High', 'Moderate', 'Routine', 'Available'];
 const NOTE_TYPE_FILTERS: { value: NoteFilter; label: string }[] = [
@@ -596,8 +600,7 @@ export default function CensusScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
-  const [acuityFilter, setAcuityFilter] = useState<AcuityFilter>('All');
-  const [noteFilter, setNoteFilter] = useState<NoteFilter | null>(null);
+  const { acuityFilter, setAcuityFilter, noteFilter, setNoteFilter, resetFilters } = useCensusFilters();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [admitVisible, setAdmitVisible] = useState(false);
   const [shiftEndedToast, setShiftEndedToast] = useState(false);
@@ -719,8 +722,7 @@ export default function CensusScreen() {
                         clearNotes();
                         clearAcknowledgments();
                         setBannerDismissed(false);
-                        setAcuityFilter('All');
-                        setNoteFilter(null);
+                        resetFilters();
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         // Show toast confirmation with slide-up entrance and fade-out exit
                         if (shiftEndedTimer.current) clearTimeout(shiftEndedTimer.current);
@@ -814,7 +816,7 @@ export default function CensusScreen() {
                   setAcuityFilter('All');
                   setNoteFilter(null);
                 } else {
-                  setAcuityFilter(prev => prev === f ? 'All' : f);
+                  setAcuityFilter(acuityFilter === f ? 'All' : f);
                 }
               }}
             >
@@ -835,7 +837,7 @@ export default function CensusScreen() {
                 isActive && { backgroundColor: colors.orange },
                 isZero && !isActive && { opacity: 0.45 },
               ]}
-              onPress={() => { Haptics.selectionAsync(); setNoteFilter(prev => prev === value ? null : value); }}
+              onPress={() => { Haptics.selectionAsync(); setNoteFilter(noteFilter === value ? null : value); }}
             >
               <Ionicons
                 name="document-text-outline"
