@@ -540,6 +540,7 @@ export default function CensusScreen() {
   const hasFiredHaptic = useRef(false);
 
   const { patients, bedStatusMap } = usePatients();
+  const { clearNotes } = useNursingNotes();
   const residentialPatients = patients.filter(p => p.bed != null);
 
   // Build bed lists from live data
@@ -587,6 +588,30 @@ export default function CensusScreen() {
             >
               <Ionicons name="person-add-outline" size={14} color="#fff" />
               <Text style={styles.admitBtnText}>Admit</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.admitBtn, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                Alert.alert(
+                  'End Shift',
+                  "This will clear all notes you've added this shift. The next nurse will start fresh.",
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'End Shift',
+                      style: 'destructive',
+                      onPress: () => {
+                        clearNotes();
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      },
+                    },
+                  ],
+                );
+              }}
+            >
+              <Ionicons name="log-out-outline" size={14} color="#fff" />
+              <Text style={styles.admitBtnText}>End Shift</Text>
             </Pressable>
             <RoleToggle />
           </View>
