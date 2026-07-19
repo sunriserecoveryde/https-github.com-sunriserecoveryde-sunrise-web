@@ -4,9 +4,11 @@ import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { FlagBadge } from '../components/ui/FlagBadge';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
+import { getPatientVitals } from '../data/mockVitals';
+import { getPatientMedications } from '../data/mockMedications';
 import {
   ArrowLeft, Activity, FileText, CheckCircle2, FlaskConical,
-  AlertCircle, Clock, Shield, CalendarDays,
+  AlertCircle, Clock, Shield, CalendarDays, Heart, Pill,
 } from 'lucide-react';
 import { Screen } from '../App';
 
@@ -32,11 +34,16 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
     navigate('DemoPatientDetail', id);
   }
 
+  const vitals = getPatientVitals(patient.id);
+  const medications = getPatientMedications(patient.id);
+
   const tabs = [
     { id: 'Overview',         icon: <Activity className="w-3.5 h-3.5" /> },
     { id: 'ASAM Assessment',  icon: <FileText className="w-3.5 h-3.5" /> },
     { id: 'Progress Notes',   icon: <FileText className="w-3.5 h-3.5" /> },
     { id: 'Treatment Plan',   icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+    { id: 'Vitals',           icon: <Heart className="w-3.5 h-3.5" /> },
+    { id: 'Medications',      icon: <Pill className="w-3.5 h-3.5" /> },
   ];
 
   // ASAM dimension labels
@@ -425,6 +432,213 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
             <div className="mt-4 flex items-center gap-2.5 bg-violet-50 border border-violet-200 rounded-lg px-4 py-3 text-sm text-violet-700">
               <FlaskConical className="w-4 h-4 shrink-0" />
               <span>Goal creation, editing, and status updates are disabled in demo mode. Counselors can manage the full MTP in a live environment.</span>
+            </div>
+          </div>
+        )}
+
+        {/* ── VITALS ── */}
+        {activeTab === 'Vitals' && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-bold text-navy flex items-center gap-2">
+                <Heart className="w-5 h-5 text-sunrise-blue" /> Vital Signs &amp; Withdrawal Scores
+              </h2>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-bg border-b border-border text-xs font-semibold text-slate uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left">Date</th>
+                    <th className="px-3 py-3 text-left">Time</th>
+                    <th className="px-3 py-3 text-left">BP</th>
+                    <th className="px-3 py-3 text-center">HR</th>
+                    <th className="px-3 py-3 text-center">Temp (°F)</th>
+                    <th className="px-3 py-3 text-center">O₂ Sat</th>
+                    <th className="px-3 py-3 text-center">RR</th>
+                    <th className="px-3 py-3 text-center">Wt (lb)</th>
+                    <th className="px-3 py-3 text-center">COWS</th>
+                    <th className="px-3 py-3 text-center">CIWA</th>
+                    <th className="px-3 py-3 text-center">Pain</th>
+                    <th className="px-3 py-3 text-left">Recorded By</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {vitals.map((v, i) => (
+                    <tr key={v.id} className={i % 2 === 0 ? 'bg-white' : 'bg-bg'}>
+                      <td className="px-3 py-3 font-medium text-navy whitespace-nowrap">{v.date}</td>
+                      <td className="px-3 py-3 text-slate whitespace-nowrap">{v.time}</td>
+                      <td className="px-3 py-3 font-semibold text-navy whitespace-nowrap">{v.bp}</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`font-semibold ${v.hr > 100 ? 'text-critical' : v.hr > 90 ? 'text-sunrise-amber' : 'text-navy'}`}>{v.hr}</span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`font-semibold ${v.temp > 100 ? 'text-critical' : v.temp > 99 ? 'text-sunrise-amber' : 'text-navy'}`}>{v.temp.toFixed(1)}</span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`font-semibold ${v.o2 < 95 ? 'text-critical' : v.o2 < 97 ? 'text-sunrise-amber' : 'text-success'}`}>{v.o2}%</span>
+                      </td>
+                      <td className="px-3 py-3 text-center text-navy">{v.rr}</td>
+                      <td className="px-3 py-3 text-center text-slate">{v.weight ?? '—'}</td>
+                      <td className="px-3 py-3 text-center">
+                        {v.cows != null ? (
+                          <span className={`inline-flex items-center justify-center w-8 h-6 rounded text-xs font-bold text-white ${v.cows >= 25 ? 'bg-critical' : v.cows >= 13 ? 'bg-sunrise-amber' : v.cows >= 5 ? 'bg-sunrise-blue' : 'bg-success'}`}>
+                            {v.cows}
+                          </span>
+                        ) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        {v.ciwa != null ? (
+                          <span className={`inline-flex items-center justify-center w-8 h-6 rounded text-xs font-bold text-white ${v.ciwa >= 15 ? 'bg-critical' : v.ciwa >= 8 ? 'bg-sunrise-amber' : v.ciwa >= 1 ? 'bg-sunrise-blue' : 'bg-success'}`}>
+                            {v.ciwa}
+                          </span>
+                        ) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`font-semibold ${v.pain >= 7 ? 'text-critical' : v.pain >= 4 ? 'text-sunrise-amber' : 'text-success'}`}>{v.pain}/10</span>
+                      </td>
+                      <td className="px-3 py-3 text-slate whitespace-nowrap">{v.recordedBy}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Score legend */}
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div className="bg-bg border border-border rounded-lg p-3">
+                <div className="text-xs font-bold text-navy mb-2">COWS Score (Opioid Withdrawal)</div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {[
+                    { label: '0–4 Mild', color: 'bg-success' },
+                    { label: '5–12 Moderate', color: 'bg-sunrise-blue' },
+                    { label: '13–24 Mod-Severe', color: 'bg-sunrise-amber' },
+                    { label: '25+ Severe', color: 'bg-critical' },
+                  ].map(s => (
+                    <span key={s.label} className="flex items-center gap-1.5">
+                      <span className={`w-2.5 h-2.5 rounded-sm ${s.color}`} />
+                      <span className="text-slate">{s.label}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-bg border border-border rounded-lg p-3">
+                <div className="text-xs font-bold text-navy mb-2">CIWA Score (Alcohol Withdrawal)</div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {[
+                    { label: '0 None', color: 'bg-success' },
+                    { label: '1–7 Mild', color: 'bg-sunrise-blue' },
+                    { label: '8–14 Moderate', color: 'bg-sunrise-amber' },
+                    { label: '15+ Severe', color: 'bg-critical' },
+                  ].map(s => (
+                    <span key={s.label} className="flex items-center gap-1.5">
+                      <span className={`w-2.5 h-2.5 rounded-sm ${s.color}`} />
+                      <span className="text-slate">{s.label}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2.5 bg-violet-50 border border-violet-200 rounded-lg px-4 py-3 text-sm text-violet-700">
+              <FlaskConical className="w-4 h-4 shrink-0" />
+              <span>Vital signs are read-only in demo mode. Nurses can enter and trend vitals in a live environment.</span>
+            </div>
+          </div>
+        )}
+
+        {/* ── MEDICATIONS ── */}
+        {activeTab === 'Medications' && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-bold text-navy flex items-center gap-2">
+                <Pill className="w-5 h-5 text-sunrise-blue" /> Medication Administration Record
+              </h2>
+            </div>
+
+            {/* Group by class */}
+            {(['MAT', 'Psychiatric', 'Medical', 'PRN'] as const).map(cls => {
+              const meds = medications.filter(m => m.class === cls);
+              if (meds.length === 0) return null;
+              const clsColors: Record<string, string> = {
+                MAT: 'bg-sunrise-blue/10 text-sunrise-blue border-sunrise-blue/20',
+                Psychiatric: 'bg-violet-50 text-violet-700 border-violet-200',
+                Medical: 'bg-success/10 text-success border-success/20',
+                PRN: 'bg-sunrise-amber/10 text-sunrise-amber border-sunrise-amber/20',
+              };
+              const clsLabels: Record<string, string> = {
+                MAT: 'MAT — Medication-Assisted Treatment',
+                Psychiatric: 'Psychiatric',
+                Medical: 'Medical / Supportive',
+                PRN: 'PRN (As Needed)',
+              };
+              return (
+                <div key={cls} className="mb-6">
+                  <div className={`inline-flex items-center gap-2 text-xs font-bold px-3 py-1 rounded-full border mb-3 ${clsColors[cls]}`}>
+                    {clsLabels[cls]}
+                  </div>
+                  <div className="space-y-3">
+                    {meds.map(med => (
+                      <div
+                        key={med.id}
+                        className={`border border-border rounded-lg overflow-hidden ${med.status === 'Discontinued' ? 'opacity-60' : ''}`}
+                      >
+                        <div className="bg-bg px-4 py-3 border-b border-border flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-navy">{med.name}</span>
+                              {med.genericName && (
+                                <span className="text-xs text-slate font-medium">({med.genericName})</span>
+                              )}
+                              <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                med.status === 'Active' ? 'bg-success/10 text-success' :
+                                med.status === 'On Hold' ? 'bg-sunrise-amber/10 text-sunrise-amber' :
+                                'bg-slate-100 text-slate line-through'
+                              }`}>
+                                {med.status}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate mt-0.5">{med.indication}</div>
+                          </div>
+                          <div className="text-xs text-slate text-right shrink-0 ml-4">
+                            <div>Start: {med.startDate}</div>
+                            {med.dcDate && <div className="text-critical">DC: {med.dcDate}</div>}
+                          </div>
+                        </div>
+                        <div className="px-4 py-3 flex flex-wrap gap-6 text-sm">
+                          <div>
+                            <div className="text-xs font-semibold text-slate uppercase tracking-wider mb-0.5">Dose</div>
+                            <div className="font-medium text-navy">{med.dose}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-slate uppercase tracking-wider mb-0.5">Route</div>
+                            <div className="font-medium text-navy">{med.route}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-slate uppercase tracking-wider mb-0.5">Frequency</div>
+                            <div className="font-medium text-navy">{med.frequency}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-slate uppercase tracking-wider mb-0.5">Prescriber</div>
+                            <div className="font-medium text-navy">{med.prescriber}</div>
+                          </div>
+                          {med.dcReason && (
+                            <div className="w-full">
+                              <div className="text-xs font-semibold text-slate uppercase tracking-wider mb-0.5">DC Reason</div>
+                              <div className="text-sm text-slate italic">{med.dcReason}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="flex items-center gap-2.5 bg-violet-50 border border-violet-200 rounded-lg px-4 py-3 text-sm text-violet-700">
+              <FlaskConical className="w-4 h-4 shrink-0" />
+              <span>Medications are read-only in demo mode. Prescribers can order, discontinue, and administer medications in a live environment.</span>
             </div>
           </div>
         )}
