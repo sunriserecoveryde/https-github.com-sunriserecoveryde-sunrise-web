@@ -584,6 +584,7 @@ export default function CensusScreen() {
   // ─── Live census data from context ────────────────────────────────────────
   const { patients, bedStatusMap } = usePatients();
   const { clearNotes } = useNursingNotes();
+  const { clearAcknowledgments } = useMdAcknowledgment();
   const residentialPatients = patients.filter(p => p.bed != null);
 
   // Build bed lists from live context data
@@ -663,6 +664,7 @@ export default function CensusScreen() {
                       style: 'destructive',
                       onPress: () => {
                         clearNotes();
+                        clearAcknowledgments();
                         setBannerDismissed(false);
                         setFilter('All');
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
