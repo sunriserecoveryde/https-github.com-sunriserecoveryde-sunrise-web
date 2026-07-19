@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useImperativeHandle, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Alert,
   Animated,
@@ -378,6 +379,8 @@ const sw = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
+const SWIPE_HINT_KEY = 'swipeHintShown';
+
 export default function PatientDetailScreen() {
   const { id, scrollTo } = useLocalSearchParams<{ id: string; scrollTo?: string }>();
   const router = useRouter();
@@ -406,8 +409,22 @@ export default function PatientDetailScreen() {
     return () => clearTimeout(timer);
   }, [scrollTo]);
 
-  // ─── Swipe hint (runs once per session when notes exist) ──────────────────
+  // ─── Swipe hint (runs once ever, persisted across app restarts) ───────────
+  // `swipeHintReady` is true only after AsyncStorage confirms the hint has never been shown.
+  // `swipeHintShown` is a ref used as an in-render guard so only the first row plays the hint.
+  const [swipeHintReady, setSwipeHintReady] = useState(false);
   const swipeHintShown = useRef(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SWIPE_HINT_KEY)
+      .then(val => {
+        if (!val) {
+          // Flag has never been written — allow the hint to play once.
+          setSwipeHintReady(true);
+        }
+      })
+      .catch(() => {/* fail silently; hint simply won't show */});
+  }, []);
 
   // ─── Swipe-to-delete: one-row-at-a-time + tap-outside-to-close ───────────
   const openRowRef = useRef<SwipeableNoteRowHandle | null>(null);
@@ -1230,9 +1247,12 @@ export default function PatientDetailScreen() {
                 ],
               );
             };
-            // Only the very first note gets the hint, and only once per session
-            const shouldPlayHint = index === 0 && !swipeHintShown.current;
-            if (shouldPlayHint) swipeHintShown.current = true;
+            // Only the very first note gets the hint, and only once ever (persisted via AsyncStorage)
+            const shouldPlayHint = index === 0 && swipeHintReady && !swipeHintShown.current;
+            if (shouldPlayHint) {
+              swipeHintShown.current = true; // in-render guard: prevent other rows from also playing
+              AsyncStorage.setItem(SWIPE_HINT_KEY, 'true').catch(() => {});
+            }
 
             return (
               <SwipeableNoteRow
