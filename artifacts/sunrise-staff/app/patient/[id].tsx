@@ -171,9 +171,27 @@ export default function PatientDetailScreen() {
   const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
 
   // ─── Add Note state ────────────────────────────────────────────────────────
+  type NoteType = 'observation' | 'med-update' | 'incident';
+  interface SessionNote { text: string; type: NoteType }
+
+  const NOTE_TYPES: { value: NoteType; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+    { value: 'observation', label: 'Observation', icon: 'eye-outline' },
+    { value: 'med-update',  label: 'Med Update',  icon: 'medkit-outline' },
+    { value: 'incident',    label: 'Incident',    icon: 'warning-outline' },
+  ];
+
+  const noteTypeColor = (type: NoteType) => {
+    switch (type) {
+      case 'observation': return { bg: colors.routineBg,  text: colors.blue };
+      case 'med-update':  return { bg: colors.moderateBg, text: colors.moderate };
+      case 'incident':    return { bg: colors.criticalBg, text: colors.critical };
+    }
+  };
+
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [noteText, setNoteText] = useState('');
-  const [sessionNotes, setSessionNotes] = useState<string[]>([]);
+  const [noteType, setNoteType] = useState<NoteType>('observation');
+  const [sessionNotes, setSessionNotes] = useState<SessionNote[]>([]);
   const slideAnim = useRef(new Animated.Value(400)).current;
 
   const openNoteModal = () => {
@@ -195,13 +213,14 @@ export default function PatientDetailScreen() {
     }).start(() => {
       setNoteModalVisible(false);
       setNoteText('');
+      setNoteType('observation');
     });
   };
 
   const submitNote = () => {
     const trimmed = noteText.trim();
     if (!trimmed) return;
-    setSessionNotes(prev => [trimmed, ...prev]);
+    setSessionNotes(prev => [{ text: trimmed, type: noteType }, ...prev]);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     closeNoteModal();
   };
@@ -335,6 +354,36 @@ export default function PatientDetailScreen() {
             <Text style={[s.sheetPatientName, { color: colors.mutedForeground }]}>
               {patient.firstName} {patient.lastName} · {patient.bed ?? patient.program}
             </Text>
+
+            {/* Note type selector */}
+            <View style={s.noteTypeRow}>
+              {NOTE_TYPES.map(nt => {
+                const selected = noteType === nt.value;
+                const tc = noteTypeColor(nt.value);
+                return (
+                  <Pressable
+                    key={nt.value}
+                    onPress={() => {
+                      setNoteType(nt.value);
+                      Haptics.selectionAsync();
+                    }}
+                    style={[
+                      s.noteTypeBtn,
+                      {
+                        backgroundColor: selected ? tc.bg : colors.muted,
+                        borderColor: selected ? tc.text : colors.border,
+                        borderWidth: selected ? 1.5 : StyleSheet.hairlineWidth,
+                      },
+                    ]}
+                  >
+                    <Ionicons name={nt.icon} size={13} color={selected ? tc.text : colors.mutedForeground} />
+                    <Text style={[s.noteTypeBtnText, { color: selected ? tc.text : colors.mutedForeground, fontFamily: selected ? 'Inter_700Bold' : 'Inter_400Regular' }]}>
+                      {nt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
             <TextInput
               style={[
@@ -607,15 +656,22 @@ export default function PatientDetailScreen() {
           </View>
 
           {/* Session notes (prepended, most recent first) */}
-          {sessionNotes.map((note, i) => (
-            <View key={i} style={[s.sessionNote, { backgroundColor: colors.successBg, borderColor: colors.success }]}>
-              <View style={s.sessionNoteHeader}>
-                <Ionicons name="create-outline" size={13} color={colors.success} />
-                <Text style={[s.sessionNoteLabel, { color: colors.success }]}>Added this session</Text>
+          {sessionNotes.map((note, i) => {
+            const tc = noteTypeColor(note.type);
+            const nt = NOTE_TYPES.find(x => x.value === note.type)!;
+            return (
+              <View key={i} style={[s.sessionNote, { backgroundColor: tc.bg, borderColor: tc.text }]}>
+                <View style={s.sessionNoteHeader}>
+                  <View style={[s.noteTypeBadge, { backgroundColor: tc.bg, borderColor: tc.text }]}>
+                    <Ionicons name={nt.icon} size={11} color={tc.text} />
+                    <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{nt.label}</Text>
+                  </View>
+                  <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session</Text>
+                </View>
+                <Text style={[s.sessionNoteText, { color: colors.navy }]}>{note.text}</Text>
               </View>
-              <Text style={[s.sessionNoteText, { color: colors.navy }]}>{note}</Text>
-            </View>
-          ))}
+            );
+          })}
 
           {/* Original handoff note */}
           {patient.handoffNote ? (
@@ -817,4 +873,11 @@ const s = StyleSheet.create({
   noteInput: { borderRadius: 10, borderWidth: 1, padding: 12, fontSize: 15, fontFamily: 'Inter_400Regular', minHeight: 120, marginBottom: 14 },
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, padding: 14 },
   submitBtnText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
+  // Note type selector
+  noteTypeRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  noteTypeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 8, paddingVertical: 8 },
+  noteTypeBtnText: { fontSize: 12 },
+  // Note type badge (on submitted notes)
+  noteTypeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1 },
+  noteTypeBadgeText: { fontSize: 11, fontFamily: 'Inter_700Bold', fontWeight: '700' },
 });
