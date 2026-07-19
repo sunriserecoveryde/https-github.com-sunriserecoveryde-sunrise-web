@@ -183,13 +183,13 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <Icon className={`w-4 h-4 flex-none ${isActive ? 'text-sunrise-orange' : isReadOnly ? 'text-slate-500' : 'text-slate-400'}`} />
-                        <span className={`truncate ${isActive ? 'font-medium' : ''} ${isReadOnly && !isActive ? 'italic' : ''}`}>
+                        <span className={`truncate ${isActive ? 'font-medium' : ''} ${isReadOnly ? 'italic' : ''}`}>
                           {item.label}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 flex-none ml-1">
-                        {isReadOnly && !isActive && (
-                          <Eye className="w-3 h-3 text-slate-500 flex-none" />
+                        {isReadOnly && (
+                          <Eye className={`w-3 h-3 flex-none ${isActive ? 'text-white/60' : 'text-slate-500'}`} />
                         )}
                         {item.badge && (
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
