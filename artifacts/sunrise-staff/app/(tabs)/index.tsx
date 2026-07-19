@@ -290,20 +290,20 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
         <View style={styles.cardTopRight}>
           {isAlert && <Ionicons name="warning" size={14} color={colors.critical} style={{ marginBottom: 2 }} />}
           <AcuityPill acuity={patient.acuity} />
-          {noteCount > 0 && (
-            <View style={[styles.noteBadge, { backgroundColor: colors.orange }]}>
-              <Ionicons name="document-text-outline" size={10} color="#fff" />
-              <Text style={styles.noteBadgeText}>{noteCount}</Text>
-              {latestNoteType != null && (
-                <>
-                  <Text style={styles.noteBadgeSep}>·</Text>
-                  <Text style={styles.noteBadgeType} numberOfLines={1}>
-                    {formatNoteType(latestNoteType)}
-                  </Text>
-                </>
-              )}
-            </View>
-          )}
+          {latestNoteType != null && latestNoteType !== 'observation' && (() => {
+            const tc = latestNoteType === 'incident'
+              ? { bg: colors.criticalBg, text: colors.critical }
+              : { bg: colors.moderateBg, text: colors.moderate };
+            const icon = latestNoteType === 'incident' ? 'warning-outline' : 'medkit-outline';
+            return (
+              <View style={[styles.noteTypePill, { backgroundColor: tc.bg, borderColor: tc.text }]}>
+                <Ionicons name={icon as any} size={10} color={tc.text} />
+                <Text style={[styles.noteTypePillText, { color: tc.text }]} numberOfLines={1}>
+                  {formatNoteType(latestNoteType)}
+                </Text>
+              </View>
+            );
+          })()}
         </View>
       </View>
 
@@ -880,6 +880,8 @@ const styles = StyleSheet.create({
   noteBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   noteBadgeSep: { fontSize: 10, color: 'rgba(255,255,255,0.6)', fontFamily: 'Inter_400Regular' },
   noteBadgeType: { fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.9)', fontFamily: 'Inter_600SemiBold', flexShrink: 1 },
+  noteTypePill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, marginTop: 2 },
+  noteTypePillText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold', flexShrink: 1 },
   // Role toggle
   roleToggle: { flexDirection: 'row', borderRadius: 8, overflow: 'hidden', padding: 2 },
   roleBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6 },
