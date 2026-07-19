@@ -148,10 +148,11 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
 
   // Filter sections and items based on current role
   const visibleSections = ALL_SECTIONS
-    .map(sec => ({
-      ...sec,
-      items: sec.items.filter(item => canAccessScreen(item.id)),
-    }))
+    .map(sec => {
+      const visibleItems = sec.items.filter(item => canAccessScreen(item.id));
+      const allReadOnly = visibleItems.length > 0 && visibleItems.every(item => getPermissionForScreen(item.id) === 'read');
+      return { ...sec, items: visibleItems, allReadOnly };
+    })
     .filter(sec => sec.items.length > 0);
 
   return (
@@ -159,8 +160,11 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
       <div className="flex-1 py-4">
         {visibleSections.map((sec, i) => (
           <div key={i} className="mb-6">
-            <div className="px-4 text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wider">
-              {sec.title}
+            <div className={`px-4 text-[10px] font-bold mb-2 uppercase tracking-wider flex items-center gap-2 ${sec.allReadOnly ? 'text-slate-600' : 'text-slate-400'}`}>
+              <span>{sec.title}</span>
+              {sec.allReadOnly && (
+                <span className="normal-case text-[9px] font-medium text-slate-600 tracking-normal">(View only)</span>
+              )}
             </div>
             <ul className="space-y-0.5">
               {sec.items.map(item => {
