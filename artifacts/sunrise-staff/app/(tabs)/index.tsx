@@ -835,7 +835,7 @@ export default function CensusScreen() {
                 styles.filterCountBadge,
                 { backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : colors.navyLight },
               ]}>
-                <Text style={[styles.noteCountBadgeText, { color: isActive ? '#fff' : colors.slateLight }]}>
+                <Text style={[styles.filterCountBadgeText, { color: isActive ? '#fff' : colors.slateLight }]}>
                   {count}
                 </Text>
               </View>
@@ -951,8 +951,8 @@ const styles = StyleSheet.create({
   filterContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', alignItems: 'center' },
   filterChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  noteCountBadge: { marginLeft: 5, borderRadius: 9, paddingHorizontal: 6, paddingVertical: 1, minWidth: 18, alignItems: 'center' },
-  noteCountBadgeText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  filterCountBadge: { marginLeft: 5, borderRadius: 9, paddingHorizontal: 6, paddingVertical: 1, minWidth: 18, alignItems: 'center' },
+  filterCountBadgeText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   filterDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 4, alignSelf: 'stretch' },
   // Bed cards
   listContent: { padding: 12, gap: 10 },

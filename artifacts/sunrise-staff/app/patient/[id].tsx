@@ -168,18 +168,43 @@ function Card({ children, colors, style }: { children: React.ReactNode; colors: 
 
 const SWIPE_OPEN_THRESHOLD = 40;
 const DELETE_BTN_WIDTH = 80;
+const HINT_NUDGE = -28; // px to slide left for the discovery hint
 
 function SwipeableNoteRow({
   children,
   onDelete,
   onLongPress,
+  playHint = false,
 }: {
   children: React.ReactNode;
   onDelete: () => void;
   onLongPress: () => void;
+  playHint?: boolean;
 }) {
   const translateX = useRef(new Animated.Value(0)).current;
   const isOpen = useRef(false);
+
+  // One-time left-nudge hint so nurses discover the swipe gesture
+  useEffect(() => {
+    if (!playHint) return;
+    const delay = setTimeout(() => {
+      Animated.sequence([
+        Animated.spring(translateX, {
+          toValue: HINT_NUDGE,
+          useNativeDriver: true,
+          damping: 18,
+          stiffness: 180,
+        }),
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+          damping: 22,
+          stiffness: 220,
+        }),
+      ]).start();
+    }, 600); // brief pause after render so the screen settles first
+    return () => clearTimeout(delay);
+  }, [playHint]);
 
   const snapTo = (toValue: number, cb?: () => void) => {
     Animated.spring(translateX, {
@@ -277,6 +302,9 @@ export default function PatientDetailScreen() {
 
   // ─── Add Note state ────────────────────────────────────────────────────────
   const { getNotesForPatient, addNote: addNoteToStore, updateNote, removeNote, restoreNote } = useNursingNotes();
+
+  // ─── Swipe hint (runs once per session when notes exist) ──────────────────
+  const swipeHintShown = useRef(false);
 
   // ─── Undo-delete toast ─────────────────────────────────────────────────────
   const [pendingDelete, setPendingDelete] = useState<{
@@ -961,11 +989,16 @@ export default function PatientDetailScreen() {
                 ],
               );
             };
+            // Only the very first note gets the hint, and only once per session
+            const shouldPlayHint = index === 0 && !swipeHintShown.current;
+            if (shouldPlayHint) swipeHintShown.current = true;
+
             return (
               <SwipeableNoteRow
                 key={note.id}
                 onDelete={() => handleDeleteNote(note, index)}
                 onLongPress={handleLongPress}
+                playHint={shouldPlayHint}
               >
                 <View
                   style={[
