@@ -6,10 +6,11 @@ import {
   GraduationCap, MessageSquare, Video, UserCheck, Award, ListOrdered,
   Droplets, Siren, UserCog, CreditCard, MapPin, BookUser, Download,
   FolderOpen, BookOpen, ClipboardCheck, LineChart, ArrowLeftRight,
-  Star, CheckSquare, ListTodo, ClipboardList, Bed, Grid3X3
+  Star, CheckSquare, ListTodo, ClipboardList, Bed, Grid3X3,
+  FlaskConical, ArrowLeft, Lock
 } from 'lucide-react';
 import { Screen } from '../../App';
-import { MOCK_PATIENTS } from '../../data/mockPatients';
+import { MOCK_PATIENTS, DEMO_PATIENTS } from '../../data/mockPatients';
 import { useRole } from '../../context/RoleContext';
 import { getPermission, getRoleById } from '../../data/mockRoles';
 
@@ -89,14 +90,31 @@ let _lastQuery = '';
 export function CommandPalette({ onClose, navigate }: Props) {
   const [query, setQuery] = useState(_lastQuery);
   const [selected, setSelected] = useState(0);
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoQuery, setDemoQuery] = useState('');
+  const [demoNudge, setDemoNudge] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const demoInputRef = useRef<HTMLInputElement>(null);
   const { roleId, canAccessScreen } = useRole();
   const canSearchPatients = getPermission(roleId, 'PatientDetail') !== 'none';
   const roleLabel = getRoleById(roleId)?.label ?? roleId;
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => { if (demoMode) { setDemoNudge(null); demoInputRef.current?.focus(); } }, [demoMode]);
 
   const go = (screen: Screen, patientId?: string) => { navigate(screen, patientId); onClose(); };
+
+  // Demo mode: filter anonymized patients by query
+  const demoResults = DEMO_PATIENTS.filter(p => {
+    const q = demoQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
+      p.mrn.toLowerCase().includes(q) ||
+      p.primaryDiagnosis.toLowerCase().includes(q) ||
+      p.program.toLowerCase().includes(q)
+    );
+  }).slice(0, 8);
 
   // Only show screens the current role can access
   const accessibleScreens = ALL_SCREEN_SHORTCUTS.filter(s =>
@@ -149,6 +167,114 @@ export function CommandPalette({ onClose, navigate }: Props) {
     if (e.key === 'Enter' && results[selected]) { results[selected].action(); }
   };
 
+  // ── Demo mode overlay ──────────────────────────────────────────────────────
+  if (demoMode) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+        <div
+          className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-border overflow-hidden"
+          onClick={e => e.stopPropagation()}
+          onKeyDown={e => { if (e.key === 'Escape') { setDemoMode(false); } }}
+        >
+          {/* Demo banner */}
+          <div className="flex items-center gap-2 px-4 py-2 bg-violet-50 border-b border-violet-200">
+            <FlaskConical className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+            <span className="text-xs font-semibold text-violet-700">Demo Mode</span>
+            <span className="text-xs text-violet-500">· All patients are anonymized — no real data shown</span>
+            <button
+              onClick={() => setDemoMode(false)}
+              className="ml-auto flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 font-medium"
+            >
+              <ArrowLeft className="w-3 h-3" /> Back
+            </button>
+          </div>
+
+          {/* Demo search input */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+            <Search className="w-5 h-5 text-slate shrink-0" />
+            <input
+              ref={demoInputRef}
+              value={demoQuery}
+              onChange={e => { setDemoQuery(e.target.value); setDemoNudge(null); }}
+              placeholder="Search demo patients by name, MRN, diagnosis, or program…"
+              className="flex-1 text-sm focus:outline-none text-navy placeholder:text-slate"
+            />
+            {demoQuery && (
+              <button onClick={() => setDemoQuery('')} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-3.5 h-3.5 text-slate" />
+              </button>
+            )}
+          </div>
+
+          {/* Nudge shown when a demo result is clicked */}
+          {demoNudge && (
+            <div className="mx-4 mt-3 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5 flex items-start gap-2.5">
+              <Lock className="w-4 h-4 text-slate shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-semibold text-navy">Full access requires a clinical role</div>
+                <div className="text-xs text-slate mt-0.5">
+                  Patient detail is available to nurses, counselors, physicians, and other clinical staff.{' '}
+                  <button
+                    onClick={() => { navigate('RoleExplorer'); onClose(); }}
+                    className="font-semibold underline hover:text-navy"
+                  >
+                    Explore role permissions →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Demo results */}
+          <div className="overflow-y-auto max-h-80">
+            {!demoQuery.trim() && (
+              <div className="px-4 pt-3 pb-1">
+                <span className="text-xs font-semibold text-slate uppercase tracking-wide">
+                  {DEMO_PATIENTS.length} anonymized patients · try searching by name, diagnosis, or program
+                </span>
+              </div>
+            )}
+            {demoResults.length === 0 && (
+              <div className="px-4 py-8 text-center">
+                <div className="text-sm text-slate">No demo patients match &ldquo;{demoQuery}&rdquo;</div>
+              </div>
+            )}
+            {demoResults.map((p, i) => (
+              <div
+                key={p.id}
+                onClick={() => setDemoNudge(p.id)}
+                className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div className="w-7 h-7 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center shrink-0">
+                  {p.firstName[0]}{p.lastName[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-navy text-sm">{p.firstName} {p.lastName}</div>
+                  <div className="text-xs text-slate truncate">
+                    {p.mrn} · {p.program} · {p.primaryDiagnosis.split(' ').slice(0, 5).join(' ')}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-medium">Demo · Anonymized</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Patient</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="px-4 py-2.5 border-t border-border bg-gray-50 flex items-center gap-4 text-xs text-slate">
+            <FlaskConical className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+            <span>This is a sandboxed demo — no real patient data is shown</span>
+            <div className="ml-auto flex items-center gap-1">
+              <kbd className="bg-white border border-gray-200 rounded px-1">Esc</kbd> close demo
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Normal palette ─────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div
@@ -207,9 +333,9 @@ export function CommandPalette({ onClose, navigate }: Props) {
                 <div className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider px-1 mb-1">Preview — what patient results look like</div>
                 <div className="relative select-none pointer-events-none" aria-hidden="true">
                   {[
-                    { initials: 'MW', name: 'Marcus Webb', sub: 'MRN-83921 · Residential · Severe Opioid Use Disorder', tag: 'Patient' },
-                    { initials: 'AR', name: 'Angela Reyes', sub: 'MRN-72819 · PHP · Severe Alcohol Use Disorder', tag: 'Patient' },
-                    { initials: 'DP', name: 'Devon Patel',  sub: 'MRN-99321 · Residential · Severe Methamphetamine Use Disorder', tag: 'Patient' },
+                    { initials: 'PA', name: 'Patient A', sub: 'DEMO-001 · Residential · Severe Opioid Use Disorder', tag: 'Patient' },
+                    { initials: 'PB', name: 'Patient B', sub: 'DEMO-002 · PHP · Severe Alcohol Use Disorder', tag: 'Patient' },
+                    { initials: 'PC', name: 'Patient C', sub: 'DEMO-003 · Residential · Severe Methamphetamine Use Disorder', tag: 'Patient' },
                   ].map((row, idx) => (
                     <div key={idx} className="flex items-center gap-3 px-2 py-2 rounded-lg" style={{ filter: 'blur(3.5px)', opacity: 0.55 }}>
                       <div className="w-7 h-7 rounded-full bg-navy text-white text-xs font-bold flex items-center justify-center shrink-0">
@@ -224,6 +350,20 @@ export function CommandPalette({ onClose, navigate }: Props) {
                   ))}
                   {/* Gradient fade at bottom */}
                   <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-amber-50/80 to-transparent rounded-b-lg" />
+                </div>
+
+                {/* Demo CTA */}
+                <div className="pt-2 pb-1 px-1">
+                  <button
+                    onClick={() => setDemoMode(true)}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition-colors"
+                  >
+                    <FlaskConical className="w-3.5 h-3.5" />
+                    Try demo search →
+                  </button>
+                  <div className="text-center text-[10px] text-amber-600 mt-1.5">
+                    Explore a fully interactive search with anonymized patients
+                  </div>
                 </div>
               </div>
             </div>

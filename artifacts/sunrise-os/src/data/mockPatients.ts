@@ -65,6 +65,114 @@ export interface Patient {
   status?: 'Occupied' | 'Available' | 'Cleaning' | 'Hold' | 'Blocked';
 }
 
+// Anonymized demo patients shown to buyer roles in the interactive demo search
+export const DEMO_PATIENTS: Patient[] = [
+  {
+    id: 'demo-a', mrn: 'DEMO-001', firstName: 'Patient', lastName: 'A',
+    dob: '1988-04-12', age: 36, gender: 'M', insurance: 'BlueCross',
+    program: 'Residential', primaryDiagnosis: 'Severe Opioid Use Disorder',
+    coOccurring: ['PTSD', 'Major Depressive Disorder'],
+    asam: { d1: 2, d2: 1, d3: 3, d4: 2, d5: 4, d6: 3 },
+    recoveryScore: 42, amaRisk: 'High', los: 12,
+    admitDate: '2026-07-14', expectedDischarge: '2026-08-13',
+    counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
+    flags: [{ type: 'AMA', note: 'Expressed desire to leave during morning group' }, { type: 'Medication', note: 'MAT induction phase' }],
+    lastUa: 'Positive (BUP)', mood: 4, craving: 8,
+    notes: [], goals: [], nextAppointment: 'Today, 2:00 PM', bed: '1A', status: 'Occupied'
+  },
+  {
+    id: 'demo-b', mrn: 'DEMO-002', firstName: 'Patient', lastName: 'B',
+    dob: '1995-08-22', age: 29, gender: 'F', insurance: 'Aetna',
+    program: 'PHP', primaryDiagnosis: 'Severe Alcohol Use Disorder',
+    coOccurring: ['Generalized Anxiety Disorder'],
+    asam: { d1: 1, d2: 1, d3: 2, d4: 3, d5: 2, d6: 2 },
+    recoveryScore: 78, amaRisk: 'Low', los: 34,
+    admitDate: '2026-06-22', expectedDischarge: '2026-09-22',
+    counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
+    flags: [{ type: 'Success', note: '30-day milestone reached' }],
+    lastUa: 'Negative', mood: 7, craving: 2,
+    notes: [], goals: [], nextAppointment: 'Tomorrow, 10:00 AM'
+  },
+  {
+    id: 'demo-c', mrn: 'DEMO-003', firstName: 'Patient', lastName: 'C',
+    dob: '2001-02-15', age: 23, gender: 'M', insurance: 'Cigna',
+    program: 'Residential', primaryDiagnosis: 'Severe Methamphetamine Use Disorder',
+    coOccurring: ['ADHD', 'Substance-Induced Psychosis'],
+    asam: { d1: 1, d2: 2, d3: 3, d4: 1, d5: 4, d6: 3 },
+    recoveryScore: 55, amaRisk: 'Med', los: 8,
+    admitDate: '2026-07-18', expectedDischarge: '2026-08-17',
+    counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
+    flags: [{ type: 'Behavioral', note: 'Disruptive in evening group' }, { type: 'Psychiatric', note: 'Mild paranoia reported' }],
+    lastUa: 'Positive (METH)', mood: 5, craving: 6,
+    notes: [], goals: [], nextAppointment: 'Today, 4:00 PM', bed: '2B', status: 'Occupied'
+  },
+  {
+    id: 'demo-d', mrn: 'DEMO-004', firstName: 'Patient', lastName: 'D',
+    dob: '1976-11-30', age: 48, gender: 'F', insurance: 'Medicare',
+    program: 'IOP', primaryDiagnosis: 'Severe Alcohol Use Disorder',
+    coOccurring: ['Bipolar I Disorder'],
+    asam: { d1: 0, d2: 1, d3: 2, d4: 3, d5: 1, d6: 1 },
+    recoveryScore: 85, amaRisk: 'Low', los: 65,
+    admitDate: '2026-05-22', expectedDischarge: '2026-09-01',
+    counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
+    flags: [{ type: 'Medical', note: 'Hypertension monitoring' }],
+    lastUa: 'Negative', mood: 8, craving: 1,
+    notes: [], goals: [], nextAppointment: 'Nov 2, 9:00 AM'
+  },
+  {
+    id: 'demo-e', mrn: 'DEMO-005', firstName: 'Patient', lastName: 'E',
+    dob: '1992-05-18', age: 32, gender: 'M', insurance: 'UnitedHealthcare',
+    program: 'Residential', primaryDiagnosis: 'Severe Polysubstance Use Disorder',
+    coOccurring: ['Major Depressive Disorder'],
+    asam: { d1: 3, d2: 2, d3: 2, d4: 2, d5: 3, d6: 4 },
+    recoveryScore: 62, amaRisk: 'Med', los: 4,
+    admitDate: '2026-07-22', expectedDischarge: '2026-08-21',
+    counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
+    flags: [{ type: 'Legal', note: 'Court mandated treatment' }, { type: 'Medical', note: 'Active wound care' }],
+    lastUa: 'Positive (OPI, COC, BZO)', mood: 3, craving: 7,
+    notes: [], goals: [], nextAppointment: 'Today, 1:00 PM', bed: '3A', status: 'Occupied'
+  },
+  {
+    id: 'demo-f', mrn: 'DEMO-006', firstName: 'Patient', lastName: 'F',
+    dob: '1985-09-04', age: 39, gender: 'F', insurance: 'Self-Pay',
+    program: 'Residential', primaryDiagnosis: 'Severe Alcohol Use Disorder',
+    coOccurring: [],
+    asam: { d1: 2, d2: 3, d3: 1, d4: 3, d5: 2, d6: 2 },
+    recoveryScore: 71, amaRisk: 'Low', los: 15,
+    admitDate: '2026-07-11', expectedDischarge: '2026-08-10',
+    counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
+    flags: [{ type: 'Insurance', note: 'Self-pay balance due' }],
+    lastUa: 'Negative', mood: 6, craving: 4,
+    notes: [], goals: [], nextAppointment: 'Tomorrow, 2:00 PM', bed: '4B', status: 'Occupied'
+  },
+  {
+    id: 'demo-g', mrn: 'DEMO-007', firstName: 'Patient', lastName: 'G',
+    dob: '1970-12-12', age: 53, gender: 'M', insurance: 'BlueCross',
+    program: 'PHP', primaryDiagnosis: 'Severe Cocaine Use Disorder',
+    coOccurring: ['Antisocial Personality Traits'],
+    asam: { d1: 0, d2: 1, d3: 2, d4: 2, d5: 3, d6: 3 },
+    recoveryScore: 48, amaRisk: 'Med', los: 22,
+    admitDate: '2026-07-04', expectedDischarge: '2026-08-24',
+    counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
+    flags: [],
+    lastUa: 'Negative', mood: 5, craving: 5,
+    notes: [], goals: [], nextAppointment: 'Today, 11:00 AM'
+  },
+  {
+    id: 'demo-h', mrn: 'DEMO-008', firstName: 'Patient', lastName: 'H',
+    dob: '1998-03-25', age: 26, gender: 'F', insurance: 'Cigna',
+    program: 'Residential', primaryDiagnosis: 'Severe Opioid Use Disorder',
+    coOccurring: ['Eating Disorder', 'Severe Anxiety'],
+    asam: { d1: 1, d2: 2, d3: 4, d4: 2, d5: 3, d6: 3 },
+    recoveryScore: 39, amaRisk: 'High', los: 6,
+    admitDate: '2026-07-20', expectedDischarge: '2026-08-19',
+    counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
+    flags: [{ type: 'Behavioral', note: 'Restricting meals' }, { type: 'Psychiatric', note: 'Severe anxiety' }],
+    lastUa: 'Positive (BUP)', mood: 2, craving: 9,
+    notes: [], goals: [], nextAppointment: 'Today, 3:30 PM', bed: '5A', status: 'Occupied'
+  },
+];
+
 export const MOCK_PATIENTS: Patient[] = [
   {
     id: 'p1',
