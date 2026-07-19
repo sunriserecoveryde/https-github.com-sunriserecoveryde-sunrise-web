@@ -95,8 +95,23 @@ let _lastDemoQuery: string = (() => {
 })();
 
 // Persists the last few demo search queries for the session so buyers can
-// quickly jump back to a recent one. Cleared on page reload.
-const _recentDemoQueries: string[] = [];
+// quickly jump back to a recent one. Survives role switches and palette
+// close/reopen within the same browser session via sessionStorage.
+const RECENT_DEMO_QUERIES_KEY = 'sunrise_recent_demo_queries';
+const _recentDemoQueries: string[] = (() => {
+  try {
+    const raw = sessionStorage.getItem(RECENT_DEMO_QUERIES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.slice(0, 3) as string[];
+    }
+  } catch { /* ignore */ }
+  return [];
+})();
+
+function _persistRecentDemoQueries() {
+  try { sessionStorage.setItem(RECENT_DEMO_QUERIES_KEY, JSON.stringify(_recentDemoQueries)); } catch { /* ignore */ }
+}
 
 function addRecentDemoQuery(q: string) {
   const trimmed = q.trim();
@@ -105,6 +120,7 @@ function addRecentDemoQuery(q: string) {
   if (idx !== -1) _recentDemoQueries.splice(idx, 1);
   _recentDemoQueries.unshift(trimmed);
   if (_recentDemoQueries.length > 3) _recentDemoQueries.length = 3;
+  _persistRecentDemoQueries();
 }
 
 export function CommandPalette({ onClose, navigate }: Props) {
@@ -136,6 +152,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
 
   const handleClearRecentQueries = () => {
     _recentDemoQueries.length = 0;
+    _persistRecentDemoQueries();
     setRecentQueries([]);
   };
 
