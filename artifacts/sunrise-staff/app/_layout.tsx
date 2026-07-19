@@ -15,6 +15,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { RoleProvider } from '@/context/RoleContext';
 import { PatientProvider } from '@/context/PatientContext';
+import { MdAcknowledgmentProvider } from '@/context/MdAcknowledgmentContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -54,7 +55,9 @@ export default function RootLayout() {
             <KeyboardProvider>
               <RoleProvider>
                 <PatientProvider>
-                  <RootLayoutNav />
+                  <MdAcknowledgmentProvider>
+                    <RootLayoutNav />
+                  </MdAcknowledgmentProvider>
                 </PatientProvider>
               </RoleProvider>
             </KeyboardProvider>

@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';
 import { usePatients } from '@/context/PatientContext';
+import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
 import {
   PATIENTS,
   VITALS,
@@ -96,6 +97,13 @@ const sparkStyles = StyleSheet.create({
   label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 2, fontFamily: 'Inter_700Bold' },
 });
 
+// ─── Withdrawal threshold (must match census board) ───────────────────────────
+const WD_THRESHOLD = 13; // COWS > 12 or CIWA > 12 per facility protocol
+
+function isWithdrawalAlert(p: { cows?: number | null; ciwa?: number | null }): boolean {
+  return (p.cows != null && p.cows >= WD_THRESHOLD) || (p.ciwa != null && p.ciwa >= WD_THRESHOLD);
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseSystolic(bp: string): number {
@@ -168,6 +176,9 @@ export default function PatientDetailScreen() {
       </View>
     );
   }
+
+  const { acknowledgments, acknowledge, isAcknowledged } = useMdAcknowledgment();
+  const mdAck = acknowledgments[patient.id];
 
   const vitals: VitalEntry[] = VITALS[patient.id] ?? [];
   const medications: Medication[] = (MEDICATIONS[patient.id] ?? []).filter(m => m.status === 'Active');
@@ -413,6 +424,52 @@ export default function PatientDetailScreen() {
           </View>
         )}
 
+        {/* ─── MD Notification ─── */}
+        {isWithdrawalAlert(patient) && (
+          <View style={s.section}>
+            <SectionTitle title="MD NOTIFICATION" colors={colors} />
+            {mdAck ? (
+              <Card colors={colors} style={[s.mdAckCard, { borderColor: colors.success }]}>
+                <View style={s.mdAckRow}>
+                  <View style={[s.mdAckIcon, { backgroundColor: colors.successBg }]}>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.mdAckTitle, { color: colors.success }]}>MD notified</Text>
+                    <Text style={[s.mdAckMeta, { color: colors.mutedForeground }]}>
+                      Logged at {mdAck.displayTime} · Today
+                    </Text>
+                  </View>
+                </View>
+              </Card>
+            ) : (
+              <Card colors={colors} style={[s.mdPendingCard, { borderColor: colors.critical }]}>
+                <View style={s.mdAckRow}>
+                  <View style={[s.mdAckIcon, { backgroundColor: colors.criticalBg }]}>
+                    <Ionicons name="call-outline" size={20} color={colors.critical} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.mdAckTitle, { color: colors.critical }]}>MD notification required</Text>
+                    <Text style={[s.mdAckMeta, { color: colors.mutedForeground }]}>
+                      Withdrawal score exceeds threshold — log when MD is notified
+                    </Text>
+                  </View>
+                </View>
+                <Pressable
+                  onPress={() => {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    acknowledge(patient.id);
+                  }}
+                  style={[s.mdAckButton, { backgroundColor: colors.success }]}
+                >
+                  <Ionicons name="call-outline" size={14} color="#fff" />
+                  <Text style={s.mdAckButtonText}>Log MD Notified</Text>
+                </Pressable>
+              </Card>
+            )}
+          </View>
+        )}
+
         {/* ─── Handoff note ─── */}
         {patient.handoffNote && (
           <View style={s.section}>
@@ -580,4 +637,13 @@ const s = StyleSheet.create({
   modalBtnCancel: {},
   modalBtnConfirm: {},
   modalBtnText: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  // MD notification
+  mdAckCard: { borderWidth: 1.5 },
+  mdPendingCard: { borderWidth: 1.5 },
+  mdAckRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  mdAckIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  mdAckTitle: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold', marginBottom: 2 },
+  mdAckMeta: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  mdAckButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, borderRadius: 8, paddingVertical: 10 },
+  mdAckButtonText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
 });

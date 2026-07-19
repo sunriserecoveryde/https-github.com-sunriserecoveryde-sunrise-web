@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { usePatients } from '@/context/PatientContext';
+import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
 import {
   BEDS,
   VITALS,
@@ -87,15 +88,20 @@ function WithdrawalAlertBanner({
   onSelectPatient: (p: Patient) => void;
   onDismiss: () => void;
 }) {
+  const { acknowledge, isAcknowledged, acknowledgments } = useMdAcknowledgment();
   const alertPatients = patients.filter(isWithdrawalAlert);
   if (alertPatients.length === 0) return null;
 
+  const pendingCount = alertPatients.filter(p => !isAcknowledged(p.id)).length;
+
   return (
     <View style={[styles.alertBanner, { backgroundColor: '#FEF2F2', borderBottomColor: colors.critical }]}>
-      <Ionicons name="warning" size={16} color={colors.critical} />
+      <Ionicons name="warning" size={16} color={pendingCount > 0 ? colors.critical : colors.mutedForeground} />
       <View style={styles.alertContent}>
-        <Text style={[styles.alertTitle, { color: colors.critical }]}>
-          {alertPatients.length} withdrawal alert{alertPatients.length > 1 ? 's' : ''} — MD notification required
+        <Text style={[styles.alertTitle, { color: pendingCount > 0 ? colors.critical : colors.mutedForeground }]}>
+          {pendingCount > 0
+            ? `${pendingCount} withdrawal alert${pendingCount > 1 ? 's' : ''} — MD notification required`
+            : 'All withdrawal alerts acknowledged'}
         </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.alertChips}>
@@ -104,19 +110,50 @@ function WithdrawalAlertBanner({
               const score = showCiwa ? p.ciwa! : p.cows!;
               const scoreKey = showCiwa ? 'ciwa' : 'cows';
               const trend = getScoreTrend(p.id, scoreKey);
+              const acked = isAcknowledged(p.id);
+
+              if (acked) {
+                // Muted "MD notified" chip
+                return (
+                  <View
+                    key={p.id}
+                    style={[styles.alertChip, styles.alertChipAcked, { backgroundColor: colors.muted }]}
+                  >
+                    <Ionicons name="checkmark-circle" size={11} color={colors.success} />
+                    <Text style={[styles.alertChipText, { color: colors.mutedForeground }]}>
+                      {p.bed}: {p.lastName} · MD notified {acknowledgments[p.id]?.displayTime}
+                    </Text>
+                  </View>
+                );
+              }
+
               return (
-                <Pressable
-                  key={p.id}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); onSelectPatient(p); }}
-                  style={[styles.alertChip, { backgroundColor: colors.critical }]}
-                >
-                  <Text style={styles.alertChipText}>
-                    {p.bed}: {p.lastName} · {showCiwa ? 'CIWA' : 'COWS'} {score}
-                    {trend != null && (
-                      <Text style={{ color: trendColor(trend, colors), fontSize: 11, fontWeight: '700' }}>{trendArrow(trend)}</Text>
-                    )}
-                  </Text>
-                </Pressable>
+                <View key={p.id} style={styles.alertChipGroup}>
+                  {/* Tap to navigate */}
+                  <Pressable
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); onSelectPatient(p); }}
+                    style={[styles.alertChip, { backgroundColor: colors.critical }]}
+                  >
+                    <Text style={styles.alertChipText}>
+                      {p.bed}: {p.lastName} · {showCiwa ? 'CIWA' : 'COWS'} {score}
+                      {trend != null && (
+                        <Text style={{ color: trendColor(trend, colors), fontSize: 11, fontWeight: '700' }}>{trendArrow(trend)}</Text>
+                      )}
+                    </Text>
+                  </Pressable>
+                  {/* Acknowledge button */}
+                  <Pressable
+                    onPress={() => {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      acknowledge(p.id);
+                    }}
+                    style={[styles.ackBtn, { backgroundColor: colors.successBg, borderColor: colors.success }]}
+                    hitSlop={4}
+                  >
+                    <Ionicons name="call-outline" size={11} color={colors.success} />
+                    <Text style={[styles.ackBtnText, { color: colors.success }]}>MD notified</Text>
+                  </Pressable>
+                </View>
               );
             })}
           </View>
@@ -660,6 +697,10 @@ const styles = StyleSheet.create({
   alertChip: { borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
   alertChipText: { fontSize: 11, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   alertDismiss: { padding: 2, alignSelf: 'flex-start' },
+  alertChipGroup: { flexDirection: 'column', gap: 4, alignItems: 'flex-start' },
+  alertChipAcked: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  ackBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 },
+  ackBtnText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   // Filters
   filterScroll: {},
   filterContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
