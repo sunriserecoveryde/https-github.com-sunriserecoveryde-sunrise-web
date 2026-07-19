@@ -15,6 +15,7 @@ import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { useNursingNotes } from '@/context/NursingNotesContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
+import { useWithdrawalFilters } from '@/context/WithdrawalFiltersContext';
 import { RESIDENTIAL_PATIENTS, Patient, acuityColor, acuitySortOrder } from '@/data/mockData';
 
 type Shift = 'day' | 'eve' | 'night';
@@ -150,6 +151,7 @@ export default function HandoffScreen() {
   const { role, setRole } = useRole();
   const { clearNotes } = useNursingNotes();
   const { clearAcknowledgments } = useMdAcknowledgment();
+  const { clearFilters } = useWithdrawalFilters();
   const [shift, setShift] = useState<Shift>('day');
   const [notes, setNotes] = useState<Record<string, string>>(
     Object.fromEntries(RESIDENTIAL_PATIENTS.map(p => [p.id, p.handoffNote ?? '']))
@@ -210,6 +212,7 @@ export default function HandoffScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     clearNotes();
     clearAcknowledgments();
+    clearFilters();
     setCompleted(true);
   }
 

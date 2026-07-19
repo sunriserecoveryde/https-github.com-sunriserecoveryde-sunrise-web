@@ -17,6 +17,7 @@ import { RoleProvider } from '@/context/RoleContext';
 import { PatientProvider } from '@/context/PatientContext';
 import { MdAcknowledgmentProvider } from '@/context/MdAcknowledgmentContext';
 import { NursingNotesProvider } from '@/context/NursingNotesContext';
+import { WithdrawalFiltersProvider } from '@/context/WithdrawalFiltersContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -58,7 +59,9 @@ export default function RootLayout() {
                 <PatientProvider>
                   <MdAcknowledgmentProvider>
                     <NursingNotesProvider>
-                      <RootLayoutNav />
+                      <WithdrawalFiltersProvider>
+                        <RootLayoutNav />
+                      </WithdrawalFiltersProvider>
                     </NursingNotesProvider>
                   </MdAcknowledgmentProvider>
                 </PatientProvider>

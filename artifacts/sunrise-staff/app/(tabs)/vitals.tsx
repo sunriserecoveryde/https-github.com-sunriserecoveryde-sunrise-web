@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
+import { useWithdrawalFilters } from '@/context/WithdrawalFiltersContext';
 import { PATIENTS, VITALS, Patient, VitalEntry, acuityColor } from '@/data/mockData';
 
 // ── Mock withdrawal score history for all residential patients ─────────────────
@@ -266,6 +267,7 @@ export default function VitalsScreen() {
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const { bannerDismissed, dismissBanner } = useWithdrawalFilters();
 
   const residentialPatients = PATIENTS.filter(p => p.program === 'Residential');
   const patientsWithScores = residentialPatients.filter(p =>
@@ -310,13 +312,16 @@ export default function VitalsScreen() {
         </View>
       </View>
 
-      {/* Alert banner */}
-      {criticalCount > 0 && (
+      {/* Alert banner — dismissable; cleared on shift handoff */}
+      {criticalCount > 0 && !bannerDismissed && (
         <View style={[styles.alertBanner, { backgroundColor: '#FEF2F2', borderBottomColor: colors.critical }]}>
           <Ionicons name="warning" size={18} color={colors.critical} />
           <Text style={[styles.alertText, { color: colors.critical }]}>
             {criticalCount} patient{criticalCount > 1 ? 's' : ''} at or above alert threshold — notify physician
           </Text>
+          <Pressable onPress={dismissBanner} hitSlop={8}>
+            <Ionicons name="close" size={18} color={colors.critical} />
+          </Pressable>
         </View>
       )}
 
