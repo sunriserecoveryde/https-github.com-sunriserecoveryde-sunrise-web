@@ -270,7 +270,7 @@ function MoodBar({ value, colors }: { value: number; colors: ReturnType<typeof u
   );
 }
 
-function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }) {
+function BedCard({ patient, onPress, onNoteBadgePress }: { patient: Patient; onPress: () => void; onNoteBadgePress?: () => void }) {
   const colors = useColors();
   const { getNotesForPatient } = useNursingNotes();
   const ac = acuityColor(patient.acuity);
@@ -313,10 +313,17 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
           {isAlert && <Ionicons name="warning" size={14} color={colors.critical} style={{ marginBottom: 2 }} />}
           <AcuityPill acuity={patient.acuity} />
           {noteCount > 0 && (
-            <View style={[styles.noteCountBadge, { backgroundColor: colors.navyLight }]}>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onNoteBadgePress?.();
+              }}
+              hitSlop={8}
+              style={[styles.noteCountBadge, { backgroundColor: colors.navyLight }]}
+            >
               <Ionicons name="document-text-outline" size={9} color="#fff" />
               <Text style={styles.noteCountText}>{noteCount}</Text>
-            </View>
+            </Pressable>
           )}
           {showBreakdown ? (
             <View style={styles.noteTypeBreakdownRow}>
@@ -705,6 +712,11 @@ export default function CensusScreen() {
     router.push(`/patient/${p.id}` as any);
   };
 
+  const openPatientNotes = (p: Patient) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/patient/${p.id}?scrollTo=notes` as any);
+  };
+
   // ─── Shift label (computed once on mount; stable within a session) ─────────
   const [shiftLabel] = useState(getShiftLabel);
 
@@ -886,7 +898,13 @@ export default function CensusScreen() {
         <FlatList
           data={acuityFilter === 'Available' ? [] : filteredPatients}
           keyExtractor={p => p.id}
-          renderItem={({ item }) => <BedCard patient={item} onPress={() => openPatient(item)} />}
+          renderItem={({ item }) => (
+            <BedCard
+              patient={item}
+              onPress={() => openPatient(item)}
+              onNoteBadgePress={() => openPatientNotes(item)}
+            />
+          )}
           contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}
           showsVerticalScrollIndicator={false}
           refreshControl={

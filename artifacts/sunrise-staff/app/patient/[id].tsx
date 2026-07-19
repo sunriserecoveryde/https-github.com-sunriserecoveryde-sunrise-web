@@ -379,7 +379,7 @@ const sw = StyleSheet.create({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PatientDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, scrollTo } = useLocalSearchParams<{ id: string; scrollTo?: string }>();
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -390,6 +390,21 @@ export default function PatientDetailScreen() {
 
   // ─── Add Note state ────────────────────────────────────────────────────────
   const { getNotesForPatient, addNote: addNoteToStore, updateNote, removeNote, restoreNote } = useNursingNotes();
+
+  // ─── Scroll-to-notes support ───────────────────────────────────────────────
+  const scrollViewRef = useRef<import('react-native').ScrollView>(null);
+  const notesSectionY = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (scrollTo !== 'notes') return;
+    // Give the layout a moment to settle before scrolling
+    const timer = setTimeout(() => {
+      if (scrollViewRef.current != null && notesSectionY.current != null) {
+        scrollViewRef.current.scrollTo({ y: notesSectionY.current, animated: true });
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [scrollTo]);
 
   // ─── Swipe hint (runs once per session when notes exist) ──────────────────
   const swipeHintShown = useRef(false);
@@ -852,6 +867,7 @@ export default function PatientDetailScreen() {
       </Modal>
 
       <ScrollView
+        ref={scrollViewRef}
         style={s.scroll}
         contentContainerStyle={[s.content, { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
@@ -1077,7 +1093,10 @@ export default function PatientDetailScreen() {
         )}
 
         {/* ─── Handoff note ─── */}
-        <View style={s.section}>
+        <View
+          style={s.section}
+          onLayout={(e) => { notesSectionY.current = e.nativeEvent.layout.y; }}
+        >
           <View style={s.handoffSectionHeader}>
             {/* Title + count badge */}
             <View style={s.handoffTitleRow}>
