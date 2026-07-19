@@ -376,6 +376,13 @@ export default function PatientDetailScreen() {
   };
   // ──────────────────────────────────────────────────────────────────────────
 
+  // Tracks which note's 'Edited' tag is currently expanded to show the edit time
+  const [expandedEditId, setExpandedEditId] = useState<string | null>(null);
+
+  const toggleEditTime = (noteId: string) => {
+    Haptics.selectionAsync();
+    setExpandedEditId(prev => (prev === noteId ? null : noteId));
+  };
   const openNoteModal = (prefill?: { id: string; text: string; noteType: NoteType }) => {
     if (prefill) {
       setEditingNoteId(prefill.id);
@@ -648,7 +655,13 @@ export default function PatientDetailScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <ScrollView style={s.scroll} contentContainerStyle={[s.content, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={[s.content, { paddingBottom: 100 }]}
+        showsVerticalScrollIndicator={false}
+        onScroll={() => { if (expandedEditId !== null) setExpandedEditId(null); }}
+        scrollEventThrottle={16}
+      >
 
         {/* ─── Withdrawal scores ─── */}
         {(hasCows || hasCiwa) && (
@@ -952,20 +965,28 @@ export default function PatientDetailScreen() {
                       <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{nt.label}</Text>
                     </View>
                     <View style={s.sessionNoteMeta}>
-                      {note.history && note.history.length > 0 && (
-                        <Pressable
-                          onPress={() => {
-                            Haptics.selectionAsync();
-                            openHistoryModal(note.history!, note.text);
-                          }}
-                          hitSlop={8}
-                          style={[s.editedBadge, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                        >
-                          <Ionicons name="time-outline" size={10} color={colors.mutedForeground} />
-                          <Text style={[s.editedBadgeText, { color: colors.mutedForeground }]}>Edited</Text>
-                        </Pressable>
-                      )}
                       <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
+                      {note.editedAt && (() => {
+                        const isExpanded = expandedEditId === note.id;
+                        const editTime = new Date(note.editedAt).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true,
+                        });
+                        return (
+                          <Pressable
+                            onPress={() => toggleEditTime(note.id)}
+                            onLongPress={() => { if (note.history && note.history.length > 0) openHistoryModal(note.history, note.text); }}
+                            hitSlop={8}
+                            style={[s.editedTag, { backgroundColor: isExpanded ? colors.routineBg : colors.muted }]}
+                          >
+                            <Ionicons name="pencil-outline" size={10} color={isExpanded ? colors.blue : colors.mutedForeground} />
+                            <Text style={[s.editedTagText, { color: isExpanded ? colors.blue : colors.mutedForeground }]}>
+                              {isExpanded ? `Edited at ${editTime}` : 'Edited'}
+                            </Text>
+                          </Pressable>
+                        );
+                      })()}
                       <Ionicons name="ellipsis-horizontal" size={13} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
                     </View>
                   </View>
@@ -1264,6 +1285,8 @@ const s = StyleSheet.create({
   sessionNoteMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   sessionNoteLabel: { fontSize: 11, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
   sessionNoteText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
+  editedTag: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  editedTagText: { fontSize: 10, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
   // Note bottom sheet
   noteOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   bottomSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingTop: 10, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 12 },
