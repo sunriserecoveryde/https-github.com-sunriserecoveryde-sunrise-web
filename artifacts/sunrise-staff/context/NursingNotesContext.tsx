@@ -22,6 +22,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type NoteType = 'observation' | 'med-update' | 'incident';
 
+/** A single prior version of a note, captured before each edit */
+export interface NoteHistoryEntry {
+  text: string;
+  noteType: NoteType;
+  /** ISO timestamp of when this version was saved (i.e. when the edit happened) */
+  savedAt: string;
+}
+
 export interface NursingNote {
   id: string;
   text: string;
@@ -30,8 +38,8 @@ export interface NursingNote {
   createdAt: string;
   /** Formatted display time, e.g. "14:32" */
   displayTime: string;
-  /** ISO timestamp of the most recent edit; absent on notes that have never been changed */
-  editedAt?: string;
+  /** Prior versions, oldest first — appended each time the note is edited */
+  history?: NoteHistoryEntry[];
 }
 
 /** Shape written to AsyncStorage */
@@ -138,11 +146,24 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
 
   const updateNote = useCallback(
     (patientId: string, noteId: string, text: string, noteType: NoteType) => {
+      const savedAt = new Date().toISOString();
       setNotesByPatient(prev => ({
         ...prev,
-        [patientId]: (prev[patientId] ?? []).map(n =>
-          n.id === noteId ? { ...n, text, noteType, editedAt: new Date().toISOString() } : n,
-        ),
+        [patientId]: (prev[patientId] ?? []).map(n => {
+          if (n.id !== noteId) return n;
+          // Snapshot the current version into history before overwriting
+          const historyEntry: NoteHistoryEntry = {
+            text: n.text,
+            noteType: n.noteType,
+            savedAt,
+          };
+          return {
+            ...n,
+            text,
+            noteType,
+            history: [...(n.history ?? []), historyEntry],
+          };
+        }),
       }));
     },
     [],

@@ -23,7 +23,7 @@ import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';
 import { usePatients } from '@/context/PatientContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
-import { useNursingNotes, NursingNote } from '@/context/NursingNotesContext';
+import { useNursingNotes, NursingNote, NoteHistoryEntry } from '@/context/NursingNotesContext';
 import {
   PATIENTS,
   VITALS,
@@ -353,6 +353,28 @@ export default function PatientDetailScreen() {
   const [noteType, setNoteType] = useState<NoteType>('observation');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const slideAnim = useRef(new Animated.Value(400)).current;
+
+  // ─── History modal state ───────────────────────────────────────────────────
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [historyEntries, setHistoryEntries] = useState<NoteHistoryEntry[]>([]);
+  const [historyNoteText, setHistoryNoteText] = useState('');
+
+  const openHistoryModal = (entries: NoteHistoryEntry[], currentText: string) => {
+    setHistoryEntries(entries);
+    setHistoryNoteText(currentText);
+    setHistoryModalVisible(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const formatHistoryTimestamp = (iso: string): string => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch {
+      return iso;
+    }
+  };
+  // ──────────────────────────────────────────────────────────────────────────
 
   const openNoteModal = (prefill?: { id: string; text: string; noteType: NoteType }) => {
     if (prefill) {
@@ -930,12 +952,20 @@ export default function PatientDetailScreen() {
                       <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{nt.label}</Text>
                     </View>
                     <View style={s.sessionNoteMeta}>
-                      <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
-                      {note.editedAt && (
-                        <View style={[s.editedTag, { backgroundColor: colors.muted }]}>
-                          <Text style={[s.editedTagText, { color: colors.mutedForeground }]}>Edited</Text>
-                        </View>
+                      {note.history && note.history.length > 0 && (
+                        <Pressable
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            openHistoryModal(note.history!, note.text);
+                          }}
+                          hitSlop={8}
+                          style={[s.editedBadge, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                        >
+                          <Ionicons name="time-outline" size={10} color={colors.mutedForeground} />
+                          <Text style={[s.editedBadgeText, { color: colors.mutedForeground }]}>Edited</Text>
+                        </Pressable>
                       )}
+                      <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
                       <Ionicons name="ellipsis-horizontal" size={13} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
                     </View>
                   </View>
@@ -990,6 +1020,83 @@ export default function PatientDetailScreen() {
           </Pressable>
         </Animated.View>
       )}
+
+      {/* ─── Edit History Modal ─── */}
+      <Modal
+        visible={historyModalVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setHistoryModalVisible(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={[s.modalCard, { backgroundColor: colors.card, borderColor: colors.border, gap: 0, alignItems: 'stretch' }]}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                <View style={[s.historyIconWrap, { backgroundColor: colors.routineBg }]}>
+                  <Ionicons name="time-outline" size={15} color={colors.blue} />
+                </View>
+                <Text style={[s.modalTitle, { color: colors.navy, fontSize: 16 }]}>Edit History</Text>
+              </View>
+              <Pressable onPress={() => setHistoryModalVisible(false)} hitSlop={12}>
+                <Ionicons name="close" size={20} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+
+            {/* Prior versions — oldest first */}
+            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+              {[...historyEntries].reverse().map((entry, i) => {
+                const tc = (() => {
+                  switch (entry.noteType) {
+                    case 'observation': return { bg: colors.routineBg,  text: colors.blue };
+                    case 'med-update':  return { bg: colors.moderateBg, text: colors.moderate };
+                    case 'incident':    return { bg: colors.criticalBg, text: colors.critical };
+                  }
+                })();
+                const isOldest = i === historyEntries.length - 1;
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      s.historyEntry,
+                      { borderColor: colors.border, backgroundColor: colors.muted },
+                      i < historyEntries.length - 1 && { marginBottom: 8 },
+                    ]}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <View style={[s.noteTypeBadge, { backgroundColor: tc.bg, borderColor: tc.text }]}>
+                        <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{entry.noteType}</Text>
+                      </View>
+                      <Text style={[s.historyTimestamp, { color: colors.mutedForeground }]}>
+                        {isOldest ? 'Original · ' : 'Version · '}{formatHistoryTimestamp(entry.savedAt)}
+                      </Text>
+                    </View>
+                    <Text style={[s.historyEntryText, { color: colors.navy }]}>{entry.text}</Text>
+                  </View>
+                );
+              })}
+
+              {/* Current version */}
+              <View style={[s.historyEntry, { borderColor: colors.navy, backgroundColor: colors.card, borderWidth: 1.5 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <View style={[s.historyCurrentBadge, { backgroundColor: colors.navy }]}>
+                    <Text style={s.historyCurrentBadgeText}>Current</Text>
+                  </View>
+                  <Text style={[s.historyTimestamp, { color: colors.mutedForeground }]}>Latest version</Text>
+                </View>
+                <Text style={[s.historyEntryText, { color: colors.navy }]}>{historyNoteText}</Text>
+              </View>
+            </ScrollView>
+
+            <Pressable
+              onPress={() => setHistoryModalVisible(false)}
+              style={[s.modalBtn, { backgroundColor: colors.muted, marginTop: 14 }]}
+            >
+              <Text style={[s.modalBtnText, { color: colors.navy }]}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* ─── Discharge confirmation modal ─── */}
       <Modal
@@ -1157,8 +1264,6 @@ const s = StyleSheet.create({
   sessionNoteMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   sessionNoteLabel: { fontSize: 11, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
   sessionNoteText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
-  editedTag: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
-  editedTagText: { fontSize: 10, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
   // Note bottom sheet
   noteOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   bottomSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingTop: 10, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 12 },
@@ -1188,4 +1293,14 @@ const s = StyleSheet.create({
   undoToastText: { fontSize: 14, color: '#fff', fontFamily: 'Inter_400Regular' },
   undoBtn: { paddingVertical: 4, paddingHorizontal: 10 },
   undoBtnText: { fontSize: 14, fontWeight: '700', color: '#4FC3F7', fontFamily: 'Inter_700Bold' },
+  // Edited badge
+  editedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, borderWidth: StyleSheet.hairlineWidth },
+  editedBadgeText: { fontSize: 10, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
+  // History modal
+  historyIconWrap: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  historyEntry: { borderRadius: 10, padding: 10, borderWidth: StyleSheet.hairlineWidth },
+  historyEntryText: { fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 19 },
+  historyTimestamp: { fontSize: 10, fontFamily: 'Inter_400Regular' },
+  historyCurrentBadge: { borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 },
+  historyCurrentBadgeText: { fontSize: 10, fontFamily: 'Inter_700Bold', fontWeight: '700', color: '#fff' },
 });
