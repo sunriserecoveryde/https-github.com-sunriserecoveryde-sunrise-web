@@ -257,7 +257,7 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
           {isAlert && <Ionicons name="warning" size={14} color={colors.critical} style={{ marginBottom: 2 }} />}
           <AcuityPill acuity={patient.acuity} />
           {noteCount > 0 && (
-            <View style={[styles.noteBadge, { backgroundColor: colors.navyLight }]}>
+            <View style={[styles.noteBadge, { backgroundColor: colors.orange }]}>
               <Ionicons name="document-text-outline" size={10} color="#fff" />
               <Text style={styles.noteBadgeText}>{noteCount}</Text>
             </View>
