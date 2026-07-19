@@ -442,6 +442,10 @@ export default function PatientDetailScreen() {
   const toastAnim = useRef(new Animated.Value(100)).current;
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ─── Clipboard-fallback modal (shown when browser blocks clipboard write) ──
+  const [clipboardFallbackVisible, setClipboardFallbackVisible] = useState(false);
+  const [clipboardFallbackText, setClipboardFallbackText] = useState('');
+
   // ─── Copied-to-clipboard toast ─────────────────────────────────────────────
   const [copiedToastVisible, setCopiedToastVisible] = useState(false);
   const copiedToastAnim = useRef(new Animated.Value(100)).current;
@@ -657,10 +661,15 @@ export default function PatientDetailScreen() {
         navigator.clipboard.writeText(exportText).then(() => {
           showCopiedToast();
         }).catch(() => {
-          // Clipboard write was denied — nothing more we can do silently here
+          // Clipboard write was denied — show a selectable text fallback modal
+          setClipboardFallbackText(exportText);
+          setClipboardFallbackVisible(true);
         });
+      } else {
+        // Clipboard API not available — show the fallback modal directly
+        setClipboardFallbackText(exportText);
+        setClipboardFallbackVisible(true);
       }
-      // If clipboard API is also absent, fail gracefully with no crash
       return;
     }
 
@@ -1512,6 +1521,43 @@ export default function PatientDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ─── Clipboard fallback modal ──────────────────────────────────────── */}
+      <Modal
+        visible={clipboardFallbackVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setClipboardFallbackVisible(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={[s.clipFallbackCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[s.modalIconWrap, { backgroundColor: colors.routineBg }]}>
+              <Ionicons name="clipboard-outline" size={28} color={colors.blue} />
+            </View>
+            <Text style={[s.modalTitle, { color: colors.navy }]}>Copy Handoff Notes</Text>
+            <Text style={[s.clipFallbackLabel, { color: colors.mutedForeground }]}>
+              Copy the text below to share your handoff notes
+            </Text>
+            <TextInput
+              style={[s.clipFallbackInput, { color: colors.foreground, backgroundColor: colors.muted, borderColor: colors.border }]}
+              value={clipboardFallbackText}
+              multiline
+              editable
+              selectTextOnFocus
+              scrollEnabled
+            />
+            <Pressable
+              style={[s.modalBtn, s.modalBtnConfirm, { backgroundColor: colors.blue, marginTop: 12 }]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setClipboardFallbackVisible(false);
+              }}
+            >
+              <Text style={[s.modalBtnText, { color: '#fff' }]}>Done</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1625,6 +1671,34 @@ const s = StyleSheet.create({
   modalBtnCancel: {},
   modalBtnConfirm: {},
   modalBtnText: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  // Clipboard fallback modal
+  clipFallbackCard: {
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 24,
+    width: '100%',
+    maxWidth: 480,
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  clipFallbackLabel: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 },
+  clipFallbackInput: {
+    width: '100%',
+    minHeight: 180,
+    maxHeight: 300,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 12,
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 20,
+    textAlignVertical: 'top',
+  },
   // MD notification
   mdAckCard: { borderWidth: 1.5 },
   mdPendingCard: { borderWidth: 1.5 },
