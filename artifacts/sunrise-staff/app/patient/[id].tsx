@@ -624,6 +624,16 @@ export default function PatientDetailScreen() {
               })}
             </View>
 
+            {/* Edit-mode history warning banner */}
+            {editingNoteId && noteText.trim().length > 0 && (
+              <View style={[s.editHistoryBanner, { backgroundColor: colors.routineBg, borderColor: colors.blue }]}>
+                <Ionicons name="information-circle-outline" size={15} color={colors.blue} />
+                <Text style={[s.editHistoryBannerText, { color: colors.blue }]}>
+                  Your current note will be saved to edit history
+                </Text>
+              </View>
+            )}
+
             <TextInput
               style={[
                 s.noteInput,
@@ -1311,6 +1321,9 @@ const s = StyleSheet.create({
   noteTypeRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   noteTypeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 8, paddingVertical: 8 },
   noteTypeBtnText: { fontSize: 12 },
+  // Edit-mode history warning banner
+  editHistoryBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 12 },
+  editHistoryBannerText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 16 },
   // Note type badge (on submitted notes)
   noteTypeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1 },
   noteTypeBadgeText: { fontSize: 11, fontFamily: 'Inter_700Bold', fontWeight: '700' },

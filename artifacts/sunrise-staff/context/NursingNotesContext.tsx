@@ -42,6 +42,8 @@ export interface NursingNote {
   displayTime: string;
   /** Prior versions, oldest first — appended each time the note is edited */
   history?: NoteHistoryEntry[];
+  /** ISO timestamp of the most recent edit, for display in the note list */
+  editedAt?: string;
 }
 
 /** Shape written to AsyncStorage */
@@ -164,6 +166,7 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
             ...n,
             text,
             noteType,
+            editedAt: savedAt,
             history: [...(n.history ?? []), historyEntry],
           };
         }),
