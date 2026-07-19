@@ -296,6 +296,10 @@ export default function VitalsScreen() {
     (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
   ).length;
 
+  const totalAlertCount = allPatientsWithScores.filter(p =>
+    (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
+  ).length;
+
   const openModal = (patient: Patient) => {
     setSelectedPatient(patient);
     setModalVisible(true);
@@ -316,8 +320,8 @@ export default function VitalsScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: criticalCount > 0 ? colors.critical : colors.success }]}>{criticalCount}</Text>
-            <Text style={styles.statLabel}>Alerts</Text>
+            <Text style={[styles.statValue, { color: totalAlertCount > 0 ? colors.critical : colors.success }]}>{totalAlertCount}</Text>
+            <Text style={styles.statLabel}>{scoreFilter !== 'all' ? 'Alerts (filtered)' : 'Alerts'}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
