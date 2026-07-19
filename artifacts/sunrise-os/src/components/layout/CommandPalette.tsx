@@ -11,7 +11,7 @@ import {
 import { Screen } from '../../App';
 import { MOCK_PATIENTS } from '../../data/mockPatients';
 import { useRole } from '../../context/RoleContext';
-import { getPermission } from '../../data/mockRoles';
+import { getPermission, getRoleById } from '../../data/mockRoles';
 
 interface Props {
   onClose: () => void;
@@ -88,6 +88,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { roleId, canAccessScreen } = useRole();
   const canSearchPatients = getPermission(roleId, 'PatientDetail') !== 'none';
+  const roleLabel = getRoleById(roleId)?.label ?? roleId;
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -176,25 +177,33 @@ export function CommandPalette({ onClose, navigate }: Props) {
               <span className="text-xs font-semibold text-slate uppercase tracking-wide">Quick Navigation</span>
             </div>
           )}
-          {results.length === 0 && query.trim() !== '' && (
-            <div className="px-4 py-8 text-center">
-              {!canSearchPatients && /[a-zA-Z]{2,}/.test(query) ? (
-                <>
-                  <div className="text-2xl mb-2">🔒</div>
-                  <div className="text-sm font-semibold text-navy">Patient records not available for this role</div>
-                  <div className="text-xs text-slate mt-1 max-w-xs mx-auto">
-                    Your current role cannot search patient records. Switch to a clinical role to look up patients by name or MRN.
-                  </div>
+          {!canSearchPatients && query.trim() !== '' && (
+            <div className="mx-4 mt-3 mb-1 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2.5">
+              <span className="text-base leading-none mt-0.5">🔒</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-amber-800">
+                  Patient records are not accessible for the {roleLabel} role
+                </div>
+                <div className="text-xs text-amber-700 mt-0.5">
+                  Only screen results are shown.{' '}
                   <button
                     onClick={() => { navigate('RoleExplorer'); onClose(); }}
-                    className="mt-3 text-xs text-orange font-semibold hover:underline"
+                    className="font-semibold underline hover:text-amber-900"
                   >
                     View role permissions →
                   </button>
-                </>
-              ) : (
-                <div className="text-sm text-slate">No results for &ldquo;{query}&rdquo;</div>
-              )}
+                </div>
+              </div>
+            </div>
+          )}
+          {results.length === 0 && query.trim() !== '' && canSearchPatients && (
+            <div className="px-4 py-8 text-center">
+              <div className="text-sm text-slate">No results for &ldquo;{query}&rdquo;</div>
+            </div>
+          )}
+          {results.length === 0 && query.trim() !== '' && !canSearchPatients && (
+            <div className="px-4 py-6 text-center">
+              <div className="text-sm text-slate">No matching screens for &ldquo;{query}&rdquo;</div>
             </div>
           )}
           {results.map((r, i) => (
