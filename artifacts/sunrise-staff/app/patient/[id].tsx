@@ -172,7 +172,7 @@ export default function PatientDetailScreen() {
   const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
 
   // ─── Add Note state ────────────────────────────────────────────────────────
-  const { getNotesForPatient, addNote: addNoteToStore, removeNote } = useNursingNotes();
+  const { getNotesForPatient, addNote: addNoteToStore, updateNote, removeNote } = useNursingNotes();
 
   type NoteType = 'observation' | 'med-update' | 'incident';
 
@@ -193,9 +193,19 @@ export default function PatientDetailScreen() {
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [noteType, setNoteType] = useState<NoteType>('observation');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const slideAnim = useRef(new Animated.Value(400)).current;
 
-  const openNoteModal = () => {
+  const openNoteModal = (prefill?: { id: string; text: string; noteType: NoteType }) => {
+    if (prefill) {
+      setEditingNoteId(prefill.id);
+      setNoteText(prefill.text);
+      setNoteType(prefill.noteType);
+    } else {
+      setEditingNoteId(null);
+      setNoteText('');
+      setNoteType('observation');
+    }
     setNoteModalVisible(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.spring(slideAnim, {
@@ -215,13 +225,18 @@ export default function PatientDetailScreen() {
       setNoteModalVisible(false);
       setNoteText('');
       setNoteType('observation');
+      setEditingNoteId(null);
     });
   };
 
   const submitNote = () => {
     const trimmed = noteText.trim();
     if (!trimmed) return;
-    addNoteToStore(id, trimmed, noteType);
+    if (editingNoteId) {
+      updateNote(id, editingNoteId, trimmed, noteType);
+    } else {
+      addNoteToStore(id, trimmed, noteType);
+    }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     closeNoteModal();
   };
@@ -346,7 +361,7 @@ export default function PatientDetailScreen() {
             <View style={[s.sheetHandle, { backgroundColor: colors.border }]} />
 
             <View style={s.sheetHeader}>
-              <Text style={[s.sheetTitle, { color: colors.navy }]}>Add Nursing Note</Text>
+              <Text style={[s.sheetTitle, { color: colors.navy }]}>{editingNoteId ? 'Edit Nursing Note' : 'Add Nursing Note'}</Text>
               <Pressable onPress={closeNoteModal} hitSlop={12}>
                 <Ionicons name="close" size={22} color={colors.mutedForeground} />
               </Pressable>
@@ -415,7 +430,7 @@ export default function PatientDetailScreen() {
               disabled={!noteText.trim()}
             >
               <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-              <Text style={s.submitBtnText}>Save Note</Text>
+              <Text style={s.submitBtnText}>{editingNoteId ? 'Save Changes' : 'Save Note'}</Text>
             </Pressable>
           </Animated.View>
         </KeyboardAvoidingView>
@@ -657,7 +672,7 @@ export default function PatientDetailScreen() {
               })()}
             </View>
             <Pressable
-              onPress={openNoteModal}
+              onPress={() => openNoteModal()}
               style={({ pressed }) => [
                 s.addNoteBtn,
                 { backgroundColor: colors.navy, opacity: pressed ? 0.8 : 1 },
@@ -675,10 +690,16 @@ export default function PatientDetailScreen() {
             const handleLongPress = () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               Alert.alert(
-                'Delete Note?',
-                'This note will be permanently removed.',
+                'Note Options',
+                '',
                 [
                   { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Edit',
+                    onPress: () => {
+                      openNoteModal({ id: note.id, text: note.text, noteType: note.noteType });
+                    },
+                  },
                   {
                     text: 'Delete',
                     style: 'destructive',
@@ -707,7 +728,7 @@ export default function PatientDetailScreen() {
                   </View>
                   <View style={s.sessionNoteMeta}>
                     <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
-                    <Ionicons name="trash-outline" size={13} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
+                    <Ionicons name="ellipsis-horizontal" size={13} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
                   </View>
                 </View>
                 <Text style={[s.sessionNoteText, { color: colors.navy }]}>{note.text}</Text>
