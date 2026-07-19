@@ -997,7 +997,11 @@ export default function PatientDetailScreen() {
                           >
                             <Ionicons name="pencil-outline" size={10} color={isExpanded ? colors.blue : colors.mutedForeground} />
                             <Text style={[s.editedTagText, { color: isExpanded ? colors.blue : colors.mutedForeground }]}>
-                              {isExpanded ? `Edited at ${editTime}` : 'Edited'}
+                              {isExpanded
+                                ? lastEdit.editedBy
+                                  ? `Edited by ${lastEdit.editedBy} at ${editTime}`
+                                  : `Edited at ${editTime}`
+                                : 'Edited'}
                             </Text>
                           </Pressable>
                         );

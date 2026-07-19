@@ -44,6 +44,8 @@ export interface NursingNote {
   history?: NoteHistoryEntry[];
   /** ISO timestamp of the most recent edit, for display in the note list */
   editedAt?: string;
+  /** Display name of the nurse who most recently edited this note */
+  editedBy?: string;
 }
 
 /** Shape written to AsyncStorage */
@@ -167,6 +169,7 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
             text,
             noteType,
             editedAt: savedAt,
+            editedBy,
             history: [...(n.history ?? []), historyEntry],
           };
         }),
