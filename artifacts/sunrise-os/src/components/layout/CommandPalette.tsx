@@ -182,20 +182,48 @@ export function CommandPalette({ onClose, navigate }: Props) {
             </div>
           )}
           {!canSearchPatients && query.trim() !== '' && (
-            <div className="mx-4 mt-3 mb-1 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2.5">
-              <span className="text-base leading-none mt-0.5">🔒</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-amber-800">
-                  Patient records are not accessible for the {roleLabel} role
+            <div className="mx-4 mt-3 mb-1 rounded-lg bg-amber-50 border border-amber-200 overflow-hidden">
+              {/* Header row */}
+              <div className="px-3 py-2.5 flex items-start gap-2.5">
+                <span className="text-base leading-none mt-0.5">🔒</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-amber-800">
+                    Patient records are not accessible for the {roleLabel} role
+                  </div>
+                  <div className="text-xs text-amber-700 mt-0.5">
+                    Only screen results are shown.{' '}
+                    <button
+                      onClick={() => { navigate('RoleExplorer'); onClose(); }}
+                      className="font-semibold underline hover:text-amber-900"
+                    >
+                      View role permissions →
+                    </button>
+                  </div>
                 </div>
-                <div className="text-xs text-amber-700 mt-0.5">
-                  Only screen results are shown.{' '}
-                  <button
-                    onClick={() => { navigate('RoleExplorer'); onClose(); }}
-                    className="font-semibold underline hover:text-amber-900"
-                  >
-                    View role permissions →
-                  </button>
+              </div>
+
+              {/* Ghosted patient row previews */}
+              <div className="border-t border-amber-200 bg-white/60 px-2 py-1.5">
+                <div className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider px-1 mb-1">Preview — what patient results look like</div>
+                <div className="relative select-none pointer-events-none" aria-hidden="true">
+                  {[
+                    { initials: 'MW', name: 'Marcus Webb', sub: 'MRN-83921 · Residential · Severe Opioid Use Disorder', tag: 'Patient' },
+                    { initials: 'AR', name: 'Angela Reyes', sub: 'MRN-72819 · PHP · Severe Alcohol Use Disorder', tag: 'Patient' },
+                    { initials: 'DP', name: 'Devon Patel',  sub: 'MRN-99321 · Residential · Severe Methamphetamine Use Disorder', tag: 'Patient' },
+                  ].map((row, idx) => (
+                    <div key={idx} className="flex items-center gap-3 px-2 py-2 rounded-lg" style={{ filter: 'blur(3.5px)', opacity: 0.55 }}>
+                      <div className="w-7 h-7 rounded-full bg-navy text-white text-xs font-bold flex items-center justify-center shrink-0">
+                        {row.initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-navy text-sm">{row.name}</div>
+                        <div className="text-xs text-slate truncate">{row.sub}</div>
+                      </div>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 shrink-0">{row.tag}</span>
+                    </div>
+                  ))}
+                  {/* Gradient fade at bottom */}
+                  <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-amber-50/80 to-transparent rounded-b-lg" />
                 </div>
               </div>
             </div>
