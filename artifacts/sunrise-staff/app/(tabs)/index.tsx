@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   FlatList,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -12,15 +11,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import {
   BEDS,
   PATIENTS,
-  VITALS,
   Patient,
   Acuity,
-  VitalEntry,
   acuityColor,
 } from '@/data/mockData';
 
@@ -28,19 +26,6 @@ type Filter = 'All' | Acuity | 'Available';
 const FILTERS: Filter[] = ['All', 'Critical', 'High', 'Moderate', 'Routine', 'Available'];
 
 // ─── Score helpers ────────────────────────────────────────────────────────────
-
-function getSeverityLabel(score: number, isCiwa: boolean) {
-  if (isCiwa) {
-    if (score <= 7) return 'Mild';
-    if (score <= 14) return 'Moderate';
-    if (score <= 19) return 'Severe';
-    return 'DANGER';
-  }
-  if (score <= 5) return 'Mild';
-  if (score <= 12) return 'Moderate';
-  if (score <= 24) return 'Severe';
-  return 'DANGER';
-}
 
 function getScoreStyle(score: number, threshold: number, colors: ReturnType<typeof useColors>) {
   if (score >= threshold) return { bg: colors.criticalBg, text: colors.critical };
@@ -94,142 +79,6 @@ function WithdrawalAlertBanner({
         </ScrollView>
       </View>
     </View>
-  );
-}
-
-// ─── Vitals History Modal ─────────────────────────────────────────────────────
-
-function VitalsModal({
-  patient,
-  visible,
-  onClose,
-  colors,
-}: {
-  patient: Patient | null;
-  visible: boolean;
-  onClose: () => void;
-  colors: ReturnType<typeof useColors>;
-}) {
-  if (!patient) return null;
-  const vitals: VitalEntry[] = VITALS[patient.id] ?? [];
-  const hasCows = patient.cows != null && patient.cows > 0;
-  const hasCiwa = patient.ciwa != null && patient.ciwa > 0;
-  const ac = acuityColor(patient.acuity);
-
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.modalHeader, { backgroundColor: colors.navy, paddingTop: Platform.OS === 'ios' ? 20 : 16 }]}>
-          <View style={styles.modalHeaderLeft}>
-            <View style={[styles.modalBedBadge, { backgroundColor: colors.navyMid }]}>
-              <Text style={styles.modalBedText}>{patient.bed}</Text>
-            </View>
-            <View>
-              <Text style={styles.modalTitle}>{patient.firstName} {patient.lastName}</Text>
-              <Text style={styles.modalSubtitle}>{patient.primaryDiagnosis} · LOS {patient.los}d</Text>
-            </View>
-          </View>
-          <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Ionicons name="close" size={22} color="#fff" />
-          </Pressable>
-        </View>
-
-        <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalContent}>
-          {/* Current scores */}
-          {(hasCows || hasCiwa) && (
-            <View style={styles.modalSection}>
-              <Text style={[styles.modalSectionTitle, { color: colors.mutedForeground }]}>CURRENT WITHDRAWAL SCORES</Text>
-              <View style={styles.scoreRow}>
-                {hasCows && (() => {
-                  const c = getScoreStyle(patient.cows!, 13, colors);
-                  return (
-                    <View style={[styles.scoreCard, { backgroundColor: c.bg, borderColor: c.text }]}>
-                      <Text style={[styles.scoreCardLabel, { color: c.text }]}>COWS</Text>
-                      <Text style={[styles.scoreCardValue, { color: c.text }]}>{patient.cows}</Text>
-                      <Text style={[styles.scoreCardSeverity, { color: c.text }]}>{getSeverityLabel(patient.cows!, false)}</Text>
-                    </View>
-                  );
-                })()}
-                {hasCiwa && (() => {
-                  const c = getScoreStyle(patient.ciwa!, 15, colors);
-                  return (
-                    <View style={[styles.scoreCard, { backgroundColor: c.bg, borderColor: c.text }]}>
-                      <Text style={[styles.scoreCardLabel, { color: c.text }]}>CIWA-Ar</Text>
-                      <Text style={[styles.scoreCardValue, { color: c.text }]}>{patient.ciwa}</Text>
-                      <Text style={[styles.scoreCardSeverity, { color: c.text }]}>{getSeverityLabel(patient.ciwa!, true)}</Text>
-                    </View>
-                  );
-                })()}
-                {/* Mood + Cravings */}
-                <View style={[styles.scoreCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <Text style={[styles.scoreCardLabel, { color: colors.mutedForeground }]}>Mood</Text>
-                  <Text style={[styles.scoreCardValue, { color: colors.navy }]}>{patient.mood}/10</Text>
-                  <Text style={[styles.scoreCardSeverity, { color: colors.mutedForeground }]}>Cravings {patient.cravings}/10</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Vitals history */}
-          {vitals.length > 0 ? (
-            <View style={styles.modalSection}>
-              <Text style={[styles.modalSectionTitle, { color: colors.mutedForeground }]}>VITAL SIGNS — RECENT HISTORY</Text>
-              <View style={[styles.vitalsTable, { backgroundColor: colors.card }]}>
-                {/* Header */}
-                <View style={[styles.vitalsRow, { borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
-                  {['Date', 'Time', 'BP', 'HR', 'Temp', 'O₂', 'Pain'].map(h => (
-                    <Text key={h} style={[styles.vitalsCell, { color: colors.mutedForeground, fontWeight: '700', fontSize: 11 }]}>{h}</Text>
-                  ))}
-                </View>
-                {vitals.map((v, i) => (
-                  <View key={v.id} style={[styles.vitalsRow, i < vitals.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
-                    <Text style={[styles.vitalsCell, { color: colors.navy }]}>{v.date}</Text>
-                    <Text style={[styles.vitalsCell, { color: colors.navy }]}>{v.time}</Text>
-                    <Text style={[styles.vitalsCell, { color: colors.navy, fontSize: 11 }]}>{v.bp}</Text>
-                    <Text style={[styles.vitalsCell, { color: v.hr > 100 ? colors.high : colors.navy }]}>{v.hr}</Text>
-                    <Text style={[styles.vitalsCell, { color: v.temp > 99 ? colors.moderate : colors.navy }]}>{v.temp}°</Text>
-                    <Text style={[styles.vitalsCell, { color: v.o2 < 96 ? colors.high : colors.success }]}>{v.o2}%</Text>
-                    <Text style={[styles.vitalsCell, { color: v.pain >= 7 ? colors.critical : v.pain >= 5 ? colors.moderate : colors.success }]}>{v.pain}/10</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : (
-            <View style={styles.modalSection}>
-              <Text style={[styles.modalSectionTitle, { color: colors.mutedForeground }]}>VITAL SIGNS</Text>
-              <View style={[styles.noVitalsCard, { backgroundColor: colors.card }]}>
-                <Ionicons name="pulse-outline" size={28} color={colors.mutedForeground} />
-                <Text style={[styles.noVitalsText, { color: colors.mutedForeground }]}>No vitals recorded for this patient yet.</Text>
-              </View>
-            </View>
-          )}
-
-          {/* Handoff note */}
-          {patient.handoffNote && (
-            <View style={styles.modalSection}>
-              <Text style={[styles.modalSectionTitle, { color: colors.mutedForeground }]}>NURSING HANDOFF NOTE</Text>
-              <View style={[styles.handoffNote, { backgroundColor: colors.navyMid }]}>
-                <Text style={styles.handoffNoteText}>{patient.handoffNote}</Text>
-              </View>
-            </View>
-          )}
-
-          {/* Flags */}
-          {patient.flags.length > 0 && (
-            <View style={styles.modalSection}>
-              <Text style={[styles.modalSectionTitle, { color: colors.mutedForeground }]}>FLAGS</Text>
-              {patient.flags.map((f, i) => (
-                <View key={i} style={[styles.flagRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <Ionicons name="flag" size={13} color={colors.high} />
-                  <Text style={[styles.flagText, { color: colors.navy }]}>{f}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </ScrollView>
-      </View>
-    </Modal>
   );
 }
 
@@ -379,10 +228,9 @@ function AvailableBedCard({ bedId, status }: { bedId: string; status: string }) 
 export default function CensusScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const [filter, setFilter] = useState<Filter>('All');
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
 
   const occupiedCount = BEDS.filter(b => b.status === 'Occupied').length;
   const availableCount = BEDS.filter(b => b.status === 'Available').length;
@@ -398,9 +246,9 @@ export default function CensusScreen() {
     : residentialPatients.filter(p => filter === 'All' || p.acuity === filter);
   const nonOccupiedBeds = BEDS.filter(b => b.status !== 'Occupied');
 
-  const openModal = (p: Patient) => {
-    setSelectedPatient(p);
-    setModalVisible(true);
+  const openPatient = (p: Patient) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/patient/${p.id}` as any);
   };
 
   return (
@@ -442,7 +290,7 @@ export default function CensusScreen() {
       <WithdrawalAlertBanner
         patients={residentialPatients}
         colors={colors}
-        onSelectPatient={openModal}
+        onSelectPatient={openPatient}
       />
 
       {/* Filter Chips */}
@@ -466,7 +314,7 @@ export default function CensusScreen() {
       <FlatList
         data={filter === 'Available' ? [] : filteredPatients}
         keyExtractor={p => p.id}
-        renderItem={({ item }) => <BedCard patient={item} onPress={() => openModal(item)} />}
+        renderItem={({ item }) => <BedCard patient={item} onPress={() => openPatient(item)} />}
         contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={filter === 'Available' ? (
@@ -493,13 +341,6 @@ export default function CensusScreen() {
         }
       />
 
-      {/* Vitals / score detail modal */}
-      <VitalsModal
-        patient={selectedPatient}
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        colors={colors}
-      />
     </View>
   );
 }
@@ -573,30 +414,4 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', gap: 12, paddingTop: 60 },
   emptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
   // Modal
-  modalContainer: { flex: 1 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingHorizontal: 16, paddingBottom: 16 },
-  modalHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  modalBedBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  modalBedText: { fontSize: 16, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
-  modalSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2, fontFamily: 'Inter_400Regular' },
-  closeBtn: { padding: 4 },
-  modalScroll: { flex: 1 },
-  modalContent: { padding: 16, paddingBottom: 40, gap: 4 },
-  modalSection: { marginBottom: 16 },
-  modalSectionTitle: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10, fontFamily: 'Inter_700Bold' },
-  scoreRow: { flexDirection: 'row', gap: 10 },
-  scoreCard: { flex: 1, borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 2 },
-  scoreCardLabel: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
-  scoreCardValue: { fontSize: 40, fontWeight: '700', fontFamily: 'Inter_700Bold', lineHeight: 48 },
-  scoreCardSeverity: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  vitalsTable: { borderRadius: 10, padding: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' },
-  vitalsRow: { flexDirection: 'row', paddingVertical: 8 },
-  vitalsCell: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', textAlign: 'center' },
-  noVitalsCard: { borderRadius: 10, padding: 24, alignItems: 'center', gap: 8 },
-  noVitalsText: { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center' },
-  handoffNote: { borderRadius: 10, padding: 14 },
-  handoffNoteText: { fontSize: 14, color: '#fff', fontFamily: 'Inter_400Regular', lineHeight: 20 },
-  flagRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
-  flagText: { fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1 },
 });
