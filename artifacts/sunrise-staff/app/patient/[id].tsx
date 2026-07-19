@@ -782,6 +782,11 @@ export default function PatientDetailScreen() {
                   </View>
                   <View style={s.sessionNoteMeta}>
                     <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
+                    {note.editedAt && (
+                      <View style={[s.editedTag, { backgroundColor: colors.muted }]}>
+                        <Text style={[s.editedTagText, { color: colors.mutedForeground }]}>Edited</Text>
+                      </View>
+                    )}
                     <Ionicons name="ellipsis-horizontal" size={13} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
                   </View>
                 </View>
@@ -999,6 +1004,8 @@ const s = StyleSheet.create({
   sessionNoteMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   sessionNoteLabel: { fontSize: 11, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
   sessionNoteText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
+  editedTag: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
+  editedTagText: { fontSize: 10, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
   // Note bottom sheet
   noteOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   bottomSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingTop: 10, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 12 },

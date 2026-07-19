@@ -30,6 +30,8 @@ export interface NursingNote {
   createdAt: string;
   /** Formatted display time, e.g. "14:32" */
   displayTime: string;
+  /** ISO timestamp of the most recent edit; absent on notes that have never been changed */
+  editedAt?: string;
 }
 
 /** Shape written to AsyncStorage */
@@ -139,7 +141,7 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
       setNotesByPatient(prev => ({
         ...prev,
         [patientId]: (prev[patientId] ?? []).map(n =>
-          n.id === noteId ? { ...n, text, noteType } : n,
+          n.id === noteId ? { ...n, text, noteType, editedAt: new Date().toISOString() } : n,
         ),
       }));
     },
