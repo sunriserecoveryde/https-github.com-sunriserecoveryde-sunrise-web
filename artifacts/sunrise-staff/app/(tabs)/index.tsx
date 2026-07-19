@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { usePatients } from '@/context/PatientContext';
@@ -584,7 +584,7 @@ export default function CensusScreen() {
   const hasFiredHaptic = useRef(false);
 
   // ─── Live census data from context ────────────────────────────────────────
-  const { patients, bedStatusMap } = usePatients();
+  const { patients, bedStatusMap, refreshFromApi } = usePatients();
   const { clearNotes } = useNursingNotes();
   const { clearAcknowledgments } = useMdAcknowledgment();
   const residentialPatients = patients.filter(p => p.bed != null);
@@ -604,17 +604,29 @@ export default function CensusScreen() {
   const alertCount = residentialPatients.filter(isWithdrawalAlert).length;
   const stats = { occupied: occupiedCount, available: availableCount, cleaning: cleaningCount, wdAlerts: alertCount };
 
-  // Pull-to-refresh: context updates live, so this is a brief visual acknowledgment
+  // ─── Pull-to-refresh ──────────────────────────────────────────────────────
   const [refreshing, setRefreshing] = useState(false);
   const loading = false; // context provides data immediately on mount
 
   const loadCensus = useCallback(async (isRefresh = false) => {
     if (!isRefresh) return;
     setRefreshing(true);
-    // Brief delay for visual feedback; context already reflects live state
-    await new Promise(resolve => setTimeout(resolve, 600));
-    setRefreshing(false);
-  }, []);
+    try {
+      await refreshFromApi();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshFromApi]);
+
+  // ─── Auto-refresh every 60 s while screen is focused ─────────────────────
+  useFocusEffect(
+    useCallback(() => {
+      // Fetch immediately on focus, then poll every 60 seconds
+      refreshFromApi();
+      const timer = setInterval(refreshFromApi, 60_000);
+      return () => clearInterval(timer);
+    }, [refreshFromApi]),
+  );
 
   useEffect(() => {
     if (alertCount > 0 && !hasFiredHaptic.current) {

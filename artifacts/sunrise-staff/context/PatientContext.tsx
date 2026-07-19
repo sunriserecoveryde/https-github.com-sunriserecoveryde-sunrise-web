@@ -8,6 +8,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PATIENTS, BEDS as STATIC_BEDS, Patient, BedStatus } from '@/data/mockData';
+import { fetchCensus } from '@/lib/api';
 
 const PATIENTS_KEY = '@sunrise_patients_v1';
 /** Written once after the first admit/discharge so we can distinguish
@@ -56,6 +57,8 @@ interface PatientContextValue {
   admitPatient: (patient: Patient) => void;
   /** True while loading from storage */
   loading: boolean;
+  /** Fetch fresh census data from the API and update patient state */
+  refreshFromApi: () => Promise<void>;
 }
 
 const PatientContext = createContext<PatientContextValue | null>(null);
@@ -106,12 +109,23 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     setPatients(prev => [...prev, patient]);
   }, []);
 
+  const refreshFromApi = useCallback(async () => {
+    try {
+      const data = await fetchCensus();
+      if (Array.isArray(data.patients) && data.patients.length > 0) {
+        setPatients(data.patients);
+      }
+    } catch {
+      // Silent failure — keep showing existing local data
+    }
+  }, []);
+
   const residentialPatients = patients.filter(p => p.program === 'Residential');
   const bedStatusMap = deriveBedStatus(patients);
 
   return (
     <PatientContext.Provider
-      value={{ patients, residentialPatients, bedStatusMap, dischargePatient, admitPatient, loading }}
+      value={{ patients, residentialPatients, bedStatusMap, dischargePatient, admitPatient, loading, refreshFromApi }}
     >
       {children}
     </PatientContext.Provider>
