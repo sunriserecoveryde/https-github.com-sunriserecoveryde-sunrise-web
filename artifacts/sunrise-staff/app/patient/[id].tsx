@@ -878,6 +878,7 @@ export default function PatientDetailScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={() => { if (expandedEditId !== null) setExpandedEditId(null); }}
         scrollEventThrottle={16}
+        onScrollBeginDrag={closeOpenRow}
       >
 
         {/* ─── Withdrawal scores ─── */}
