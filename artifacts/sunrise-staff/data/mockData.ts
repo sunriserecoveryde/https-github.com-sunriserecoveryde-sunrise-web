@@ -254,6 +254,12 @@ export const VITALS: Record<string, VitalEntry[]> = {
     { id: 'v1-2', date: '10/25', time: '06:00', bp: '142/90', hr: 98, temp: 99.1, o2: 97, pain: 7, cows: 8, recordedBy: 'M. Boyd, RN' },
     { id: 'v1-3', date: '10/24', time: '06:00', bp: '148/94', hr: 105, temp: 99.4, o2: 96, pain: 7, cows: 12, recordedBy: 'J. Torres, RN' },
   ],
+  // p3: Devon Patel — Meth, COWS 2, acuity High, LOS 8d. Paranoia improving; COWS falling as acute stimulant effects subside.
+  p3: [
+    { id: 'v3-1', date: '10/26', time: '06:00', bp: '128/82', hr: 84, temp: 98.4, o2: 99, pain: 2, cows: 2, recordedBy: 'J. Torres, RN' },
+    { id: 'v3-2', date: '10/25', time: '06:00', bp: '132/86', hr: 90, temp: 98.7, o2: 98, pain: 3, cows: 5, recordedBy: 'M. Boyd, RN' },
+    { id: 'v3-3', date: '10/24', time: '06:00', bp: '136/88', hr: 96, temp: 98.9, o2: 98, pain: 4, cows: 8, recordedBy: 'J. Torres, RN' },
+  ],
   p4: [
     { id: 'v4-1', date: '10/26', time: '06:00', bp: '144/92', hr: 96, temp: 98.8, o2: 97, pain: 7, cows: 10, ciwa: 8, recordedBy: 'J. Torres, RN' },
     { id: 'v4-2', date: '10/25', time: '06:00', bp: '150/94', hr: 102, temp: 99.2, o2: 96, pain: 8, cows: 14, ciwa: 12, recordedBy: 'M. Boyd, RN' },
@@ -262,9 +268,23 @@ export const VITALS: Record<string, VitalEntry[]> = {
     { id: 'v5-1', date: '10/26', time: '06:00', bp: '124/80', hr: 78, temp: 98.4, o2: 98, pain: 3, ciwa: 6, recordedBy: 'J. Torres, RN' },
     { id: 'v5-2', date: '10/25', time: '06:00', bp: '128/84', hr: 82, temp: 98.8, o2: 98, pain: 4, ciwa: 9, recordedBy: 'M. Boyd, RN' },
   ],
+  // p6: Robert Kim — OUD/PTSD, COWS 1, acuity Moderate, LOS 10d. Well-established on Suboxone; COWS minimal and stable.
+  p6: [
+    { id: 'v6-1', date: '10/26', time: '06:00', bp: '122/78', hr: 68, temp: 98.2, o2: 99, pain: 1, cows: 1, recordedBy: 'J. Torres, RN' },
+    { id: 'v6-2', date: '10/25', time: '06:00', bp: '124/80', hr: 70, temp: 98.3, o2: 99, pain: 2, cows: 1, recordedBy: 'M. Boyd, RN' },
+    { id: 'v6-3', date: '10/24', time: '06:00', bp: '126/82', hr: 72, temp: 98.4, o2: 98, pain: 2, cows: 2, recordedBy: 'J. Torres, RN' },
+  ],
+  // p7: Destiny Williams — Heroin/Methadone, COWS 2, acuity Moderate, LOS 11d. Stable on methadone 40mg; residual low COWS stable.
+  p7: [
+    { id: 'v7-1', date: '10/26', time: '06:00', bp: '118/76', hr: 72, temp: 98.0, o2: 99, pain: 1, cows: 2, recordedBy: 'J. Torres, RN' },
+    { id: 'v7-2', date: '10/25', time: '06:00', bp: '120/78', hr: 74, temp: 98.2, o2: 99, pain: 2, cows: 2, recordedBy: 'M. Boyd, RN' },
+    { id: 'v7-3', date: '10/24', time: '06:00', bp: '122/80', hr: 76, temp: 98.4, o2: 98, pain: 2, cows: 3, recordedBy: 'J. Torres, RN' },
+  ],
+  // p8: Carlos Mendez — AUD, CIWA 17, acuity High, LOS 5d. CIWA worsening mid-shift (06:00→10:00); MD notified, Librium given.
   p8: [
-    { id: 'v8-1', date: '10/26', time: '06:00', bp: '158/96', hr: 88, temp: 98.6, o2: 97, pain: 4, ciwa: 9, recordedBy: 'J. Torres, RN' },
-    { id: 'v8-2', date: '10/25', time: '06:00', bp: '162/98', hr: 94, temp: 98.8, o2: 96, pain: 5, ciwa: 12, recordedBy: 'M. Boyd, RN' },
+    { id: 'v8-1', date: '10/26', time: '10:00', bp: '162/100', hr: 96, temp: 99.0, o2: 96, pain: 6, ciwa: 17, recordedBy: 'J. Torres, RN' },
+    { id: 'v8-2', date: '10/26', time: '06:00', bp: '158/96', hr: 88, temp: 98.6, o2: 97, pain: 4, ciwa: 9, recordedBy: 'J. Torres, RN' },
+    { id: 'v8-3', date: '10/25', time: '06:00', bp: '162/98', hr: 94, temp: 98.8, o2: 96, pain: 5, ciwa: 12, recordedBy: 'M. Boyd, RN' },
   ],
 };
 
