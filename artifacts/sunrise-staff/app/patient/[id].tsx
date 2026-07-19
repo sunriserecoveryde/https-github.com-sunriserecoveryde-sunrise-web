@@ -407,6 +407,7 @@ export default function PatientDetailScreen() {
     pendingDelete,
     startPendingDelete,
     undoPendingDelete,
+    clearPendingDelete,
   } = useNursingNotes();
 
   // ─── Scroll-to-section support ────────────────────────────────────────────
@@ -488,6 +489,13 @@ export default function PatientDetailScreen() {
     const noteId = pendingDelete?.patientId === id ? pendingDelete.note.id : null;
 
     if (noteId !== null && toastNoteIdRef.current === null) {
+      // Guard: if the undo window is almost over, skip the toast entirely so it
+      // doesn't flash in and immediately slide back out (ghost toast).
+      const MINIMUM_SHOW_MS = 500;
+      if (pendingDelete && pendingDelete.expiresAt - Date.now() < MINIMUM_SHOW_MS) {
+        clearPendingDelete();
+        return;
+      }
       // Fresh show — toast was not visible
       toastNoteIdRef.current = noteId;
       setToastVisible(true);
