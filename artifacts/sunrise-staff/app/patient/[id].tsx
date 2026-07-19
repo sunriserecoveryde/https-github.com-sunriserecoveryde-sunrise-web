@@ -196,6 +196,15 @@ export default function PatientDetailScreen() {
 
   const hasSparklines = vitalsAsc.length >= 2;
 
+  // For withdrawal scores: rising = worse = red, falling = better = green, flat = blue
+  const withdrawalTrendColor = (series: number[]) => {
+    if (series.length < 2) return colors.blue;
+    const delta = series[series.length - 1] - series[0];
+    if (delta > 0) return colors.critical;   // rising — bad
+    if (delta < 0) return colors.success;    // falling — good
+    return colors.blue;                      // flat — neutral
+  };
+
   const goBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
@@ -290,12 +299,12 @@ export default function PatientDetailScreen() {
               <View style={s.sparkRow}>
                 {cowsSeries.length >= 2 && (
                   <View style={s.sparkItem}>
-                    <Sparkline data={cowsSeries} color={colors.high} label="COWS" />
+                    <Sparkline data={cowsSeries} color={withdrawalTrendColor(cowsSeries)} label="COWS" />
                   </View>
                 )}
                 {ciwaSeries.length >= 2 && (
                   <View style={s.sparkItem}>
-                    <Sparkline data={ciwaSeries} color={colors.moderate} label="CIWA" />
+                    <Sparkline data={ciwaSeries} color={withdrawalTrendColor(ciwaSeries)} label="CIWA" />
                   </View>
                 )}
                 {bpSeries.length >= 2 && (
