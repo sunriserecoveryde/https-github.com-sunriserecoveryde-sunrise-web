@@ -509,7 +509,7 @@ export default function PatientDetailScreen() {
     // Guard: if this note is already pending deletion (undo toast visible), do nothing.
     if (pendingDelete?.note.id === note.id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Commit any in-flight deletion before starting a new one
+    // Commit any in-flight deletion timer before starting a new one
     if (deleteTimerRef.current) {
       clearTimeout(deleteTimerRef.current);
       deleteTimerRef.current = null;
@@ -517,14 +517,30 @@ export default function PatientDetailScreen() {
     // Clean up the row ref immediately so no stale ref lingers during the undo window.
     rowRefsMap.current.delete(note.id);
     removeNote(id, note.id);
-    setPendingDelete({ note, patientId: id, originalIndex: index });
-    Animated.spring(toastAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      damping: 20,
-      stiffness: 200,
-    }).start();
-    deleteTimerRef.current = setTimeout(dismissToast, 4000);
+
+    const showNewToast = () => {
+      setPendingDelete({ note, patientId: id, originalIndex: index });
+      Animated.spring(toastAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 200,
+      }).start();
+      deleteTimerRef.current = setTimeout(dismissToast, 4000);
+    };
+
+    if (pendingDelete) {
+      // A toast is already visible — slide it out first, then slide the new one in.
+      // The first deletion is already committed (removeNote was called when it was
+      // first deleted); we just need to replace the toast smoothly.
+      Animated.timing(toastAnim, {
+        toValue: 100,
+        duration: 180,
+        useNativeDriver: true,
+      }).start(() => showNewToast());
+    } else {
+      showNewToast();
+    }
   };
 
   type NoteType = 'observation' | 'med-update' | 'incident';
