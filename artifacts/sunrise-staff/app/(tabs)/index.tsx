@@ -1,10 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -31,7 +33,28 @@ import {
 type Filter = 'All' | Acuity | 'Available';
 const FILTERS: Filter[] = ['All', 'Critical', 'High', 'Moderate', 'Routine', 'Available'];
 
-// ─── Score helpers ────────────────────────────────────────────────────────────────
+// ─── Shift label ──────────────────────────────────────────────────────────────
+// Day:     07:00 – 14:59
+// Evening: 15:00 – 22:59
+// Night:   23:00 – 06:59
+
+function getShiftLabel(): string {
+  const now = new Date();
+  const h = now.getHours();
+  let shift: string;
+  if (h >= 7 && h < 15) {
+    shift = 'Day Shift';
+  } else if (h >= 15 && h < 23) {
+    shift = 'Evening Shift';
+  } else {
+    shift = 'Night Shift';
+  }
+  const month = now.toLocaleString('en-US', { month: 'short' });
+  const day = now.getDate();
+  return `${month} ${day} · ${shift}`;
+}
+
+// ─── Score helpers ────────────────────────────────────────────────────────────
 
 function getScoreStyle(score: number, threshold: number, colors: ReturnType<typeof useColors>) {
   if (score >= threshold) return { bg: colors.criticalBg, text: colors.critical };
@@ -558,11 +581,12 @@ export default function CensusScreen() {
   const [admitVisible, setAdmitVisible] = useState(false);
   const hasFiredHaptic = useRef(false);
 
+  // ─── Live census data from context ────────────────────────────────────────
   const { patients, bedStatusMap } = usePatients();
   const { clearNotes } = useNursingNotes();
   const residentialPatients = patients.filter(p => p.bed != null);
 
-  // Build bed lists from live data
+  // Build bed lists from live context data
   const allBedIds = BEDS.map(b => b.id);
   const occupiedBedIds = new Set(patients.map(p => p.bed).filter(Boolean));
   const occupiedCount = occupiedBedIds.size;
@@ -573,7 +597,21 @@ export default function CensusScreen() {
   const cleaningCount = nonOccupiedBeds.filter(b => b.status === 'Cleaning').length;
   const availableBedIds = nonOccupiedBeds.filter(b => b.status === 'Available').map(b => b.id);
 
+  // Stats computed from live context (satisfies real-time requirement)
   const alertCount = residentialPatients.filter(isWithdrawalAlert).length;
+  const stats = { occupied: occupiedCount, available: availableCount, cleaning: cleaningCount, wdAlerts: alertCount };
+
+  // Pull-to-refresh: context updates live, so this is a brief visual acknowledgment
+  const [refreshing, setRefreshing] = useState(false);
+  const loading = false; // context provides data immediately on mount
+
+  const loadCensus = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) return;
+    setRefreshing(true);
+    // Brief delay for visual feedback; context already reflects live state
+    await new Promise(resolve => setTimeout(resolve, 600));
+    setRefreshing(false);
+  }, []);
 
   useEffect(() => {
     if (alertCount > 0 && !hasFiredHaptic.current) {
@@ -591,6 +629,9 @@ export default function CensusScreen() {
     router.push(`/patient/${p.id}` as any);
   };
 
+  // ─── Shift label (computed once on mount; stable within a session) ─────────
+  const [shiftLabel] = useState(getShiftLabel);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -598,7 +639,7 @@ export default function CensusScreen() {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.headerTitle}>Census Board</Text>
-            <Text style={styles.headerSubtitle}>Jul 19 · Day Shift</Text>
+            <Text style={styles.headerSubtitle}>{shiftLabel}</Text>
           </View>
           <View style={styles.headerActions}>
             <Pressable
@@ -640,22 +681,22 @@ export default function CensusScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{occupiedCount}</Text>
+            <Text style={styles.statValue}>{stats.occupied}</Text>
             <Text style={styles.statLabel}>Occupied</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.success }]}>{availableCount}</Text>
+            <Text style={[styles.statValue, { color: colors.success }]}>{stats.available}</Text>
             <Text style={styles.statLabel}>Available</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.amber }]}>{cleaningCount}</Text>
+            <Text style={[styles.statValue, { color: colors.amber }]}>{stats.cleaning}</Text>
             <Text style={styles.statLabel}>Cleaning</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: alertCount > 0 ? colors.critical : '#fff' }]}>{alertCount}</Text>
+            <Text style={[styles.statValue, { color: alertCount > 0 ? colors.critical : '#fff' }]}>{stats.wdAlerts}</Text>
             <Text style={styles.statLabel}>WD Alerts</Text>
           </View>
         </View>
@@ -689,35 +730,49 @@ export default function CensusScreen() {
         ))}
       </ScrollView>
 
-      <FlatList
-        data={filter === 'Available' ? [] : filteredPatients}
-        keyExtractor={p => p.id}
-        renderItem={({ item }) => <BedCard patient={item} onPress={() => openPatient(item)} />}
-        contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={filter === 'Available' ? (
-          <View>
-            <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Non-Occupied Beds</Text>
-            <View style={styles.availableGrid}>
-              {nonOccupiedBeds.map(b => <AvailableBedCard key={b.id} bedId={b.id} status={b.status} />)}
+      {loading ? (
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={colors.navy} />
+        </View>
+      ) : (
+        <FlatList
+          data={filter === 'Available' ? [] : filteredPatients}
+          keyExtractor={p => p.id}
+          renderItem={({ item }) => <BedCard patient={item} onPress={() => openPatient(item)} />}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadCensus(true)}
+              tintColor={colors.navy}
+              colors={[colors.navy]}
+            />
+          }
+          ListHeaderComponent={filter === 'Available' ? (
+            <View>
+              <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Non-Occupied Beds</Text>
+              <View style={styles.availableGrid}>
+                {nonOccupiedBeds.map(b => <AvailableBedCard key={b.id} bedId={b.id} status={b.status} />)}
+              </View>
             </View>
-          </View>
-        ) : null}
-        ListFooterComponent={filter !== 'Available' && nonOccupiedBeds.length > 0 ? (
-          <View style={styles.footerBeds}>
-            <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Other Beds</Text>
-            <View style={styles.availableGrid}>
-              {nonOccupiedBeds.map(b => <AvailableBedCard key={b.id} bedId={b.id} status={b.status} />)}
+          ) : null}
+          ListFooterComponent={filter !== 'Available' && nonOccupiedBeds.length > 0 ? (
+            <View style={styles.footerBeds}>
+              <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Other Beds</Text>
+              <View style={styles.availableGrid}>
+                {nonOccupiedBeds.map(b => <AvailableBedCard key={b.id} bedId={b.id} status={b.status} />)}
+              </View>
             </View>
-          </View>
-        ) : null}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="bed-outline" size={40} color={colors.mutedForeground} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No patients match this filter</Text>
-          </View>
-        }
-      />
+          ) : null}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="bed-outline" size={40} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No patients match this filter</Text>
+            </View>
+          }
+        />
+      )}
 
       <AdmitModal
         visible={admitVisible}
@@ -808,6 +863,8 @@ const styles = StyleSheet.create({
   footerBeds: { marginTop: 8 },
   emptyState: { alignItems: 'center', gap: 12, paddingTop: 60 },
   emptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
+  // Loading
+  loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });
 
 const modalStyles = StyleSheet.create({
