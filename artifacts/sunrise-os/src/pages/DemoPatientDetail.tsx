@@ -5,7 +5,7 @@ import { FlagBadge } from '../components/ui/FlagBadge';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 import { getPatientVitals } from '../data/mockVitals';
-import { getPatientMedications } from '../data/mockMedications';
+import { getPatientMedications, getMARStatus, DEMO_MAR_TIME } from '../data/mockMedications';
 import {
   ArrowLeft, Activity, FileText, CheckCircle2, FlaskConical,
   AlertCircle, Clock, Shield, CalendarDays, Heart, Pill, ChevronDown,
@@ -638,7 +638,9 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
                     {clsLabels[cls]}
                   </div>
                   <div className="space-y-3">
-                    {meds.map(med => (
+                    {meds.map(med => {
+                      const marStatus = getMARStatus(med);
+                      return (
                       <div
                         key={med.id}
                         className={`border border-border rounded-lg overflow-hidden ${med.status === 'Discontinued' ? 'opacity-60' : ''}`}
@@ -657,6 +659,23 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
                               }`}>
                                 {med.status}
                               </span>
+                              {marStatus && (
+                                <span className={`text-xs px-2 py-0.5 rounded font-bold flex items-center gap-1 ${
+                                  marStatus.label === 'Given'   ? 'bg-success/10 text-success' :
+                                  marStatus.label === 'Due'     ? 'bg-sunrise-amber/10 text-sunrise-amber' :
+                                                                  'bg-critical/10 text-critical'
+                                }`}>
+                                  {marStatus.label === 'Given'   && <CheckCircle2 className="w-3 h-3" />}
+                                  {marStatus.label === 'Due'     && <Clock className="w-3 h-3" />}
+                                  {marStatus.label === 'Overdue' && <AlertCircle className="w-3 h-3" />}
+                                  {marStatus.label}
+                                  {marStatus.time && (
+                                    <span className="font-normal opacity-80">
+                                      {` · ${marStatus.time ?? ''}`}
+                                    </span>
+                                  )}
+                                </span>
+                              )}
                             </div>
                             <div className="text-xs text-slate mt-0.5">{med.indication}</div>
                           </div>
@@ -690,7 +709,8 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
                           )}
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </div>
               );
@@ -698,7 +718,10 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
 
             <div className="flex items-center gap-2.5 bg-violet-50 border border-violet-200 rounded-lg px-4 py-3 text-sm text-violet-700">
               <FlaskConical className="w-4 h-4 shrink-0" />
-              <span>Medications are read-only in demo mode. Prescribers can order, discontinue, and administer medications in a live environment.</span>
+              <span>
+                Demo MAR snapshot at {DEMO_MAR_TIME} — Given / Due / Overdue badges reflect illustrative administration data.
+                Prescribers can order, discontinue, and record administrations in a live environment.
+              </span>
             </div>
           </div>
         )}
