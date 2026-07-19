@@ -48,7 +48,7 @@ const TRAINING_DATA: TrainingRecord[] = MOCK_STAFF.map((s, si) => {
       daysUntilExpiry: completed ? daysUntilExpiry : -1,
     };
   });
-  return { staffId: s.id, staffName: s.name, role: s.role, department: s.department, completions };
+  return { staffId: s.id, staffName: `${s.firstName} ${s.lastName}`, role: s.title, department: s.department, completions };
 });
 
 interface ScheduledTraining {
@@ -293,8 +293,8 @@ export function Training({ navigate }: Props) {
                 const onTrack = ceuCompleted >= ceuRequired * 0.5;
                 return (
                   <tr key={s.id} className="border-b border-border last:border-0 hover:bg-gray-50">
-                    <td className="px-4 py-3 font-semibold text-navy">{s.name}</td>
-                    <td className="px-4 py-3 text-slate">{s.role}</td>
+                    <td className="px-4 py-3 font-semibold text-navy">{s.firstName} {s.lastName}</td>
+                    <td className="px-4 py-3 text-slate">{s.title}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-20 bg-gray-100 rounded-full">

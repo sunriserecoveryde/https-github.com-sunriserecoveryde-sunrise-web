@@ -7,7 +7,7 @@ description: Screen union (53 values), data files, Sidebar sections, key convent
 `artifacts/sunrise-os/src/`
 Workflow: `artifacts/sunrise-os: web` — must be running for preview.
 
-## Screen Union (53 values — current)
+## Screen Union (54 values — current, includes StaffAdmin added with auth session)
 `Dashboard`, `CommandCenter`, `CensusBedBoard`, `PatientList`, `Admissions`, `Discharges`,
 `ChartReview`, `ProgressNotes`, `TreatmentPlans`, `ASAMAssessments`, `GroupNotes`, `CosignQueue`,
 `MyCaseload`, `AppointmentCalendar`, `GroupSchedule`, `StaffScheduling`, `RiskDashboard`,

@@ -56,10 +56,14 @@ import { WaitlistManager } from './pages/WaitlistManager';
 import { SecureMessaging } from './pages/SecureMessaging';
 import { FormularyManagement } from './pages/FormularyManagement';
 import { RoleExplorer } from './pages/RoleExplorer';
+import { StaffAdmin } from './pages/StaffAdmin';
+import { LoginPage } from './pages/LoginPage';
 import { AccessDenied } from './components/common/AccessDenied';
 import { ReadOnlyBanner } from './components/common/ReadOnlyBanner';
 import { RoleProvider } from './context/RoleContext';
 import { useRole } from './context/RoleContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export type Screen =
@@ -116,9 +120,10 @@ export type Screen =
   | 'SecureMessaging'
   | 'FormularyManagement'
   | 'PatientDetail'
-  | 'RoleExplorer';
+  | 'RoleExplorer'
+  | 'StaffAdmin';
 
-// ─── Inner app (needs RoleContext) ──────────────────────────────────────────
+// ─── Inner app (needs RoleContext) ───────────────────────────────────────────
 
 function AppInner() {
   const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
@@ -133,8 +138,7 @@ function AppInner() {
 
   /** Wrap page content with access gate */
   const withAccess = (screen: Screen, content: React.ReactNode): React.ReactNode => {
-    // RoleExplorer is always accessible (demo tool)
-    if (screen === 'RoleExplorer') return content;
+    if (screen === 'RoleExplorer' || screen === 'StaffAdmin') return content;
     const permission = getPermissionForScreen(screen);
     if (permission === 'none') return <AccessDenied screen={screen} screenLabel={screen} />;
     if (permission === 'read') return <ReadOnlyBanner screen={screen}>{content}</ReadOnlyBanner>;
@@ -142,8 +146,8 @@ function AppInner() {
   };
 
   /**
-   * For the 5 high-value clinical pages, instead of a global pointer-events-none overlay,
-   * individual action buttons receive readOnly=true and show a lock icon + tooltip.
+   * For the 5 high-value clinical pages, individual action buttons receive
+   * readOnly=true and show a lock icon + tooltip instead of a global overlay.
    */
   const withAccessReadOnlyProp = (
     screen: Screen,
@@ -210,6 +214,7 @@ function AppInner() {
       case 'WaitlistManager':         return withAccess('WaitlistManager',         <WaitlistManager navigate={navigateTo} />);
       case 'SecureMessaging':         return withAccess('SecureMessaging',         <SecureMessaging navigate={navigateTo} />);
       case 'FormularyManagement':     return withAccess('FormularyManagement',     <FormularyManagement navigate={navigateTo} />);
+      case 'StaffAdmin':              return <StaffAdmin navigate={navigateTo} />;
       case 'RoleExplorer':            return <RoleExplorer navigate={navigateTo} />;
       default:
         return (
@@ -250,13 +255,29 @@ function AppInner() {
   );
 }
 
-// ─── Root app wrapped with providers ────────────────────────────────────────
+// ─── Auth gate: picks correct initial role from logged-in staff member ────────
+
+function AppWithAuth() {
+  const { isLoggedIn, currentStaff } = useAuth();
+
+  return (
+    <RoleProvider
+      key={currentStaff?.id ?? 'guest'}
+      defaultRoleId={currentStaff?.roleId}
+      staffId={currentStaff?.id}
+    >
+      {isLoggedIn ? <AppInner /> : <LoginPage />}
+    </RoleProvider>
+  );
+}
+
+// ─── Root app wrapped with providers ─────────────────────────────────────────
 
 function App() {
   return (
-    <RoleProvider>
-      <AppInner />
-    </RoleProvider>
+    <AuthProvider>
+      <AppWithAuth />
+    </AuthProvider>
   );
 }
 

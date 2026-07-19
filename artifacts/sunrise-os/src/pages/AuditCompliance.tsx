@@ -223,8 +223,8 @@ export function AuditCompliance({ navigate }: { navigate: (s: Screen) => void })
                 <tbody className="divide-y divide-border">
                   {TRAINING_RECORDS.map(s => (
                     <tr key={s.id} className="hover:bg-bg">
-                      <td className="py-3 px-3 font-semibold text-navy">{s.name}</td>
-                      <td className="py-3 px-3 text-slate text-xs">{s.role}</td>
+                      <td className="py-3 px-3 font-semibold text-navy">{s.firstName} {s.lastName}</td>
+                      <td className="py-3 px-3 text-slate text-xs">{s.title}</td>
                       <td className="py-3 px-3 text-center">
                         {s.hipaa ? <CheckCircle2 className="w-4 h-4 text-success mx-auto" /> : <XCircle className="w-4 h-4 text-critical mx-auto" />}
                       </td>

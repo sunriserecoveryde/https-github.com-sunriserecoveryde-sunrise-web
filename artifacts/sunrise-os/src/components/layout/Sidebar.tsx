@@ -133,6 +133,12 @@ const ALL_SECTIONS: SidebarSection[] = [
       { id: 'SecureMessaging', label: 'Secure Messaging', icon: MessageSquare, badge: 3 },
     ]
   },
+  {
+    title: 'SECURITY & ADMIN',
+    items: [
+      { id: 'StaffAdmin', label: 'Staff Administration', icon: ShieldCheck },
+    ]
+  },
 ];
 
 export function Sidebar({ currentScreen, navigate }: SidebarProps) {

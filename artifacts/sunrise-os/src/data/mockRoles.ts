@@ -6,7 +6,8 @@ export type RoleCategory =
   | 'Nursing & Direct Care'
   | 'Operations'
   | 'Administrative'
-  | 'Leadership';
+  | 'Leadership'
+  | 'IT & Security';
 
 export interface RoleDefinition {
   id: string;
@@ -30,6 +31,7 @@ function perms(full: string[], read: string[]): Record<string, Permission> {
 }
 
 // ─── convenience screen-group arrays ────────────────────────────────────────
+const SECURITY         = ['StaffAdmin'];
 const CLINICAL_DIRECT  = ['PatientList','PatientDetail','CensusBedBoard','Admissions','Discharges','BedManagement'];
 const CLINICAL_DOCS    = ['ChartReview','ProgressNotes','TreatmentPlans','ASAMAssessments','BiopsychosocialAssessment','DischargeSummary','GroupNotes','MedicalRecords'];
 const CLINICAL_QUEUE   = ['CosignQueue','MyCaseload'];
@@ -304,6 +306,21 @@ export const ROLES: RoleDefinition[] = [
       ['PatientList','DischargeSummary','RecoveryEngagementScore','Dashboard','FamilyEngagement','Settings'],
     ),
   },
+
+  // ── 17. Security Administrator ──────────────────────────────────────────
+  {
+    id: 'security_admin',
+    label: 'Security Administrator',
+    shortLabel: 'Security Admin',
+    description: 'HIPAA Security Officer. Manages staff access, system permissions, audit trails. No patient data access.',
+    color: 'bg-indigo-500/20', textColor: 'text-indigo-300', borderColor: 'border-indigo-500/40', dotColor: 'bg-indigo-400',
+    category: 'IT & Security',
+    permissions: perms(
+      [...SECURITY, 'AuditCompliance', 'QualityImprovement', 'Training', 'Dashboard',
+       'Settings', 'HelpSupport', 'CertificationTracker', 'StaffScheduling', 'SecureMessaging', ...DEMO],
+      ['RevenueCycle', 'FinancialCounseling'],
+    ),
+  },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -323,7 +340,7 @@ export function canAccess(roleId: string, screen: string): boolean {
 }
 
 export const ROLE_CATEGORIES: RoleCategory[] = [
-  'Clinical', 'Medical', 'Nursing & Direct Care', 'Operations', 'Administrative', 'Leadership',
+  'Clinical', 'Medical', 'Nursing & Direct Care', 'Operations', 'Administrative', 'Leadership', 'IT & Security',
 ];
 
 export const DEFAULT_ROLE_ID = 'clinical_supervisor';

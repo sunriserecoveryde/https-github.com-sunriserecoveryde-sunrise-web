@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import sunriseLogo from '@assets/0_SunriseOS_Logo_1784397889924.png';
-import { Bell, Search, Settings, MessageSquare, ChevronDown, Flag, X } from 'lucide-react';
+import { Bell, Search, Settings, MessageSquare, ChevronDown, Flag, LogOut, UserCircle } from 'lucide-react';
 import { Screen } from '../../App';
 import { NotificationPanel } from './NotificationPanel';
 import { CommandPalette } from './CommandPalette';
 import { useRole } from '../../context/RoleContext';
+import { useAuth } from '../../context/AuthContext';
 import { ROLES, ROLE_CATEGORIES } from '../../data/mockRoles';
 
 interface Props {
@@ -18,9 +19,12 @@ export function Topbar({ navigate, currentScreen }: Props) {
   const [showNotif, setShowNotif] = useState(false);
   const [showCmd, setShowCmd] = useState(false);
   const [showRolePicker, setShowRolePicker] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const notifBtnRef = useRef<HTMLDivElement>(null);
   const rolePickerRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { role, setRoleId } = useRole();
+  const { currentStaff, logout } = useAuth();
 
   // Ctrl+K global shortcut
   useEffect(() => {
@@ -35,6 +39,7 @@ export function Topbar({ navigate, currentScreen }: Props) {
         setShowNotif(false);
         setShowCmd(false);
         setShowRolePicker(false);
+        setShowUserMenu(false);
       }
     };
     window.addEventListener('keydown', handler);
@@ -52,10 +57,31 @@ export function Topbar({ navigate, currentScreen }: Props) {
     return () => document.removeEventListener('mousedown', handler);
   }, [showRolePicker]);
 
+  // Click-outside for user menu
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    if (showUserMenu) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showUserMenu]);
+
   const handleRoleSelect = (roleId: string) => {
     setRoleId(roleId);
     setShowRolePicker(false);
   };
+
+  const avatarInitials = currentStaff
+    ? currentStaff.photoInitials
+    : 'OS';
+
+  const avatarBg = currentStaff?.avatarBg ?? 'bg-sunrise-blue-light';
+
+  const displayName = currentStaff
+    ? `${currentStaff.firstName} ${currentStaff.lastName}`
+    : 'Demo User';
 
   return (
     <>
@@ -94,7 +120,7 @@ export function Topbar({ navigate, currentScreen }: Props) {
               <div className="absolute top-full right-0 mt-2 w-80 bg-navy border border-navy-light rounded-xl shadow-2xl z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-navy-light flex items-center justify-between">
                   <span className="text-xs font-bold text-white uppercase tracking-wider">Switch Role</span>
-                  <span className="text-[10px] text-slate-400">Demo — affects navigation & access</span>
+                  <span className="text-[10px] text-slate-400">Demo — affects navigation &amp; access</span>
                 </div>
                 <div className="overflow-y-auto max-h-96 py-2">
                   {ROLE_CATEGORIES.map(cat => {
@@ -195,9 +221,62 @@ export function Topbar({ navigate, currentScreen }: Props) {
             <Settings className="w-5 h-5" />
           </button>
 
-          {/* Avatar */}
-          <div className="w-8 h-8 rounded-full bg-sunrise-blue-light flex items-center justify-center font-bold text-sm ml-2 border border-white/20 cursor-pointer hover:ring-2 hover:ring-sunrise-amber/50 transition-all">
-            JC
+          {/* ── User Avatar & Menu ── */}
+          <div className="relative ml-1" ref={userMenuRef}>
+            <button
+              onClick={() => setShowUserMenu(p => !p)}
+              className={`w-8 h-8 rounded-full ${avatarBg} flex items-center justify-center font-bold text-sm border border-white/20 hover:ring-2 hover:ring-sunrise-amber/50 transition-all text-white`}
+              title={displayName}
+            >
+              {avatarInitials}
+            </button>
+
+            {showUserMenu && (
+              <div className="absolute top-full right-0 mt-2 w-56 bg-navy border border-navy-light rounded-xl shadow-2xl z-50 overflow-hidden">
+                {/* User info */}
+                <div className="px-4 py-3 border-b border-navy-light">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-full ${avatarBg} flex items-center justify-center font-bold text-sm text-white shrink-0`}>
+                      {avatarInitials}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-white truncate">{displayName}</div>
+                      {currentStaff && (
+                        <div className="text-[10px] text-slate-400 truncate">{currentStaff.title}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Menu items */}
+                <div className="py-1">
+                  <button
+                    onClick={() => { navigate('Settings'); setShowUserMenu(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    My Settings
+                  </button>
+                  <button
+                    onClick={() => { navigate('RoleExplorer'); setShowUserMenu(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                  >
+                    <UserCircle className="w-4 h-4" />
+                    Role Explorer
+                  </button>
+                </div>
+
+                <div className="border-t border-navy-light py-1">
+                  <button
+                    onClick={() => { setShowUserMenu(false); logout(); }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
