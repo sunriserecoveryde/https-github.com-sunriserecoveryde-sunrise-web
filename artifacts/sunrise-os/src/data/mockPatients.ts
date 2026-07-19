@@ -78,7 +78,15 @@ export const DEMO_PATIENTS: Patient[] = [
     counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
     flags: [{ type: 'AMA', note: 'Expressed desire to leave during morning group' }, { type: 'Medication', note: 'MAT induction phase' }],
     lastUa: 'Positive (BUP)', mood: 4, craving: 8,
-    notes: [], goals: [], nextAppointment: 'Today, 2:00 PM', bed: '1A', status: 'Occupied'
+    notes: [
+      { id: 'dn1a', date: '2026-07-25 14:30', type: 'Individual', author: 'Counselor (anonymized)', status: 'Signed', format: 'BIRP', content: 'Patient attended 1:1 session. Expressed high cravings and desire to leave AMA. Processed consequences of leaving. Patient agreed to stay for next 24 hours and commit to morning group. Safety plan reviewed and updated.' },
+      { id: 'dn1b', date: '2026-07-24 09:00', type: 'Medical', author: 'Physician (anonymized)', status: 'Signed', format: 'DAP', content: 'MAT stabilized at therapeutic dose. Patient reports reduced withdrawal symptoms but persistent cravings. Vitals stable. Continue current regimen. Follow-up in 48 hours.' },
+    ],
+    goals: [
+      { id: 'dg1a', category: 'Substance Use', problem: 'Inability to maintain abstinence from opioids', longTerm: 'Achieve 1 year continuous sobriety', shortTerm: 'Identify 3 craving triggers this week', status: 'In Progress', targetDate: '2026-08-01' },
+      { id: 'dg1b', category: 'Safety', problem: 'AMA risk and impulsive exit-seeking behavior', longTerm: 'Complete full residential episode without AMA', shortTerm: 'Attend all scheduled groups for 7 consecutive days', status: 'In Progress', targetDate: '2026-07-31' },
+    ],
+    nextAppointment: 'Today, 2:00 PM', bed: '1A', status: 'Occupied'
   },
   {
     id: 'demo-b', mrn: 'DEMO-002', firstName: 'Patient', lastName: 'B',
@@ -91,7 +99,14 @@ export const DEMO_PATIENTS: Patient[] = [
     counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
     flags: [{ type: 'Success', note: '30-day milestone reached' }],
     lastUa: 'Negative', mood: 7, craving: 2,
-    notes: [], goals: [], nextAppointment: 'Tomorrow, 10:00 AM'
+    notes: [
+      { id: 'dn2a', date: '2026-07-23 11:00', type: 'Individual', author: 'Counselor (anonymized)', status: 'Signed', format: 'DAP', content: 'Patient celebrated 30-day milestone in session. Demonstrated significant progress in identifying triggers and building sober support network. Discussed Vivitrol maintenance and long-term aftercare planning. Highly motivated and engaged. Outstanding therapeutic progress this week.' },
+    ],
+    goals: [
+      { id: 'dg2a', category: 'Abstinence', problem: 'Alcohol use as emotional regulation', longTerm: '6 months continuous sobriety', shortTerm: 'Attend AA 3x/week and identify a sponsor', status: 'In Progress', targetDate: '2026-09-01' },
+      { id: 'dg2b', category: 'Anxiety Management', problem: 'GAD symptoms interfering with recovery engagement', longTerm: 'Maintain GAD-7 score below 8 for 60 days', shortTerm: 'Practice mindfulness exercise daily', status: 'Met', targetDate: '2026-07-15' },
+    ],
+    nextAppointment: 'Tomorrow, 10:00 AM'
   },
   {
     id: 'demo-c', mrn: 'DEMO-003', firstName: 'Patient', lastName: 'C',
@@ -104,7 +119,14 @@ export const DEMO_PATIENTS: Patient[] = [
     counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
     flags: [{ type: 'Behavioral', note: 'Disruptive in evening group' }, { type: 'Psychiatric', note: 'Mild paranoia reported' }],
     lastUa: 'Positive (METH)', mood: 5, craving: 6,
-    notes: [], goals: [], nextAppointment: 'Today, 4:00 PM', bed: '2B', status: 'Occupied'
+    notes: [
+      { id: 'dn3a', date: '2026-07-22 15:45', type: 'Behavioral', author: 'Counselor (anonymized)', status: 'Signed', format: 'BIRP', content: 'Patient became verbally disruptive during evening process group. Redirected by facilitator with limited success. Patient removed from group for de-escalation. Individual check-in completed afterward — patient endorsed mild paranoid ideation but denied SI/HI. Psychiatric team notified. Safety monitoring increased to q2h.' },
+    ],
+    goals: [
+      { id: 'dg3a', category: 'Psychiatric Stability', problem: 'Substance-induced psychosis', longTerm: 'Remain free of psychotic symptoms for 30 days', shortTerm: 'Attend daily psychiatric check-in without refusal', status: 'In Progress', targetDate: '2026-08-17' },
+      { id: 'dg3b', category: 'Abstinence', problem: 'Severe methamphetamine dependence', longTerm: 'Achieve 90 days abstinence from stimulants', shortTerm: 'Engage in SMART Recovery group 3x/week', status: 'Not Started', targetDate: '2026-10-01' },
+    ],
+    nextAppointment: 'Today, 4:00 PM', bed: '2B', status: 'Occupied'
   },
   {
     id: 'demo-d', mrn: 'DEMO-004', firstName: 'Patient', lastName: 'D',

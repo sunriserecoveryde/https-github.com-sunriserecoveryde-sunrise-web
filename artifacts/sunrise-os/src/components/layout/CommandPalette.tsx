@@ -7,7 +7,7 @@ import {
   Droplets, Siren, UserCog, CreditCard, MapPin, BookUser, Download,
   FolderOpen, BookOpen, ClipboardCheck, LineChart, ArrowLeftRight,
   Star, CheckSquare, ListTodo, ClipboardList, Bed, Grid3X3,
-  FlaskConical, ArrowLeft, Lock
+  FlaskConical, ArrowLeft
 } from 'lucide-react';
 import { Screen } from '../../App';
 import { MOCK_PATIENTS, DEMO_PATIENTS } from '../../data/mockPatients';
@@ -87,15 +87,11 @@ const ALL_SCREEN_SHORTCUTS: { label: string; screen: Screen; icon: React.ReactNo
 // have to retype after switching roles via RoleExplorer and returning.
 let _lastQuery = '';
 
-// Persists the last demo search query and nudge so the demo feels
-// personalized when a buyer reopens the palette (session-scoped).
+// Persists the last demo search query so the demo feels personalized
+// when a buyer reopens the palette (session-scoped).
 const DEMO_QUERY_KEY = 'sunrise_demo_query';
-const DEMO_NUDGE_KEY = 'sunrise_demo_nudge';
 let _lastDemoQuery: string = (() => {
   try { return sessionStorage.getItem(DEMO_QUERY_KEY) ?? ''; } catch { return ''; }
-})();
-let _lastDemoNudge: string | null = (() => {
-  try { return sessionStorage.getItem(DEMO_NUDGE_KEY) ?? null; } catch { return null; }
 })();
 
 // Persists the last few demo search queries for the session so buyers can
@@ -116,7 +112,6 @@ export function CommandPalette({ onClose, navigate }: Props) {
   const [selected, setSelected] = useState(0);
   const [demoMode, setDemoMode] = useState(false);
   const [demoQuery, setDemoQuery] = useState(_lastDemoQuery);
-  const [demoNudge, setDemoNudge] = useState<string | null>(_lastDemoNudge);
   const inputRef = useRef<HTMLInputElement>(null);
   const demoInputRef = useRef<HTMLInputElement>(null);
   const { roleId, canAccessScreen } = useRole();
@@ -128,17 +123,10 @@ export function CommandPalette({ onClose, navigate }: Props) {
 
   const updateDemoQuery = (v: string) => {
     setDemoQuery(v);
-    setDemoNudge(null);
     _lastDemoQuery = v;
-    _lastDemoNudge = null;
-    try { sessionStorage.setItem(DEMO_QUERY_KEY, v); sessionStorage.removeItem(DEMO_NUDGE_KEY); } catch { /* ignore */ }
+    try { sessionStorage.setItem(DEMO_QUERY_KEY, v); } catch { /* ignore */ }
   };
 
-  const updateDemoNudge = (id: string) => {
-    setDemoNudge(id);
-    _lastDemoNudge = id;
-    try { sessionStorage.setItem(DEMO_NUDGE_KEY, id); } catch { /* ignore */ }
-  };
 
   const go = (screen: Screen, patientId?: string) => { navigate(screen, patientId); onClose(); };
 
@@ -244,31 +232,12 @@ export function CommandPalette({ onClose, navigate }: Props) {
             )}
           </div>
 
-          {/* Nudge shown when a demo result is clicked */}
-          {demoNudge && (
-            <div className="mx-4 mt-3 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5 flex items-start gap-2.5">
-              <Lock className="w-4 h-4 text-slate shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-semibold text-navy">Full access requires a clinical role</div>
-                <div className="text-xs text-slate mt-0.5">
-                  Patient detail is available to nurses, counselors, physicians, and other clinical staff.{' '}
-                  <button
-                    onClick={() => { navigate('RoleExplorer'); onClose(); }}
-                    className="font-semibold underline hover:text-navy"
-                  >
-                    Explore role permissions →
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Demo results */}
           <div className="overflow-y-auto max-h-80">
             {!demoQuery.trim() && (
               <div className="px-4 pt-3 pb-1">
                 <span className="text-xs font-semibold text-slate uppercase tracking-wide">
-                  {DEMO_PATIENTS.length} anonymized patients · try searching by name, diagnosis, or program
+                  {DEMO_PATIENTS.length} anonymized patients · click any patient to explore their chart
                 </span>
                 {_recentDemoQueries.length > 0 && (
                   <div className="flex items-center gap-1.5 flex-wrap mt-2">
@@ -276,7 +245,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
                     {_recentDemoQueries.map(q => (
                       <button
                         key={q}
-                        onClick={() => { setDemoQuery(q); setDemoNudge(null); }}
+                        onClick={() => { updateDemoQuery(q); }}
                         className="flex items-center gap-1 text-[11px] font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-full px-2.5 py-0.5 transition-colors"
                       >
                         <Search className="w-2.5 h-2.5" />
@@ -295,7 +264,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
             {demoResults.map((p, i) => (
               <div
                 key={p.id}
-                onClick={() => updateDemoNudge(p.id)}
+                onClick={() => { go('DemoPatientDetail', p.id); }}
                 className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
               >
                 <div className="w-7 h-7 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center justify-center shrink-0">

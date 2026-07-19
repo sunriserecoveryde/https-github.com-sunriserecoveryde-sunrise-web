@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard';
 import { PatientList } from './pages/PatientList';
 import { CensusBedBoard } from './pages/CensusBedBoard';
 import { PatientDetail } from './pages/PatientDetail';
+import { DemoPatientDetail } from './pages/DemoPatientDetail';
 import { ASAMAssessments } from './pages/ASAMAssessments';
 import { ProgressNotes } from './pages/ProgressNotes';
 import { TreatmentPlans } from './pages/TreatmentPlans';
@@ -123,7 +124,8 @@ export type Screen =
   | 'PatientDetail'
   | 'RoleExplorer'
   | 'StaffAdmin'
-  | 'WithdrawalMonitor';
+  | 'WithdrawalMonitor'
+  | 'DemoPatientDetail';
 
 // ─── Inner app (needs RoleContext) ───────────────────────────────────────────
 
@@ -218,6 +220,7 @@ function AppInner() {
       case 'FormularyManagement':     return withAccess('FormularyManagement',     <FormularyManagement navigate={navigateTo} />);
       case 'StaffAdmin':              return <StaffAdmin navigate={navigateTo} />;
       case 'WithdrawalMonitor':       return withAccessReadOnlyProp('WithdrawalMonitor', ro => <WithdrawalMonitor navigate={navigateTo} readOnly={ro} />);
+      case 'DemoPatientDetail':       return <DemoPatientDetail patientId={selectedPatientId} navigate={navigateTo} returnTo='Dashboard' />;
       case 'RoleExplorer':            return <RoleExplorer navigate={navigateTo} />;
       default:
         return (
