@@ -443,7 +443,8 @@ export default function PatientDetailScreen() {
     lines.push('');
 
     sessionNotes.forEach(note => {
-      const editSuffix = note.editedAt ? ` (edited ${formatEditedTime(note.editedAt)})` : '';
+      const lastEdit = note.history && note.history.length > 0 ? note.history[note.history.length - 1] : null;
+      const editSuffix = lastEdit ? ` (edited ${formatEditedTime(lastEdit.savedAt)})` : '';
       const typeLabel = NOTE_TYPES.find(x => x.value === note.noteType)?.label ?? note.noteType;
       lines.push(`[${typeLabel}] ${note.displayTime}${editSuffix}`);
       lines.push(note.text);

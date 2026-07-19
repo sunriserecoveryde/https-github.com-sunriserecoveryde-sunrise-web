@@ -610,6 +610,19 @@ export default function CensusScreen() {
   const cleaningCount = nonOccupiedBeds.filter(b => b.status === 'Cleaning').length;
   const availableBedIds = nonOccupiedBeds.filter(b => b.status === 'Available').map(b => b.id);
 
+  // Count patients matching each note-type chip — uses the same predicate as the filter
+  // so the badge accurately previews how many patients will appear after tapping.
+  const noteTypeCounts = React.useMemo(() => {
+    const counts: Record<NoteFilter, number> = { observation: 0, 'med-update': 0, incident: 0 };
+    for (const p of residentialPatients) {
+      const notes = getNotesForPatient(p.id);
+      for (const type of NOTE_TYPE_FILTERS.map(f => f.value)) {
+        if (notes.some(n => n.noteType === type)) counts[type]++;
+      }
+    }
+    return counts;
+  }, [residentialPatients, getNotesForPatient]);
+
   // Stats computed from live context (satisfies real-time requirement)
   const alertCount = residentialPatients.filter(isWithdrawalAlert).length;
   const stats = { occupied: occupiedCount, available: availableCount, cleaning: cleaningCount, wdAlerts: alertCount };
@@ -771,21 +784,38 @@ export default function CensusScreen() {
           </Pressable>
         ))}
         <View style={styles.filterDivider} />
-        {NOTE_TYPE_FILTERS.map(({ value, label }) => (
-          <Pressable
-            key={value}
-            style={[styles.filterChip, filter === value && { backgroundColor: colors.orange }]}
-            onPress={() => { Haptics.selectionAsync(); setFilter(prev => prev === value ? 'All' : value); }}
-          >
-            <Ionicons
-              name="document-text-outline"
-              size={11}
-              color={filter === value ? '#fff' : colors.slateLight}
-              style={{ marginRight: 3 }}
-            />
-            <Text style={[styles.filterChipText, { color: filter === value ? '#fff' : colors.slateLight }]}>{label}</Text>
-          </Pressable>
-        ))}
+        {NOTE_TYPE_FILTERS.map(({ value, label }) => {
+          const count = noteTypeCounts[value];
+          const isActive = filter === value;
+          const isZero = count === 0;
+          return (
+            <Pressable
+              key={value}
+              style={[
+                styles.filterChip,
+                isActive && { backgroundColor: colors.orange },
+                isZero && !isActive && { opacity: 0.45 },
+              ]}
+              onPress={() => { Haptics.selectionAsync(); setFilter(prev => prev === value ? 'All' : value); }}
+            >
+              <Ionicons
+                name="document-text-outline"
+                size={11}
+                color={isActive ? '#fff' : colors.slateLight}
+                style={{ marginRight: 3 }}
+              />
+              <Text style={[styles.filterChipText, { color: isActive ? '#fff' : colors.slateLight }]}>{label}</Text>
+              <View style={[
+                styles.noteCountBadge,
+                { backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : colors.navyLight },
+              ]}>
+                <Text style={[styles.noteCountBadgeText, { color: isActive ? '#fff' : colors.slateLight }]}>
+                  {count}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
       {loading ? (
@@ -895,6 +925,8 @@ const styles = StyleSheet.create({
   filterContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', alignItems: 'center' },
   filterChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  noteCountBadge: { marginLeft: 5, borderRadius: 9, paddingHorizontal: 6, paddingVertical: 1, minWidth: 18, alignItems: 'center' },
+  noteCountBadgeText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   filterDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: 4, alignSelf: 'stretch' },
   // Bed cards
   listContent: { padding: 12, gap: 10 },
