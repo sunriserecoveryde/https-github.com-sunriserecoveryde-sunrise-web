@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
   Modal,
   Platform,
@@ -581,6 +582,7 @@ export default function CensusScreen() {
   const [admitVisible, setAdmitVisible] = useState(false);
   const [shiftEndedToast, setShiftEndedToast] = useState(false);
   const shiftEndedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastAnim = useRef(new Animated.Value(0)).current;
   const hasFiredHaptic = useRef(false);
 
   // ─── Live census data from context ────────────────────────────────────────
@@ -682,10 +684,16 @@ export default function CensusScreen() {
                         setBannerDismissed(false);
                         setFilter('All');
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        // Show toast confirmation
+                        // Show toast confirmation with slide-up entrance and fade-out exit
                         if (shiftEndedTimer.current) clearTimeout(shiftEndedTimer.current);
+                        toastAnim.setValue(0);
                         setShiftEndedToast(true);
-                        shiftEndedTimer.current = setTimeout(() => setShiftEndedToast(false), 2000);
+                        Animated.timing(toastAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+                        shiftEndedTimer.current = setTimeout(() => {
+                          Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+                            setShiftEndedToast(false);
+                          });
+                        }, 1700);
                       },
                     },
                   ],
@@ -802,12 +810,23 @@ export default function CensusScreen() {
 
       {/* Shift-ended toast */}
       {shiftEndedToast && (
-        <View style={styles.toastContainer} pointerEvents="none">
+        <Animated.View
+          style={[
+            styles.toastContainer,
+            {
+              opacity: toastAnim,
+              transform: [{
+                translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }),
+              }],
+            },
+          ]}
+          pointerEvents="none"
+        >
           <View style={[styles.toast, { backgroundColor: colors.navy }]}>
             <Ionicons name="checkmark-circle" size={16} color={colors.success} />
             <Text style={styles.toastText}>Shift ended — board reset</Text>
           </View>
-        </View>
+        </Animated.View>
       )}
     </View>
   );
