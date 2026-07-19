@@ -18,8 +18,16 @@ interface Props {
 }
 
 export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' }: Props) {
-  const patient = DEMO_PATIENTS.find(p => p.id === patientId) ?? DEMO_PATIENTS[0];
+  const currentIndex = DEMO_PATIENTS.findIndex(p => p.id === patientId);
+  const patient = currentIndex >= 0 ? DEMO_PATIENTS[currentIndex] : DEMO_PATIENTS[0];
+  const prevPatient = currentIndex > 0 ? DEMO_PATIENTS[currentIndex - 1] : null;
+  const nextPatient = currentIndex < DEMO_PATIENTS.length - 1 ? DEMO_PATIENTS[currentIndex + 1] : null;
   const [activeTab, setActiveTab] = useState('Overview');
+
+  function goToPatient(id: string) {
+    setActiveTab('Overview');
+    navigate('DemoPatientDetail', id);
+  }
 
   const tabs = [
     { id: 'Overview',         icon: <Activity className="w-3.5 h-3.5" /> },
@@ -53,6 +61,37 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
           <Shield className="w-3.5 h-3.5 opacity-70" />
           <span className="font-normal opacity-80">All actions are disabled in demo mode</span>
         </div>
+      </div>
+
+      {/* Prev / Next patient navigation */}
+      <div className="flex items-center justify-between px-4 py-2 bg-violet-50 border-x border-violet-100 flex-shrink-0">
+        <button
+          onClick={() => prevPatient && goToPatient(prevPatient.id)}
+          disabled={!prevPatient}
+          className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+            prevPatient
+              ? 'text-violet-700 hover:text-violet-900'
+              : 'text-violet-300 cursor-default'
+          }`}
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          {prevPatient ? `Patient ${prevPatient.lastName}` : 'First patient'}
+        </button>
+        <span className="text-xs text-violet-400 font-medium select-none">
+          {currentIndex + 1} of {DEMO_PATIENTS.length}
+        </span>
+        <button
+          onClick={() => nextPatient && goToPatient(nextPatient.id)}
+          disabled={!nextPatient}
+          className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+            nextPatient
+              ? 'text-violet-700 hover:text-violet-900'
+              : 'text-violet-300 cursor-default'
+          }`}
+        >
+          {nextPatient ? `Patient ${nextPatient.lastName}` : 'Last patient'}
+          <ArrowLeft className="w-3.5 h-3.5 rotate-180" />
+        </button>
       </div>
 
       {/* Header */}
