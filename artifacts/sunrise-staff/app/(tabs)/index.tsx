@@ -275,7 +275,12 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
   const isAlert = isWithdrawalAlert(patient);
   const notes = getNotesForPatient(patient.id);
   const noteCount = notes.length;
-  const latestNoteType = notes[0]?.noteType ?? null;
+  // Show the most urgent note type across all notes: Incident > Med Update > (none for Observation-only)
+  const urgentNoteType: typeof notes[0]['noteType'] | null = notes.some(n => n.noteType === 'incident')
+    ? 'incident'
+    : notes.some(n => n.noteType === 'med-update')
+    ? 'med-update'
+    : null;
 
   return (
     <Pressable
@@ -299,16 +304,16 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
         <View style={styles.cardTopRight}>
           {isAlert && <Ionicons name="warning" size={14} color={colors.critical} style={{ marginBottom: 2 }} />}
           <AcuityPill acuity={patient.acuity} />
-          {latestNoteType != null && latestNoteType !== 'observation' && (() => {
-            const tc = latestNoteType === 'incident'
+          {urgentNoteType != null && (() => {
+            const tc = urgentNoteType === 'incident'
               ? { bg: colors.criticalBg, text: colors.critical }
               : { bg: colors.moderateBg, text: colors.moderate };
-            const icon = latestNoteType === 'incident' ? 'warning-outline' : 'medkit-outline';
+            const icon = urgentNoteType === 'incident' ? 'warning-outline' : 'medkit-outline';
             return (
               <View style={[styles.noteTypePill, { backgroundColor: tc.bg, borderColor: tc.text }]}>
                 <Ionicons name={icon as any} size={10} color={tc.text} />
                 <Text style={[styles.noteTypePillText, { color: tc.text }]} numberOfLines={1}>
-                  {formatNoteType(latestNoteType)}
+                  {formatNoteType(urgentNoteType)}
                 </Text>
               </View>
             );
