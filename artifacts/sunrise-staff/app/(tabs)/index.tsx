@@ -19,6 +19,7 @@ import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { usePatients } from '@/context/PatientContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
+import { useNursingNotes } from '@/context/NursingNotesContext';
 import {
   BEDS,
   VITALS,
@@ -226,10 +227,12 @@ function MoodBar({ value, colors }: { value: number; colors: ReturnType<typeof u
 
 function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }) {
   const colors = useColors();
+  const { getNotesForPatient } = useNursingNotes();
   const ac = acuityColor(patient.acuity);
   const showCows = patient.cows != null && patient.cows > 0;
   const showCiwa = patient.ciwa != null && patient.ciwa > 0;
   const isAlert = isWithdrawalAlert(patient);
+  const noteCount = getNotesForPatient(patient.id).length;
 
   return (
     <Pressable
@@ -253,6 +256,12 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
         <View style={styles.cardTopRight}>
           {isAlert && <Ionicons name="warning" size={14} color={colors.critical} style={{ marginBottom: 2 }} />}
           <AcuityPill acuity={patient.acuity} />
+          {noteCount > 0 && (
+            <View style={[styles.noteBadge, { backgroundColor: colors.navyLight }]}>
+              <Ionicons name="document-text-outline" size={10} color="#fff" />
+              <Text style={styles.noteBadgeText}>{noteCount}</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -736,6 +745,8 @@ const styles = StyleSheet.create({
   moodBarFill: { height: 6, borderRadius: 3 },
   moodBarLabel: { fontSize: 11, fontFamily: 'Inter_500Medium' },
   tapHint: { fontSize: 10, fontFamily: 'Inter_400Regular', textAlign: 'right', marginTop: 6, opacity: 0.6 },
+  noteBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2 },
+  noteBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   // Role toggle
   roleToggle: { flexDirection: 'row', borderRadius: 8, overflow: 'hidden', padding: 2 },
   roleBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6 },
