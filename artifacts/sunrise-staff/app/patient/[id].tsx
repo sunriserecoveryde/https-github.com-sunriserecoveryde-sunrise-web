@@ -831,7 +831,7 @@ export default function PatientDetailScreen() {
         <Animated.View
           style={[
             s.undoToast,
-            { bottom: insets.bottom + 16, transform: [{ translateY: toastAnim }] },
+            { bottom: Math.max(insets.bottom, 8) + 16, transform: [{ translateY: toastAnim }] },
           ]}
         >
           <Text style={s.undoToastText}>Note deleted</Text>
