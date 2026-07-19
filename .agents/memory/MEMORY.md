@@ -1,2 +1,3 @@
-- [Sunrise OS architecture](sunrise-os-arch.md) — Screen union (44 values), data files, Sidebar sections, key conventions
+- [Sunrise OS architecture](sunrise-os-arch.md) — Screen union (53 values), data files, Sidebar sections, key conventions
 - [Sunrise OS auth & permission architecture](sunrise-os-auth.md) — AuthContext + RoleProvider wiring, permissionStore override pattern, login flow
+- [Sunrise Staff mobile](sunrise-staff-mobile.md) — Expo companion app structure, data model, role context, key pitfalls
