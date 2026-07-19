@@ -8,6 +8,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -396,6 +397,38 @@ export default function PatientDetailScreen() {
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     closeNoteModal();
+  };
+  // ─── Share / export handoff notes ─────────────────────────────────────────
+  const formatEditedTime = (isoString: string): string => {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  const handleShareNotes = () => {
+    const sessionNotes = getNotesForPatient(id);
+    if (sessionNotes.length === 0 && !patient?.handoffNote) return;
+
+    const lines: string[] = [];
+    lines.push(`NURSING HANDOFF — ${patient?.firstName ?? ''} ${patient?.lastName ?? ''} (${patient?.bed ?? patient?.program ?? ''})`);
+    lines.push(`MRN: ${patient?.mrn ?? ''} · ${new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`);
+    lines.push('');
+
+    sessionNotes.forEach(note => {
+      const editSuffix = note.editedAt ? ` (edited ${formatEditedTime(note.editedAt)})` : '';
+      const typeLabel = NOTE_TYPES.find(x => x.value === note.noteType)?.label ?? note.noteType;
+      lines.push(`[${typeLabel}] ${note.displayTime}${editSuffix}`);
+      lines.push(note.text);
+      lines.push('');
+    });
+
+    if (patient?.handoffNote) {
+      lines.push('[Handoff Note]');
+      lines.push(patient.handoffNote);
+      lines.push('');
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Share.share({ message: lines.join('\n').trim() });
   };
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -828,16 +861,30 @@ export default function PatientDetailScreen() {
                 );
               })()}
             </View>
-            <Pressable
-              onPress={() => openNoteModal()}
-              style={({ pressed }) => [
-                s.addNoteBtn,
-                { backgroundColor: colors.navy, opacity: pressed ? 0.8 : 1 },
-              ]}
-            >
-              <Ionicons name="add" size={14} color="#fff" />
-              <Text style={s.addNoteBtnText}>Add Note</Text>
-            </Pressable>
+            <View style={s.handoffActionRow}>
+              {getNotesForPatient(patient.id).length > 0 || patient.handoffNote ? (
+                <Pressable
+                  onPress={handleShareNotes}
+                  style={({ pressed }) => [
+                    s.shareNoteBtn,
+                    { backgroundColor: colors.muted, opacity: pressed ? 0.7 : 1 },
+                  ]}
+                >
+                  <Ionicons name="share-outline" size={14} color={colors.navy} />
+                  <Text style={[s.shareNoteBtnText, { color: colors.navy }]}>Export</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                onPress={() => openNoteModal()}
+                style={({ pressed }) => [
+                  s.addNoteBtn,
+                  { backgroundColor: colors.navy, opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <Ionicons name="add" size={14} color="#fff" />
+                <Text style={s.addNoteBtnText}>Add Note</Text>
+              </Pressable>
+            </View>
           </View>
 
           {/* Session notes (persisted in context, most recent first) */}
@@ -1099,6 +1146,9 @@ const s = StyleSheet.create({
   handoffTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   noteCountBadge: { borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
   noteCountBadgeText: { color: '#fff', fontSize: 11, fontFamily: 'Inter_700Bold', fontWeight: '700' },
+  handoffActionRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  shareNoteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  shareNoteBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   addNoteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
   addNoteBtnText: { color: '#fff', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   // Session notes
