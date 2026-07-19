@@ -10,7 +10,8 @@ import {
   Pill, Heart, Stethoscope, LineChart, Clipboard,
   ArrowLeftRight, Star, CreditCard, MapPin, BookUser, Download,
   Video, UserCheck, FolderOpen, DollarSign, BookOpen, HandHelping,
-  Award, ClipboardCheck, MessageSquare, ListOrdered, Grid3X3
+  Award, ClipboardCheck, MessageSquare, ListOrdered, Grid3X3,
+  Eye
 } from 'lucide-react';
 import { Screen } from '../../App';
 import { useRole } from '../../context/RoleContext';
@@ -95,6 +96,7 @@ const ALL_SECTIONS: SidebarSection[] = [
     items: [
       { id: 'NursingMAR', label: 'Medication MAR', icon: Clipboard },
       { id: 'ShiftHandoff', label: 'Shift Handoff', icon: ArrowLeftRight },
+      { id: 'WithdrawalMonitor', label: 'Withdrawal Monitor', icon: Activity },
     ]
   },
   {
@@ -142,7 +144,7 @@ const ALL_SECTIONS: SidebarSection[] = [
 ];
 
 export function Sidebar({ currentScreen, navigate }: SidebarProps) {
-  const { canAccessScreen } = useRole();
+  const { canAccessScreen, getPermissionForScreen } = useRole();
 
   // Filter sections and items based on current role
   const visibleSections = ALL_SECTIONS
@@ -164,6 +166,8 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
               {sec.items.map(item => {
                 const Icon = item.icon;
                 const isActive = currentScreen === item.id;
+                const perm = getPermissionForScreen(item.id);
+                const isReadOnly = perm === 'read';
                 return (
                   <li key={item.id}>
                     <button
@@ -171,20 +175,30 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
                       className={`w-full flex items-center justify-between px-4 py-2 text-sm transition-colors ${
                         isActive
                           ? 'bg-sunrise-blue/20 text-white border-r-2 border-sunrise-orange'
-                          : 'hover:bg-white/5 hover:text-white border-r-2 border-transparent'
+                          : isReadOnly
+                            ? 'hover:bg-white/5 hover:text-white/80 border-r-2 border-transparent text-slate-400'
+                            : 'hover:bg-white/5 hover:text-white border-r-2 border-transparent'
                       }`}
+                      title={isReadOnly ? `${item.label} — View only` : item.label}
                     >
-                      <div className="flex items-center gap-3">
-                        <Icon className={`w-4 h-4 ${isActive ? 'text-sunrise-orange' : 'text-slate-400'}`} />
-                        <span className={isActive ? 'font-medium' : ''}>{item.label}</span>
-                      </div>
-                      {item.badge && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                          isActive ? 'bg-sunrise-orange text-white' : 'bg-navy-light text-white'
-                        }`}>
-                          {item.badge}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Icon className={`w-4 h-4 flex-none ${isActive ? 'text-sunrise-orange' : isReadOnly ? 'text-slate-500' : 'text-slate-400'}`} />
+                        <span className={`truncate ${isActive ? 'font-medium' : ''} ${isReadOnly && !isActive ? 'italic' : ''}`}>
+                          {item.label}
                         </span>
-                      )}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-none ml-1">
+                        {isReadOnly && !isActive && (
+                          <Eye className="w-3 h-3 text-slate-500 flex-none" />
+                        )}
+                        {item.badge && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                            isActive ? 'bg-sunrise-orange text-white' : 'bg-navy-light text-white'
+                          }`}>
+                            {item.badge}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   </li>
                 );

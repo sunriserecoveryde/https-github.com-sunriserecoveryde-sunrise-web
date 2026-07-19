@@ -138,6 +138,9 @@ function HandoffCard({
   );
 }
 
+const STORAGE_KEY_NOTES = '@sunrise_handoff_notes_2026-07-19';
+const STORAGE_KEY_SHIFT = '@sunrise_handoff_shift_2026-07-19';
+
 export default function HandoffScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -148,6 +151,52 @@ export default function HandoffScreen() {
     Object.fromEntries(RESIDENTIAL_PATIENTS.map(p => [p.id, p.handoffNote ?? '']))
   );
   const [completed, setCompleted] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load persisted notes on mount
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const [savedNotes, savedShift] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEY_NOTES),
+          AsyncStorage.getItem(STORAGE_KEY_SHIFT),
+        ]);
+        if (savedNotes) {
+          setNotes(prev => ({ ...prev, ...JSON.parse(savedNotes) }));
+        }
+        if (savedShift) {
+          setShift(savedShift as Shift);
+        }
+      } catch (_) {
+        // ignore storage errors
+      } finally {
+        setLoaded(true);
+      }
+    })();
+  }, []);
+
+  // Persist notes when they change (after initial load)
+  React.useEffect(() => {
+    if (!loaded) return;
+    (async () => {
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        await AsyncStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(notes));
+      } catch (_) {}
+    })();
+  }, [notes, loaded]);
+
+  // Persist shift selection
+  React.useEffect(() => {
+    if (!loaded) return;
+    (async () => {
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        await AsyncStorage.setItem(STORAGE_KEY_SHIFT, shift);
+      } catch (_) {}
+    })();
+  }, [shift, loaded]);
 
   const sortedPatients = [...RESIDENTIAL_PATIENTS].sort(
     (a, b) => acuitySortOrder(a.acuity) - acuitySortOrder(b.acuity)
@@ -165,7 +214,7 @@ export default function HandoffScreen() {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.headerTitle}>Shift Handoff</Text>
-            <Text style={styles.headerSubtitle}>Oct 26 · {RESIDENTIAL_PATIENTS.length} patients</Text>
+            <Text style={styles.headerSubtitle}>Jul 19, 2026 · {RESIDENTIAL_PATIENTS.length} patients</Text>
           </View>
           <View style={[styles.roleToggle, { backgroundColor: colors.navyLight }]}>
             <Pressable

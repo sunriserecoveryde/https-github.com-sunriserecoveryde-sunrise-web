@@ -77,6 +77,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(new Set(['presenting']));
   const [completedSections, setCompletedSections] = useState<Set<SectionKey>>(new Set(['presenting', 'substances', 'medical', 'psychiatric', 'legal', 'family', 'social', 'trauma', 'strengths', 'diagnostic', 'summary']));
   const [saved, setSaved] = useState(false);
+  const [bpsTab, setBpsTab] = useState<'Assessment' | 'Population Summary' | 'SUD Epidemiology' | 'Diagnostic Coding' | 'Assessment Quality'>('Assessment');
 
   const p = MOCK_PATIENTS.find(pt => pt.id === selectedPatient) ?? MOCK_PATIENTS[0];
 
@@ -104,6 +105,131 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
         </div>
       </div>
 
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-border">
+        {(['Assessment', 'Population Summary', 'SUD Epidemiology', 'Diagnostic Coding', 'Assessment Quality'] as const).map(t => (
+          <button key={t} onClick={() => setBpsTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${bpsTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
+        ))}
+      </div>
+
+      {bpsTab === 'Population Summary' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Assessments Completed', value: 18, sub: 'Current census', color: 'text-navy' },
+              { label: 'Completed Within 72h', value: 16, sub: '89% compliance rate', color: 'text-green-600' },
+              { label: 'Awaiting Co-sign', value: 2, sub: 'Clinical director review', color: 'text-amber-600' },
+              { label: 'Next Scheduled', value: 'Today 3PM', sub: 'Thomas Reilly — intake', color: 'text-blue-600' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Primary Substance — Census Breakdown</h3>
+              <div className="space-y-2.5">
+                {[
+                  { substance: 'Opioid (Heroin / Fentanyl)', n: 7, pct: 39, color: 'bg-red-500' },
+                  { substance: 'Alcohol', n: 5, pct: 28, color: 'bg-amber-400' },
+                  { substance: 'Methamphetamine', n: 3, pct: 17, color: 'bg-blue-500' },
+                  { substance: 'Polysubstance', n: 2, pct: 11, color: 'bg-purple-500' },
+                  { substance: 'Cocaine / Stimulants', n: 1, pct: 5, color: 'bg-pink-400' },
+                ].map(r => (
+                  <div key={r.substance}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate">{r.substance}</span>
+                      <span className="font-bold text-navy">{r.n} ({r.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Co-occurring Disorders — Census</h3>
+              <div className="space-y-2.5">
+                {[
+                  { dx: 'Major Depressive Disorder', n: 11, pct: 61, color: 'bg-blue-400' },
+                  { dx: 'PTSD', n: 8, pct: 44, color: 'bg-purple-400' },
+                  { dx: 'Anxiety Disorder', n: 9, pct: 50, color: 'bg-teal-400' },
+                  { dx: 'ADHD', n: 4, pct: 22, color: 'bg-green-400' },
+                  { dx: 'Bipolar Disorder', n: 2, pct: 11, color: 'bg-orange-400' },
+                  { dx: 'Eating Disorder (co-occurring)', n: 2, pct: 11, color: 'bg-pink-400' },
+                ].map(r => (
+                  <div key={r.dx}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate">{r.dx}</span>
+                      <span className="font-bold text-navy">{r.n} ({r.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">ACE Score Distribution & Trauma Profile</h3>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <div className="text-xs text-slate mb-2">ACE (Adverse Childhood Experiences) score distribution — current census</div>
+                <div className="space-y-2">
+                  {[
+                    { range: '0–2 (Low)', n: 3, pct: 17, color: 'bg-green-400' },
+                    { range: '3–4 (Moderate)', n: 5, pct: 28, color: 'bg-amber-400' },
+                    { range: '5–6 (High)', n: 6, pct: 33, color: 'bg-orange-400' },
+                    { range: '7–10 (Very High)', n: 4, pct: 22, color: 'bg-red-500' },
+                  ].map(r => (
+                    <div key={r.range}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-slate">{r.range}</span>
+                        <span className="font-bold text-navy">{r.n} ({r.pct}%)</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full">
+                        <div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-xs font-semibold text-navy mt-3">Average ACE Score: <span className="text-orange">4.9</span> (vs. 2.0 in general population)</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-slate mb-2">Trauma types present in BPS assessments</div>
+                <div className="space-y-1.5">
+                  {[
+                    { type: 'Physical or sexual abuse (childhood)', pct: 67 },
+                    { type: 'Parental substance use disorder', pct: 72 },
+                    { type: 'Combat / Military trauma', pct: 22 },
+                    { type: 'Domestic violence (intimate partner)', pct: 44 },
+                    { type: 'Overdose (self or witnessed)', pct: 56 },
+                    { type: 'Incarceration', pct: 39 },
+                    { type: 'Housing instability / homelessness', pct: 33 },
+                  ].map(r => (
+                    <div key={r.type} className="flex items-center justify-between text-xs">
+                      <span className="text-slate">{r.type}</span>
+                      <span className={`font-bold ${r.pct >= 60 ? 'text-red-600' : r.pct >= 40 ? 'text-amber-600' : 'text-green-600'}`}>{r.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bpsTab === 'Assessment' && (
+      <>
       {/* Patient selector + progress */}
       <div className="card flex items-center gap-6">
         <div className="flex-1">
@@ -214,11 +340,102 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
           </div>
         </div>
       )}
+      </>
+      )}
+
+      {bpsTab === 'SUD Epidemiology' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Reference data for clinicians — national and Tennessee-specific SUD prevalence, trends, and population benchmarks relevant to treatment planning.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Americans with SUD (2023)', value: '48.7M', color: 'text-navy', sub: 'SAMHSA NSDUH 2023' },
+              { label: 'Received Tx in Past Year', value: '13%', color: 'text-amber-600', sub: '6.3M of 48.7M affected' },
+              { label: 'TN Opioid Deaths (2023)', value: '3,281', color: 'text-red-600', sub: '~9/day · TDMHSAS' },
+              { label: 'TN SUD Tx Capacity Gap', value: '~70%', color: 'text-amber-600', sub: 'Unmet need statewide' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">National SUD Prevalence by Substance (2023)</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { sub: 'Alcohol Use Disorder', prev: '29.5M', pct: 10.8, color: 'bg-amber-500' },
+                  { sub: 'Cannabis Use Disorder', prev: '16.3M', pct: 6.0, color: 'bg-green-500' },
+                  { sub: 'Opioid Use Disorder', prev: '6.1M', pct: 2.2, color: 'bg-red-500' },
+                  { sub: 'Stimulant Use Disorder (Meth/Cocaine)', prev: '5.3M', pct: 1.9, color: 'bg-orange-500' },
+                  { sub: 'Nicotine/Tobacco Use Disorder', prev: '59.1M', pct: 21.6, color: 'bg-gray-500' },
+                  { sub: 'Benzodiazepine Use Disorder', prev: '1.8M', pct: 0.7, color: 'bg-purple-500' },
+                  { sub: 'Co-occurring MH + SUD', prev: '21.5M', pct: 7.9, color: 'bg-blue-500' },
+                ].map(s => (
+                  <div key={s.sub}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{s.sub}</span>
+                      <span className="font-semibold text-navy">{s.prev} ({s.pct}%)</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full">
+                      <div className={`h-2 rounded-full ${s.color}`} style={{ width: `${Math.min(s.pct * 4, 100)}%` }} />
+                    </div>
+                  </div>
+                ))}
+                <div className="text-[10px] text-slate italic mt-2">Source: SAMHSA National Survey on Drug Use and Health (NSDUH) 2023</div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Tennessee-Specific Highlights</h3>
+                <div className="space-y-2 text-xs text-slate">
+                  {[
+                    { label: 'Opioid overdose deaths (2023)', value: '3,281 · 5th highest per capita in US' },
+                    { label: 'TN buprenorphine prescribers', value: '~2,800 DATA-waiver providers statewide' },
+                    { label: 'TN Medicaid (TennCare) SUD coverage', value: 'Residential + MAT covered; PHP/IOP carved in as of 2022' },
+                    { label: 'Alcohol-related deaths (TN, 2022)', value: '1,847 · liver disease + poisoning combined' },
+                    { label: 'Stimulant (meth) tx admissions, TN', value: '38% of all TN SUD tx admissions involve stimulants' },
+                    { label: 'Rural access gap', value: '72% of TN counties have no licensed SUD tx facility' },
+                  ].map(r => (
+                    <div key={r.label} className="border border-border rounded p-2">
+                      <span className="font-semibold text-navy">{r.label}: </span>
+                      <span>{r.value}</span>
+                    </div>
+                  ))}
+                  <div className="text-[10px] italic">Sources: TDMHSAS, TN Dept. of Health, SAMHSA TEDS</div>
+                </div>
+              </div>
+
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Treatment Effectiveness Evidence Base</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { tx: 'MAT (buprenorphine)', evidence: 'Reduces OUD mortality by 50-60%. Gold-standard per ASAM, SAMHSA, and WHO. Continuous treatment dramatically outperforms detox-only.' },
+                    { tx: 'Residential (≥90 days)', evidence: 'Longer treatment duration consistently associated with better outcomes. NIDA: 90 days threshold for meaningful recovery benefit.' },
+                    { tx: 'Cognitive Behavioral Therapy (CBT)', evidence: 'Strong evidence for AUD, OUD, stimulant SUD. Skill transfer and relapse prevention persist years post-treatment.' },
+                    { tx: 'Motivational Interviewing (MI)', evidence: 'Meta-analyses: 74% of studies show MI superior to no treatment. Particularly effective in early-stage ambivalence.' },
+                    { tx: '12-Step / Mutual Aid (AA/NA)', evidence: 'Cochrane review: AA at least as effective as CBT for AUD at 1 year, with stronger social support outcomes.' },
+                  ].map(e => (
+                    <div key={e.tx} className="border border-border rounded-lg p-2.5">
+                      <div className="font-semibold text-navy mb-0.5">{e.tx}</div>
+                      <div className="text-slate leading-relaxed">{e.evidence}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bpsTab === 'Diagnostic Coding' && <DiagnosticCodingTab />}
+      {bpsTab === 'Assessment Quality' && <AssessmentQualityTab />}
     </div>
   );
 }
-
-// ── Section sub-components ──────────────────────────────────────────────────
 
 function Field({ label, value, multiline = true }: { label: string; value?: string; multiline?: boolean }) {
   return (
@@ -391,6 +608,119 @@ function SummarySection({ data }: { data: Record<string, string> }) {
       <Field label="Clinical Summary & Formulation" value={data.clinicalSummary} />
       <Field label="Treatment Recommendations & ASAM Level of Care Justification" value={data.treatmentRecommendations} />
       <Field label="Clinician Attestation & Co-signature Plan" value={data.assessmentCompleted} multiline={false} />
+    </div>
+  );
+}
+
+function DiagnosticCodingTab() {
+  return (
+    <div className="space-y-5">
+      <div className="text-sm text-slate">DSM-5-TR and ICD-10-CM reference for common SUD and co-occurring diagnoses — for BPS assessment completion and billing documentation.</div>
+      <div className="grid grid-cols-2 gap-5">
+        <div className="card">
+          <h3 className="font-semibold text-navy text-sm mb-3">Common SUD Diagnoses — ICD-10-CM Quick Reference</h3>
+          <div className="space-y-1 text-xs">
+            {[
+              { code: 'F10.20', dx: 'Alcohol Use Disorder, Moderate/Severe' },
+              { code: 'F10.230', dx: 'AUD, Severe, with Withdrawal' },
+              { code: 'F11.20', dx: 'Opioid Use Disorder, Moderate/Severe' },
+              { code: 'F11.23', dx: 'OUD, Severe, with Withdrawal' },
+              { code: 'F11.90', dx: 'Opioid Use, Unspecified, Uncomplicated' },
+              { code: 'F14.20', dx: 'Cocaine Use Disorder, Moderate/Severe' },
+              { code: 'F15.20', dx: 'Amphetamine-type SUD, Moderate/Severe' },
+              { code: 'F12.20', dx: 'Cannabis Use Disorder, Moderate/Severe' },
+              { code: 'F19.20', dx: 'Other Psychoactive SUD, Moderate/Severe' },
+              { code: 'F13.20', dx: 'Sedative/Hypnotic/Anxiolytic Use Disorder' },
+            ].map(d => (
+              <div key={d.code} className="flex gap-3 border-b border-border py-1.5">
+                <span className="font-mono font-bold text-navy shrink-0 w-16">{d.code}</span>
+                <span className="text-slate">{d.dx}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Common Co-occurring Diagnoses</h3>
+            <div className="space-y-1 text-xs">
+              {[
+                { code: 'F33.1', dx: 'Major Depressive Disorder, Recurrent, Moderate' },
+                { code: 'F41.1', dx: 'Generalized Anxiety Disorder' },
+                { code: 'F43.10', dx: 'PTSD, Unspecified' },
+                { code: 'F31.81', dx: 'Bipolar II Disorder' },
+                { code: 'F20.9', dx: 'Schizophrenia, Unspecified' },
+                { code: 'F90.9', dx: 'ADHD, Unspecified' },
+                { code: 'F60.3', dx: 'Borderline Personality Disorder' },
+                { code: 'F43.22', dx: 'Adjustment Disorder with Anxiety' },
+              ].map(d => (
+                <div key={d.code} className="flex gap-3 border-b border-border py-1.5">
+                  <span className="font-mono font-bold text-purple-600 shrink-0 w-14">{d.code}</span>
+                  <span className="text-slate">{d.dx}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+            <strong>Note:</strong> Substance-induced disorders (e.g., F10.94 — AUD with induced depressive disorder) should be distinguished from independent co-occurring diagnoses. DSM-5-TR requires ≥30 days abstinence to confirm primary psychiatric diagnosis in most cases.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssessmentQualityTab() {
+  const metrics = [
+    { clinician: 'A. Brooks, LPC', completed: 12, avgDays: 1.1, sigRate: '100%', score: 96, trend: 'up' },
+    { clinician: 'T. Jackson, CADC', completed: 9, avgDays: 1.4, sigRate: '100%', score: 93, trend: 'stable' },
+    { clinician: 'M. Rivera, MS', completed: 7, avgDays: 2.1, sigRate: '86%', score: 84, trend: 'down' },
+    { clinician: 'R. Torres, LPC-MHSP', completed: 5, avgDays: 1.0, sigRate: '100%', score: 98, trend: 'up' },
+  ];
+  return (
+    <div className="space-y-5">
+      <div className="text-sm text-slate">BPS assessment completion quality metrics — timeliness, co-signature compliance, and clinical supervisor quality scores (30-day rolling).</div>
+      <div className="grid grid-cols-4 gap-4">
+        {[
+          { label: 'Avg Completion Time', value: '1.4d', color: 'text-green-600', sub: 'Target: ≤2 business days' },
+          { label: 'Co-sign Rate', value: '96%', color: 'text-blue-600', sub: '47 of 49 assessments' },
+          { label: 'Supervisor Score Avg', value: '93/100', color: 'text-navy', sub: '30-day rolling mean' },
+          { label: 'Assessments (30d)', value: 49, color: 'text-teal-600', sub: 'All programs combined' },
+        ].map(k => (
+          <div key={k.label} className="card">
+            <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+            <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+            <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <h3 className="font-semibold text-navy text-sm mb-3">Clinician-Level Assessment Quality</h3>
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border text-slate">
+              <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Clinician</th>
+              <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Completed</th>
+              <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Avg Days</th>
+              <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Co-sign Rate</th>
+              <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Quality Score</th>
+              <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Trend</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {metrics.map(m => (
+              <tr key={m.clinician} className="hover:bg-gray-50">
+                <td className="py-2 font-medium text-navy">{m.clinician}</td>
+                <td className="py-2 text-center text-slate">{m.completed}</td>
+                <td className="py-2 text-center text-slate">{m.avgDays}d</td>
+                <td className="py-2 text-center font-semibold text-blue-600">{m.sigRate}</td>
+                <td className="py-2 text-center"><span className={`font-bold ${m.score >= 90 ? 'text-green-600' : 'text-amber-600'}`}>{m.score}/100</span></td>
+                <td className="py-2 text-center text-lg">{m.trend === 'up' ? '↑' : m.trend === 'down' ? '↓' : '→'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

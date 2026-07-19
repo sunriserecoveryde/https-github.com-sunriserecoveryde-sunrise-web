@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
+import { LockedButton } from '../components/common/LockedButton';
 import { getPatientMedications } from '../data/mockMedications';
 import { CheckCircle, Printer, Save, Download } from 'lucide-react';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 interface DischargeGoal { goal: string; status: string; notes: string; }
 
@@ -114,9 +115,9 @@ const GOAL_STATUS_STYLE: Record<string, string> = {
   'Not Met':           'bg-red-100 text-red-700',
 };
 
-export function DischargeSummary({ navigate }: Props) {
+export function DischargeSummary({ navigate, readOnly }: Props) {
   const [selectedPatient, setSelectedPatient] = useState('p4');
-  const [tab, setTab] = useState<'Draft' | 'Print Preview'>('Draft');
+  const [tab, setTab] = useState<'Draft' | 'Print Preview' | 'Continuity of Care' | 'Distribution Log'>('Draft');
   const [saved, setSaved] = useState(false);
 
   const p = MOCK_PATIENTS.find(pt => pt.id === selectedPatient) ?? MOCK_PATIENTS[0];
@@ -132,14 +133,17 @@ export function DischargeSummary({ navigate }: Props) {
           <p className="text-slate text-sm mt-0.5">Clinical discharge documentation · CARF / CMS required within 5 business days of discharge</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setTab(tab === 'Draft' ? 'Print Preview' : 'Draft')} className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
-            <Printer className="w-4 h-4" /> {tab === 'Draft' ? 'Preview' : 'Back to Edit'}
-          </button>
-          <button onClick={() => setSaved(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+          <LockedButton locked={readOnly} onClick={() => !readOnly && setSaved(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
             <Save className="w-4 h-4" />{saved ? 'Saved ✓' : 'Save Summary'}
-          </button>
+          </LockedButton>
         </div>
       </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-border">
+        {(['Draft', 'Print Preview', 'Continuity of Care', 'Distribution Log'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
+        ))}</div>
 
       {/* Patient selector */}
       <div className="card">
@@ -396,6 +400,162 @@ export function DischargeSummary({ navigate }: Props) {
 
           <div className="text-center text-xs text-gray-400 pt-4 border-t border-gray-100">
             This document is protected under 42 CFR Part 2 and HIPAA. Unauthorized disclosure is prohibited by federal law.
+          </div>
+        </div>
+      )}
+
+      {tab === 'Continuity of Care' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Post-discharge care coordination — referral status, follow-up appointments, aftercare plan, and warm handoffs to receiving providers.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Follow-Up Appointments Scheduled</h3>
+              <div className="space-y-3">
+                {[
+                  { type: 'Outpatient Counseling', provider: 'Recovery Road Counseling Center', date: '2026-07-26', status: 'Confirmed', contact: '(615) 555-0198' },
+                  { type: 'Buprenorphine Prescriber', provider: 'Dr. Anita Shah, MD (OBOT Clinic)', date: '2026-07-23', status: 'Confirmed', contact: '(615) 555-0241' },
+                  { type: 'Primary Care', provider: 'Vanderbilt Medical Group — Dr. Parrish', date: '2026-08-05', status: 'Pending — awaiting callback', contact: '(615) 555-0112' },
+                  { type: 'Psychiatry', provider: 'TN Behavioral Health Associates', date: '2026-08-12', status: 'Pending — referral sent', contact: '(615) 555-0339' },
+                  { type: 'Peer Support / AA Sponsor', provider: 'Local AA — Group 114, Monday 7 PM', date: 'Ongoing', status: 'Committed', contact: 'Via patient' },
+                ].map(f => (
+                  <div key={f.type} className="border border-border rounded-lg p-3 text-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-navy">{f.type}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${f.status === 'Confirmed' ? 'bg-green-100 text-green-700' : f.status === 'Committed' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>{f.status}</span>
+                    </div>
+                    <div className="text-slate">{f.provider}</div>
+                    <div className="flex justify-between mt-0.5 text-slate">
+                      <span>{f.date}</span>
+                      <span>{f.contact}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Warm Handoffs Completed</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { to: 'Recovery Road Counseling Center', method: 'Phone', date: '2026-07-18', staff: 'Sarah Jenkins, LPC', notes: 'Spoke with intake coordinator; patient\'s biopsychosocial summary faxed with consent.' },
+                    { to: 'Dr. Anita Shah (OBOT)', method: 'Fax + Phone', date: '2026-07-18', staff: 'Dr. Robert Chen, MD', notes: 'MAT summary faxed; buprenorphine dose confirmed; labs forwarded with 42 CFR Part 2 consent.' },
+                    { to: 'TN Behavioral Health Associates', method: 'Fax', date: '2026-07-18', staff: 'Maria Torres, LMFT', notes: 'Referral letter sent; psychiatric eval summary included; patient to call and confirm appt.' },
+                  ].map(h => (
+                    <div key={h.to} className="border border-border rounded-lg p-2.5">
+                      <div className="font-semibold text-navy mb-0.5">{h.to}</div>
+                      <div className="text-slate">{h.notes}</div>
+                      <div className="flex gap-3 mt-1 text-[10px] text-slate">
+                        <span>Method: {h.method}</span>
+                        <span>Date: {h.date}</span>
+                        <span>By: {h.staff}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Discharge Medications Dispensed</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { med: 'Buprenorphine/Naloxone 8mg/2mg SL', qty: '14 films', refills: '5', prescriber: 'Dr. R. Chen', note: 'Pt counseled on safe storage and no sharing' },
+                    { med: 'Ondansetron 4mg PO PRN', qty: '10 tablets', refills: '2', prescriber: 'Dr. R. Chen', note: 'For nausea — take with first buprenorphine dose if needed' },
+                    { med: 'Naloxone (Narcan) 4mg nasal spray', qty: '2 kits', refills: '1', prescriber: 'Dr. R. Chen', note: 'Patient and support person both trained on use' },
+                  ].map(m => (
+                    <div key={m.med} className="border border-border rounded-lg p-2.5">
+                      <div className="font-semibold text-navy mb-0.5">{m.med}</div>
+                      <div className="flex gap-4 text-[10px] text-slate mb-0.5">
+                        <span>Qty: {m.qty}</span>
+                        <span>Refills: {m.refills}</span>
+                        <span>Rx: {m.prescriber}</span>
+                      </div>
+                      <div className="text-slate italic">{m.note}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Recovery Resources Provided</h3>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    { resource: 'SAMHSA National Helpline', detail: '1-800-662-4357 · Free, confidential, 24/7' },
+                    { resource: 'Crisis Text Line', detail: 'Text HOME to 741741' },
+                    { resource: 'Alcoholics Anonymous (Local)', detail: 'aa.org/find-aa · Group 114 Mon 7 PM, First Baptist Nashville' },
+                    { resource: 'SMART Recovery', detail: 'smartrecovery.org · Online and in-person meetings' },
+                    { resource: 'Tennessee REDLINE (Opioid Helpline)', detail: '1-800-889-9789' },
+                    { resource: 'Patient Bill of Rights', detail: 'Provided in writing at discharge — signed by patient' },
+                    { resource: '42 CFR Part 2 Notice', detail: 'Confidentiality of SUD records — patient copy provided' },
+                  ].map(r => (
+                    <div key={r.resource} className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5 shrink-0">✓</span>
+                      <div>
+                        <span className="font-medium text-navy">{r.resource}</span>
+                        <span className="text-slate"> — {r.detail}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Distribution Log' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Track distribution of discharge summaries to receiving providers, care coordinators, and the patient — ensures 42 CFR and CMS timely transmission compliance.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Summaries Sent (30d)', value: 18, color: 'text-navy', sub: 'To external providers' },
+              { label: 'Avg Transmission Time', value: '4.2h', color: 'text-green-600', sub: 'Post-discharge; target ≤24h' },
+              { label: 'Patient Copy Provided', value: '100%', color: 'text-teal-600', sub: '42 CFR Part 2 compliance' },
+              { label: 'Pending Fax/Secure Send', value: 2, color: 'text-amber-600', sub: 'Awaiting provider confirmation' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Recent Distribution Log</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  {['Patient', 'Discharge Date', 'Recipient', 'Recipient Type', 'Method', 'Sent', 'Status'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { patient: 'Marcus Webb', dc: '2026-07-14', recipient: 'Dr. R. Evans, Nashville Health', type: 'PCP', method: 'Secure Fax', sent: '2026-07-14 14:22', status: 'Confirmed', ok: true },
+                  { patient: 'Marcus Webb', dc: '2026-07-14', recipient: 'Patient Self', type: 'Patient', method: 'Printed / Given', sent: '2026-07-14 10:05', status: 'Confirmed', ok: true },
+                  { patient: 'Samantha Choi', dc: '2026-07-15', recipient: 'Recovery Works IOP', type: 'Step-down', method: 'Secure Email', sent: '2026-07-15 09:41', status: 'Confirmed', ok: true },
+                  { patient: 'Samantha Choi', dc: '2026-07-15', recipient: 'Patient Self', type: 'Patient', method: 'MyChart Portal', sent: '2026-07-15 09:00', status: 'Confirmed', ok: true },
+                  { patient: 'James Thornton', dc: '2026-07-16', recipient: 'TN Drug Court', type: 'Legal', method: 'Secure Fax', sent: '2026-07-16 11:15', status: 'Pending Confirm', ok: false },
+                  { patient: 'James Thornton', dc: '2026-07-16', recipient: 'Vanderbilt Psychiatry', type: 'Specialist', method: 'CommonWell HIE', sent: '2026-07-16 11:16', status: 'Delivered', ok: true },
+                  { patient: 'Patricia Holloway', dc: '2026-07-17', recipient: 'Patient Self', type: 'Patient', method: 'Printed / Given', sent: '2026-07-17 08:30', status: 'Confirmed', ok: true },
+                  { patient: 'Patricia Holloway', dc: '2026-07-17', recipient: 'Serenity Sober Living', type: 'Housing', method: 'Secure Email', sent: '2026-07-17 09:00', status: 'Pending Confirm', ok: false },
+                ].map((r, i) => (
+                  <tr key={i} className={`hover:bg-gray-50 ${!r.ok ? 'bg-amber-50/30' : ''}`}>
+                    <td className="px-3 py-2 font-medium text-navy">{r.patient}</td>
+                    <td className="px-3 py-2 text-slate">{r.dc}</td>
+                    <td className="px-3 py-2 text-navy">{r.recipient}</td>
+                    <td className="px-3 py-2 text-slate">{r.type}</td>
+                    <td className="px-3 py-2 text-slate">{r.method}</td>
+                    <td className="px-3 py-2 text-slate">{r.sent}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.status === 'Confirmed' || r.status === 'Delivered' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{r.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

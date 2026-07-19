@@ -11,11 +11,12 @@ import { CustomButtons } from '../components/ui/CustomButtons';
 import {
   ArrowLeft, Activity, FileText, Pill, Users, HeartPulse,
   FlaskConical, BookOpen, FolderOpen, CheckCircle2, XCircle,
-  AlertCircle, Clock, Upload, Download
+  AlertCircle, Clock, Upload, Download, ClipboardList
 } from 'lucide-react';
 import { Screen } from '../App';
+import { LockedButton } from '../components/common/LockedButton';
 
-export function PatientDetail({ patientId, navigate }: { patientId: string | null; navigate: (s: Screen, id?: string) => void }) {
+export function PatientDetail({ patientId, navigate, readOnly }: { patientId: string | null; navigate: (s: Screen, id?: string) => void; readOnly?: boolean }) {
   const patient = MOCK_PATIENTS.find(p => p.id === patientId) || MOCK_PATIENTS[0];
   const [activeTab, setActiveTab] = useState('Overview');
   const [isComposingNote, setIsComposingNote] = useState(false);
@@ -38,6 +39,7 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
     { id: 'Vitals', icon: <HeartPulse className="w-3.5 h-3.5" /> },
     { id: 'Labs', icon: <FlaskConical className="w-3.5 h-3.5" /> },
     { id: 'History', icon: <BookOpen className="w-3.5 h-3.5" /> },
+    { id: 'Discharge Plan', icon: <ClipboardList className="w-3.5 h-3.5" /> },
     { id: 'Documents', icon: <FolderOpen className="w-3.5 h-3.5" /> },
   ];
 
@@ -53,7 +55,7 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
     ];
     const statuses: Array<'Present' | 'Absent' | 'Excused'> = ['Present', 'Present', 'Present', 'Absent', 'Present', 'Excused', 'Present', 'Present'];
     const sessions: Array<{ id: string; date: string; name: string; facilitator: string; topic: string; time: string; status: 'Present' | 'Absent' | 'Excused'; note: string }> = [];
-    const admitMs = new Date('2023-10-14').getTime();
+    const admitMs = new Date(patient.admitDate).getTime();
     for (let day = 0; day < Math.min(patient.los, 10); day++) {
       const d = new Date(admitMs + day * 86400000);
       const dateStr = d.toISOString().slice(0, 10);
@@ -280,9 +282,9 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-navy">Progress Notes</h2>
                 {!isComposingNote && (
-                  <button onClick={() => setIsComposingNote(true)} className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">
+                  <LockedButton locked={readOnly} onClick={() => setIsComposingNote(true)} className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">
                     + New Note
-                  </button>
+                  </LockedButton>
                 )}
               </div>
               <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
@@ -374,9 +376,9 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
                 <div className="bg-bg border-t border-border p-4 flex justify-between items-center">
                   <div className="text-xs text-slate">Auto-saved at {new Date().toLocaleTimeString()}</div>
                   <div className="flex gap-2">
-                    <button className="px-4 py-2 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 transition-colors">Save Draft</button>
-                    <button className="px-4 py-2 border border-sunrise-orange text-sunrise-orange bg-sunrise-orange/10 rounded text-sm font-medium hover:bg-sunrise-orange/20 transition-colors">Send for Co-sign</button>
-                    <button className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">Sign & Lock</button>
+                    <LockedButton locked={readOnly} className="px-4 py-2 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 transition-colors">Save Draft</LockedButton>
+                    <LockedButton locked={readOnly} className="px-4 py-2 border border-sunrise-orange text-sunrise-orange bg-sunrise-orange/10 rounded text-sm font-medium hover:bg-sunrise-orange/20 transition-colors">Send for Co-sign</LockedButton>
+                    <LockedButton locked={readOnly} className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">Sign & Lock</LockedButton>
                   </div>
                 </div>
               </div>
@@ -390,8 +392,8 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-navy">Master Treatment Plan</h2>
               <div className="flex gap-2">
-                <button className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Review Plan</button>
-                <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Add Goal</button>
+                <LockedButton locked={readOnly} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Review Plan</LockedButton>
+                <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Add Goal</LockedButton>
               </div>
             </div>
             {patient.goals.length > 0 ? (
@@ -426,7 +428,7 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
               <div className="text-center p-12 border border-dashed border-border rounded-lg bg-bg">
                 <h3 className="font-semibold text-slate mb-2">No Active Goals</h3>
                 <p className="text-sm text-slate-light mb-4">Create a treatment plan to track client progress.</p>
-                <button className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">Initialize Master Treatment Plan</button>
+                <LockedButton locked={readOnly} className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">Initialize Master Treatment Plan</LockedButton>
               </div>
             )}
           </div>
@@ -439,7 +441,7 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
               <h2 className="text-lg font-bold text-navy flex items-center gap-2"><Pill className="w-5 h-5 text-sunrise-blue" /> Medication Administration Record</h2>
               <div className="flex gap-2">
                 <button className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Print MAR</button>
-                <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Order Medication</button>
+                <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Order Medication</LockedButton>
               </div>
             </div>
 
@@ -537,7 +539,7 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-navy flex items-center gap-2"><Users className="w-5 h-5 text-sunrise-blue" /> Group Therapy Attendance</h2>
-              <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Group Note</button>
+              <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Group Note</LockedButton>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
@@ -590,7 +592,7 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-navy flex items-center gap-2"><HeartPulse className="w-5 h-5 text-sunrise-blue" /> Vital Signs</h2>
-              <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Record Vitals</button>
+              <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Record Vitals</LockedButton>
             </div>
 
             {/* Latest vitals */}
@@ -666,7 +668,7 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-navy flex items-center gap-2"><FlaskConical className="w-5 h-5 text-sunrise-blue" /> Laboratory Results</h2>
-              <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Order Labs</button>
+              <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Order Labs</LockedButton>
             </div>
 
             {/* Critical alerts */}
@@ -761,10 +763,10 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
                   </thead>
                   <tbody className="divide-y divide-border">
                     {[
-                      { sub: 'Heroin / Fentanyl', onset: 'Age 24 (2012)', route: 'IV', freq: 'Daily, ~0.5g/day', last: '2023-10-13', abstinence: '8 months (2020–2021)' },
-                      { sub: 'Alcohol', onset: 'Age 17 (2005)', route: 'PO', freq: 'Weekends, 6–10 drinks', last: '2023-10-10', abstinence: '2 years (2015–2017)' },
-                      { sub: 'Cannabis', onset: 'Age 16 (2004)', route: 'Inhaled', freq: '3–4x/week', last: '2023-10-05', abstinence: 'None significant' },
-                      { sub: 'Benzodiazepines', onset: 'Age 30 (2018)', route: 'PO', freq: 'PRN, prescribed → misuse', last: '2023-10-14', abstinence: '—' },
+                      { sub: 'Heroin / Fentanyl', onset: 'Age 24 (2012)', route: 'IV', freq: 'Daily, ~0.5g/day', last: '2026-07-13', abstinence: '8 months (2020–2021)' },
+                      { sub: 'Alcohol', onset: 'Age 17 (2005)', route: 'PO', freq: 'Weekends, 6–10 drinks', last: '2026-07-09', abstinence: '2 years (2015–2017)' },
+                      { sub: 'Cannabis', onset: 'Age 16 (2004)', route: 'Inhaled', freq: '3–4x/week', last: '2026-07-05', abstinence: 'None significant' },
+                      { sub: 'Benzodiazepines', onset: 'Age 30 (2018)', route: 'PO', freq: 'PRN, prescribed → misuse', last: '2026-07-14', abstinence: '—' },
                     ].map((row, i) => (
                       <tr key={i} className="hover:bg-bg">
                         <td className="px-3 py-2.5 font-semibold text-navy">{row.sub}</td>
@@ -821,13 +823,181 @@ export function PatientDetail({ patientId, navigate }: { patientId: string | nul
           </div>
         )}
 
+        {/* ── DISCHARGE PLAN ── */}
+        {activeTab === 'Discharge Plan' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-navy flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-sunrise-blue" /> Discharge Planning
+              </h2>
+              <div className="flex gap-2">
+                <LockedButton locked={readOnly} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Update Plan</LockedButton>
+                <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">Finalize &amp; Sign</LockedButton>
+              </div>
+            </div>
+
+            {/* Target Disposition */}
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { label: 'Target Discharge Date', value: (() => { const d = new Date(patient.admitDate); d.setDate(d.getDate() + 30); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })(), sub: `Day ${patient.los + 23} projected`, icon: '📅', color: 'border-l-sunrise-blue' },
+                { label: 'Planned Disposition', value: 'Step Down to PHP', sub: 'Continued Outpatient Care', icon: '🏠', color: 'border-l-success' },
+                { label: 'Clinician Responsible', value: patient.counselor, sub: 'Primary Counselor', icon: '👤', color: 'border-l-navy' },
+              ].map(c => (
+                <div key={c.label} className={`bg-white border border-border border-l-4 ${c.color} rounded-xl shadow-sm p-4`}>
+                  <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-2">{c.label}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{c.icon}</span>
+                    <div>
+                      <div className="font-bold text-navy">{c.value}</div>
+                      <div className="text-xs text-slate">{c.sub}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Discharge Readiness Checklist */}
+            <div className="bg-white border border-border rounded-xl shadow-sm p-5">
+              <h3 className="font-bold text-navy mb-4 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-success" /> Discharge Readiness Checklist
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { item: 'Insurance authorization through discharge date', status: 'complete' },
+                  { item: 'PHP program identified and enrolled', status: patient.recoveryScore > 70 ? 'complete' : 'pending' },
+                  { item: 'Aftercare counseling scheduled (within 7 days)', status: 'complete' },
+                  { item: 'MAT continuation — prescriber identified', status: patient.flags.some(f => f.type === 'Medication' && (f.note.includes('Suboxone') || f.note.includes('Vivitrol') || f.note.includes('Naltrexone'))) ? 'complete' : 'n-a' },
+                  { item: 'Sober living or stable housing confirmed', status: patient.recoveryScore > 65 ? 'complete' : 'in-progress' },
+                  { item: 'Sponsor / peer support contact established', status: patient.recoveryScore > 60 ? 'complete' : 'pending' },
+                  { item: 'Family psychoeducation session completed', status: 'in-progress' },
+                  { item: '42 CFR Part 2 release for aftercare provider', status: 'complete' },
+                  { item: 'Patient goals met ≥ 70% per treatment plan', status: patient.recoveryScore > 65 ? 'complete' : 'in-progress' },
+                  { item: 'Discharge summary dictated by physician', status: 'pending' },
+                  { item: 'Emergency contact / crisis plan reviewed', status: 'complete' },
+                  { item: 'Follow-up appointment reminder sent to patient', status: 'pending' },
+                ].map(({ item, status }) => (
+                  <div key={item} className={`flex items-start gap-2.5 p-3 rounded-lg ${
+                    status === 'complete'     ? 'bg-green-50 border border-green-100' :
+                    status === 'in-progress'  ? 'bg-amber-50 border border-amber-100' :
+                    status === 'n-a'          ? 'bg-gray-50 border border-border' :
+                                               'bg-red-50 border border-red-100'
+                  }`}>
+                    <span className={`text-lg leading-none mt-0.5 ${
+                      status === 'complete' ? 'text-success' :
+                      status === 'in-progress' ? 'text-sunrise-amber' :
+                      status === 'n-a' ? 'text-slate' :
+                      'text-critical'
+                    }`}>
+                      {status === 'complete' ? '✓' : status === 'in-progress' ? '◑' : status === 'n-a' ? '—' : '○'}
+                    </span>
+                    <div className="flex-1">
+                      <span className={`text-xs font-medium ${status === 'complete' ? 'text-green-800' : status === 'in-progress' ? 'text-amber-800' : status === 'n-a' ? 'text-slate' : 'text-red-800'}`}>{item}</span>
+                    </div>
+                    <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded flex-none ${
+                      status === 'complete'    ? 'bg-green-200 text-green-800' :
+                      status === 'in-progress' ? 'bg-amber-200 text-amber-800' :
+                      status === 'n-a'         ? 'bg-gray-200 text-gray-600' :
+                                                 'bg-red-200 text-red-800'
+                    }`}>{status === 'n-a' ? 'N/A' : status === 'in-progress' ? 'In Progress' : status === 'complete' ? 'Done' : 'Pending'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Aftercare Plan */}
+            <div className="grid grid-cols-2 gap-5">
+              <div className="bg-white border border-border rounded-xl shadow-sm p-5">
+                <h3 className="font-bold text-navy mb-4">Aftercare &amp; Continuum of Care</h3>
+                <div className="space-y-3 text-sm">
+                  {[
+                    { label: 'Step-Down Level of Care', value: 'Partial Hospitalization (PHP)', icon: '🏥' },
+                    { label: 'Outpatient Counselor', value: 'To be assigned at PHP intake', icon: '🧑‍⚕️' },
+                    { label: 'Prescriber (MAT)', value: patient.flags.some(f => f.type === 'Medication' && (f.note.includes('Suboxone') || f.note.includes('Naltrexone') || f.note.includes('Vivitrol'))) ? 'Dr. Richard Patel, MD — Sunrise Outpatient' : 'N/A (no MAT)', icon: '💊' },
+                    { label: 'Housing', value: 'Returning to family home (verified sober environment)', icon: '🏠' },
+                    { label: 'Employment / School', value: 'Medical leave active — RTW plan w/ EAP', icon: '💼' },
+                    { label: 'AA/NA Sponsor', value: patient.recoveryScore > 60 ? 'James (AA) — confirmed, local home group identified' : 'Referral pending', icon: '🤝' },
+                    { label: '72h Follow-Up Call', value: 'Scheduled — Sunrise Aftercare Line', icon: '📞' },
+                    { label: '30-Day Check-In', value: 'Automated via Sunrise Connect portal', icon: '📱' },
+                  ].map(row => (
+                    <div key={row.label} className="flex gap-3 items-start border-b border-border pb-2.5 last:border-0 last:pb-0">
+                      <span className="text-base mt-0.5">{row.icon}</span>
+                      <div>
+                        <div className="text-[10px] font-bold text-slate uppercase tracking-wide">{row.label}</div>
+                        <div className="text-navy font-medium mt-0.5">{row.value}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* Crisis Plan */}
+                <div className="bg-white border border-border rounded-xl shadow-sm p-5">
+                  <h3 className="font-bold text-navy mb-3">Crisis &amp; Relapse Prevention Plan</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="bg-red-50 border border-red-100 rounded-lg p-3">
+                      <div className="text-[10px] font-bold text-red-700 uppercase tracking-wide mb-1">Warning Signs</div>
+                      <p className="text-red-900 text-xs">Isolation, skipping meetings, contact with using friends, sleep disruption, irritability</p>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
+                      <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1">Coping Strategies</div>
+                      <p className="text-amber-900 text-xs">Call sponsor first, attend extra AA meeting, 10-min mindfulness, call crisis line if urges escalate</p>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                      <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wide mb-1">Emergency Contacts</div>
+                      <p className="text-blue-900 text-xs">SAMHSA Helpline: 1-800-662-4357 · Sunrise Aftercare: (555) 290-7800 · Sponsor: Saved in phone</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Legal/Court Obligations */}
+                {patient.flags.some(f => f.type === 'Legal') && (
+                  <div className="bg-white border border-border rounded-xl shadow-sm p-5">
+                    <h3 className="font-bold text-navy mb-3">Legal &amp; Court Obligations</h3>
+                    <div className="text-sm text-slate space-y-1.5">
+                      <div><span className="font-medium text-navy">Court Hearing:</span> Pretrial — Next date TBD</div>
+                      <div><span className="font-medium text-navy">Probation Officer:</span> Completion letter required</div>
+                      <div><span className="font-medium text-navy">Completion Letter:</span> <span className="text-sunrise-amber font-medium">Pending physician sign-off</span></div>
+                      <div><span className="font-medium text-navy">Drug Testing:</span> Continued random UA per PO terms</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Discharge summary progress */}
+                <div className="bg-white border border-border rounded-xl shadow-sm p-5">
+                  <h3 className="font-bold text-navy mb-3">Discharge Summary Progress</h3>
+                  <div className="space-y-2">
+                    {[
+                      { section: 'Clinical Summary', pct: 85 },
+                      { section: 'Medication Reconciliation', pct: 100 },
+                      { section: 'Aftercare Recommendations', pct: 70 },
+                      { section: 'Legal/Compliance Section', pct: 40 },
+                      { section: 'Physician Attestation', pct: 0 },
+                    ].map(s => (
+                      <div key={s.section}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-medium text-navy">{s.section}</span>
+                          <span className={`text-[10px] font-bold ${s.pct === 100 ? 'text-success' : s.pct > 50 ? 'text-sunrise-amber' : 'text-critical'}`}>{s.pct}%</span>
+                        </div>
+                        <div className="h-1.5 bg-gray-100 rounded-full">
+                          <div className={`h-full rounded-full ${s.pct === 100 ? 'bg-success' : s.pct > 50 ? 'bg-sunrise-amber' : 'bg-critical'}`} style={{ width: `${s.pct}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── DOCUMENTS ── */}
         {activeTab === 'Documents' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-navy flex items-center gap-2"><FolderOpen className="w-5 h-5 text-sunrise-blue" /> Document Vault</h2>
               <div className="flex gap-2">
-                <button className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 flex items-center gap-1.5"><Upload className="w-3.5 h-3.5" /> Upload</button>
+                <LockedButton locked={readOnly} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 flex items-center gap-1.5"><Upload className="w-3.5 h-3.5" /> Upload</LockedButton>
               </div>
             </div>
 

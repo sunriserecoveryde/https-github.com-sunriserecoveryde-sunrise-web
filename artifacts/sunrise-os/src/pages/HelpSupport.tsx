@@ -102,7 +102,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export function HelpSupport({ navigate }: Props) {
-  const [activeTab, setActiveTab] = useState<'Quick Reference' | 'Keyboard Shortcuts' | 'Contact Support'>('Quick Reference');
+  const [activeTab, setActiveTab] = useState<'Quick Reference' | 'Keyboard Shortcuts' | 'Contact Support' | 'Training Resources' | 'Release Notes'>('Quick Reference');
   const [selected, setSelected] = useState<HelpArticle | null>(ARTICLES[0]);
   const [search, setSearch] = useState('');
 
@@ -122,7 +122,7 @@ export function HelpSupport({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Quick Reference', 'Keyboard Shortcuts', 'Contact Support'] as const).map(t => (
+        {(['Quick Reference', 'Keyboard Shortcuts', 'Contact Support', 'Training Resources', 'Release Notes'] as const).map(t => (
           <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -251,6 +251,178 @@ export function HelpSupport({ navigate }: Props) {
               />
               <button className="btn-primary text-sm px-4 py-2 w-full">Submit Ticket</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Training Resources' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Staff training library — compliance courses, clinical skill modules, documentation guides, and certification trackers.</div>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: 'Required Courses Due', value: 2, color: 'text-red-600', sub: 'Complete by Aug 1' },
+              { label: 'Completed This Month', value: 14, color: 'text-green-600', sub: 'Across all staff' },
+              { label: 'Certifications Expiring', value: 3, color: 'text-amber-600', sub: 'Within 60 days' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Required Training Courses</h3>
+              <div className="space-y-3">
+                {[
+                  { course: 'Annual HIPAA Compliance', due: '2026-08-01', status: 'Incomplete', type: 'Compliance', time: '45 min', req: true },
+                  { course: '42 CFR Part 2 — SUD Record Privacy', due: '2026-08-01', status: 'Incomplete', type: 'Compliance', time: '30 min', req: true },
+                  { course: 'Suicide Risk Assessment (QPR)', due: '2026-09-01', status: 'Complete', type: 'Clinical', time: '60 min', req: true },
+                  { course: 'Trauma-Informed Care Refresher', due: '2026-09-15', status: 'Complete', type: 'Clinical', time: '90 min', req: true },
+                  { course: 'Mandatory Reporter — Child Abuse', due: '2026-10-01', status: 'Complete', type: 'Compliance', time: '45 min', req: true },
+                  { course: 'Fire Safety & Evacuation', due: '2026-10-15', status: 'Complete', type: 'Safety', time: '20 min', req: true },
+                ].map(c => (
+                  <div key={c.course} className={`flex items-center gap-3 p-2.5 border rounded-lg text-xs ${c.status === 'Incomplete' ? 'border-red-200 bg-red-50' : 'border-border'}`}>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${c.status === 'Complete' ? 'bg-green-500 text-white' : 'bg-red-100 text-red-600 border border-red-300'}`}>{c.status === 'Complete' ? '✓' : '!'}</div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-navy">{c.course}</div>
+                      <div className="text-slate">{c.type} · {c.time} · Due {c.due}</div>
+                    </div>
+                    <button className={`text-[10px] font-bold px-2 py-1 rounded ${c.status === 'Incomplete' ? 'bg-red-600 text-white' : 'bg-gray-100 text-slate'}`}>{c.status === 'Incomplete' ? 'Start' : 'Review'}</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Optional Clinical Skill Modules</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { title: 'Motivational Interviewing — Advanced', cat: 'Counseling', time: '3h', level: 'Advanced', cert: true },
+                    { title: 'CIWA-Ar & COWS Assessment Mastery', cat: 'Nursing', time: '1h', level: 'Intermediate', cert: false },
+                    { title: 'MAT Pharmacology for Counselors', cat: 'MAT', time: '2h', level: 'Intermediate', cert: true },
+                    { title: 'Documentation Excellence (BIRP/DAP)', cat: 'Documentation', time: '1.5h', level: 'Foundational', cert: false },
+                    { title: 'Co-Occurring Disorders — Integrated Tx', cat: 'Clinical', time: '4h', level: 'Advanced', cert: true },
+                    { title: 'Family Systems in Addiction Recovery', cat: 'Counseling', time: '2h', level: 'Intermediate', cert: false },
+                  ].map(m => (
+                    <div key={m.title} className="flex items-center justify-between p-2.5 border border-border rounded-lg hover:bg-gray-50">
+                      <div>
+                        <div className="font-semibold text-navy">{m.title}</div>
+                        <div className="text-slate">{m.cat} · {m.time} {m.cert && '· CE credit available'}</div>
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full mb-1 ${m.level === 'Advanced' ? 'bg-purple-100 text-purple-700' : m.level === 'Intermediate' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{m.level}</div>
+                        <button className="text-[10px] font-bold bg-navy text-white px-2 py-0.5 rounded">Enroll</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Certification Tracker</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { cert: 'LADC (TN Licensed Alcohol & Drug Counselor)', exp: '2026-09-01', status: 'Expiring Soon' },
+                    { cert: 'CPR / BLS (Basic Life Support)', exp: '2026-08-15', status: 'Expiring Soon' },
+                    { cert: 'CPI (Crisis Prevention)', exp: '2026-10-01', status: 'Expiring Soon' },
+                    { cert: 'CADC-II (Certified Alcohol & Drug Counselor)', exp: '2027-01-15', status: 'Current' },
+                    { cert: 'Mental Health First Aid', exp: '2027-03-01', status: 'Current' },
+                  ].map(c => (
+                    <div key={c.cert} className="flex items-center justify-between p-2 border border-border rounded">
+                      <span className="text-navy font-medium">{c.cert}</span>
+                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                        <span className="text-slate">Exp {c.exp}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${c.status === 'Current' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{c.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {activeTab === 'Release Notes' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Sunrise OS version history and feature release notes — what's new, what's improved, and known issues per release.</div>
+          <div className="space-y-4">
+            {[
+              {
+                version: '1.0.0-demo', date: '2026-07-19', tag: 'Current', tagColor: 'bg-green-100 text-green-700',
+                headline: 'Full demo release — all modules live',
+                added: [
+                  'Complete EHR navigation: 50+ clinical screens across all care areas',
+                  'Role-based access control with 10 staff roles and configurable permissions',
+                  'NursingMAR: full MAR accordion, Controlled Substance log, PRN History, Allergy Registry',
+                  'CensusBedBoard: 14-day Discharge Forecast, bed turnover timeline',
+                  'CommandCenter: Ops Dashboard with unit occupancy, staffing ratios, daily throughput',
+                  'PopulationAnalytics: Payer Mix analysis with denial rates, revenue by LOC',
+                  'RiskDashboard: Peer Benchmark module vs SAMHSA national averages',
+                  'ASAMAssessments: Outcome Tracking tab with LOC-to-outcome correlation data',
+                ],
+                fixed: ['Resolved NursingMAR tab wrapper JSX nesting issue', 'Fixed SUD Epidemiology content placement outside component boundary'],
+                known: ['AppointmentCalendar drag-and-drop not yet implemented', 'Export functions are UI-only in demo mode'],
+              },
+              {
+                version: '0.9.0-beta', date: '2026-07-10', tag: 'Beta', tagColor: 'bg-blue-100 text-blue-700',
+                headline: 'Clinical core modules and StaffAdmin launch',
+                added: [
+                  'StaffAdmin: full credential management, DEA number, permission overrides',
+                  'WithdrawalMonitor: CIWA-Ar and COWS live scoring with severity alerts',
+                  'PatientDetail: comprehensive 6-tab patient record with timeline and vitals',
+                  'MATManagement: induction eligibility, prescription tracking, PDMP reference',
+                  'ProgressNotes: note composer with co-sign workflow and template library',
+                ],
+                fixed: ['Fixed role permission state persistence across navigation'],
+                known: ['MedicalRecords export function placeholder only'],
+              },
+              {
+                version: '0.8.0-alpha', date: '2026-06-28', tag: 'Alpha', tagColor: 'bg-amber-100 text-amber-700',
+                headline: 'Dashboard, auth layer, and navigation scaffold',
+                added: [
+                  'Core navigation sidebar with role-based section visibility',
+                  'Dashboard with live census, alerts, and quick actions',
+                  'AuthContext + RoleProvider wiring for per-screen permission checks',
+                  'LoginPage with role selector and demo credential flow',
+                  'RoleExplorer: buyer-facing permission matrix overview',
+                ],
+                fixed: [],
+                known: ['Most clinical pages stub-only in this release'],
+              },
+            ].map(r => (
+              <div key={r.version} className="card">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="font-mono font-bold text-navy">{r.version}</span>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.tagColor}`}>{r.tag}</span>
+                  <span className="text-xs text-slate">{r.date}</span>
+                  <span className="text-xs font-medium text-navy">— {r.headline}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <div className="font-semibold text-green-700 mb-1.5">✦ Added</div>
+                    <ul className="space-y-1">
+                      {r.added.map(a => <li key={a} className="text-slate flex items-start gap-1"><span className="text-green-500 shrink-0">+</span>{a}</li>)}
+                    </ul>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-blue-700 mb-1.5">✎ Fixed</div>
+                    {r.fixed.length > 0
+                      ? <ul className="space-y-1">{r.fixed.map(f => <li key={f} className="text-slate flex items-start gap-1"><span className="text-blue-500 shrink-0">↻</span>{f}</li>)}</ul>
+                      : <div className="text-slate italic">None noted</div>}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-amber-700 mb-1.5">⚠ Known Issues</div>
+                    {r.known.length > 0
+                      ? <ul className="space-y-1">{r.known.map(k => <li key={k} className="text-slate flex items-start gap-1"><span className="text-amber-500 shrink-0">!</span>{k}</li>)}</ul>
+                      : <div className="text-slate italic">None noted</div>}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

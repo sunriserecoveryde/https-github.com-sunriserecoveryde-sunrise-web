@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+import { LockedButton } from '../components/common/LockedButton';
 
-export function Settings({ navigate }: Props) {
-  const [activeTab, setActiveTab] = useState<'Facility' | 'Clinical' | 'Users & Roles' | 'Notifications' | 'System'>('Facility');
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
+
+export function Settings({ navigate, readOnly }: Props) {
+  const [activeTab, setActiveTab] = useState<'Facility' | 'Clinical' | 'Users & Roles' | 'Notifications' | 'System' | 'Integrations'>('Facility');
   const [saved, setSaved] = useState(false);
 
   const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
@@ -16,13 +18,13 @@ export function Settings({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Settings</h1>
           <p className="text-slate text-sm mt-0.5">Facility configuration, clinical defaults, and system preferences</p>
         </div>
-        <button onClick={save} className={`btn-primary text-sm px-5 py-2 transition-all ${saved ? 'bg-green-600' : ''}`}>
+        <LockedButton locked={readOnly} onClick={save} className={`btn-primary text-sm px-5 py-2 transition-all ${saved ? 'bg-green-600' : ''}`}>
           {saved ? '✓ Saved' : 'Save Changes'}
-        </button>
+        </LockedButton>
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Facility', 'Clinical', 'Users & Roles', 'Notifications', 'System'] as const).map(t => (
+        {(['Facility', 'Clinical', 'Users & Roles', 'Notifications', 'System', 'Integrations'] as const).map(t => (
           <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -220,7 +222,7 @@ export function Settings({ navigate }: Props) {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-slate">Manage system users, roles, and permissions.</p>
-            <button className="btn-primary text-sm px-4 py-2">+ Add User</button>
+            <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">+ Add User</LockedButton>
           </div>
           <div className="card p-0 overflow-hidden">
             <table className="w-full text-sm">
@@ -415,6 +417,79 @@ export function Settings({ navigate }: Props) {
               <div><span className="text-slate">Build:</span> <span className="font-mono text-navy">2026.07.18</span></div>
               <div><span className="text-slate">Environment:</span> <span className="text-purple-700 font-medium">Demo</span></div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Integrations' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Connected third-party systems, data exchange integrations, and external service configuration for Sunrise OS.</div>
+          <div className="grid grid-cols-2 gap-5">
+            {[
+              {
+                category: 'Electronic Health Records & HIE',
+                items: [
+                  { name: 'Tennessee Health Information Network (TN HIN)', status: 'Active', desc: 'Bi-directional ADT and CCD exchange. FHIR R4 compliant.', color: 'bg-green-100 text-green-700' },
+                  { name: 'CommonWell Health Alliance', status: 'Active', desc: 'Patient matching and record retrieval across member HIEs.', color: 'bg-green-100 text-green-700' },
+                  { name: 'Carequality Framework', status: 'Pending', desc: 'Pending onboarding. Enables query to non-CommonWell networks.', color: 'bg-amber-100 text-amber-700' },
+                ]
+              },
+              {
+                category: 'Prescription & Controlled Substance',
+                items: [
+                  { name: 'Tennessee CSMD (PDMP)', status: 'Active', desc: 'Real-time PDMP check integrated into MAT and prescriber workflows.', color: 'bg-green-100 text-green-700' },
+                  { name: 'Surescripts (eRx)', status: 'Active', desc: 'Electronic prescribing for all medications including controlled substances.', color: 'bg-green-100 text-green-700' },
+                  { name: 'DEA CSOS (Electronic Orders)', status: 'Active', desc: 'DEA-compliant electronic ordering for Schedule II controlled substances.', color: 'bg-green-100 text-green-700' },
+                ]
+              },
+              {
+                category: 'Laboratory & Diagnostics',
+                items: [
+                  { name: 'Quest Diagnostics (Lab Interface)', status: 'Active', desc: 'Bi-directional order and result exchange via HL7 v2.5.1.', color: 'bg-green-100 text-green-700' },
+                  { name: 'LabCorp Connect', status: 'Active', desc: 'Alternate lab routing; UA drug screen preferred lab.', color: 'bg-green-100 text-green-700' },
+                  { name: 'Vanderbilt Labs (Send-out)', status: 'Active', desc: 'Specialty and confirmatory test routing.', color: 'bg-green-100 text-green-700' },
+                ]
+              },
+              {
+                category: 'Insurance & Billing',
+                items: [
+                  { name: 'Waystar / ZirMed (Clearinghouse)', status: 'Active', desc: '837/835 EDI claims submission and ERA posting.', color: 'bg-green-100 text-green-700' },
+                  { name: 'Availity Real-time Eligibility', status: 'Active', desc: '270/271 real-time eligibility and benefits verification.', color: 'bg-green-100 text-green-700' },
+                  { name: 'TennCare / Medicaid Portal', status: 'Active', desc: 'Direct payer portal submission for TennCare MCOs.', color: 'bg-green-100 text-green-700' },
+                ]
+              },
+              {
+                category: 'State Reporting & Compliance',
+                items: [
+                  { name: 'TDMHSAS CBMS (State Reporting)', status: 'Active', desc: 'Automated submission of required SUD treatment data to TN DMHSAS.', color: 'bg-green-100 text-green-700' },
+                  { name: 'SAMHSA TEDS (NOMS Reporting)', status: 'Active', desc: 'Federal treatment episode data set reporting via state gateway.', color: 'bg-green-100 text-green-700' },
+                  { name: 'DEA ARCOS (Controlled Sub Reporting)', status: 'Active', desc: 'Automated annual acquisition/distribution reporting.', color: 'bg-green-100 text-green-700' },
+                ]
+              },
+              {
+                category: 'Telehealth & Communication',
+                items: [
+                  { name: 'Doxy.me (HIPAA Telehealth)', status: 'Active', desc: 'HIPAA-compliant video sessions embedded in telehealth module.', color: 'bg-green-100 text-green-700' },
+                  { name: 'Twilio (SMS Reminders)', status: 'Active', desc: 'Appointment reminder and follow-up SMS with opt-out compliance.', color: 'bg-green-100 text-green-700' },
+                  { name: 'Vonage / VoIP (Phone Integration)', status: 'Inactive', desc: 'Planned: click-to-call and call recording from patient chart.', color: 'bg-gray-100 text-slate' },
+                ]
+              },
+            ].map(section => (
+              <div key={section.category} className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">{section.category}</h3>
+                <div className="space-y-2 text-xs">
+                  {section.items.map(item => (
+                    <div key={item.name} className="flex items-start justify-between border border-border rounded p-2.5 gap-2">
+                      <div>
+                        <div className="font-medium text-navy">{item.name}</div>
+                        <div className="text-slate mt-0.5">{item.desc}</div>
+                      </div>
+                      <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${item.color}`}>{item.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { CheckCircle, Circle, Phone, MapPin, AlertTriangle, Plus, Calendar, Star } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 interface ChecklistItem {
   id: string;
@@ -137,8 +138,8 @@ const FOLLOWUP_STYLE: Record<string, string> = {
   'In Treatment': 'bg-blue-100 text-blue-700',
 };
 
-export function AftercarePlanning({ navigate }: Props) {
-  const [tab, setTab] = useState<'Discharge Plans' | 'Housing Directory' | 'Follow-up Tracker'>('Discharge Plans');
+export function AftercarePlanning({ navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Discharge Plans' | 'Housing Directory' | 'Follow-up Tracker' | 'Community Resources' | 'Alumni Program' | 'Outcomes' | 'Peer Support Network'>('Discharge Plans');
   const [selectedPatient, setSelectedPatient] = useState<string>('p3');
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set(['c5', 'c7', 'd1', 'd3', 'd7', 'e1', 'e2', 'e3', 'e5', 'e6']));
 
@@ -159,7 +160,7 @@ export function AftercarePlanning({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Aftercare Planning</h1>
           <p className="text-slate text-sm mt-0.5">Discharge checklists, recovery housing, follow-up calls, and alumni program</p>
         </div>
-        <button className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" /> New Discharge Plan</button>
+        <LockedButton locked={readOnly} onClick={() => {}} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" /> New Discharge Plan</LockedButton>
       </div>
 
       {/* Stats */}
@@ -179,7 +180,7 @@ export function AftercarePlanning({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Discharge Plans', 'Housing Directory', 'Follow-up Tracker'] as const).map(t => (
+        {(['Discharge Plans', 'Housing Directory', 'Follow-up Tracker', 'Community Resources', 'Alumni Program', 'Outcomes', 'Peer Support Network'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -299,7 +300,7 @@ export function AftercarePlanning({ navigate }: Props) {
                           const isDone = checkedItems.has(item.id) || item.completed;
                           return (
                             <div key={item.id} className={`flex items-start gap-3 p-2.5 rounded-lg border transition-all ${isDone ? 'bg-green-50 border-green-200' : 'bg-white border-border hover:border-orange/50'}`}>
-                              <button onClick={() => toggleItem(item.id)} className="mt-0.5 shrink-0">
+                              <button onClick={() => !readOnly && toggleItem(item.id)} className="mt-0.5 shrink-0" disabled={readOnly}>
                                 {isDone ? <CheckCircle className="w-4.5 h-4.5 text-green-500 w-5 h-5" /> : <Circle className="w-5 h-5 text-gray-300" />}
                               </button>
                               <div className="flex-1">
@@ -423,6 +424,312 @@ export function AftercarePlanning({ navigate }: Props) {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Community Resources' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Resources Listed', value: 24, sub: 'In our network', color: 'text-navy' },
+              { label: 'Sober Living', value: 8, sub: 'Available beds (est.)', color: 'text-green-600' },
+              { label: 'Peer Support Lines', value: 4, sub: '24/7 crisis access', color: 'text-blue-600' },
+              { label: 'Employment Services', value: 5, sub: 'Partnered agencies', color: 'text-orange' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {[
+            {
+              category: '🏠 Sober Living / Recovery Housing',
+              resources: [
+                { name: 'Sunrise Sober Living — East', address: '842 Maple Ave, Nashville TN 37206', phone: '(615) 555-0221', notes: 'Men only · MAT-friendly · 12 beds · $750/mo', partner: true },
+                { name: 'New Paths Women\'s Residence', address: '1015 Oak St, Nashville TN 37208', phone: '(615) 555-0234', notes: 'Women only · Children welcome (under 5) · 8 beds · $825/mo', partner: true },
+                { name: 'Oxford House — Hillsboro', address: '337 Hillsboro Rd, Nashville TN 37215', phone: '(615) 555-0189', notes: 'Democratically run · Any gender · 10 beds · $500/mo', partner: false },
+                { name: 'Alano House', address: '204 Church St, Nashville TN 37201', phone: '(615) 555-0144', notes: 'Men only · No MAT policy · 14 beds · $600/mo', partner: false },
+              ]
+            },
+            {
+              category: '📞 Crisis & Peer Support Lines',
+              resources: [
+                { name: 'SAMHSA National Helpline', address: 'National — 24/7', phone: '1-800-662-4357', notes: 'Free, confidential · English & Spanish · Treatment referrals', partner: true },
+                { name: 'Tennessee REDLINE', address: 'TN Statewide — 24/7', phone: '1-800-889-9789', notes: 'State addiction crisis line · Referral coordination', partner: true },
+                { name: 'Crisis Text Line', address: 'National — 24/7', phone: 'Text HOME to 741741', notes: 'Text-based crisis support · Free', partner: false },
+                { name: 'Nashville AA Central Office', address: '855 5th Ave N, Nashville TN 37219', phone: '(615) 831-1050', notes: 'Meeting finder · Intergroup support · Speaker requests', partner: false },
+              ]
+            },
+            {
+              category: '💼 Employment & Vocational Services',
+              resources: [
+                { name: 'Nashville Career Advancement Center', address: '301 Plus Park Blvd, Nashville TN 37217', phone: '(615) 862-8890', notes: 'Free job training · Resume help · Justice-involved friendly', partner: true },
+                { name: 'Goodwill Industries of Middle TN', address: '937 Herman St, Nashville TN 37208', phone: '(615) 742-7151', notes: 'On-the-job training · Recovery-friendly employer', partner: true },
+                { name: 'TN Vocational Rehabilitation', address: '220 French Landing Dr, Nashville TN 37243', phone: '(615) 313-4891', notes: 'State-funded voc rehab · SUD-recovery applicants accepted', partner: false },
+              ]
+            },
+            {
+              category: '🏥 Ongoing Treatment & Medication Access',
+              resources: [
+                { name: 'Centerstone — Nashville Outpatient', address: '1921 Ransom Place, Nashville TN 37228', phone: '(615) 460-4500', notes: 'OP / IOP · MAT program · Medicaid accepted', partner: true },
+                { name: 'Matthew Walker Comprehensive Health', address: '1035 14th Ave N, Nashville TN 37208', phone: '(615) 341-4600', notes: 'FQHC · MOUD / buprenorphine · Sliding scale', partner: true },
+                { name: 'CVS MinuteClinic — MAT Program', address: 'Multiple TN locations', phone: '1-800-746-7287', notes: 'Buprenorphine · No prior auth for first 30 days', partner: false },
+              ]
+            },
+          ].map(section => (
+            <div key={section.category} className="card p-0 overflow-hidden">
+              <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm">{section.category}</div>
+              <table className="w-full text-xs">
+                <tbody className="divide-y divide-border">
+                  {section.resources.map(r => (
+                    <tr key={r.name} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-navy whitespace-nowrap">
+                        {r.name}
+                        {r.partner && <span className="ml-2 text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">PARTNER</span>}
+                      </td>
+                      <td className="px-4 py-3 text-slate">{r.address}</td>
+                      <td className="px-4 py-3 text-blue-600 font-medium whitespace-nowrap">{r.phone}</td>
+                      <td className="px-4 py-3 text-slate max-w-xs">{r.notes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'Alumni Program' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Sunrise Recovery alumni engagement — post-discharge check-ins, milestone tracking, and community re-integration support.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Active Alumni', value: 48, sub: 'Enrolled in program', color: 'text-navy' },
+              { label: 'Sober 90+ Days', value: 31, sub: '65% of active alumni', color: 'text-green-600' },
+              { label: 'Upcoming 1-Year Anniversaries', value: 3, sub: 'Next 30 days', color: 'text-amber-600' },
+              { label: 'Alumni Meetings/Month', value: 4, sub: 'Tuesday evenings', color: 'text-blue-600' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Recent Alumni Milestones</h3>
+              <div className="space-y-3">
+                {[
+                  { name: 'Kevin Ashford', milestone: '6 Months Sober', date: '2026-07-18', program: 'Residential alum', note: 'Employed at Vanderbilt. Attending AA 4x/week.' },
+                  { name: 'Monica Delgado', milestone: '90 Days Sober', date: '2026-07-15', program: 'PHP alum', note: 'Living with family. Outpatient therapy continuing.' },
+                  { name: 'Stuart Fink', milestone: '1 Year Sober', date: '2026-07-10', program: 'IOP alum', note: 'Peer support volunteer at Sunrise. Leading alumni group.' },
+                  { name: 'Jasmine Hayward', milestone: '30 Days (Re-entry)', date: '2026-07-05', program: 'Residential — readmit alum', note: 'Returned after relapse. Now 30 days clean in current admission.' },
+                  { name: 'David Okafor', milestone: '2 Years Sober', date: '2026-06-28', program: 'Residential alum', note: 'Pursuing CPRS certification. Mentors 2 current patients.' },
+                ].map(a => (
+                  <div key={a.name} className="flex items-start gap-3 p-2.5 border border-border rounded-lg">
+                    <div className="w-9 h-9 rounded-full bg-navy text-white text-sm font-bold flex items-center justify-center shrink-0">{a.name.split(' ').map(n=>n[0]).join('')}</div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-navy text-sm">{a.name}</span>
+                        <span className="text-[10px] bg-green-100 text-green-700 font-bold px-1.5 py-0.5 rounded-full">{a.milestone}</span>
+                      </div>
+                      <div className="text-[10px] text-slate mt-0.5">{a.program} · {a.date}</div>
+                      <div className="text-xs text-slate mt-0.5">{a.note}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Alumni Check-in Schedule</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { interval: 'Day 7 Call', coverage: '94%', next: '3 calls due this week', color: 'text-green-600' },
+                    { interval: '30-Day Call', coverage: '85%', next: '4 calls due this week', color: 'text-green-600' },
+                    { interval: '60-Day Call', coverage: '71%', next: '2 calls due this week', color: 'text-amber-600' },
+                    { interval: '90-Day Call', coverage: '63%', next: '1 call due this week', color: 'text-amber-600' },
+                    { interval: '6-Month Check-in', coverage: '52%', next: 'Kevin Ashford — today', color: 'text-amber-600' },
+                    { interval: '1-Year Anniversary', coverage: '44%', next: '3 upcoming in next 30 days', color: 'text-orange' },
+                  ].map(r => (
+                    <div key={r.interval} className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-navy w-36 shrink-0">{r.interval}</span>
+                      <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                        <div className="h-1.5 bg-navy rounded-full" style={{ width: r.coverage }} />
+                      </div>
+                      <span className={`font-bold w-10 text-right shrink-0 ${r.color}`}>{r.coverage}</span>
+                      <span className="text-[10px] text-slate w-40 shrink-0">{r.next}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Alumni Meeting Schedule</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { day: 'Every Tuesday', time: '6:00 PM – 7:30 PM', name: 'Sunrise Alumni Group', location: 'Main Conference Room, Building A', facilitator: 'Marcus Thompson, CPRS (PSS)' },
+                    { day: 'First Sunday/month', time: '2:00 PM – 4:00 PM', name: 'Family & Alumni Reunion Meeting', location: 'Outdoor Pavilion / Rain: Main Hall', facilitator: 'Sarah Jenkins, LPC' },
+                    { day: 'Third Friday/month', time: '5:30 PM – 6:30 PM', name: 'Milestone Celebration (chips & share)', location: 'Sunrise Café', facilitator: 'David Okafor (2-year alum volunteer)' },
+                  ].map(m => (
+                    <div key={m.name} className="p-2.5 border border-border rounded-lg">
+                      <div className="font-semibold text-navy">{m.name}</div>
+                      <div className="text-slate mt-0.5">{m.day} · {m.time}</div>
+                      <div className="text-slate mt-0.5">{m.location}</div>
+                      <div className="text-slate mt-0.5"><strong>Facilitator:</strong> {m.facilitator}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Outcomes' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Post-discharge outcomes for patients with completed aftercare plans — housing stability, sobriety milestones, and alumni re-engagement tracking.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Discharged (90d)', value: 22, color: 'text-navy', sub: 'With documented aftercare plan' },
+              { label: 'Housing Stable at 90d', value: '77%', color: 'text-green-600', sub: '17 of 22 confirmed stable' },
+              { label: '30-Day Sobriety (Self-Report)', value: '73%', color: 'text-teal-600', sub: 'via alumni check-in call' },
+              { label: 'Alumni Enrolled', value: '64%', color: 'text-blue-600', sub: '14 of 22 in alumni program' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">90-Day Outcomes by LOC</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-slate">
+                    <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Discharge LOC</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">N</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Housing Stable</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">30d Sobriety</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Alumni Enrolled</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { loc: 'Residential (3.5)', n: 9, housing: '89%', sob30: '83%', alum: '78%' },
+                    { loc: 'PHP (2.5)', n: 7, housing: '71%', sob30: '71%', alum: '57%' },
+                    { loc: 'IOP (2.1)', n: 4, housing: '75%', sob30: '50%', alum: '50%' },
+                    { loc: 'Detox only', n: 2, housing: '50%', sob30: '50%', alum: '0%' },
+                  ].map(r => (
+                    <tr key={r.loc} className="hover:bg-gray-50">
+                      <td className="py-2 font-medium text-navy">{r.loc}</td>
+                      <td className="py-2 text-center text-slate">{r.n}</td>
+                      <td className="py-2 text-center font-semibold text-green-600">{r.housing}</td>
+                      <td className="py-2 text-center font-semibold text-teal-600">{r.sob30}</td>
+                      <td className="py-2 text-center font-semibold text-blue-600">{r.alum}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Aftercare Plan Component Impact</h3>
+              <div className="space-y-3 text-xs">
+                {[
+                  { component: 'Sober Living Placement', n: 11, sob30: 89, housing: 100 },
+                  { component: 'IOP Step-down Enrolled', n: 9, sob30: 78, housing: 89 },
+                  { component: 'MAT Continuation Plan', n: 7, sob30: 86, housing: 86 },
+                  { component: 'Peer Recovery Coach', n: 6, sob30: 83, housing: 83 },
+                  { component: 'Employment / Voc Rehab', n: 5, sob30: 80, housing: 80 },
+                  { component: 'Family Ongoing Contact', n: 14, sob30: 79, housing: 86 },
+                ].map(c => (
+                  <div key={c.component}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{c.component} (n={c.n})</span>
+                      <div className="flex gap-3 text-[10px]">
+                        <span className="font-bold text-teal-600">{c.sob30}% sober</span>
+                        <span className="text-green-600">{c.housing}% housed</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className="h-1.5 rounded-full bg-teal-500" style={{ width: `${c.sob30}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Peer Support Network' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Certified Peer Recovery Specialists (CPRS) and mutual aid network connections — available to support patients during treatment and post-discharge.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'CPRS on Staff', value: 3, color: 'text-navy', sub: 'Employed at Sunrise' },
+              { label: 'Active Peer Mentors', value: 14, color: 'text-blue-600', sub: 'Alumni volunteers engaged' },
+              { label: 'Patients with Peer Match', value: 24, color: 'text-green-600', sub: 'Of 36 current patients' },
+              { label: 'Peer Touchpoints (30d)', value: 87, color: 'text-teal-600', sub: 'Calls, visits, texts combined' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">CPRS Team — Sunrise Staff</h3>
+              <div className="space-y-3 text-xs">
+                {[
+                  { name: 'Derrick Hampton, CPRS', spec: 'OUD/MAT, Criminal Justice', exp: '6 yr recovery, 3 yr CPRS', cases: 9, avail: 'Mon–Fri 9a–5p', type: 'OUD' },
+                  { name: 'Tamika Powell, CPRS', spec: 'Women\'s issues, Co-occurring', exp: '8 yr recovery, 4 yr CPRS', cases: 8, avail: 'Mon–Thu 10a–6p', type: 'Women' },
+                  { name: 'Carlos Ramos, CPRS', spec: 'Family recovery, Stimulant use', exp: '5 yr recovery, 2 yr CPRS', cases: 7, avail: 'Tue–Sat 8a–4p', type: 'Stimulant' },
+                ].map(p => (
+                  <div key={p.name} className="border border-border rounded-xl p-3">
+                    <div className="font-semibold text-navy mb-0.5">{p.name}</div>
+                    <div className="text-slate mb-1">{p.spec} · {p.exp}</div>
+                    <div className="flex gap-4 text-[10px]">
+                      <span><span className="font-semibold text-slate">Current:</span> <span className="text-navy">{p.cases} patients</span></span>
+                      <span><span className="font-semibold text-slate">Avail:</span> <span className="text-navy">{p.avail}</span></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Community Mutual Aid — AA/NA/SMART Recovery Meetings</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { name: 'Nashville Central AA (Downtown)', days: 'Daily 7pm', format: 'In-person', focus: 'Open AA', contact: '615-555-0100' },
+                  { name: 'Narcotics Anonymous (Bellevue)', days: 'Mon/Wed/Fri 6:30pm', format: 'In-person', focus: 'Open NA', contact: '615-555-0210' },
+                  { name: 'SMART Recovery Nashville', days: 'Tue/Thu 5:30pm', format: 'Hybrid', focus: 'CBT-based, secular', contact: '615-555-0322' },
+                  { name: 'Women for Sobriety (Franklin)', days: 'Sat 10am', format: 'In-person', focus: 'Women-specific', contact: '615-555-0418' },
+                  { name: 'Online AA (Zoom)', days: 'Daily multiple times', format: 'Virtual', focus: 'Open AA — any device', contact: 'aa-intergroup.org' },
+                  { name: 'Refuge Recovery (East Nashville)', days: 'Mon/Thu 7pm', format: 'In-person', focus: 'Mindfulness-based', contact: '615-555-0511' },
+                ].map(m => (
+                  <div key={m.name} className="flex items-center justify-between border border-border rounded p-2">
+                    <div>
+                      <div className="font-medium text-navy">{m.name}</div>
+                      <div className="text-[10px] text-slate">{m.days} · {m.format} · {m.focus}</div>
+                    </div>
+                    <span className="text-[10px] font-mono text-blue-700 shrink-0 ml-2">{m.contact}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

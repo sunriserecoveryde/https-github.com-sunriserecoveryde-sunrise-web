@@ -98,6 +98,7 @@ export function CosignQueue({ navigate, readOnly }: Props) {
   const [selected, setSelected] = useState<CosignItem | null>(QUEUE[0]);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [comments, setComments] = useState('');
+  const [cosignTab, setCosignTab] = useState<'Queue' | 'Analytics' | 'Supervision Notes' | 'Compliance Report'>('Queue');
 
   const pending = QUEUE.filter(q => !completedIds.includes(q.id));
   const urgent = pending.filter(q => q.priority === 'Urgent').length;
@@ -132,6 +133,101 @@ export function CosignQueue({ navigate, readOnly }: Props) {
         </div>
       </div>
 
+      <div className="flex gap-1 border-b border-border">
+        {(['Queue', 'Analytics', 'Supervision Notes', 'Compliance Report'] as const).map(t => (
+          <button key={t} onClick={() => setCosignTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${cosignTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t === 'Analytics' ? 'Co-sign Analytics' : t}</button>
+        ))}
+      </div>
+
+      {cosignTab === 'Analytics' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Supervisor co-sign performance metrics — turnaround times, compliance rates, and volume by clinician.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Avg Turnaround', value: '4.2h', color: 'text-green-600', sub: 'Target: ≤8h' },
+              { label: 'On-Time Co-sign Rate', value: '94%', color: 'text-green-600', sub: 'Notes signed within 24h' },
+              { label: 'Late Co-signs (>24h)', value: 3, color: 'text-amber-600', sub: 'Last 30 days' },
+              { label: 'Total This Month', value: 187, color: 'text-navy', sub: 'All note types' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Volume by Clinician (Rolling 30 Days)</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-slate">
+                    <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Clinician</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Notes</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Avg Turnaround</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Late</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">On-Time %</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { name: 'Sarah Jenkins, LPC', notes: 52, avg: '3.1h', late: 0, pct: 100 },
+                    { name: 'David Odom, LMFT', notes: 44, avg: '5.8h', late: 2, pct: 95 },
+                    { name: 'Marcus Chen, LADC', notes: 38, avg: '4.4h', late: 1, pct: 97 },
+                    { name: 'Priya Nair, MSW', notes: 31, avg: '6.2h', late: 0, pct: 100 },
+                    { name: 'Kevin Walsh, LADC', notes: 22, avg: '9.1h', late: 3, pct: 86 },
+                  ].map(r => (
+                    <tr key={r.name} className="hover:bg-gray-50">
+                      <td className="py-2 font-medium text-navy">{r.name}</td>
+                      <td className="py-2 text-center text-slate">{r.notes}</td>
+                      <td className="py-2 text-center text-slate">{r.avg}</td>
+                      <td className="py-2 text-center text-red-600 font-semibold">{r.late}</td>
+                      <td className="py-2 text-center">
+                        <span className={`font-bold text-xs ${r.pct >= 95 ? 'text-green-600' : r.pct >= 85 ? 'text-amber-600' : 'text-red-600'}`}>{r.pct}%</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Turnaround by Note Type</h3>
+              <div className="space-y-3">
+                {[
+                  { type: 'Individual Session Note', avg: '3.8h', vol: 74, target: '≤8h', pct: 100 },
+                  { type: 'Group Note', avg: '5.1h', vol: 56, target: '≤8h', pct: 98 },
+                  { type: 'Nursing Progress Note', avg: '1.2h', vol: 31, target: '≤4h', pct: 100 },
+                  { type: 'Medical Note (Physician)', avg: '2.4h', vol: 14, target: '≤24h', pct: 100 },
+                  { type: 'Psychiatric Evaluation', avg: '8.6h', vol: 8, target: '≤24h', pct: 88 },
+                  { type: 'Discharge Summary', avg: '18.2h', vol: 4, target: '≤120h', pct: 100 },
+                ].map(n => (
+                  <div key={n.type}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate font-medium">{n.type} <span className="text-[10px]">(n={n.vol})</span></span>
+                      <span className="font-bold text-navy">{n.avg} avg</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${n.pct >= 95 ? 'bg-green-500' : n.pct >= 85 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${n.pct}%` }} />
+                    </div>
+                    <div className="text-[10px] text-slate mt-0.5">Target: {n.target} · {n.pct}% on time</div>
+                  </div>
+                ))}
+              </div>
+
+              {[{ name: 'Kevin Walsh, LADC', issue: '3 notes pending >24h — oldest is 38h. Supervisor follow-up recommended.' }].map(a => (
+                <div key={a.name} className="mt-4 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                  <strong>Action Needed ({a.name}):</strong> {a.issue}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cosignTab === 'Queue' && (
+      <div className="space-y-4">
       {pending.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <div className="text-4xl mb-3">✅</div>
@@ -190,41 +286,37 @@ export function CosignQueue({ navigate, readOnly }: Props) {
 
                 {/* Note Content */}
                 <div className="mt-4 border border-border rounded-lg divide-y divide-border overflow-hidden">
-                  {selected.format === 'BIRP' && selected.content && (
-                    <>
-                      {[
-                        { label: 'B — Behavior', text: selected.content.behavior },
-                        { label: 'I — Intervention', text: selected.content.intervention },
-                        { label: 'R — Response', text: selected.content.response },
-                        { label: 'P — Plan', text: selected.content.plan },
-                      ].map(sec => (
-                        <div key={sec.label} className="p-3">
-                          <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">{sec.label}</div>
-                          <p className="text-sm text-navy">{sec.text}</p>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                  {selected.format === 'DAP' && selected.content && (
-                    <>
-                      {[
-                        { label: 'D — Data', text: selected.content.data },
-                        { label: 'A — Assessment', text: selected.content.assessment },
-                        { label: 'P — Plan', text: selected.content.plan },
-                      ].map(sec => (
-                        <div key={sec.label} className="p-3">
-                          <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">{sec.label}</div>
-                          <p className="text-sm text-navy">{sec.text}</p>
-                        </div>
-                      ))}
-                    </>
-                  )}
+                  {selected.format === 'BIRP' && selected.content &&
+                    [
+                      { label: 'B — Behavior', text: selected.content.behavior },
+                      { label: 'I — Intervention', text: selected.content.intervention },
+                      { label: 'R — Response', text: selected.content.response },
+                      { label: 'P — Plan', text: selected.content.plan },
+                    ].map(sec => (
+                      <div key={sec.label} className="p-3">
+                        <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">{sec.label}</div>
+                        <p className="text-sm text-navy">{sec.text}</p>
+                      </div>
+                    ))
+                  }
+                  {selected.format === 'DAP' && selected.content &&
+                    [
+                      { label: 'D — Data', text: selected.content.data },
+                      { label: 'A — Assessment', text: selected.content.assessment },
+                      { label: 'P — Plan', text: selected.content.plan },
+                    ].map(sec => (
+                      <div key={sec.label} className="p-3">
+                        <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">{sec.label}</div>
+                        <p className="text-sm text-navy">{sec.text}</p>
+                      </div>
+                    ))
+                  }
                   {!selected.format && selected.content && (
-                    <>
+                    <div>
                       {selected.content.data && <div className="p-3"><div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Clinical Data</div><p className="text-sm text-navy">{selected.content.data}</p></div>}
-                      {selected.content.assessment && <div className="p-3"><div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Assessment & Plan</div><p className="text-sm text-navy">{selected.content.assessment}</p></div>}
+                      {selected.content.assessment && <div className="p-3"><div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Assessment &amp; Plan</div><p className="text-sm text-navy">{selected.content.assessment}</p></div>}
                       {selected.content.plan && <div className="p-3"><div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Plan</div><p className="text-sm text-navy">{selected.content.plan}</p></div>}
-                    </>
+                    </div>
                   )}
                 </div>
 
@@ -247,6 +339,116 @@ export function CosignQueue({ navigate, readOnly }: Props) {
               </div>
             </div>
           )}
+        </div>
+      )}
+      </div>
+      )}
+
+      {cosignTab === 'Supervision Notes' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Clinical supervision session notes — tracks supervisory meetings, case consultations, and competency development for staff requiring oversight.</div>
+          <div className="card">
+            <div className="space-y-4">
+              {[
+                {
+                  supervisee: 'A. Brooks, LPC-Associate', supervisor: 'Dr. R. Okafor, LPC-S', date: '2026-07-15', type: 'Individual Supervision',
+                  caseload: 8, topics: 'Reviewed trauma-informed approaches with dual-diagnosis patient (rm 3A). Discussed countertransference with AMA-risk patient. CBT homework compliance strategies.',
+                  plan: 'Brooks to complete 2-hour MI refresher by Jul 30. Shared exemplary progress note from peers as model. Next session: July 29.',
+                  rating: 'On Track', rColor: 'bg-green-100 text-green-700'
+                },
+                {
+                  supervisee: 'D. Williams, CADC-II', supervisor: 'A. Simms, LCSW', date: '2026-07-14', type: 'Group Supervision',
+                  caseload: 10, topics: 'Group reviewed documentation standards for treatment plan objectives. Case presentation: chronic relapse patient with ambivalence about MAT.',
+                  plan: 'Williams to revise two treatment plans flagged in peer review by 7/22. Schedule make-up session for missed July 1 group.',
+                  rating: 'Needs Support', rColor: 'bg-amber-100 text-amber-700'
+                },
+                {
+                  supervisee: 'T. Jackson, CADC', supervisor: 'A. Simms, LCSW', date: '2026-07-12', type: 'Individual Supervision',
+                  caseload: 11, topics: 'High-performing supervisee — discussed pathway to LPC licensure. Case consultation on patient with complex trauma and SUD. Reviewed family therapy engagement strategies.',
+                  plan: 'Jackson pursuing LPC-A application; supervisor endorsement signed. Exploring group co-facilitation opportunities.',
+                  rating: 'Exemplary', rColor: 'bg-teal-100 text-teal-700'
+                },
+              ].map(s => (
+                <div key={s.supervisee} className="border border-border rounded-xl overflow-hidden">
+                  <div className="px-4 py-3 bg-gray-50 border-b border-border flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-navy">{s.supervisee}</span>
+                      <span className="text-slate text-xs ml-2">— supervised by {s.supervisor}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate">{s.date} · {s.type}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${s.rColor}`}>{s.rating}</span>
+                    </div>
+                  </div>
+                  <div className="px-4 py-3 grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <div className="font-semibold text-navy mb-1">Topics Covered</div>
+                      <div className="text-slate leading-relaxed">{s.topics}</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-navy mb-1">Plan &amp; Follow-Up</div>
+                      <div className="text-slate leading-relaxed">{s.plan}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cosignTab === 'Compliance Report' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Cosignature compliance report — tracks supervisory cosign completion rates against state licensure and CARF documentation requirements.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Cosign Rate (30d)', value: '96%', color: 'text-green-600', sub: 'Of all notes requiring cosign' },
+              { label: 'Avg Time to Cosign', value: '18h', color: 'text-blue-600', sub: 'From note submission to approval' },
+              { label: 'Notes Overdue (>72h)', value: 3, color: 'text-amber-600', sub: 'Currently awaiting cosignature' },
+              { label: 'Provisional Staff (CADC-II eligible)', value: 2, color: 'text-navy', sub: 'Require 100% cosign rate' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Cosignature Compliance by Clinician — Last 30 Days</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  {['Clinician', 'Credential', 'Notes Submitted', 'Cosigned On-Time', 'Cosign Rate', 'Avg Wait Time', 'Overdue'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'T. Jackson', cred: 'CADC (Provisional)', submitted: 48, ontime: 47, rate: '98%', wait: '12h', overdue: 1, flag: false },
+                  { name: 'M. Rivera', cred: 'MS, Intern', submitted: 36, ontime: 33, rate: '92%', wait: '24h', overdue: 2, flag: true },
+                  { name: 'K. Nguyen', cred: 'CADC-II (Provisional)', submitted: 42, ontime: 42, rate: '100%', wait: '10h', overdue: 0, flag: false },
+                  { name: 'A. Brooks', cred: 'LPC (Licensed)', submitted: 61, ontime: 61, rate: 'N/A (licensed)', wait: '—', overdue: 0, flag: false },
+                  { name: 'R. Torres', cred: 'LPC-MHSP (Licensed)', submitted: 55, ontime: 55, rate: 'N/A (licensed)', wait: '—', overdue: 0, flag: false },
+                ].map(r => (
+                  <tr key={r.name} className={`hover:bg-gray-50 ${r.flag ? 'bg-amber-50/30' : ''}`}>
+                    <td className="px-3 py-2 font-medium text-navy">{r.name}</td>
+                    <td className="px-3 py-2 text-slate">{r.cred}</td>
+                    <td className="px-3 py-2 text-center text-navy">{r.submitted}</td>
+                    <td className="px-3 py-2 text-center text-navy">{r.ontime}</td>
+                    <td className="px-3 py-2 text-center font-bold">
+                      <span className={r.rate === 'N/A (licensed)' ? 'text-slate text-[10px]' : r.rate === '100%' ? 'text-green-600' : parseFloat(r.rate) >= 95 ? 'text-blue-600' : 'text-amber-600'}>{r.rate}</span>
+                    </td>
+                    <td className="px-3 py-2 text-center text-slate">{r.wait}</td>
+                    <td className="px-3 py-2 text-center">
+                      {r.overdue > 0 ? <span className="font-bold text-amber-600">{r.overdue}</span> : <span className="text-green-600">0</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

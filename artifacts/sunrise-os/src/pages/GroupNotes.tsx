@@ -87,6 +87,7 @@ export function GroupNotes({ navigate, readOnly }: Props) {
   const [selected, setSelected] = useState<GroupSession | null>(SESSIONS[0]);
   const [noteText, setNoteText] = useState('');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
+  const [view, setView] = useState<'Sessions' | 'Attendance' | 'Group Analytics' | 'Facilitator Stats' | 'Curriculum Map'>('Sessions');
 
   const todaySessions = SESSIONS.filter(s => s.date === selectedDate);
   const todayComplete = todaySessions.filter(s => s.status === 'Completed').length;
@@ -112,6 +113,76 @@ export function GroupNotes({ navigate, readOnly }: Props) {
         </div>
       </div>
 
+      {/* View Toggle */}
+      <div className="flex gap-1 border-b border-border">
+        {(['Sessions', 'Attendance', 'Group Analytics', 'Facilitator Stats', 'Curriculum Map'] as const).map(v => (
+          <button key={v} onClick={() => setView(v)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${view === v ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{v === 'Attendance' ? 'Attendance Sheet' : v}</button>
+        ))}
+      </div>
+
+      {view === 'Attendance' && (
+        <div className="card p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b border-border bg-gray-50 flex items-center justify-between">
+            <h3 className="font-semibold text-navy text-sm">Group Attendance — {selectedDate}</h3>
+            <span className="text-xs text-slate">Participation codes: P = Present, A = Absent (excused), U = Absent (unexcused), L = Late</span>
+          </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border bg-bg">
+                <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate min-w-[160px]">Patient</th>
+                <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate min-w-[80px]">Program</th>
+                {SESSIONS.filter(s => s.date === selectedDate).map(s => (
+                  <th key={s.id} className="text-center px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate max-w-[90px]">
+                    <div className="truncate">{s.name.split(' ').slice(0, 2).join(' ')}</div>
+                    <div className="font-normal text-[9px] text-slate/70">{s.time}</div>
+                  </th>
+                ))}
+                <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {MOCK_PATIENTS.slice(0, 12).map((p, pi) => {
+                const sessionList = SESSIONS.filter(s => s.date === selectedDate);
+                const codes = sessionList.map((s, si) => {
+                  if (s.status === 'Upcoming') return '—';
+                  const roll = (pi + si) % 7;
+                  if (roll === 0) return 'A';
+                  if (roll === 6) return 'L';
+                  if (p.program !== 'Residential' && s.program === 'Residential') return '—';
+                  return 'P';
+                });
+                const attended = codes.filter(c => c === 'P' || c === 'L').length;
+                const total = codes.filter(c => c !== '—').length;
+                return (
+                  <tr key={p.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2.5 font-medium text-navy whitespace-nowrap">
+                      <button className="hover:text-orange" onClick={() => navigate('PatientDetail', p.id)}>{p.firstName} {p.lastName}</button>
+                    </td>
+                    <td className="px-4 py-2.5 text-slate">{p.program}</td>
+                    {codes.map((code, ci) => (
+                      <td key={ci} className="px-2 py-2.5 text-center">
+                        <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold ${code === 'P' ? 'bg-green-100 text-green-700' : code === 'A' ? 'bg-red-100 text-red-700' : code === 'L' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-slate'}`}>{code}</span>
+                      </td>
+                    ))}
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`text-xs font-bold ${total > 0 && attended/total >= 0.8 ? 'text-green-700' : total > 0 && attended/total >= 0.5 ? 'text-amber-700' : 'text-slate'}`}>
+                        {attended}/{total}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <div className="px-5 py-2.5 bg-gray-50 border-t border-border flex justify-between text-xs text-slate">
+            <span>Required attendance: ≥80% of scheduled groups per program policy</span>
+            <LockedButton locked={readOnly} className="text-xs text-orange font-medium hover:underline">Export Attendance Report</LockedButton>
+          </div>
+        </div>
+      )}
+
+      {view === 'Sessions' && (
+      <div className="space-y-6">
       {/* Summary Bar */}
       <div className="grid grid-cols-4 gap-4">
         <div className="card text-center">
@@ -247,6 +318,263 @@ export function GroupNotes({ navigate, readOnly }: Props) {
           </div>
         )}
       </div>
+      </div>
+      )}
+
+      {view === 'Group Analytics' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Group therapy engagement metrics, attendance trends, and session quality indicators — rolling 30-day window.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Sessions This Month', value: 42, color: 'text-navy', sub: '6 per day avg' },
+              { label: 'Avg Attendance Rate', value: '87%', color: 'text-green-600', sub: 'Target: ≥80%' },
+              { label: 'Notes Signed Same Day', value: '71%', color: 'text-amber-600', sub: 'Target: ≥85%' },
+              { label: 'Groups Cancelled', value: 2, color: 'text-red-600', sub: 'Staff shortage (2), Weather (0)' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Attendance by Group Type (Rolling 30 Days)</h3>
+              <div className="space-y-3">
+                {[
+                  { type: 'Process Group', sessions: 16, avgAttend: 9.1, capacity: 10, pct: 91 },
+                  { type: 'Psychoeducation', sessions: 12, avgAttend: 8.4, capacity: 10, pct: 84 },
+                  { type: 'Relapse Prevention', sessions: 8, avgAttend: 7.9, capacity: 10, pct: 79 },
+                  { type: 'Mindfulness / DBT', sessions: 4, avgAttend: 6.2, capacity: 8, pct: 78 },
+                  { type: 'Family Education', sessions: 2, avgAttend: 5.0, capacity: 8, pct: 63 },
+                ].map(g => (
+                  <div key={g.type}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate font-medium">{g.type}</span>
+                      <span className="font-bold text-navy">{g.pct}% · {g.sessions} sessions</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full">
+                      <div className={`h-2 rounded-full ${g.pct >= 85 ? 'bg-green-500' : g.pct >= 75 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${g.pct}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Documentation Compliance by Facilitator</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-slate">
+                    <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Facilitator</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Sessions</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Signed</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Draft</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Missing</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Compliance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { name: 'Sarah Jenkins, LPC', sessions: 14, signed: 13, draft: 1, missing: 0 },
+                    { name: 'David Odom, LMFT', sessions: 12, signed: 10, draft: 1, missing: 1 },
+                    { name: 'Marcus Chen, LADC', sessions: 10, signed: 8, draft: 2, missing: 0 },
+                    { name: 'Priya Nair, MSW', sessions: 6, signed: 4, draft: 1, missing: 1 },
+                  ].map(f => {
+                    const pct = Math.round((f.signed / f.sessions) * 100);
+                    return (
+                      <tr key={f.name} className="hover:bg-gray-50">
+                        <td className="py-2 font-medium text-navy">{f.name}</td>
+                        <td className="py-2 text-center text-slate">{f.sessions}</td>
+                        <td className="py-2 text-center text-green-600 font-semibold">{f.signed}</td>
+                        <td className="py-2 text-center text-amber-600">{f.draft}</td>
+                        <td className="py-2 text-center text-red-600">{f.missing}</td>
+                        <td className="py-2 text-center">
+                          <span className={`font-bold text-xs ${pct >= 90 ? 'text-green-600' : pct >= 75 ? 'text-amber-600' : 'text-red-600'}`}>{pct}%</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                <strong>Action Needed:</strong> David Odom and Priya Nair have unsigned sessions &gt;48h old. Supervisor follow-up recommended.
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Patient Participation Quality — This Week</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-bg text-slate">
+                    <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Patient</th>
+                    <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Groups Attended</th>
+                    <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Groups Missed</th>
+                    <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Participation Level</th>
+                    <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Engagement Trend</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { name: 'Marcus Webb', attended: 12, missed: 1, level: 'High', trend: '↑' },
+                    { name: 'Linda Farris', attended: 10, missed: 3, level: 'Moderate', trend: '→' },
+                    { name: 'Robert Navarro', attended: 11, missed: 2, level: 'High', trend: '↑' },
+                    { name: 'Samantha Choi', attended: 9, missed: 4, level: 'Low', trend: '↓' },
+                    { name: 'Thomas Reilly', attended: 7, missed: 1, level: 'Moderate', trend: '↑' },
+                    { name: 'Elena Vasquez', attended: 8, missed: 0, level: 'High', trend: '↑' },
+                  ].map(p => (
+                    <tr key={p.name} className="hover:bg-gray-50">
+                      <td className="px-4 py-2.5 font-medium text-navy">{p.name}</td>
+                      <td className="px-3 py-2.5 text-center font-semibold text-green-600">{p.attended}</td>
+                      <td className="px-3 py-2.5 text-center text-red-600">{p.missed}</td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${p.level === 'High' ? 'bg-green-100 text-green-700' : p.level === 'Moderate' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{p.level}</span>
+                      </td>
+                      <td className={`px-3 py-2.5 text-center font-bold text-lg ${p.trend === '↑' ? 'text-green-600' : p.trend === '↓' ? 'text-red-600' : 'text-slate'}`}>{p.trend}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+      {view === 'Facilitator Stats' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Group facilitation metrics by staff — session volume, attendance averages, note completion rates, and patient satisfaction scores.</div>
+          <div className="card overflow-hidden">
+            <h3 className="font-semibold text-navy text-sm mb-3">Facilitator Performance — Trailing 30 Days</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  {['Facilitator', 'Sessions Led', 'Avg Attendance', 'Note Completion', 'On-Time Rate', 'Patient Satisfaction', 'Specialty'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'T. Jackson, CADC', sessions: 18, avg: 8.4, notes: '100%', onTime: '94%', sat: 4.7, spec: 'CBT / Relapse Prev.' },
+                  { name: 'A. Brooks, LPC', sessions: 14, avg: 7.1, notes: '86%', onTime: '89%', sat: 4.4, spec: 'Trauma / DBT' },
+                  { name: 'M. Rivera, MS', sessions: 16, avg: 7.9, notes: '94%', onTime: '97%', sat: 4.6, spec: 'Psychoeducation' },
+                  { name: 'D. Williams, CADC', sessions: 12, avg: 6.8, notes: '75%', onTime: '83%', sat: 4.1, spec: '12-Step / Spirituality' },
+                  { name: 'P. Chen, LMFT', sessions: 10, avg: 6.2, notes: '100%', onTime: '100%', sat: 4.8, spec: 'Family Systems' },
+                  { name: 'K. Nguyen, CADC-II', sessions: 8, avg: 5.9, notes: '88%', onTime: '88%', sat: 4.3, spec: 'Anger Mgmt / Life Skills' },
+                ].map(f => (
+                  <tr key={f.name} className="hover:bg-gray-50">
+                    <td className="px-3 py-2.5 font-medium text-navy">{f.name}</td>
+                    <td className="px-3 py-2.5 text-center text-slate">{f.sessions}</td>
+                    <td className="px-3 py-2.5 text-center text-slate">{f.avg}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`font-semibold ${parseInt(f.notes) >= 95 ? 'text-green-600' : parseInt(f.notes) >= 80 ? 'text-blue-600' : 'text-amber-600'}`}>{f.notes}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`font-semibold ${parseInt(f.onTime) >= 95 ? 'text-green-600' : parseInt(f.onTime) >= 85 ? 'text-slate' : 'text-amber-600'}`}>{f.onTime}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className="font-bold text-navy">{f.sat}</span><span className="text-slate">/5</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate">{f.spec}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {view === 'Curriculum Map' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Weekly group therapy curriculum map — ensures topic variety, evidence-based coverage, and ASAM compliance across all programs.</div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">This Week's Group Curriculum — July 14–20, 2026</h3>
+            <div className="overflow-x-auto text-xs">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50 text-slate">
+                    {['Time', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Weekend'].map(h => (
+                      <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { time: '9:00 AM', mon: 'Psychoeducation: Addiction & the Brain', tue: 'CBT: Thought Records', wed: 'Relapse Prevention Planning', thu: 'MI: Values Clarification', fri: 'Goal Setting Workshop', wknd: 'Alumni AA/NA Meeting' },
+                    { time: '10:30 AM', mon: 'Morning Check-in Group', tue: 'Morning Check-in Group', wed: 'Morning Check-in Group', thu: 'Morning Check-in Group', fri: 'Morning Check-in Group', wknd: 'Mindfulness Session' },
+                    { time: '1:00 PM', mon: 'Trauma: Psychoeducation (EMDR-informed)', tue: 'DBT: Distress Tolerance', wed: 'Family Roles & Boundaries', thu: 'Anger Management', fri: 'Life Skills: Financial Recovery', wknd: 'Creative Expression' },
+                    { time: '2:30 PM', mon: '12-Step Facilitation', tue: 'Co-occurring Disorders', wed: 'Healthy Relationships', thu: '12-Step Facilitation', fri: 'Process Group', wknd: 'Open (Optional)' },
+                    { time: '4:00 PM', mon: 'Mindfulness & Meditation', tue: 'Relapse Prevention: Triggers', wed: 'Coping Skills Practice', thu: 'Anger & Stress Management', fri: 'Community Meeting / Goals', wknd: 'Recreational Therapy' },
+                  ].map(r => (
+                    <tr key={r.time} className="hover:bg-gray-50">
+                      <td className="px-3 py-2.5 font-mono font-bold text-navy shrink-0">{r.time}</td>
+                      {[r.mon, r.tue, r.wed, r.thu, r.fri, r.wknd].map((g, i) => (
+                        <td key={i} className="px-3 py-2.5 text-navy">{g}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Modality Coverage This Week</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { mod: 'Psychoeducation', sessions: 4, pct: 17, color: 'bg-blue-500', req: '≥3' },
+                  { mod: 'CBT / Skills', sessions: 5, pct: 21, color: 'bg-purple-500', req: '≥4' },
+                  { mod: 'Trauma-Informed', sessions: 2, pct: 8, color: 'bg-orange-400', req: '≥2' },
+                  { mod: '12-Step Facilitation', sessions: 2, pct: 8, color: 'bg-green-500', req: '≥2' },
+                  { mod: 'Relapse Prevention', sessions: 3, pct: 13, color: 'bg-teal-500', req: '≥3' },
+                  { mod: 'Process Group', sessions: 2, pct: 8, color: 'bg-amber-500', req: '≥1' },
+                  { mod: 'Mindfulness', sessions: 2, pct: 8, color: 'bg-pink-400', req: '≥2' },
+                  { mod: 'Life Skills', sessions: 3, pct: 13, color: 'bg-gray-500', req: '≥2' },
+                ].map(m => (
+                  <div key={m.mod} className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="flex justify-between mb-0.5">
+                        <span className="text-slate">{m.mod}</span>
+                        <span className="text-[10px] text-navy font-semibold">{m.sessions} sessions · Req: {m.req}</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full">
+                        <div className={`h-1.5 rounded-full ${m.color}`} style={{ width: `${m.pct * 4}%` }} />
+                      </div>
+                    </div>
+                    <span className="text-green-500 shrink-0">✓</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">ASAM Minimum Hours Compliance</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { loc: 'Residential (3.5)', required: '≥5h/day', actual: '6.5h/day', ok: true },
+                  { loc: 'PHP (2.5)', required: '≥3h/day, ≥5d', actual: '3.5h/day, 5d', ok: true },
+                  { loc: 'IOP (2.1)', required: '≥3h/day, ≥3d/wk', actual: '3h/day, 3d/wk', ok: true },
+                ].map(l => (
+                  <div key={l.loc} className="border border-border rounded p-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-navy">{l.loc}</span>
+                      <span className="text-green-500 font-bold">✓ Compliant</span>
+                    </div>
+                    <div className="flex gap-6 text-slate mt-0.5">
+                      <span>Required: <strong className="text-slate">{l.required}</strong></span>
+                      <span>Actual: <strong className="text-teal-600">{l.actual}</strong></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

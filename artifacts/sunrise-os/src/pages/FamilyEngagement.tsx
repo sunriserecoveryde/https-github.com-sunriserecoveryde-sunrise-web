@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { CheckCircle, XCircle, Phone, Mail, Users, Clock, Plus, AlertTriangle } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 interface FamilyMember {
   name: string;
@@ -133,8 +134,8 @@ const CONTACT_STYLE: Record<string, string> = {
   'Text':          'bg-teal-100 text-teal-700',
 };
 
-export function FamilyEngagement({ navigate }: Props) {
-  const [tab, setTab] = useState<'Overview' | 'Sessions' | 'New Contact'>('Overview');
+export function FamilyEngagement({ navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Overview' | 'Sessions' | 'Family Education' | 'New Contact' | 'Resources' | 'Outcomes' | 'CRAFT Guide'>('Overview');
   const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
   const [logSubmitted, setLogSubmitted] = useState(false);
 
@@ -156,9 +157,9 @@ export function FamilyEngagement({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Family Engagement</h1>
           <p className="text-slate text-sm mt-0.5">Family contact log, consent tracking, and therapy coordination</p>
         </div>
-        <button onClick={() => setTab('New Contact')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+        <LockedButton locked={readOnly} onClick={() => setTab('New Contact')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
           <Plus className="w-4 h-4" /> Log Contact
-        </button>
+        </LockedButton>
       </div>
 
       {/* Stats */}
@@ -178,7 +179,7 @@ export function FamilyEngagement({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Overview', 'Sessions', 'New Contact'] as const).map(t => (
+        {(['Overview', 'Sessions', 'Family Education', 'New Contact', 'Resources', 'Outcomes', 'CRAFT Guide'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -269,12 +270,12 @@ export function FamilyEngagement({ navigate }: Props) {
                       <div className="text-sm text-slate italic p-3 bg-gray-50 rounded-lg border border-border">No family contact logged for this patient.</div>
                     )}
                     <div className="flex gap-2">
-                      <button onClick={() => setTab('New Contact')} className="text-xs border border-orange text-orange px-3 py-1.5 rounded-lg hover:bg-orange/5">Log New Contact</button>
-                      <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Schedule Family Session</button>
+                      <LockedButton locked={readOnly} onClick={() => setTab('New Contact')} className="text-xs border border-orange text-orange px-3 py-1.5 rounded-lg hover:bg-orange/5">Log New Contact</LockedButton>
+                      <LockedButton locked={readOnly} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Schedule Family Session</LockedButton>
                       {!record.cfr42Consent && (
-                        <button className="text-xs border border-red-200 text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 flex items-center gap-1">
+                        <LockedButton locked={readOnly} className="text-xs border border-red-200 text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 flex items-center gap-1">
                           <AlertTriangle className="w-3 h-3" /> Get 42 CFR Consent
-                        </button>
+                        </LockedButton>
                       )}
                     </div>
                   </div>
@@ -334,6 +335,84 @@ export function FamilyEngagement({ navigate }: Props) {
         </div>
       )}
 
+      {tab === 'Family Education' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Education Sessions', value: 8, sub: 'This month', color: 'text-navy' },
+              { label: 'Family Members Reached', value: 22, sub: 'Unique participants', color: 'text-blue-600' },
+              { label: 'Handouts Distributed', value: 47, sub: 'Multilingual', color: 'text-green-600' },
+              { label: 'Avg Satisfaction', value: '4.6/5', sub: 'Post-session survey', color: 'text-orange' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {[
+            {
+              title: '📚 Understanding Addiction',
+              items: [
+                { name: 'Addiction as a Brain Disease — NIDA Fact Sheet', type: 'PDF', pages: 4, audience: 'All families', lang: 'EN / ES' },
+                { name: 'How Opioids Work: A Family Guide to OUD', type: 'PDF', pages: 8, audience: 'OUD families', lang: 'EN' },
+                { name: 'Alcohol Use Disorder — What Families Should Know', type: 'PDF', pages: 6, audience: 'AUD families', lang: 'EN / ES' },
+                { name: 'Co-occurring Mental Health & Addiction (Dual Diagnosis)', type: 'PDF', pages: 5, audience: 'All families', lang: 'EN' },
+              ]
+            },
+            {
+              title: '💊 Medication-Assisted Treatment (MAT)',
+              items: [
+                { name: 'What Is Buprenorphine / Suboxone? A Guide for Loved Ones', type: 'PDF', pages: 3, audience: 'OUD families', lang: 'EN / ES' },
+                { name: 'Methadone Maintenance — Myths and Facts', type: 'PDF', pages: 4, audience: 'OUD families', lang: 'EN' },
+                { name: 'Vivitrol (Naltrexone) — What to Expect', type: 'PDF', pages: 3, audience: 'OUD / AUD families', lang: 'EN' },
+                { name: 'How to Respond to a Suspected Overdose (Naloxone Guide)', type: 'PDF', pages: 2, audience: 'All families', lang: 'EN / ES / KO' },
+              ]
+            },
+            {
+              title: '💬 Communication & Boundaries',
+              items: [
+                { name: 'Setting Healthy Boundaries Without Enabling', type: 'Workshop', pages: null, audience: 'All families', lang: 'EN' },
+                { name: 'How to Talk to Your Loved One About Recovery', type: 'PDF', pages: 6, audience: 'All families', lang: 'EN / ES' },
+                { name: 'Family Roles in Addiction: Enabler, Hero, Scapegoat, Lost Child', type: 'PDF', pages: 5, audience: 'All families', lang: 'EN' },
+                { name: 'Al-Anon & Nar-Anon: Finding Your Own Recovery', type: 'PDF', pages: 3, audience: 'All families', lang: 'EN / ES' },
+              ]
+            },
+            {
+              title: '🏠 Supporting Long-Term Recovery at Home',
+              items: [
+                { name: 'Creating a Recovery-Supportive Home Environment', type: 'PDF', pages: 4, audience: 'All families', lang: 'EN' },
+                { name: 'Warning Signs of Relapse — Family Recognition Guide', type: 'PDF', pages: 4, audience: 'All families', lang: 'EN / ES' },
+                { name: 'Aftercare & Continuing Treatment: What Happens After Discharge', type: 'PDF', pages: 5, audience: 'All families', lang: 'EN' },
+                { name: 'Self-Care for Families in Recovery: Secondary Trauma', type: 'PDF', pages: 4, audience: 'All families', lang: 'EN' },
+              ]
+            },
+          ].map(section => (
+            <div key={section.title} className="card p-0 overflow-hidden">
+              <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm">{section.title}</div>
+              <table className="w-full text-xs">
+                <tbody className="divide-y divide-border">
+                  {section.items.map(item => (
+                    <tr key={item.name} className="hover:bg-gray-50">
+                      <td className="px-4 py-2.5 font-medium text-navy">{item.name}</td>
+                      <td className="px-4 py-2.5"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${item.type === 'Workshop' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>{item.type}</span></td>
+                      <td className="px-4 py-2.5 text-slate">{item.pages ? `${item.pages} pp` : 'In-person'}</td>
+                      <td className="px-4 py-2.5 text-slate">{item.audience}</td>
+                      <td className="px-4 py-2.5 text-slate">{item.lang}</td>
+                      <td className="px-4 py-2.5">
+                        <button className="text-xs text-orange hover:underline font-medium">📄 View / Print</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+
       {tab === 'New Contact' && !logSubmitted && (
         <div className="max-w-2xl">
           <div className="card space-y-4">
@@ -390,7 +469,7 @@ export function FamilyEngagement({ navigate }: Props) {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setTab('Overview')} className="border border-border rounded-lg px-5 py-2 text-sm text-slate">Cancel</button>
-              <button onClick={() => setLogSubmitted(true)} className="btn-primary text-sm px-5 py-2">Save Contact Log</button>
+              <LockedButton locked={readOnly} onClick={() => setLogSubmitted(true)} className="btn-primary text-sm px-5 py-2">Save Contact Log</LockedButton>
             </div>
           </div>
         </div>
@@ -402,6 +481,247 @@ export function FamilyEngagement({ navigate }: Props) {
             <h2 className="text-lg font-bold text-navy">Contact Logged</h2>
             <p className="text-slate text-sm mt-2">The family contact has been documented in the patient's record.</p>
             <button onClick={() => { setLogSubmitted(false); setTab('Overview'); }} className="btn-primary text-sm px-6 py-2 mt-5">Back to Family Engagement</button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Resources' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Handouts, consent forms, and psychoeducational materials for families of patients in addiction treatment.</div>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { cat: 'Understanding Addiction', items: [
+                { title: 'What Is Addiction? A Family Guide', type: 'PDF', pages: 8, tags: ['Foundational'] },
+                { title: 'The Brain Disease Model — Plain Language', type: 'PDF', pages: 4, tags: ['Foundational'] },
+                { title: 'Co-occurring Mental Health Disorders Explained', type: 'PDF', pages: 6, tags: ['Co-occurring'] },
+                { title: 'Enabling vs. Supporting: What Families Can Do', type: 'PDF', pages: 5, tags: ['Boundaries'] },
+              ]},
+              { cat: 'Treatment & Recovery', items: [
+                { title: 'What to Expect During Residential Treatment', type: 'PDF', pages: 10, tags: ['Residential'] },
+                { title: 'Medication-Assisted Treatment (MAT) for Families', type: 'PDF', pages: 6, tags: ['MAT'] },
+                { title: 'Understanding ASAM Levels of Care', type: 'PDF', pages: 4, tags: ['Clinical'] },
+                { title: 'Family Roles in the Recovery Journey', type: 'PDF', pages: 7, tags: ['Engagement'] },
+                { title: 'Relapse Warning Signs — A Family Checklist', type: 'PDF', pages: 3, tags: ['Prevention'] },
+              ]},
+              { cat: 'Support & Self-Care', items: [
+                { title: 'Al-Anon & Nar-Anon — Meeting Finder and Guide', type: 'PDF', pages: 2, tags: ['Community'] },
+                { title: 'CRAFT — Community Reinforcement for Families', type: 'PDF', pages: 12, tags: ['Evidence-Based'] },
+                { title: 'Setting Healthy Boundaries Without Guilt', type: 'PDF', pages: 5, tags: ['Boundaries'] },
+                { title: 'Talking to Children About a Parent\'s Addiction', type: 'PDF', pages: 6, tags: ['Children'] },
+                { title: 'Grief and Loss in Addiction Families', type: 'PDF', pages: 8, tags: ['Mental Health'] },
+              ]},
+            ].map(section => (
+              <div key={section.cat} className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">{section.cat}</h3>
+                <div className="space-y-2">
+                  {section.items.map(r => (
+                    <div key={r.title} className="flex items-start justify-between gap-2 p-2 rounded-lg border border-border hover:bg-gray-50 cursor-pointer">
+                      <div className="flex-1">
+                        <div className="text-xs font-medium text-navy">{r.title}</div>
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {r.tags.map(t => (
+                            <span key={t} className="text-[9px] bg-navy/10 text-navy px-1.5 py-0.5 rounded-full">{t}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-slate shrink-0">{r.pages}pg</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Consent & Authorization Forms</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { title: '42 CFR Part 2 — Disclosure Authorization (Family)', status: 'Required before family clinical contact', form: 'FE-2024-001' },
+                { title: 'Family Visitation Agreement', status: 'Required for all residential visits', form: 'FE-2024-002' },
+                { title: 'Family Therapy Consent (Joint Sessions)', status: 'Required before family therapy', form: 'FE-2024-003' },
+                { title: 'Emergency Contact & Collateral Release', status: 'Optional — expands contact permissions', form: 'FE-2024-004' },
+              ].map(f => (
+                <div key={f.title} className="flex items-start justify-between gap-3 p-3 border border-border rounded-lg">
+                  <div>
+                    <div className="text-xs font-semibold text-navy">{f.title}</div>
+                    <div className="text-[10px] text-slate mt-0.5">{f.status}</div>
+                    <div className="text-[10px] text-orange mt-0.5 font-mono">{f.form}</div>
+                  </div>
+                  <button className="text-xs text-blue-600 hover:underline shrink-0">Print</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {tab === 'Outcomes' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Family engagement program outcomes — measures impact on patient retention, treatment satisfaction, and 90-day sobriety rates.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Family Sessions Completed', value: 38, color: 'text-navy', sub: 'Trailing 90 days' },
+              { label: 'Patient Retention Improvement', value: '+19%', color: 'text-green-600', sub: 'vs. no family engagement' },
+              { label: '90-Day Sobriety (Family Involved)', value: '74%', color: 'text-teal-600', sub: 'vs. 51% without family' },
+              { label: 'Family Satisfaction Score', value: '4.5/5', color: 'text-blue-600', sub: 'n=31 survey responses' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Family Engagement vs. Patient Outcomes</h3>
+              <div className="space-y-3 text-xs">
+                {[
+                  { outcome: 'Treatment Completion Rate', withFamily: 78, noFamily: 62 },
+                  { outcome: '30-Day Sobriety Post-Discharge', withFamily: 81, noFamily: 59 },
+                  { outcome: '90-Day Sobriety', withFamily: 74, noFamily: 51 },
+                  { outcome: 'AMA Rate', withFamily: 7, noFamily: 18 },
+                  { outcome: 'Patient Satisfaction (CSAT ≥4)', withFamily: 93, noFamily: 81 },
+                ].map(o => (
+                  <div key={o.outcome}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{o.outcome}</span>
+                      <div className="flex gap-3 text-[10px]">
+                        <span className="font-bold text-teal-600">Family: {o.withFamily}%</span>
+                        <span className="text-slate">No Family: {o.noFamily}%</span>
+                      </div>
+                    </div>
+                    <div className="relative h-2 bg-gray-100 rounded-full">
+                      <div className="absolute h-2 rounded-full bg-teal-400 opacity-60" style={{ width: `${o.noFamily}%` }} />
+                      <div className="absolute h-2 rounded-full bg-teal-600" style={{ width: `${o.withFamily}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-2">CRAFT Program Effectiveness</h3>
+                <div className="text-xs text-slate space-y-2">
+                  <div className="border border-border rounded p-2.5">
+                    <div className="font-semibold text-navy mb-0.5">Engagement Success Rate</div>
+                    <div className="text-slate">CRAFT-trained family members successfully engaged resistant loved ones in treatment at a <strong className="text-teal-600">64%</strong> rate vs. 25% for traditional confrontation (Al-Anon alone).</div>
+                  </div>
+                  <div className="border border-border rounded p-2.5">
+                    <div className="font-semibold text-navy mb-0.5">Family Wellbeing Improvement</div>
+                    <div className="text-slate">Family depression scores (PHQ-9) decreased an average of <strong className="text-teal-600">6.2 points</strong> over 8 sessions. Anxiety scores dropped 38% on GAD-7.</div>
+                  </div>
+                  <div className="border border-border rounded p-2.5">
+                    <div className="font-semibold text-navy mb-0.5">Re-engagement Rate</div>
+                    <div className="text-slate">Of patients who left AMA, <strong className="text-teal-600">41%</strong> with active family program returned to treatment within 30 days vs. 11% without.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-800">
+                <strong>Program Note:</strong> Family engagement is among the highest-ROI interventions in residential SUD treatment. Every 10% increase in family session completion correlates with a measurable improvement in 90-day outcomes based on our trailing 12-month data.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'CRAFT Guide' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Community Reinforcement and Family Training (CRAFT) — clinician reference guide for the evidence-based family engagement model used at Sunrise Recovery Center.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Evidence Level', value: 'Grade A', color: 'text-green-600', sub: 'Multiple RCTs; NIDA-recommended' },
+              { label: 'Treatment Entry Rate', value: '64–74%', color: 'text-teal-600', sub: 'vs. 30% for Al-Anon alone' },
+              { label: 'Sessions to Complete CRAFT', value: '12–16', color: 'text-navy', sub: 'Family therapist delivered' },
+              { label: 'Families Trained (YTD)', value: 11, color: 'text-blue-600', sub: 'At Sunrise, 2026' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">CRAFT Core Components — Session Map</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { sessions: '1–2', topic: 'Motivational foundation & functional analysis', goal: 'Identify triggers, behaviors, and consequences surrounding IP substance use; motivate family engagement' },
+                  { sessions: '3–4', topic: 'Communication skills training', goal: 'Teach non-enabling, empathic communication; practice assertive but non-confrontational dialogue' },
+                  { sessions: '5–6', topic: 'Natural consequences & enabling behavior reduction', goal: 'Identify family enabling patterns; support allowing natural consequences while maintaining safety' },
+                  { sessions: '7–8', topic: 'Positive reinforcement of sobriety-adjacent behavior', goal: 'Identify and reinforce clean/sober behavior in the IP; use CRAFT behavioral principles' },
+                  { sessions: '9–10', topic: 'Timing the suggestion to seek treatment', goal: 'Identify windows of opportunity; practice scripting the invitation to enter treatment' },
+                  { sessions: '11–12', topic: 'Family self-care and sustainability', goal: 'Address caregiver burnout; build family member\'s own support system; plan for IP treatment engagement' },
+                  { sessions: '13–16', topic: 'Ongoing support + treatment entry support', goal: 'Navigate IP intake; support family during early treatment; transition to aftercare family involvement' },
+                ].map(s => (
+                  <div key={s.sessions} className="border border-border rounded-lg p-2.5">
+                    <div className="flex items-start gap-2">
+                      <span className="shrink-0 font-mono font-bold text-blue-700 text-[10px] mt-0.5">Sess {s.sessions}</span>
+                      <div>
+                        <div className="font-semibold text-navy">{s.topic}</div>
+                        <div className="text-slate mt-0.5">{s.goal}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">CRAFT vs. Other Family Approaches</h3>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border bg-gray-50 text-slate">
+                      {['Approach', 'Treatment Entry', 'Family Distress ↓', 'Relationship ↑', 'Evidence'].map(h => (
+                        <th key={h} className="text-left px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {[
+                      { approach: 'CRAFT', entry: '64–74%', distress: '✓ Yes', rel: '✓ Yes', ev: 'Grade A (RCT)' },
+                      { approach: 'Al-Anon / Nar-Anon', entry: '18–30%', distress: '✓ Yes', rel: '—', ev: 'Grade B' },
+                      { approach: 'Johnson Intervention', entry: '30%', distress: 'Mixed', rel: '— (harm risk)', ev: 'Grade C' },
+                      { approach: 'Nar-Anon + CRAFT', entry: '~70%', distress: '✓ Yes', rel: '✓ Yes', ev: 'Emerging' },
+                    ].map(r => (
+                      <tr key={r.approach} className={`hover:bg-gray-50 ${r.approach === 'CRAFT' ? 'bg-green-50/40 font-semibold' : ''}`}>
+                        <td className="px-2 py-1.5 text-navy">{r.approach}</td>
+                        <td className="px-2 py-1.5 text-green-700 font-bold">{r.entry}</td>
+                        <td className="px-2 py-1.5 text-slate">{r.distress}</td>
+                        <td className="px-2 py-1.5 text-slate">{r.rel}</td>
+                        <td className="px-2 py-1.5 text-slate">{r.ev}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
+                <strong>Sunrise CRAFT Protocol:</strong> Family therapist-delivered, 12–16 sessions over 3–4 months. Delivered via in-person, telehealth, or hybrid. Families may begin CRAFT prior to patient admission — contact the Family Engagement Coordinator to initiate referral.
+              </div>
+
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-2">CRAFT Contraindications & Precautions</h3>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    { flag: 'Domestic Violence', detail: 'If active DV or safety concerns — refer to DV specialist first; CRAFT communication skills must be adapted', color: 'text-red-600' },
+                    { flag: 'IP Psychosis / Severe MH', detail: 'Consult with psychiatric provider before proceeding — behavioral analysis may need modification', color: 'text-amber-600' },
+                    { flag: 'Family Member Addiction', detail: 'Screen family members for SUD; co-occurring family SUD requires separate treatment', color: 'text-amber-600' },
+                    { flag: 'IP Suicidality', detail: 'Coordinate safety planning with clinical team; proceed with caution on natural consequences component', color: 'text-amber-600' },
+                  ].map(c => (
+                    <div key={c.flag} className="flex gap-2">
+                      <span className={`shrink-0 font-bold ${c.color}`}>⚠ {c.flag}:</span>
+                      <span className="text-slate">{c.detail}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

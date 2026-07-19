@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { CheckCircle, Phone, Calendar, TrendingUp, Heart, Star, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 interface AlumniRecord {
   id: string;
@@ -142,8 +143,8 @@ const UPCOMING_EVENTS = [
   { date: '2026-09-06', event: 'Monthly Alumni Meeting + 1-Year Chip Ceremony', location: 'Sunrise Recovery', time: '6:00 PM' },
 ];
 
-export function AlumniProgram({ navigate }: Props) {
-  const [tab, setTab] = useState<'Alumni' | 'Outcomes' | 'Events' | 'Testimonials'>('Alumni');
+export function AlumniProgram({ navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Alumni' | 'Outcomes' | 'Events' | 'Testimonials' | 'Re-admission' | 'Engagement Analytics'>('Alumni');
 
   const soberCount = ALUMNI.filter(a => a.currentStatus === 'Sober').length;
   const pendingCalls = ALUMNI.flatMap(a => a.contacts).filter(c => c.outcome === 'Pending').length;
@@ -156,7 +157,7 @@ export function AlumniProgram({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Alumni Program</h1>
           <p className="text-slate text-sm mt-0.5">Post-discharge outcomes, 30/60/90 day follow-up, alumni events, and recovery success stories</p>
         </div>
-        <button className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Phone className="w-4 h-4" /> Log Follow-up Call</button>
+        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Phone className="w-4 h-4" /> Log Follow-up Call</LockedButton>
       </div>
 
       {/* KPIs */}
@@ -176,7 +177,7 @@ export function AlumniProgram({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Alumni', 'Outcomes', 'Events', 'Testimonials'] as const).map(t => (
+        {(['Alumni', 'Outcomes', 'Events', 'Testimonials', 'Re-admission', 'Engagement Analytics'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -342,11 +343,182 @@ export function AlumniProgram({ navigate }: Props) {
                 <span className="text-xs text-slate ml-1">Consent to share: on file</span>
                 <div className="flex gap-2 ml-auto">
                   <button className="text-xs border border-border text-slate px-3 py-1 rounded-lg hover:bg-gray-50">Edit</button>
-                  <button className="text-xs btn-primary px-3 py-1">Use in Marketing</button>
+                  <LockedButton locked={readOnly} className="text-xs btn-primary px-3 py-1">Use in Marketing</LockedButton>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'Re-admission' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: '30-Day Readmission Rate', value: '22%', sub: 'Target: <15%', color: 'text-red-600' },
+              { label: 'AMA Returns', value: 4, sub: 'In last 90 days', color: 'text-amber-600' },
+              { label: 'Planned Readmissions', value: 2, sub: 'Step-up from OP/IOP', color: 'text-blue-600' },
+              { label: 'Avg Days to Readmit', value: '12.4', sub: 'Post-discharge', color: 'text-navy' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Readmission Risk Factors</h3>
+              <div className="space-y-2.5">
+                {[
+                  { factor: 'Left AMA on previous admission', odds: '3.8×', pct: 95 },
+                  { factor: 'Housing instability at discharge', odds: '2.9×', pct: 73 },
+                  { factor: 'No IOP/OP step-down arranged', odds: '2.4×', pct: 60 },
+                  { factor: 'No MAT at discharge (OUD patients)', odds: '2.1×', pct: 53 },
+                  { factor: 'Missing 30-day follow-up call', odds: '1.7×', pct: 43 },
+                  { factor: 'No peer sponsor/support identified', odds: '1.4×', pct: 35 },
+                ].map(r => (
+                  <div key={r.factor}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate">{r.factor}</span>
+                      <span className="font-bold text-red-600">{r.odds}</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full"><div className="h-1.5 bg-red-400 rounded-full" style={{ width: `${r.pct}%` }} /></div>
+                  </div>
+                ))}
+                <div className="text-[10px] text-slate pt-1">Odds ratios vs. population without factor. Source: internal outcomes data + SAMHSA literature.</div>
+              </div>
+            </div>
+
+            <div className="card space-y-4">
+              <h3 className="font-semibold text-navy text-sm">Protective Factors at Discharge</h3>
+              {[
+                { factor: 'IOP / OP step-down scheduled before discharge', pct: 72 },
+                { factor: 'MAT continued into outpatient (OUD patients)', pct: 68 },
+                { factor: 'Stable housing confirmed', pct: 61 },
+                { factor: 'Peer specialist assigned for 30d post-discharge', pct: 55 },
+                { factor: 'Alumni program enrolled', pct: 83 },
+                { factor: '30-day follow-up call completed', pct: 77 },
+              ].map(r => (
+                <div key={r.factor}>
+                  <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.factor}</span><span className="font-bold text-green-600">{r.pct}%</span></div>
+                  <div className="h-1.5 bg-gray-100 rounded-full"><div className="h-1.5 bg-green-500 rounded-full" style={{ width: `${r.pct}%` }} /></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card p-0 overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-border flex items-center justify-between">
+              <h3 className="font-semibold text-navy text-sm">Alumni Who Readmitted — Case Review</h3>
+              <span className="text-xs text-slate">Last 90 days · 6 readmissions</span>
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border text-slate">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Alumni</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Original DC</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Days Out</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Trigger</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Protective Gaps</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Type</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'M. Webb', dc: '2026-04-15', days: 14, trigger: 'Relationship conflict / stress', gaps: 'No step-down, unstable housing', type: 'Unplanned' },
+                  { name: 'D. Patel', dc: '2026-05-02', days: 9, trigger: 'Pain medication misuse', gaps: 'No MAT, no peer sponsor', type: 'Unplanned' },
+                  { name: 'A. Monroe', dc: '2026-05-20', days: 22, trigger: 'Employment loss', gaps: 'Step-down missed first appt', type: 'Planned step-up' },
+                  { name: 'R. Navarro', dc: '2026-06-01', days: 7, trigger: 'Return to using environment', gaps: 'Housing unstable, no peer support', type: 'Unplanned' },
+                  { name: 'L. Farris', dc: '2026-06-10', days: 18, trigger: 'Anxiety / PTSD escalation', gaps: 'No MAT, missed 30-day call', type: 'Unplanned' },
+                  { name: 'S. Choi', dc: '2026-06-28', days: 5, trigger: 'OD — Naloxone reversed', gaps: 'No MAT, no peer, no step-down', type: 'Emergency' },
+                ].map(r => (
+                  <tr key={r.name} className="hover:bg-gray-50">
+                    <td className="px-4 py-2.5 font-medium text-navy">{r.name}</td>
+                    <td className="px-4 py-2.5 text-slate">{r.dc}</td>
+                    <td className="px-4 py-2.5 text-center font-bold text-navy">{r.days}d</td>
+                    <td className="px-4 py-2.5 text-slate">{r.trigger}</td>
+                    <td className="px-4 py-2.5 text-slate">{r.gaps}</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${r.type === 'Emergency' ? 'bg-red-100 text-red-700' : r.type === 'Unplanned' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{r.type}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Engagement Analytics' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Alumni engagement metrics — activity rates, touchpoint frequency, re-engagement success, and program ROI for the trailing 12 months.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Total Alumni (Active)', value: 142, color: 'text-navy', sub: 'Opted into alumni program' },
+              { label: 'Monthly Engagement Rate', value: '54%', color: 'text-green-600', sub: '77 of 142 engaged last 30d' },
+              { label: 'Event Attendance Rate', value: '38%', color: 'text-blue-600', sub: 'Avg across monthly events' },
+              { label: '12-Month Sobriety (Alumni)', value: '61%', color: 'text-teal-600', sub: 'Self-reported at check-in' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Engagement by Touchpoint Type</h3>
+              <div className="space-y-2.5 text-xs">
+                {[
+                  { type: 'Monthly Check-in Call', completions: 61, pct: 43, color: 'bg-blue-500' },
+                  { type: 'Alumni Group Meeting', completions: 41, pct: 29, color: 'bg-teal-500' },
+                  { type: 'App / Portal Login', completions: 58, pct: 41, color: 'bg-purple-500' },
+                  { type: 'Event Attendance', completions: 27, pct: 19, color: 'bg-orange-400' },
+                  { type: 'Sponsor/Mentorship Contact', completions: 22, pct: 15, color: 'bg-green-500' },
+                  { type: 'Crisis Line Utilized', completions: 4, pct: 3, color: 'bg-red-400' },
+                ].map(t => (
+                  <div key={t.type}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{t.type}</span>
+                      <span className="font-semibold text-navy">{t.completions} alumni ({t.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${t.color}`} style={{ width: `${t.pct * 1.8}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Alumni Engagement → Re-admission Correlation</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { group: 'High engagement (≥3 touchpoints/mo)', readmit: '7%', sob12: '74%', n: 38 },
+                    { group: 'Moderate engagement (1–2/mo)', readmit: '14%', sob12: '62%', n: 51 },
+                    { group: 'Low engagement (<1/mo)', readmit: '27%', sob12: '48%', n: 53 },
+                  ].map(g => (
+                    <div key={g.group} className="border border-border rounded p-2.5">
+                      <div className="font-medium text-navy mb-0.5">{g.group} (n={g.n})</div>
+                      <div className="flex gap-4 text-slate">
+                        <span>Re-admission rate: <strong className="text-red-600">{g.readmit}</strong></span>
+                        <span>12-mo sobriety: <strong className="text-green-600">{g.sob12}</strong></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-800">
+                <strong>Program Insight:</strong> Alumni with ≥3 engagement touchpoints per month have 3.9× lower re-admission rates vs. disengaged alumni. Investment in engagement coordination has measurable bed and revenue impact.
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

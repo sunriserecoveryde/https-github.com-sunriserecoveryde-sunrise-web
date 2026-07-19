@@ -94,8 +94,64 @@ const RECOVERY_SCORE_DIST = [
 
 const COLORS = ['#E8761A', '#3B9ED4', '#2ECC71', '#9B59B6', '#F39C12', '#E74C3C', '#1ABC9C', '#95a5a6'];
 
+const AGE_DISTRIBUTION = [
+  { range: '18–24', count: 2 },
+  { range: '25–34', count: 6 },
+  { range: '35–44', count: 7 },
+  { range: '45–54', count: 5 },
+  { range: '55–64', count: 3 },
+  { range: '65+',   count: 1 },
+];
+
+const GENDER_DATA = [
+  { name: 'Male',        value: 13, color: '#3B9ED4' },
+  { name: 'Female',      value: 10, color: '#E8761A' },
+  { name: 'Non-Binary',  value: 1,  color: '#9B59B6' },
+];
+
+const REFERRAL_SOURCES = [
+  { source: 'Emergency Room',        count: 5 },
+  { source: 'Physician Referral',    count: 4 },
+  { source: 'Self / Family',         count: 4 },
+  { source: 'Drug Court / Legal',    count: 3 },
+  { source: 'Prior Treatment Ctr',   count: 3 },
+  { source: 'EAP / Employer',        count: 2 },
+  { source: 'Insurance Case Mgmt',   count: 2 },
+  { source: 'Peer / Community',      count: 1 },
+];
+
+const CO_OCCURRING = [
+  { condition: 'Major Depression', count: 9 },
+  { condition: 'Anxiety Disorders', count: 8 },
+  { condition: 'PTSD', count: 6 },
+  { condition: 'BPD', count: 3 },
+  { condition: 'Bipolar Disorder', count: 4 },
+  { condition: 'ADHD', count: 5 },
+  { condition: 'Eating Disorder', count: 2 },
+  { condition: 'Psychotic Disorder', count: 2 },
+];
+
+const EMPLOYMENT_STATUS = [
+  { status: 'Employed (on leave)',  value: 8,  color: '#3B9ED4' },
+  { status: 'Unemployed',           value: 7,  color: '#E8761A' },
+  { status: 'Disability / SSDI',    value: 3,  color: '#9B59B6' },
+  { status: 'Student',              value: 2,  color: '#2ECC71' },
+  { status: 'Retired',              value: 2,  color: '#95a5a6' },
+  { status: 'Unknown',              value: 2,  color: '#F39C12' },
+];
+
+const HOUSING_AT_ADMIT = [
+  { type: 'Private Residence',  value: 11, color: '#2ECC71' },
+  { type: 'Family / Friends',   value: 5,  color: '#3B9ED4' },
+  { type: 'Homeless / Shelter', value: 3,  color: '#E74C3C' },
+  { type: 'Sober Living',       value: 2,  color: '#9B59B6' },
+  { type: 'Incarcerated/Jail',  value: 2,  color: '#95a5a6' },
+  { type: 'Other',              value: 1,  color: '#F39C12' },
+];
+
 export function PopulationAnalytics({ navigate }: Props) {
   const [period, setPeriod] = useState<'30D' | '60D' | '90D' | 'YTD'>('30D');
+  const [paTab, setPaTab] = useState<'Analytics' | 'Social Determinants' | 'Equity' | 'Payer Mix' | 'Predictive Risk' | 'Geographic Reach'>('Analytics');
 
   const avgLOS = (MOCK_PATIENTS.reduce((a, p) => a + (p.los ?? 0), 0) / MOCK_PATIENTS.length).toFixed(1);
   const avgRecovery = Math.round(MOCK_PATIENTS.reduce((a, p) => a + (p.recoveryScore ?? 0), 0) / MOCK_PATIENTS.length);
@@ -116,6 +172,180 @@ export function PopulationAnalytics({ navigate }: Props) {
         </div>
       </div>
 
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-border">
+        {(['Analytics', 'Social Determinants', 'Equity', 'Payer Mix', 'Predictive Risk', 'Geographic Reach'] as const).map(t => (
+          <button key={t} onClick={() => setPaTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${paTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
+        ))}
+      </div>
+
+      {paTab === 'Social Determinants' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Social determinants of health (SDOH) across the current patient census — housing, employment, food security, insurance, and social support.</div>
+          <div className="grid grid-cols-3 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Housing Status at Admission</h3>
+              <div className="space-y-2.5">
+                {[
+                  { label: 'Private Residence (owned/rented)', n: 11, pct: 55, color: 'bg-green-500' },
+                  { label: 'Family or Friends', n: 5, pct: 25, color: 'bg-blue-400' },
+                  { label: 'Homeless / Emergency Shelter', n: 3, pct: 15, color: 'bg-red-500' },
+                  { label: 'Sober Living / Recovery Home', n: 2, pct: 10, color: 'bg-purple-400' },
+                  { label: 'Incarcerated / Jail', n: 1, pct: 5, color: 'bg-gray-400' },
+                ].map(r => (
+                  <div key={r.label}>
+                    <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className="font-bold text-navy">{r.n} ({r.pct}%)</span></div>
+                    <div className="h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Employment & Income</h3>
+              <div className="space-y-2.5">
+                {[
+                  { label: 'Employed Full-Time', n: 8, pct: 40, color: 'bg-green-500' },
+                  { label: 'Employed Part-Time', n: 3, pct: 15, color: 'bg-teal-400' },
+                  { label: 'Unemployed (seeking)', n: 5, pct: 25, color: 'bg-amber-400' },
+                  { label: 'Disability / SSI / SSDI', n: 2, pct: 10, color: 'bg-blue-400' },
+                  { label: 'Student', n: 1, pct: 5, color: 'bg-purple-400' },
+                  { label: 'Other / Unknown', n: 1, pct: 5, color: 'bg-gray-400' },
+                ].map(r => (
+                  <div key={r.label}>
+                    <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className="font-bold text-navy">{r.n} ({r.pct}%)</span></div>
+                    <div className="h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Social Support & Insurance</h3>
+              <div className="space-y-3">
+                <div className="text-xs font-semibold text-slate uppercase">Social Support</div>
+                {[
+                  { label: 'Strong family support', n: 9, pct: 45, color: 'bg-green-500' },
+                  { label: 'Limited support', n: 7, pct: 35, color: 'bg-amber-400' },
+                  { label: 'Isolated / No support', n: 4, pct: 20, color: 'bg-red-500' },
+                ].map(r => (
+                  <div key={r.label}>
+                    <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className="font-bold text-navy">{r.n} ({r.pct}%)</span></div>
+                    <div className="h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} /></div>
+                  </div>
+                ))}
+                <div className="text-xs font-semibold text-slate uppercase mt-2">Insurance Type</div>
+                {[
+                  { label: 'Commercial / Private', n: 12, pct: 60, color: 'bg-blue-500' },
+                  { label: 'Medicaid (TennCare)', n: 4, pct: 20, color: 'bg-teal-400' },
+                  { label: 'Self-Pay / Uninsured', n: 3, pct: 15, color: 'bg-amber-400' },
+                  { label: 'Medicare', n: 1, pct: 5, color: 'bg-purple-400' },
+                ].map(r => (
+                  <div key={r.label}>
+                    <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className="font-bold text-navy">{r.n} ({r.pct}%)</span></div>
+                    <div className="h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Criminal Justice Involvement & Legal History</h3>
+            <div className="grid grid-cols-4 gap-4 text-center">
+              {[
+                { label: 'Current Probation/Parole', value: '4 (20%)', color: 'text-amber-600' },
+                { label: 'Court-Mandated Treatment', value: '3 (15%)', color: 'text-amber-600' },
+                { label: 'Prior Incarceration', value: '7 (35%)', color: 'text-navy' },
+                { label: 'Drug Court Participants', value: '2 (10%)', color: 'text-navy' },
+              ].map(k => (
+                <div key={k.label} className="bg-gray-50 rounded-xl p-3">
+                  <div className={`text-xl font-bold ${k.color}`}>{k.value}</div>
+                  <div className="text-xs text-slate mt-1">{k.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {paTab === 'Equity' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Health equity indicators — demographic breakdown, disparity flags, and access metrics to support CARF and SAMHSA equity standards.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Race / Ethnicity — Current Census</h3>
+              <div className="space-y-2.5">
+                {[
+                  { label: 'White / Non-Hispanic', n: 12, pct: 60, color: 'bg-blue-500' },
+                  { label: 'Black or African American', n: 4, pct: 20, color: 'bg-purple-500' },
+                  { label: 'Hispanic or Latino', n: 2, pct: 10, color: 'bg-teal-500' },
+                  { label: 'Asian', n: 1, pct: 5, color: 'bg-green-500' },
+                  { label: 'Multiracial', n: 1, pct: 5, color: 'bg-amber-400' },
+                ].map(r => (
+                  <div key={r.label}>
+                    <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className="font-bold text-navy">{r.n} ({r.pct}%)</span></div>
+                    <div className="h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Gender & Age Distribution</h3>
+              <div className="space-y-2.5 mb-4">
+                {[
+                  { label: 'Male', n: 12, pct: 60, color: 'bg-blue-500' },
+                  { label: 'Female', n: 7, pct: 35, color: 'bg-pink-400' },
+                  { label: 'Non-binary / Other', n: 1, pct: 5, color: 'bg-purple-400' },
+                ].map(r => (
+                  <div key={r.label}>
+                    <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className="font-bold text-navy">{r.n} ({r.pct}%)</span></div>
+                    <div className="h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+              <div className="text-xs font-semibold text-slate uppercase mb-2">Age Range</div>
+              <div className="space-y-2">
+                {[
+                  { label: '18–25', n: 3, pct: 15, color: 'bg-green-400' },
+                  { label: '26–35', n: 7, pct: 35, color: 'bg-blue-400' },
+                  { label: '36–45', n: 6, pct: 30, color: 'bg-purple-400' },
+                  { label: '46–55', n: 3, pct: 15, color: 'bg-amber-400' },
+                  { label: '56+', n: 1, pct: 5, color: 'bg-gray-400' },
+                ].map(r => (
+                  <div key={r.label}>
+                    <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className="font-bold text-navy">{r.n} ({r.pct}%)</span></div>
+                    <div className="h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Equity Access Indicators</h3>
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              {[
+                { metric: 'Patients with interpreter services needed', value: '2 (10%)', benchmark: 'State avg: 8%', flag: false },
+                { metric: 'Patients reporting transportation barrier', value: '5 (25%)', benchmark: 'State avg: 19%', flag: true },
+                { metric: 'Uninsured / Self-pay patients', value: '3 (15%)', benchmark: 'Target: ≤15%', flag: false },
+                { metric: 'Patients from rural zip codes', value: '4 (20%)', benchmark: 'TN rural avg: 35%', flag: false },
+                { metric: 'Patients with veteran status', value: '3 (15%)', benchmark: 'VA coverage: active', flag: false },
+                { metric: 'Patients with DOJ / drug court mandate', value: '3 (15%)', benchmark: 'CARF equity flag: documented', flag: false },
+                { metric: 'Patients declined for capacity (waitlisted)', value: '9 active waitlist', benchmark: 'Reviewed for equity weekly', flag: false },
+                { metric: 'Spanish-speaking patients (primary)', value: '2 (10%)', benchmark: 'Spanish-language materials: available', flag: false },
+              ].map(r => (
+                <div key={r.metric} className={`p-3 border rounded-lg ${r.flag ? 'border-amber-300 bg-amber-50/30' : 'border-border'}`}>
+                  <div className="font-semibold text-navy">{r.metric}</div>
+                  <div className={`font-bold mt-0.5 ${r.flag ? 'text-amber-600' : 'text-navy'}`}>{r.value}</div>
+                  <div className="text-slate mt-0.5">{r.benchmark}{r.flag && ' ⚠️ Above benchmark'}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {paTab === 'Analytics' && (
+      <div className="space-y-6">
       {/* Top KPIs */}
       <div className="grid grid-cols-5 gap-4">
         {[
@@ -320,6 +550,127 @@ export function PopulationAnalytics({ navigate }: Props) {
         </div>
       </div>
 
+      {/* Demographics Section */}
+      <div>
+        <h2 className="text-base font-semibold text-navy mb-3 flex items-center gap-2">
+          <span className="text-xl">👥</span> Population Demographics &amp; Social Determinants
+        </h2>
+        <div className="grid grid-cols-3 gap-5">
+
+          {/* Age Distribution */}
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-0.5">Age Distribution</h3>
+            <p className="text-xs text-slate mb-3">Current census</p>
+            <ResponsiveContainer width="100%" height={170}>
+              <BarChart data={AGE_DISTRIBUTION} margin={{ left: -20, right: 4, top: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="range" tick={{ fontSize: 10 }} tickLine={false} />
+                <YAxis tick={{ fontSize: 10 }} tickLine={false} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <Bar dataKey="count" name="Patients" fill="#3B9ED4" radius={[3,3,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="text-xs text-slate mt-2 text-center">Median age: <span className="font-semibold text-navy">38</span></div>
+          </div>
+
+          {/* Gender + Employment */}
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-0.5">Gender Identity</h3>
+            <p className="text-xs text-slate mb-1">Current census</p>
+            <div className="flex items-center gap-4">
+              <div style={{ width: 110, height: 110 }}>
+                <PieChart width={110} height={110}>
+                  <Pie data={GENDER_DATA} cx={50} cy={50} outerRadius={48} dataKey="value" strokeWidth={1}>
+                    {GENDER_DATA.map((g, i) => <Cell key={i} fill={g.color} />)}
+                  </Pie>
+                </PieChart>
+              </div>
+              <div className="space-y-1.5">
+                {GENDER_DATA.map(g => (
+                  <div key={g.name} className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: g.color }} />
+                    <span className="text-xs text-slate">{g.name}</span>
+                    <span className="text-xs font-bold text-navy ml-auto">{g.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-border">
+              <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">Employment Status</div>
+              <div className="space-y-1">
+                {EMPLOYMENT_STATUS.map(e => (
+                  <div key={e.status} className="flex items-center gap-2 text-xs">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: e.color }} />
+                    <span className="text-slate flex-1">{e.status}</span>
+                    <span className="font-semibold text-navy">{e.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Housing at Admission */}
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-0.5">Housing at Admission</h3>
+            <p className="text-xs text-slate mb-3">Social determinant of health</p>
+            <div className="space-y-2">
+              {HOUSING_AT_ADMIT.map(h => (
+                <div key={h.type}>
+                  <div className="flex justify-between items-center mb-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: h.color }} />
+                      <span className="text-xs text-slate">{h.type}</span>
+                    </div>
+                    <span className="text-xs font-bold text-navy">{h.value}</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full">
+                    <div className="h-full rounded-full" style={{ width: `${(h.value/24)*100}%`, backgroundColor: h.color }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 pt-3 border-t border-border text-xs text-slate">
+              Unstable housing at admit: <span className="font-bold text-critical">25%</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-5 mt-4">
+          {/* Referral Sources */}
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-0.5">Referral Sources (Current Census)</h3>
+            <p className="text-xs text-slate mb-3">How patients found their way to care</p>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={REFERRAL_SOURCES} layout="vertical" margin={{ left: 10, right: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} />
+                <YAxis type="category" dataKey="source" tick={{ fontSize: 10 }} width={130} tickLine={false} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <Bar dataKey="count" name="Patients" fill="#E8761A" radius={[0,3,3,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Co-occurring Disorders */}
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-0.5">Co-occurring Mental Health Disorders</h3>
+            <p className="text-xs text-slate mb-3">Dual diagnosis prevalence — current census</p>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={CO_OCCURRING} layout="vertical" margin={{ left: 10, right: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} />
+                <YAxis type="category" dataKey="condition" tick={{ fontSize: 10 }} width={130} tickLine={false} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <Bar dataKey="count" name="Patients" fill="#9B59B6" radius={[0,3,3,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="text-xs text-slate mt-2 text-center">
+              Dual diagnosis rate: <span className="font-bold text-navy">{Math.round((17/24)*100)}% of census</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Patient-level table */}
       <div className="card p-0 overflow-hidden">
         <div className="px-5 py-3 border-b border-border bg-gray-50 flex items-center justify-between">
@@ -366,6 +717,190 @@ export function PopulationAnalytics({ navigate }: Props) {
           </tbody>
         </table>
       </div>
+      </div>
+      )}
+
+      {paTab === 'Payer Mix' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Payer mix analysis for the current census and trailing 12 months — revenue composition, authorization approval rates, and payer-specific LOS benchmarks.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Medicaid (TennCare)', pct: '38%', color: 'text-blue-600', sub: 'Largest single payer' },
+              { label: 'Commercial Insurance', pct: '32%', color: 'text-teal-600', sub: 'PPO + HMO combined' },
+              { label: 'Medicare / Dual', pct: '12%', color: 'text-purple-600', sub: 'Growing segment' },
+              { label: 'Self-Pay / Sliding Scale', pct: '18%', color: 'text-amber-600', sub: 'Scholarship + cash pay' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.pct}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Payer-Specific Metrics (Trailing 12 Months)</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-slate">
+                    <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Payer</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Auth Approval</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Avg LOS Auth</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Denial Rate</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Days to Pay</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { payer: 'TennCare (BlueCare)', approval: '91%', los: '18d', deny: '9%', days: 28, ok: true },
+                    { payer: 'BlueCross BlueShield TN', approval: '87%', los: '21d', deny: '13%', days: 22, ok: true },
+                    { payer: 'Cigna Behavioral', approval: '82%', los: '16d', deny: '18%', days: 35, ok: false },
+                    { payer: 'Aetna Behavioral', approval: '85%', los: '19d', deny: '15%', days: 30, ok: true },
+                    { payer: 'UnitedHealth / Optum', approval: '78%', los: '14d', deny: '22%', days: 38, ok: false },
+                    { payer: 'Medicare / Humana', approval: '94%', los: '20d', deny: '6%', days: 21, ok: true },
+                    { payer: 'Self-Pay / Scholarship', approval: 'N/A', los: 'N/A', deny: 'N/A', days: 0, ok: true },
+                  ].map(r => (
+                    <tr key={r.payer} className="hover:bg-gray-50">
+                      <td className="py-2 font-medium text-navy">{r.payer}</td>
+                      <td className="py-2 text-center text-slate">{r.approval}</td>
+                      <td className="py-2 text-center text-slate">{r.los}</td>
+                      <td className="py-2 text-center">
+                        <span className={`font-semibold ${r.ok ? 'text-slate' : 'text-red-600'}`}>{r.deny}</span>
+                      </td>
+                      <td className="py-2 text-center text-slate">{r.days > 0 ? `${r.days}d` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Revenue by Level of Care</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { loc: 'Residential (3.1)', rev: '$187,400', pct: 62, color: 'bg-navy' },
+                    { loc: 'PHP (2.5)', rev: '$71,200', pct: 23, color: 'bg-blue-500' },
+                    { loc: 'IOP (2.1)', rev: '$36,800', pct: 12, color: 'bg-teal-500' },
+                    { loc: 'Detox / Med Mgmt (3.7)', rev: '$9,100', pct: 3, color: 'bg-purple-500' },
+                  ].map(l => (
+                    <div key={l.loc}>
+                      <div className="flex justify-between mb-0.5">
+                        <span className="text-slate">{l.loc}</span>
+                        <span className="font-semibold text-navy">{l.rev} ({l.pct}%)</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full">
+                        <div className={`h-2 rounded-full ${l.color}`} style={{ width: `${l.pct}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="border-t border-border pt-2 font-semibold text-navy flex justify-between">
+                    <span>Total (This Month)</span>
+                    <span>$304,500</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                <strong>Payer Watch:</strong> UnitedHealth/Optum denial rate (22%) and Cigna Behavioral (18%) are above the 15% internal threshold. Targeted appeal support and concurrent review documentation improvement are recommended for these payers.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {paTab === 'Predictive Risk' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Machine-learning-informed risk stratification — AMA propensity, relapse probability, and readmission likelihood scores for the active census.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'High AMA Risk (≥70%)', value: 5, color: 'text-red-600', sub: 'Active monitoring flags' },
+              { label: 'High Relapse Risk (≥65%)', value: 8, color: 'text-amber-600', sub: '12-month post-discharge model' },
+              { label: 'Model Accuracy (Backtest)', value: '81%', color: 'text-navy', sub: 'AMA model, 2024–2025 cohort' },
+              { label: 'Interventions Triggered', value: 12, color: 'text-blue-600', sub: 'This month by risk flags' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">AMA Risk Model — Key Predictors (Feature Importance)</h3>
+            <div className="space-y-2.5 text-xs">
+              {[
+                { factor: 'Prior AMA history (same facility)', weight: 94, color: 'bg-red-500', direction: 'Increases risk' },
+                { factor: 'Day 3–7 of treatment (highest risk window)', weight: 88, color: 'bg-orange-500', direction: 'Increases risk' },
+                { factor: 'Low therapeutic alliance score at Day 2', weight: 81, color: 'bg-amber-500', direction: 'Increases risk' },
+                { factor: 'Pending criminal legal matter', weight: 74, color: 'bg-amber-400', direction: 'Increases risk' },
+                { factor: 'Peer support contact ≥1×/day (protective)', weight: 68, color: 'bg-blue-500', direction: 'Reduces risk' },
+                { factor: 'Family session completed by Day 5 (protective)', weight: 61, color: 'bg-teal-500', direction: 'Reduces risk' },
+                { factor: 'MAT initiated within 48h (protective)', weight: 57, color: 'bg-green-500', direction: 'Reduces risk' },
+              ].map(f => (
+                <div key={f.factor}>
+                  <div className="flex justify-between mb-0.5">
+                    <span className="text-slate flex items-center gap-1.5">{f.factor} <span className={`text-[9px] font-bold px-1 rounded ${f.direction === 'Reduces risk' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{f.direction}</span></span>
+                    <span className="font-semibold text-navy">{f.weight}</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full">
+                    <div className={`h-1.5 rounded-full ${f.color}`} style={{ width: `${f.weight}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-[10px] text-blue-900">
+              <strong>Note:</strong> Predictive risk scores are clinical decision support tools — not deterministic. All interventions require clinical judgment. Model trained on 2023–2025 Sunrise patient cohort (n=198 completed episodes). Re-training scheduled annually.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {paTab === 'Geographic Reach' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Patient geographic origin, county-level demand mapping, and referral corridor analysis — informs marketing, business development, and resource allocation.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Tennessee Counties (Served)', value: 22, color: 'text-navy', sub: 'Of 95 counties statewide' },
+              { label: 'Out-of-State Patients (YTD)', value: 14, color: 'text-blue-600', sub: 'AL, KY, GA primary sources' },
+              { label: 'Avg Distance Traveled', value: '64 mi', color: 'text-teal-600', sub: 'From patient zip to Sunrise' },
+              { label: 'Nashville Metro (≤30mi)', value: '58%', color: 'text-green-600', sub: 'Of all admissions YTD' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Admissions by County / Region — YTD 2026</h3>
+            <div className="space-y-2 text-xs">
+              {[
+                { region: 'Davidson County (Nashville)', admits: 68, pct: 38, type: 'Metro', color: 'bg-blue-500' },
+                { region: 'Rutherford County (Murfreesboro)', admits: 24, pct: 13, type: 'Metro', color: 'bg-blue-400' },
+                { region: 'Williamson County (Franklin)', admits: 21, pct: 12, type: 'Metro', color: 'bg-blue-300' },
+                { region: 'Wilson County (Lebanon)', admits: 14, pct: 8, type: 'Middle TN', color: 'bg-teal-500' },
+                { region: 'Sumner County (Gallatin)', admits: 11, pct: 6, type: 'Middle TN', color: 'bg-teal-400' },
+                { region: 'Montgomery County (Clarksville)', admits: 9, pct: 5, type: 'Middle TN', color: 'bg-teal-300' },
+                { region: 'Other TN Counties', admits: 18, pct: 10, type: 'Statewide', color: 'bg-purple-400' },
+                { region: 'Out of State (AL/KY/GA)', admits: 14, pct: 8, type: 'OOS', color: 'bg-orange-400' },
+              ].map(r => (
+                <div key={r.region}>
+                  <div className="flex justify-between mb-0.5">
+                    <span className="text-slate flex items-center gap-1.5">{r.region} <span className="text-[9px] bg-gray-100 text-slate px-1 rounded">{r.type}</span></span>
+                    <span className="font-semibold text-navy">{r.admits} admits ({r.pct}%)</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full">
+                    <div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct * 2.2}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

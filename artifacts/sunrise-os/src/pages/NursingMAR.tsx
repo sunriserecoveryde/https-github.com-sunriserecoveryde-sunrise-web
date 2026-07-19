@@ -156,6 +156,7 @@ const SHIFTS = ['0800', '1200', '1400', '1800', '2000', '2100'];
 
 export function NursingMAR({ navigate, readOnly }: Props) {
   const [date] = useState(TODAY);
+  const [marTab, setMarTab] = useState<'MAR' | 'Controlled Log' | 'PRN History' | 'Allergy Registry' | 'Medication Errors'>('MAR');
   const [expandedPatient, setExpandedPatient] = useState<string | null>('p1');
   const [administering, setAdministering] = useState<{ patientId: string; med: string; time: string } | null>(null);
 
@@ -190,6 +191,13 @@ export function NursingMAR({ navigate, readOnly }: Props) {
         </div>
       </div>
 
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-border">
+        {(['MAR', 'Controlled Log', 'PRN History', 'Allergy Registry', 'Medication Errors'] as const).map(t => (
+          <button key={t} onClick={() => setMarTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${marTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
+        ))}
+      </div>
+
       {/* Quick stats */}
       <div className="grid grid-cols-4 gap-4">
         {[
@@ -206,6 +214,8 @@ export function NursingMAR({ navigate, readOnly }: Props) {
         ))}
       </div>
 
+      {marTab === 'MAR' && (
+      <div className="space-y-4">
       {/* Controlled substance alert */}
       <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -370,6 +380,232 @@ export function NursingMAR({ navigate, readOnly }: Props) {
           </div>
         </div>
       )}
+
+      {/* Controlled Substance Count Sheet */}
+      <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-border bg-red-50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-600" />
+            <h2 className="font-bold text-navy">Controlled Substance Count Sheet — {date}</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-red-700 font-medium">Shift count required at 07:00, 15:00, 23:00</span>
+            <LockedButton locked={readOnly} className="text-xs bg-red-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-red-700">Verify Count</LockedButton>
+          </div>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-border">
+              {['Patient', 'Medication', 'Schedule', 'Qty on Hand', 'Qty Dispensed Today', 'Balance', 'Last Count By', 'Status'].map(h => (
+                <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {[
+              { patient: 'Marcus Webb', mrn: 'MRN-83921', med: 'Suboxone 16mg SL', schedule: 'C-III', qtyHand: 28, dispensed: 1, countBy: 'J. Torres, RN', witness: 'M. Boyd, RN', ok: true },
+              { patient: 'Samantha Choi', mrn: 'MRN-74563', med: 'Ativan 0.5mg PO', schedule: 'C-IV', qtyHand: 14, dispensed: 0, countBy: 'J. Torres, RN', witness: 'M. Boyd, RN', ok: true },
+              { patient: 'James Thornton', mrn: 'MRN-62841', med: 'Suboxone 12mg SL', schedule: 'C-III', qtyHand: 20, dispensed: 1, countBy: 'J. Torres, RN', witness: 'M. Boyd, RN', ok: true },
+              { patient: 'Robert Navarro', mrn: 'MRN-44782', med: 'Suboxone 8mg SL', schedule: 'C-III', qtyHand: 12, dispensed: 1, countBy: 'J. Torres, RN', witness: 'M. Boyd, RN', ok: true },
+              { patient: 'Patricia Holloway', mrn: 'MRN-48320', med: 'Librium 25mg PO', schedule: 'C-IV', qtyHand: 6, dispensed: 2, countBy: 'Pending', witness: '—', ok: false },
+              { patient: 'Elena Vasquez', mrn: 'MRN-28841', med: 'Klonopin 0.5mg PO', schedule: 'C-IV', qtyHand: 9, dispensed: 1, countBy: 'J. Torres, RN', witness: 'M. Boyd, RN', ok: true },
+            ].map(row => (
+              <tr key={row.mrn} className={`hover:bg-slate-50 ${!row.ok ? 'bg-amber-50' : ''}`}>
+                <td className="px-4 py-2.5">
+                  <div className="font-semibold text-navy text-sm">{row.patient}</div>
+                  <div className="text-[10px] text-slate font-mono">{row.mrn}</div>
+                </td>
+                <td className="px-4 py-2.5 font-medium text-navy text-sm">{row.med}</td>
+                <td className="px-4 py-2.5"><span className="text-[10px] font-bold px-1.5 py-0.5 bg-red-100 text-red-700 rounded">{row.schedule}</span></td>
+                <td className="px-4 py-2.5 font-mono font-bold text-navy">{row.qtyHand}</td>
+                <td className="px-4 py-2.5 font-mono text-navy">{row.dispensed}</td>
+                <td className="px-4 py-2.5 font-mono font-bold text-navy">{row.qtyHand - row.dispensed}</td>
+                <td className="px-4 py-2.5 text-xs text-slate">
+                  {row.ok ? (
+                    <div>{row.countBy}<div className="text-[10px] text-slate">Witness: {row.witness}</div></div>
+                  ) : (
+                    <span className="text-amber-700 font-semibold">Count required</span>
+                  )}
+                </td>
+                <td className="px-4 py-2.5">
+                  {row.ok
+                    ? <span className="text-[10px] font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full">✓ Verified</span>
+                    : <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">⚠ Pending</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="px-5 py-2 bg-gray-50 border-t border-border text-xs text-slate flex items-center justify-between">
+          <span>All counts require two-nurse witness signature per DEA CFR 21 §1304</span>
+          <span className="font-medium text-navy">Last verified: 07:12 AM — J. Torres, RN &amp; M. Boyd, RN</span>
+        </div>
+      </div>
+      </div>
+      )}
+
+      {marTab === 'PRN History' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">As-needed (PRN) medication administration history for the current shift — verifying appropriate intervals, clinical justification, and nurse documentation.</div>
+          <div className="card overflow-hidden">
+            <h3 className="font-semibold text-navy text-sm mb-3">PRN Administrations — Today</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Time</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Patient</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Medication</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Dose</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Indication</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">CIWA/COWS at Time</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Nurse</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Interval OK</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { time: '07:45', patient: 'Marcus Webb', med: 'Lorazepam (Ativan)', dose: '1mg PO', indication: 'CIWA ≥10 — anxiety/tremor', score: 'CIWA 12', nurse: 'J. Torres, RN', ok: true },
+                  { time: '08:20', patient: 'Darnell Price', med: 'Ondansetron (Zofran)', dose: '4mg ODT', indication: 'Nausea — COWS moderate', score: 'COWS 15', nurse: 'M. Boyd, RN', ok: true },
+                  { time: '09:00', patient: 'Marcus Webb', med: 'Lorazepam (Ativan)', dose: '1mg PO', indication: 'CIWA escalation — 4h interval', score: 'CIWA 14', nurse: 'J. Torres, RN', ok: false },
+                  { time: '09:30', patient: 'Keisha Brown', med: 'Ibuprofen', dose: '600mg PO', indication: 'Headache — withdrawal-related', score: 'N/A', nurse: 'M. Boyd, RN', ok: true },
+                  { time: '10:15', patient: 'Tyler Nguyen', med: 'Clonidine', dose: '0.1mg PO', indication: 'COWS ≥13 — autonomic sx', score: 'COWS 16', nurse: 'J. Torres, RN', ok: true },
+                  { time: '11:00', patient: 'Marcus Webb', med: 'Lorazepam (Ativan)', dose: '2mg PO', indication: 'CIWA threshold — MD order', score: 'CIWA 17', nurse: 'J. Torres, RN', ok: true },
+                  { time: '11:45', patient: 'Angela Morse', med: 'Acetaminophen', dose: '650mg PO', indication: 'Pain — headache, myalgia', score: 'N/A', nurse: 'M. Boyd, RN', ok: true },
+                ].map((r, i) => (
+                  <tr key={i} className={`hover:bg-gray-50 ${!r.ok ? 'bg-amber-50' : ''}`}>
+                    <td className="px-3 py-2.5 font-mono font-bold text-navy">{r.time}</td>
+                    <td className="px-3 py-2.5 font-medium text-navy">{r.patient}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.med}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.dose}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.indication}</td>
+                    <td className="px-3 py-2.5 font-semibold text-navy">{r.score}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.nurse}</td>
+                    <td className="px-3 py-2.5">
+                      {r.ok
+                        ? <span className="text-[9px] font-bold px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full">✓ OK</span>
+                        : <span className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">⚠ Review</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+              <strong>Note:</strong> 09:00 Lorazepam administration for Marcus Webb was at a 75-minute interval — Ativan PRN order requires minimum 4-hour interval unless MD overrides. Clinical supervisor notified.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {marTab === 'Allergy Registry' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Active allergy and adverse reaction registry for all current patients — cross-referenced against MAR for contraindication alerts.</div>
+          <div className="card overflow-hidden">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-navy text-sm">Patient Allergy &amp; Adverse Reaction Registry</h3>
+              <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded font-semibold">MAR Cross-Check: No Active Conflicts</span>
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Patient</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Allergen</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Reaction</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Severity</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Verified By</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">On Wristband</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { patient: 'Marcus Webb', allergen: 'Penicillin', reaction: 'Rash, urticaria', sev: 'Moderate', by: 'J. Torres, RN', band: true },
+                  { patient: 'Marcus Webb', allergen: 'Shellfish', reaction: 'GI distress', sev: 'Mild', by: 'J. Torres, RN', band: false },
+                  { patient: 'Darnell Price', allergen: 'Sulfa drugs', reaction: 'Anaphylaxis (prior)', sev: 'Severe', by: 'M. Boyd, RN', band: true },
+                  { patient: 'Keisha Brown', allergen: 'Codeine', reaction: 'Vomiting, confusion', sev: 'Moderate', by: 'J. Torres, RN', band: true },
+                  { patient: 'Tyler Nguyen', allergen: 'Latex', reaction: 'Contact dermatitis', sev: 'Mild', by: 'M. Boyd, RN', band: true },
+                  { patient: 'Angela Morse', allergen: 'NKDA', reaction: '—', sev: '—', by: 'M. Boyd, RN', band: false },
+                  { patient: 'Ronald Kim', allergen: 'Aspirin', reaction: 'Bronchospasm', sev: 'Severe', by: 'J. Torres, RN', band: true },
+                  { patient: 'Carmen Diaz', allergen: 'Haloperidol', reaction: 'Dystonic reaction', sev: 'Moderate', by: 'J. Torres, RN', band: true },
+                ].map((r, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-3 py-2.5 font-medium text-navy">{r.patient}</td>
+                    <td className="px-3 py-2.5 font-semibold text-red-700">{r.allergen}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.reaction}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.sev === 'Severe' ? 'bg-red-100 text-red-700' : r.sev === 'Moderate' ? 'bg-amber-100 text-amber-700' : r.sev === 'Mild' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-slate'}`}>{r.sev}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate">{r.by}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      {r.band ? <span className="text-green-600 font-bold">✓</span> : <span className="text-slate">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {marTab === 'Medication Errors' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Medication error and near-miss reporting log — ISMP categories, contributing factors, and corrective action tracking per Joint Commission and CARF standards.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Errors Reported (30d)', value: 2, color: 'text-amber-600', sub: 'All categories' },
+              { label: 'Near Misses (30d)', value: 4, color: 'text-blue-600', sub: 'Caught before administration' },
+              { label: 'Harm Reached Patient', value: 0, color: 'text-green-600', sub: 'No patient harm this period' },
+              { label: 'Open Corrective Actions', value: 3, color: 'text-navy', sub: 'Under active remediation' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Error & Near-Miss Log — Last 30 Days</h3>
+            <div className="space-y-3 text-xs">
+              {[
+                {
+                  date: '2026-07-14', type: 'Wrong Dose', ismp: 'Category C (reached patient, no harm)', patient: 'Patient 7A', med: 'Clonidine 0.2 mg administered instead of 0.1 mg (double dose)',
+                  discovered: 'Nurse self-report at 0830, prior to reassessment',
+                  action: 'Vital signs q1h × 4h, BP remained stable. Report filed with Medical Director. Corrective action: 2-pharmacist check on clonidine doses. Training refresher scheduled.',
+                  status: 'Closed', ok: true
+                },
+                {
+                  date: '2026-07-11', type: 'Near Miss — Omission', ismp: 'Category B (error did not reach patient)', patient: 'Patient 3B', med: 'Buprenorphine morning dose nearly omitted due to MAR transcription gap from intake paperwork',
+                  discovered: 'Charge nurse caught during pre-administration double check',
+                  action: 'MAR corrected. Intake-to-MAR transcription workflow reviewed. New check: Intake RN and Charge RN both sign MAR setup for all new admissions.',
+                  status: 'Action Pending', ok: false
+                },
+                {
+                  date: '2026-07-08', type: 'Near Miss — Wrong Patient', ismp: 'Category B (error did not reach patient)', patient: 'Patients 5A / 5C (same unit)', med: 'Lorazepam PRN nearly given to incorrect patient — similar room numbers and first names',
+                  discovered: 'Bedside barcode scan mismatch alert caught error',
+                  action: 'Barcode scanning protocol reinforced. Wristband audit completed for all patients. Corrective action: verbal name confirmation + DOB required for all PRN meds.',
+                  status: 'Closed', ok: true
+                },
+              ].map(e => (
+                <div key={e.date} className={`border rounded-xl p-3 ${!e.ok ? 'border-amber-300 bg-amber-50/30' : 'border-border'}`}>
+                  <div className="flex items-start justify-between mb-1.5">
+                    <div>
+                      <span className="font-semibold text-navy">{e.type}</span>
+                      <span className="text-slate ml-2">· {e.date} · {e.ismp}</span>
+                    </div>
+                    <span className={`shrink-0 ml-3 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${e.ok ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{e.status}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><span className="font-semibold text-slate">Medication/Event:</span> <span className="text-navy">{e.med}</span></div>
+                    <div><span className="font-semibold text-slate">Discovered:</span> <span className="text-navy">{e.discovered}</span></div>
+                    <div><span className="font-semibold text-slate">Action Taken:</span> <span className="text-navy">{e.action}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

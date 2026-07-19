@@ -57,6 +57,7 @@ import { SecureMessaging } from './pages/SecureMessaging';
 import { FormularyManagement } from './pages/FormularyManagement';
 import { RoleExplorer } from './pages/RoleExplorer';
 import { StaffAdmin } from './pages/StaffAdmin';
+import { WithdrawalMonitor } from './pages/WithdrawalMonitor';
 import { LoginPage } from './pages/LoginPage';
 import { AccessDenied } from './components/common/AccessDenied';
 import { ReadOnlyBanner } from './components/common/ReadOnlyBanner';
@@ -121,7 +122,8 @@ export type Screen =
   | 'FormularyManagement'
   | 'PatientDetail'
   | 'RoleExplorer'
-  | 'StaffAdmin';
+  | 'StaffAdmin'
+  | 'WithdrawalMonitor';
 
 // ─── Inner app (needs RoleContext) ───────────────────────────────────────────
 
@@ -164,57 +166,58 @@ function AppInner() {
       case 'Dashboard':               return withAccess('Dashboard',               <Dashboard navigate={navigateTo} />);
       case 'CensusBedBoard':          return withAccess('CensusBedBoard',          <CensusBedBoard navigate={navigateTo} />);
       case 'PatientList':             return withAccess('PatientList',             <PatientList navigate={navigateTo} />);
-      case 'PatientDetail':           return withAccess('PatientDetail',           <PatientDetail patientId={selectedPatientId} navigate={navigateTo} />);
+      case 'PatientDetail':           return withAccessReadOnlyProp('PatientDetail',           ro => <PatientDetail patientId={selectedPatientId} navigate={navigateTo} readOnly={ro} />);
       case 'ASAMAssessments':         return withAccessReadOnlyProp('ASAMAssessments',    ro => <ASAMAssessments navigate={navigateTo} readOnly={ro} />);
       case 'ProgressNotes':           return withAccessReadOnlyProp('ProgressNotes',   ro => <ProgressNotes navigate={navigateTo} readOnly={ro} />);
       case 'TreatmentPlans':          return withAccessReadOnlyProp('TreatmentPlans',  ro => <TreatmentPlans navigate={navigateTo} readOnly={ro} />);
-      case 'AppointmentCalendar':     return withAccess('AppointmentCalendar',     <AppointmentCalendar navigate={navigateTo} />);
-      case 'GroupSchedule':           return withAccess('GroupSchedule',           <GroupSchedule navigate={navigateTo} />);
+      case 'AppointmentCalendar':     return withAccessReadOnlyProp('AppointmentCalendar',     ro => <AppointmentCalendar navigate={navigateTo} readOnly={ro} />);
+      case 'GroupSchedule':           return withAccessReadOnlyProp('GroupSchedule',           ro => <GroupSchedule navigate={navigateTo} readOnly={ro} />);
       case 'RiskDashboard':           return withAccess('RiskDashboard',           <RiskDashboard navigate={navigateTo} />);
       case 'RecoveryEngagementScore': return withAccess('RecoveryEngagementScore', <RecoveryEngagementScore navigate={navigateTo} />);
-      case 'ReferralTracker':         return withAccess('ReferralTracker',         <ReferralTracker navigate={navigateTo} />);
-      case 'BedManagement':           return withAccess('BedManagement',           <BedManagement navigate={navigateTo} />);
-      case 'AuditCompliance':         return withAccess('AuditCompliance',         <AuditCompliance navigate={navigateTo} />);
+      case 'ReferralTracker':         return withAccessReadOnlyProp('ReferralTracker',         ro => <ReferralTracker navigate={navigateTo} readOnly={ro} />);
+      case 'BedManagement':           return withAccessReadOnlyProp('BedManagement',           ro => <BedManagement navigate={navigateTo} readOnly={ro} />);
+      case 'AuditCompliance':         return withAccessReadOnlyProp('AuditCompliance',         ro => <AuditCompliance navigate={navigateTo} readOnly={ro} />);
       case 'OutcomeTracking':         return withAccess('OutcomeTracking',         <OutcomeTracking navigate={navigateTo} />);
-      case 'CommandCenter':           return withAccess('CommandCenter',           <CommandCenter navigate={navigateTo} />);
-      case 'Admissions':              return withAccess('Admissions',              <Admissions navigate={navigateTo} />);
-      case 'Discharges':              return withAccess('Discharges',              <Discharges navigate={navigateTo} />);
+      case 'CommandCenter':           return withAccessReadOnlyProp('CommandCenter',           ro => <CommandCenter navigate={navigateTo} readOnly={ro} />);
+      case 'Admissions':              return withAccessReadOnlyProp('Admissions',              ro => <Admissions navigate={navigateTo} readOnly={ro} />);
+      case 'Discharges':              return withAccessReadOnlyProp('Discharges',              ro => <Discharges navigate={navigateTo} readOnly={ro} />);
       case 'ChartReview':             return withAccessReadOnlyProp('ChartReview',        ro => <ChartReview navigate={navigateTo} readOnly={ro} />);
       case 'GroupNotes':              return withAccessReadOnlyProp('GroupNotes',          ro => <GroupNotes navigate={navigateTo} readOnly={ro} />);
       case 'CosignQueue':             return withAccessReadOnlyProp('CosignQueue',         ro => <CosignQueue navigate={navigateTo} readOnly={ro} />);
-      case 'RevenueCycle':            return withAccess('RevenueCycle',            <RevenueCycle navigate={navigateTo} />);
-      case 'BusinessDevelopment':     return withAccess('BusinessDevelopment',     <BusinessDevelopment navigate={navigateTo} />);
-      case 'Training':                return withAccess('Training',                <Training navigate={navigateTo} />);
-      case 'Settings':                return withAccess('Settings',                <Settings navigate={navigateTo} />);
+      case 'RevenueCycle':            return withAccessReadOnlyProp('RevenueCycle',            ro => <RevenueCycle navigate={navigateTo} readOnly={ro} />);
+      case 'BusinessDevelopment':     return withAccessReadOnlyProp('BusinessDevelopment',     ro => <BusinessDevelopment navigate={navigateTo} readOnly={ro} />);
+      case 'Training':                return withAccessReadOnlyProp('Training',                ro => <Training navigate={navigateTo} readOnly={ro} />);
+      case 'Settings':                return withAccessReadOnlyProp('Settings',                ro => <Settings navigate={navigateTo} readOnly={ro} />);
       case 'HelpSupport':             return withAccess('HelpSupport',             <HelpSupport navigate={navigateTo} />);
-      case 'UADrugTesting':           return withAccess('UADrugTesting',           <UADrugTesting navigate={navigateTo} />);
-      case 'IncidentReporting':       return withAccess('IncidentReporting',       <IncidentReporting navigate={navigateTo} />);
-      case 'StaffScheduling':         return withAccess('StaffScheduling',         <StaffScheduling navigate={navigateTo} />);
+      case 'UADrugTesting':           return withAccessReadOnlyProp('UADrugTesting',           ro => <UADrugTesting navigate={navigateTo} readOnly={ro} />);
+      case 'IncidentReporting':       return withAccessReadOnlyProp('IncidentReporting',       ro => <IncidentReporting navigate={navigateTo} readOnly={ro} />);
+      case 'StaffScheduling':         return withAccessReadOnlyProp('StaffScheduling',         ro => <StaffScheduling navigate={navigateTo} readOnly={ro} />);
       case 'MATManagement':           return withAccessReadOnlyProp('MATManagement',   ro => <MATManagement navigate={navigateTo} readOnly={ro} />);
-      case 'FamilyEngagement':        return withAccess('FamilyEngagement',        <FamilyEngagement navigate={navigateTo} />);
+      case 'FamilyEngagement':        return withAccessReadOnlyProp('FamilyEngagement',        ro => <FamilyEngagement navigate={navigateTo} readOnly={ro} />);
       case 'PhysicianOrders':         return withAccessReadOnlyProp('PhysicianOrders', ro => <PhysicianOrders navigate={navigateTo} readOnly={ro} />);
       case 'PopulationAnalytics':     return withAccess('PopulationAnalytics',     <PopulationAnalytics navigate={navigateTo} />);
       case 'NursingMAR':              return withAccessReadOnlyProp('NursingMAR',      ro => <NursingMAR navigate={navigateTo} readOnly={ro} />);
-      case 'ShiftHandoff':            return withAccess('ShiftHandoff',            <ShiftHandoff navigate={navigateTo} />);
-      case 'QualityImprovement':      return withAccess('QualityImprovement',      <QualityImprovement navigate={navigateTo} />);
-      case 'InsuranceAuthorization':  return withAccess('InsuranceAuthorization',  <InsuranceAuthorization navigate={navigateTo} />);
-      case 'AftercarePlanning':       return withAccess('AftercarePlanning',       <AftercarePlanning navigate={navigateTo} />);
-      case 'MyCaseload':              return withAccess('MyCaseload',              <MyCaseload navigate={navigateTo} />);
+      case 'ShiftHandoff':            return withAccessReadOnlyProp('ShiftHandoff',            ro => <ShiftHandoff navigate={navigateTo} readOnly={ro} />);
+      case 'QualityImprovement':      return withAccessReadOnlyProp('QualityImprovement',      ro => <QualityImprovement navigate={navigateTo} readOnly={ro} />);
+      case 'InsuranceAuthorization':  return withAccessReadOnlyProp('InsuranceAuthorization',  ro => <InsuranceAuthorization navigate={navigateTo} readOnly={ro} />);
+      case 'AftercarePlanning':       return withAccessReadOnlyProp('AftercarePlanning',       ro => <AftercarePlanning navigate={navigateTo} readOnly={ro} />);
+      case 'MyCaseload':              return withAccessReadOnlyProp('MyCaseload',              ro => <MyCaseload navigate={navigateTo} readOnly={ro} />);
       case 'BiopsychosocialAssessment': return withAccessReadOnlyProp('BiopsychosocialAssessment', ro => <BiopsychosocialAssessment navigate={navigateTo} readOnly={ro} />);
-      case 'DischargeSummary':        return withAccess('DischargeSummary',        <DischargeSummary navigate={navigateTo} />);
-      case 'CrisisAssessment':        return withAccess('CrisisAssessment',        <CrisisAssessment navigate={navigateTo} />);
-      case 'AlumniProgram':           return withAccess('AlumniProgram',           <AlumniProgram navigate={navigateTo} />);
-      case 'TelehealthConsults':      return withAccess('TelehealthConsults',      <TelehealthConsults navigate={navigateTo} />);
-      case 'ClinicalSupervision':     return withAccess('ClinicalSupervision',     <ClinicalSupervision navigate={navigateTo} />);
-      case 'MedicalRecords':          return withAccess('MedicalRecords',          <MedicalRecords navigate={navigateTo} />);
-      case 'PeerSupport':             return withAccess('PeerSupport',             <PeerSupport navigate={navigateTo} />);
-      case 'FinancialCounseling':     return withAccess('FinancialCounseling',     <FinancialCounseling navigate={navigateTo} />);
-      case 'GroupTherapyCurriculum':  return withAccess('GroupTherapyCurriculum',  <GroupTherapyCurriculum navigate={navigateTo} />);
-      case 'CertificationTracker':    return withAccess('CertificationTracker',    <CertificationTracker navigate={navigateTo} />);
-      case 'WaitlistManager':         return withAccess('WaitlistManager',         <WaitlistManager navigate={navigateTo} />);
-      case 'SecureMessaging':         return withAccess('SecureMessaging',         <SecureMessaging navigate={navigateTo} />);
+      case 'DischargeSummary':        return withAccessReadOnlyProp('DischargeSummary',        ro => <DischargeSummary navigate={navigateTo} readOnly={ro} />);
+      case 'CrisisAssessment':        return withAccessReadOnlyProp('CrisisAssessment',        ro => <CrisisAssessment navigate={navigateTo} readOnly={ro} />);
+      case 'AlumniProgram':           return withAccessReadOnlyProp('AlumniProgram',           ro => <AlumniProgram navigate={navigateTo} readOnly={ro} />);
+      case 'TelehealthConsults':      return withAccessReadOnlyProp('TelehealthConsults',      ro => <TelehealthConsults navigate={navigateTo} readOnly={ro} />);
+      case 'ClinicalSupervision':     return withAccessReadOnlyProp('ClinicalSupervision',     ro => <ClinicalSupervision navigate={navigateTo} readOnly={ro} />);
+      case 'MedicalRecords':          return withAccessReadOnlyProp('MedicalRecords',          ro => <MedicalRecords navigate={navigateTo} readOnly={ro} />);
+      case 'PeerSupport':             return withAccessReadOnlyProp('PeerSupport',             ro => <PeerSupport navigate={navigateTo} readOnly={ro} />);
+      case 'FinancialCounseling':     return withAccessReadOnlyProp('FinancialCounseling',     ro => <FinancialCounseling navigate={navigateTo} readOnly={ro} />);
+      case 'GroupTherapyCurriculum':  return withAccessReadOnlyProp('GroupTherapyCurriculum',  ro => <GroupTherapyCurriculum navigate={navigateTo} readOnly={ro} />);
+      case 'CertificationTracker':    return withAccessReadOnlyProp('CertificationTracker',    ro => <CertificationTracker navigate={navigateTo} readOnly={ro} />);
+      case 'WaitlistManager':         return withAccessReadOnlyProp('WaitlistManager',         ro => <WaitlistManager navigate={navigateTo} readOnly={ro} />);
+      case 'SecureMessaging':         return withAccessReadOnlyProp('SecureMessaging',         ro => <SecureMessaging navigate={navigateTo} readOnly={ro} />);
       case 'FormularyManagement':     return withAccess('FormularyManagement',     <FormularyManagement navigate={navigateTo} />);
       case 'StaffAdmin':              return <StaffAdmin navigate={navigateTo} />;
+      case 'WithdrawalMonitor':       return withAccessReadOnlyProp('WithdrawalMonitor', ro => <WithdrawalMonitor navigate={navigateTo} readOnly={ro} />);
       case 'RoleExplorer':            return <RoleExplorer navigate={navigateTo} />;
       default:
         return (

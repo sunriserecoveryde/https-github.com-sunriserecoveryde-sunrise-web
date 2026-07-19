@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   FlatList,
   Platform,
@@ -11,9 +11,30 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { RESIDENTIAL_PATIENTS, MEDICATIONS, Patient, Medication } from '@/data/mockData';
+
+// ── Persistence helpers ────────────────────────────────────────────────────
+
+// Demo date key — in production this would be today's actual date so
+// the MAR resets each shift day automatically.
+const DEMO_DATE = '2026-07-19';
+const MAR_KEY   = `@sunrise_mar_${DEMO_DATE}`;
+const CHECKS_KEY = `@sunrise_checks_${DEMO_DATE}`;
+
+async function loadFromStorage<T>(key: string, fallback: T): Promise<T> {
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    if (raw !== null) return JSON.parse(raw) as T;
+  } catch { /* ignore parse errors */ }
+  return fallback;
+}
+
+async function saveToStorage<T>(key: string, value: T): Promise<void> {
+  try { await AsyncStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
+}
 
 // ── MAR (Nursing) ──────────────────────────────────────────────────────────
 
@@ -146,6 +167,20 @@ function MARView() {
   const colors = useColors();
   const [adminMap, setAdminMap] = useState<AdminMap>({});
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['p1', 'p4', 'p8']));
+  const [loaded, setLoaded] = useState(false);
+
+  // Load persisted MAR state on mount
+  useEffect(() => {
+    loadFromStorage<AdminMap>(MAR_KEY, {}).then(saved => {
+      setAdminMap(saved);
+      setLoaded(true);
+    });
+  }, []);
+
+  // Persist adminMap whenever it changes (after initial load)
+  useEffect(() => {
+    if (loaded) saveToStorage(MAR_KEY, adminMap);
+  }, [adminMap, loaded]);
 
   function handleToggle(patientId: string, medId: string, time: string) {
     const key = `${medId}-${time}`;
@@ -316,9 +351,24 @@ function PatientCheckCard({ patient, check, onChange }: {
 function ChecksView() {
   const colors = useColors();
   const defaultCheck: CheckEntry = { mood: 5, cravings: 5, oriented: true, uaCollected: false, completed: false };
-  const [checks, setChecks] = useState<Record<string, CheckEntry>>(
-    Object.fromEntries(RESIDENTIAL_PATIENTS.map(p => [p.id, { ...defaultCheck }]))
-  );
+  const defaultChecks = Object.fromEntries(RESIDENTIAL_PATIENTS.map(p => [p.id, { ...defaultCheck }]));
+  const [checks, setChecks] = useState<Record<string, CheckEntry>>(defaultChecks);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load persisted BHT check-in state on mount
+  useEffect(() => {
+    loadFromStorage<Record<string, CheckEntry>>(CHECKS_KEY, defaultChecks).then(saved => {
+      // Merge: ensure any new patients get a default entry
+      const merged = { ...defaultChecks, ...saved };
+      setChecks(merged);
+      setLoaded(true);
+    });
+  }, []);
+
+  // Persist checks whenever they change (after initial load)
+  useEffect(() => {
+    if (loaded) saveToStorage(CHECKS_KEY, checks);
+  }, [checks, loaded]);
 
   const completedCount = Object.values(checks).filter(c => c.completed).length;
 

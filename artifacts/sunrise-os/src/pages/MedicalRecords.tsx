@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, Plus, Eye, Download, Lock, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type ROIStatus = 'Pending' | 'Active' | 'Expired' | 'Revoked' | 'Fulfilled' | 'Denied';
 type ROIType = 'Outgoing' | 'Incoming';
@@ -122,8 +123,8 @@ const STATUS_STYLE: Record<ROIStatus, string> = {
   'Denied':    'bg-red-200 text-red-800',
 };
 
-export function MedicalRecords({ navigate }: Props) {
-  const [tab, setTab] = useState<'ROI Queue' | 'New Request' | 'Audit Log' | '42 CFR Guide'>('ROI Queue');
+export function MedicalRecords({ navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'ROI Queue' | 'New Request' | 'Audit Log' | '42 CFR Guide' | 'Record Stats' | 'HIPAA Reference'>('ROI Queue');
   const [expandedROI, setExpandedROI] = useState<string | null>('ROI-001');
   const [filterStatus, setFilterStatus] = useState<ROIStatus | 'All'>('All');
 
@@ -143,9 +144,9 @@ export function MedicalRecords({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Medical Records & ROI</h1>
           <p className="text-slate text-sm mt-0.5">Release of Information · 42 CFR Part 2 compliance · Audit trail</p>
         </div>
-        <button onClick={() => setTab('New Request')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+        <LockedButton locked={readOnly} onClick={() => !readOnly && setTab('New Request')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
           <Plus className="w-4 h-4" /> New ROI Request
-        </button>
+        </LockedButton>
       </div>
 
       <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3">
@@ -172,7 +173,7 @@ export function MedicalRecords({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['ROI Queue', 'New Request', 'Audit Log', '42 CFR Guide'] as const).map(t => (
+        {(['ROI Queue', 'New Request', 'Audit Log', '42 CFR Guide', 'Record Stats', 'HIPAA Reference'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -302,7 +303,7 @@ export function MedicalRecords({ navigate }: Props) {
               <Lock className="w-4 h-4 shrink-0 mt-0.5" />
               <span>If "Substance Abuse Records (42 CFR)" is selected, a 42 CFR-compliant Notice to Accompany will be automatically generated with the records. Consent must specify this is an addiction treatment record per 42 CFR Part 2.</span>
             </div>
-            <button className="btn-primary text-sm px-5 py-2">Create ROI Request</button>
+            <LockedButton locked={readOnly} onClick={() => {}} className="btn-primary text-sm px-5 py-2">Create ROI Request</LockedButton>
           </div>
         </div>
       )}
@@ -368,6 +369,140 @@ export function MedicalRecords({ navigate }: Props) {
               </ul>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'Record Stats' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Medical records department metrics — ROI volume, processing time, compliance rates, and 42 CFR adherence indicators.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Total ROIs (30d)', value: 48, color: 'text-navy', sub: '↑ 14% vs prior month' },
+              { label: 'Avg Processing Time', value: '2.3d', color: 'text-blue-600', sub: 'Target: ≤5 business days' },
+              { label: '42 CFR Compliance', value: '100%', color: 'text-green-600', sub: 'All disclosures tracked' },
+              { label: 'Pending > 5 Days', value: 1, color: 'text-amber-600', sub: 'Flagged for follow-up' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">ROI Volume by Request Type</h3>
+              <div className="space-y-2.5 text-xs">
+                {[
+                  { type: 'Continuing Care / Other Tx Provider', count: 18, pct: 38, color: 'bg-blue-500' },
+                  { type: 'Patient Self-Request', count: 12, pct: 25, color: 'bg-teal-500' },
+                  { type: 'Insurance / Prior Authorization', count: 9, pct: 19, color: 'bg-purple-500' },
+                  { type: 'Legal / Court Order', count: 6, pct: 13, color: 'bg-amber-500' },
+                  { type: 'Other (Research / Academic)', count: 3, pct: 6, color: 'bg-gray-400' },
+                ].map(r => (
+                  <div key={r.type}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{r.type}</span>
+                      <span className="font-semibold text-navy">{r.count} ({r.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct * 2}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">42 CFR Part 2 Disclosure Log — This Month</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-slate">
+                    <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Category</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Disclosures</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Consent on File</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { cat: 'Authorized Tx Provider', count: 18, consent: '100%', ok: true },
+                    { cat: 'Patient Self-Authorized', count: 12, consent: '100%', ok: true },
+                    { cat: 'Insurance (w/ patient consent)', count: 9, consent: '100%', ok: true },
+                    { cat: 'Court Order (judicial mandate)', count: 6, consent: 'Court order', ok: true },
+                    { cat: 'Medical Emergency Exception', count: 1, consent: 'Documented', ok: true },
+                    { cat: 'Research / Academic', count: 3, consent: '100%', ok: true },
+                  ].map(r => (
+                    <tr key={r.cat} className="hover:bg-gray-50">
+                      <td className="py-2 text-navy font-medium">{r.cat}</td>
+                      <td className="py-2 text-center text-slate">{r.count}</td>
+                      <td className="py-2 text-center text-slate">{r.consent}</td>
+                      <td className="py-2 text-center">
+                        <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">✓ Compliant</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'HIPAA Reference' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">HIPAA Privacy Rule and 42 CFR Part 2 quick reference — staff training aid covering permitted disclosures, patient rights, breach notification, and SUD-specific confidentiality rules.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">HIPAA — Permitted Disclosures Without Authorization</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { perm: 'Treatment, Payment, and Operations (TPO)', detail: 'Sharing PHI with providers involved in patient care, payers for billing, and internal operations (QI, training, audits).' },
+                  { perm: 'Imminent Danger to Self or Others', detail: 'Disclosure to law enforcement or emergency services when a patient poses a credible, imminent threat. Document the basis.' },
+                  { perm: 'Mandatory Reporting — Child Abuse/Neglect', detail: 'TN mandatory reporters (all clinical staff) must report suspected child abuse/neglect to DCS regardless of confidentiality.' },
+                  { perm: 'Public Health Activities', detail: 'Disclosures to public health agencies for disease surveillance, vital statistics (birth/death), and reportable communicable diseases.' },
+                  { perm: 'Coroner / Medical Examiner', detail: 'PHI may be disclosed to coroners for death investigation without patient authorization.' },
+                  { perm: 'Law Enforcement (limited)', detail: 'Limited info to locate missing persons, identify suspects (by description), or respond to court order. Note: 42 CFR Part 2 restrictions apply to SUD records.' },
+                ].map(d => (
+                  <div key={d.perm} className="border border-border rounded-lg p-2.5">
+                    <div className="font-semibold text-navy mb-0.5">{d.perm}</div>
+                    <div className="text-slate">{d.detail}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">42 CFR Part 2 — SUD Records (Stricter Than HIPAA)</h3>
+                <div className="space-y-2 text-xs">
+                  <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-800 font-medium">42 CFR Part 2 applies to all Sunrise patient records because we are a federally assisted SUD program.</div>
+                  {[
+                    { rule: 'General rule', detail: 'No disclosure without written patient consent (Form 2.31 or equivalent) — even to other treating providers unless consent covers them.' },
+                    { rule: 'Court order exception', detail: 'Court subpoena alone is NOT sufficient — requires a separate court order specifically authorizing disclosure of SUD records.' },
+                    { rule: 'Criminal proceedings', detail: 'SUD records CANNOT be used as evidence in any criminal proceeding against the patient without a 42 CFR–compliant court order.' },
+                    { rule: 'Medical emergency', detail: 'Disclosure permitted to medical personnel to treat immediate medical emergency — document basis and notify patient.' },
+                    { rule: '2020 CARES Act update', detail: 'Permitted 42 CFR records to be shared with other treating providers under a valid patient consent for integrated care, aligning more closely with HIPAA TPO.' },
+                  ].map(r => (
+                    <div key={r.rule} className="flex gap-2 text-xs">
+                      <span className="font-bold text-amber-700 shrink-0 min-w-[120px]">{r.rule}:</span>
+                      <span className="text-navy">{r.detail}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Breach Notification Requirements</h3>
+                <div className="space-y-1.5 text-xs text-navy">
+                  <div><span className="font-bold text-slate">Individual notification:</span> Within 60 days of breach discovery</div>
+                  <div><span className="font-bold text-slate">HHS notification:</span> Within 60 days (same 60-day rule)</div>
+                  <div><span className="font-bold text-slate">Media notification:</span> Required if breach affects ≥500 residents of a state/jurisdiction</div>
+                  <div><span className="font-bold text-slate">Sunrise Privacy Officer:</span> Notify immediately upon discovery — do not delay pending investigation</div>
+                  <div><span className="font-bold text-slate">Document:</span> What happened, date of breach, what PHI was involved, who was affected, steps taken</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

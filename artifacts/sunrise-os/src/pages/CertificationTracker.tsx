@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { CheckCircle, AlertTriangle, Clock, XCircle, Plus, Award, Calendar, ExternalLink } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type CertStatus = 'Current' | 'Expiring Soon' | 'Expired' | 'Pending Renewal' | 'In Progress';
 type CertType = 'License' | 'Certification' | 'CEU' | 'Training';
@@ -130,8 +131,8 @@ const getCredentialStatus = (c: Credential): CertStatus => {
   return c.status;
 };
 
-export function CertificationTracker({ navigate: _navigate }: Props) {
-  const [tab, setTab] = useState<'Dashboard' | 'Staff' | 'Upcoming' | 'CEU Tracker'>('Dashboard');
+export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Dashboard' | 'Staff' | 'Upcoming' | 'CEU Tracker' | 'Licensure Board' | 'Renewal Planner'>('Dashboard');
   const [selectedStaff, setSelectedStaff] = useState<string>('SC-001');
 
   const allCreds = STAFF_CREDENTIALS.flatMap(s => s.credentials.map(c => ({ ...c, staff: s })));
@@ -155,7 +156,7 @@ export function CertificationTracker({ navigate: _navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Certification Tracker</h1>
           <p className="text-slate text-sm mt-0.5">Staff licenses · Certifications · CEU tracking · CARF credentialing compliance</p>
         </div>
-        <button className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Add Credential</button>
+        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Add Credential</LockedButton>
       </div>
 
       {(expiredCreds.length > 0 || expiringSoon.length > 0) && (
@@ -188,7 +189,7 @@ export function CertificationTracker({ navigate: _navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Dashboard', 'Staff', 'Upcoming', 'CEU Tracker'] as const).map(t => (
+        {(['Dashboard', 'Staff', 'Upcoming', 'CEU Tracker', 'Licensure Board', 'Renewal Planner'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -372,6 +373,171 @@ export function CertificationTracker({ navigate: _navigate }: Props) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {tab === 'Licensure Board' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Active state licensure board tracking — renewal deadlines, CE requirements, and disciplinary status for all credentialed clinical staff.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Active Licensed Staff', value: 12, sub: 'All programs', color: 'text-navy' },
+              { label: 'Renewals This Quarter', value: 3, sub: 'Due Q3 2026', color: 'text-amber-600' },
+              { label: 'Board Complaints (12m)', value: 0, sub: 'Facility-wide', color: 'text-green-600' },
+              { label: 'Supervisions On File', value: 8, sub: 'Active supervisees', color: 'text-blue-600' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card p-0 overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm">Clinical Staff — Licensure Status</div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-bg text-slate">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Staff Member</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">License</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">License #</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">State</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Issued</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Expires</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">CE Required</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'Sarah Jenkins', license: 'LPC', num: 'TN-LPC-4421', state: 'TN', issued: '2020-05-01', expires: '2026-11-30', ce: '40 hrs/2yr', status: 'Active' },
+                  { name: 'David Odom', license: 'LMFT', num: 'TN-LMFT-1882', state: 'TN', issued: '2019-09-01', expires: '2026-09-01', ce: '24 hrs/2yr', status: 'Due Q3' },
+                  { name: 'Maria Gonzales', license: 'LCSW', num: 'TN-LCSW-7714', state: 'TN', issued: '2021-01-01', expires: '2027-01-01', ce: '30 hrs/2yr', status: 'Active' },
+                  { name: 'Dr. Robert Chen', license: 'MD', num: 'TN-MD-28841', state: 'TN', issued: '2015-06-01', expires: '2027-06-01', ce: 'CME 40 hrs/yr', status: 'Active' },
+                  { name: 'Dr. Allen Hughes', license: 'MD', num: 'TN-MD-31209', state: 'TN', issued: '2018-03-01', expires: '2027-03-01', ce: 'CME 40 hrs/yr', status: 'Active' },
+                  { name: 'Jessica Torres', license: 'RN', num: 'TN-RN-88421', state: 'TN', issued: '2020-08-01', expires: '2026-08-01', ce: '5 hrs/2yr', status: 'Due Q3' },
+                  { name: 'Michael Boyd', license: 'RN', num: 'TN-RN-91104', state: 'TN', issued: '2022-01-01', expires: '2027-01-01', ce: '5 hrs/2yr', status: 'Active' },
+                  { name: 'Dr. James Carter', license: 'PhD / CADC-III', num: 'TN-PHD-1043', state: 'TN', issued: '2017-12-01', expires: '2026-12-01', ce: '40 hrs/2yr', status: 'Active' },
+                  { name: 'Marcus Thompson (PSS)', license: 'CPRS', num: 'TN-CPRS-5521', state: 'TN', issued: '2023-03-01', expires: '2025-03-01', ce: '20 hrs/2yr', status: 'Renewal Overdue' },
+                ].map(r => (
+                  <tr key={r.name} className={`hover:bg-gray-50 ${r.status === 'Renewal Overdue' ? 'bg-red-50/40' : r.status === 'Due Q3' ? 'bg-amber-50/30' : ''}`}>
+                    <td className="px-4 py-2.5 font-medium text-navy">{r.name}</td>
+                    <td className="px-3 py-2.5 text-center font-bold text-slate">{r.license}</td>
+                    <td className="px-3 py-2.5 text-center font-mono text-slate text-[10px]">{r.num}</td>
+                    <td className="px-3 py-2.5 text-center text-slate">{r.state}</td>
+                    <td className="px-3 py-2.5 text-center text-slate">{r.issued}</td>
+                    <td className="px-3 py-2.5 text-center text-slate">{r.expires}</td>
+                    <td className="px-3 py-2.5 text-center text-slate">{r.ce}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${r.status === 'Active' ? 'bg-green-100 text-green-700' : r.status === 'Due Q3' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{r.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Clinical Supervision Agreements on File</h3>
+            <div className="space-y-3">
+              {[
+                { supervisee: 'Sandra Kim, LPCA', supervisor: 'Sarah Jenkins, LPC', goal: 'Full LPC licensure', hours: 1240, required: 2000, started: '2024-09-01' },
+                { supervisee: 'Devon Ramos, LMSW', supervisor: 'Maria Gonzales, LCSW', goal: 'Full LCSW licensure', hours: 890, required: 2000, started: '2025-01-15' },
+                { supervisee: 'Priya Mehta, LAMFT', supervisor: 'David Odom, LMFT', goal: 'Full LMFT licensure', hours: 650, required: 3000, started: '2025-03-01' },
+              ].map(s => (
+                <div key={s.supervisee} className="border border-border rounded-lg p-3 flex items-center gap-4">
+                  <div className="flex-1">
+                    <div className="font-medium text-navy text-sm">{s.supervisee} → supervised by {s.supervisor}</div>
+                    <div className="text-xs text-slate mt-0.5">Goal: {s.goal} · Started {s.started}</div>
+                  </div>
+                  <div className="text-right text-xs">
+                    <div className="font-bold text-navy">{s.hours}/{s.required} hrs</div>
+                    <div className="text-slate">{Math.round((s.hours/s.required)*100)}% complete</div>
+                    <div className="w-24 h-1.5 bg-gray-100 rounded-full mt-1">
+                      <div className="h-1.5 bg-blue-500 rounded-full" style={{ width: `${Math.round((s.hours/s.required)*100)}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Renewal Planner' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Structured renewal planning tool — generates individualized CEU completion roadmaps for staff with upcoming certification expirations.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Renewals Due (6 months)', value: 5, color: 'text-amber-600', sub: 'Across clinical + nursing staff' },
+              { label: 'CEU Hours Still Needed', value: 82, color: 'text-red-600', sub: 'Total across all staff due' },
+              { label: 'Approved CEU Sources', value: 14, color: 'text-navy', sub: 'On Sunrise approved vendor list' },
+              { label: 'Budget Available (CEU)', value: '$4,800', color: 'text-green-600', sub: 'FY2026 remaining' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Individualized Renewal Roadmaps — Next 6 Months</h3>
+            <div className="space-y-4 text-xs">
+              {[
+                {
+                  name: 'A. Brooks, LPC', cert: 'TN LPC License', expiry: '2026-09-30', board: 'MHSAB', needed: 20, done: 12, remaining: 8,
+                  plan: [
+                    { source: 'AAMFT Online CE — Ethics (3 CEU)', date: 'Jul 2026', cost: '$49', approved: true },
+                    { source: 'NAADAC Trauma-Informed Care Workshop (5 CEU)', date: 'Aug 2026', cost: '$89', approved: true },
+                    { source: 'SAMHSA TIP-63 Online Training Series (2 CEU)', date: 'Sep 2026', cost: 'Free', approved: true },
+                  ]
+                },
+                {
+                  name: 'K. Santos, RN', cert: 'TN RN License', expiry: '2026-09-30', board: 'TN BON', needed: 30, done: 14, remaining: 16,
+                  plan: [
+                    { source: 'ANA MedSurg Nursing Review (6 CEU)', date: 'Jul 2026', cost: '$79', approved: true },
+                    { source: 'CE4Nurses Psychiatric/Mental Health Module (5 CEU)', date: 'Aug 2026', cost: '$45', approved: true },
+                    { source: 'NAPNES Pharmacology Update (5 CEU)', date: 'Aug 2026', cost: '$55', approved: true },
+                  ]
+                },
+                {
+                  name: 'T. Jackson, CADC', cert: 'CADC Certification', expiry: '2026-11-15', board: 'NAADAC', needed: 40, done: 27, remaining: 13,
+                  plan: [
+                    { source: 'NAADAC Annual Conference Sessions (8 CEU)', date: 'Oct 2026', cost: '$249', approved: true },
+                    { source: 'ATTC Motivational Interviewing Training (5 CEU)', date: 'Sep 2026', cost: '$75', approved: true },
+                  ]
+                },
+              ].map(s => (
+                <div key={s.name} className="border border-border rounded-xl overflow-hidden">
+                  <div className="px-4 py-2.5 bg-gray-50 border-b border-border flex items-center justify-between">
+                    <div className="font-semibold text-navy">{s.name} — <span className="text-slate font-normal">{s.cert}</span></div>
+                    <div className="flex items-center gap-4 text-slate text-[10px]">
+                      <span>Expires: <strong className="text-amber-700">{s.expiry}</strong></span>
+                      <span>Board: {s.board}</span>
+                      <span>Progress: <strong className="text-navy">{s.done}/{s.needed} CEU ({s.remaining} remaining)</strong></span>
+                    </div>
+                  </div>
+                  <div className="p-3 space-y-1.5">
+                    {s.plan.map(p => (
+                      <div key={p.source} className="flex items-center justify-between border border-border rounded p-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-500">✓</span>
+                          <span className="text-navy">{p.source}</span>
+                        </div>
+                        <div className="flex gap-4 text-slate shrink-0 ml-3">
+                          <span>{p.date}</span>
+                          <span className="font-semibold text-navy">{p.cost}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

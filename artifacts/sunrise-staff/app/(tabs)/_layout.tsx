@@ -21,6 +21,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: 'pill', selected: 'pill.fill' }} />
         <Label>{role === 'nursing' ? 'MAR' : 'Checks'}</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="vitals">
+        <Icon sf={{ default: 'waveform.path.ecg', selected: 'waveform.path.ecg' }} />
+        <Label>Scores</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="handoff">
         <Icon sf={{ default: 'arrow.left.arrow.right', selected: 'arrow.left.arrow.right' }} />
         <Label>Handoff</Label>
@@ -92,6 +96,18 @@ function ClassicTabLayout() {
               <SymbolView name="pill" tintColor={color} size={22} />
             ) : (
               <Ionicons name="medical-outline" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="vitals"
+        options={{
+          title: 'Scores',
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="waveform.path.ecg" tintColor={color} size={22} />
+            ) : (
+              <Ionicons name="pulse-outline" size={22} color={color} />
             ),
         }}
       />

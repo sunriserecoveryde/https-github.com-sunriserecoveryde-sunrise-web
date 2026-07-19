@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { CheckCircle, Clock, AlertTriangle, Plus, ChevronDown, ChevronUp, Star, TrendingUp, Award } from 'lucide-react';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type SuperviseeRole = 'LPC-Associate' | 'LCSW-Associate' | 'CADC-I' | 'CADC-II' | 'BHT';
 type NoteStatus = 'Draft' | 'Signed' | 'Co-signed' | 'Pending Review';
@@ -116,8 +117,8 @@ const PRODUCTIVITY_DATA = [
   { name: 'Aisha T.', notes: 16, cosigns: 15, groups: 7, missed: 0 },
 ];
 
-export function ClinicalSupervision({ navigate: _navigate }: Props) {
-  const [tab, setTab] = useState<'Overview' | 'Individual' | 'Group' | 'Productivity'>('Overview');
+export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Overview' | 'Individual' | 'Group' | 'Productivity' | 'Supervisor Notes' | 'Competency Eval'>('Overview');
   const [selectedSupervisee, setSelectedSupervisee] = useState<string>('SV-001');
   const [expandedNote, setExpandedNote] = useState<string | null>('SN-001');
 
@@ -137,9 +138,9 @@ export function ClinicalSupervision({ navigate: _navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Clinical Supervision</h1>
           <p className="text-slate text-sm mt-0.5">Supervision notes · Competency tracking · CARF supervision compliance</p>
         </div>
-        <button className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
           <Plus className="w-4 h-4" /> New Supervision Note
-        </button>
+        </LockedButton>
       </div>
 
       {overdueSupervision.length > 0 && (
@@ -170,7 +171,7 @@ export function ClinicalSupervision({ navigate: _navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Overview', 'Individual', 'Group', 'Productivity'] as const).map(t => (
+        {(['Overview', 'Individual', 'Group', 'Productivity', 'Supervisor Notes', 'Competency Eval'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -316,7 +317,7 @@ export function ClinicalSupervision({ navigate: _navigate }: Props) {
                     {gs.attendees.map(a => <span key={a} className="text-[10px] bg-navy/10 text-navy px-2 py-0.5 rounded-full">{a}</span>)}
                   </div>
                 </div>
-                {gs.status === 'Upcoming' && <button className="btn-primary text-xs px-3 py-1.5">Add to Calendar</button>}
+                {gs.status === 'Upcoming' && <LockedButton locked={readOnly} className="btn-primary text-xs px-3 py-1.5">Add to Calendar</LockedButton>}
               </div>
             </div>
           ))}
@@ -365,6 +366,178 @@ export function ClinicalSupervision({ navigate: _navigate }: Props) {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Supervisor Notes' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Confidential supervision notes maintained by the Clinical Director. Accessible only to supervisors and the supervisee per licensure board standards.</div>
+
+          {[
+            {
+              supervisee: 'Sarah Jenkins, LPC',
+              credential: 'LPC · CADC-II · 6 yrs exp',
+              supervisor: 'Dr. James Carter, PhD',
+              date: '2026-07-14',
+              type: 'Individual Supervision',
+              rating: 5,
+              focus: ['Documentation quality', 'Transference in group settings'],
+              strengths: 'Exceptional therapeutic alliance with high-acuity patients. Documentation is consistently thorough and timely. Demonstrates strong insight in processing countertransference during supervision.',
+              growth: 'Continue developing advanced group facilitation skills for higher-acuity populations. Explore supervision of interns as a professional development goal for Q4.',
+              plan: 'Assign as lead facilitator for new DBT-ST group launching Aug 1. Pair with Maria Chen for peer observation.',
+              hours: { individual: 1, group: 0.5, total: 1.5 },
+            },
+            {
+              supervisee: 'David Odom, LMFT',
+              credential: 'LMFT · CADC-I · 4 yrs exp',
+              supervisor: 'Dr. James Carter, PhD',
+              date: '2026-07-10',
+              type: 'Individual Supervision',
+              rating: 4,
+              focus: ['Family systems interventions', 'HIPAA/42 CFR documentation'],
+              strengths: 'Strong family therapy skills. Excellent engagement with family members during visitation sessions. Innovative with group curriculum topics.',
+              growth: '42 CFR Part 2 consent documentation needs to be more explicit in the chart. Reviewed the consent form structure. One note lacked proper disclosure language — corrected.',
+              plan: 'Complete 42 CFR refresher module by July 31. Attend compliance training July 25.',
+              hours: { individual: 1, group: 0, total: 1 },
+            },
+            {
+              supervisee: 'Maria Chen, LSW',
+              credential: 'LSW (toward LCSW) · 2 yrs exp',
+              supervisor: 'Sarah Jenkins, LPC',
+              date: '2026-07-12',
+              type: 'Individual Supervision',
+              rating: 4,
+              focus: ['Suicide risk assessment', 'Use of self in session'],
+              strengths: 'Rapid professional growth since January. Demonstrates solid clinical reasoning. Patients frequently report feeling genuinely heard. Accurate CIWA/COWS scoring.',
+              growth: 'Safety planning documentation needs to be more specific — collaboratively constructed rather than checklist-style. Reviewed Columbia Suicide Severity Rating Scale.',
+              plan: 'Shadow Dr. Stone for one psychiatric evaluation before Aug 1. Present a case in August group supervision.',
+              hours: { individual: 1, group: 0.5, total: 1.5 },
+            },
+          ].map(note => (
+            <div key={note.supervisee} className="card">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-navy">{note.supervisee}</h3>
+                    <span className="text-xs text-slate">{note.credential}</span>
+                  </div>
+                  <div className="text-xs text-slate mt-0.5">{note.type} · {note.date} · Supervisor: {note.supervisor}</div>
+                </div>
+                <div className="flex gap-0.5">{Array.from({ length: 5 }).map((_, i) => <span key={i} className={`text-base ${i < note.rating ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>)}</div>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {note.focus.map(f => <span key={f} className="text-[10px] bg-navy/10 text-navy px-2 py-0.5 rounded-full font-medium">{f}</span>)}
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 text-xs mb-3">
+                <div className="bg-green-50 rounded-lg p-3">
+                  <div className="font-bold text-green-700 mb-1">✓ Strengths Observed</div>
+                  <p className="text-green-800 leading-relaxed">{note.strengths}</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-3">
+                  <div className="font-bold text-amber-700 mb-1">↗ Growth Areas</div>
+                  <p className="text-amber-800 leading-relaxed">{note.growth}</p>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <div className="font-bold text-blue-700 mb-1">📋 Development Plan</div>
+                  <p className="text-blue-800 leading-relaxed">{note.plan}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs border-t border-border pt-3">
+                <div className="flex gap-4 text-slate">
+                  <span>Individual hrs: <span className="font-bold text-navy">{note.hours.individual}</span></span>
+                  <span>Group hrs: <span className="font-bold text-navy">{note.hours.group}</span></span>
+                  <span>Total hrs this session: <span className="font-bold text-navy">{note.hours.total}</span></span>
+                </div>
+                <div className="flex gap-2">
+                  <button className="text-xs border border-border text-slate px-3 py-1 rounded hover:bg-gray-50">View History</button>
+                  <LockedButton locked={readOnly} className="text-xs btn-primary px-3 py-1">Add Note</LockedButton>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'Competency Eval' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Annual and probationary clinical competency evaluations — domain scores, supervisor ratings, and professional development plans.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Evals Completed (YTD)', value: 11, color: 'text-navy', sub: 'Of 13 scheduled' },
+              { label: 'Avg Overall Score', value: '87/100', color: 'text-green-600', sub: 'Meets/Exceeds standard' },
+              { label: 'Staff Requiring PIP', value: 1, color: 'text-amber-600', sub: 'Performance Improvement Plan' },
+              { label: 'Evals Overdue', value: 2, color: 'text-red-600', sub: 'Scheduled — not completed' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Competency Domain Scores — Staff Average</h3>
+            <div className="space-y-2.5 text-xs">
+              {[
+                { domain: 'Clinical Documentation & Timeliness', score: 84, max: 100, color: 'bg-blue-500' },
+                { domain: 'Therapeutic Relationship & Engagement', score: 91, max: 100, color: 'bg-teal-500' },
+                { domain: 'Treatment Planning & Goal Setting', score: 88, max: 100, color: 'bg-purple-500' },
+                { domain: 'Group Facilitation Skills', score: 85, max: 100, color: 'bg-green-500' },
+                { domain: 'Crisis Assessment & De-escalation', score: 89, max: 100, color: 'bg-orange-400' },
+                { domain: 'Cultural Competency & Trauma-Informed Care', score: 93, max: 100, color: 'bg-pink-400' },
+                { domain: 'MAT/Harm Reduction Knowledge', score: 82, max: 100, color: 'bg-amber-500' },
+                { domain: 'Ethics & Scope of Practice Compliance', score: 96, max: 100, color: 'bg-navy' },
+              ].map(d => (
+                <div key={d.domain}>
+                  <div className="flex justify-between mb-0.5">
+                    <span className="text-slate">{d.domain}</span>
+                    <span className="font-semibold text-navy">{d.score}/100</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full">
+                    <div className={`h-1.5 rounded-full ${d.color}`} style={{ width: `${d.score}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Individual Evaluation Summary</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border text-slate">
+                  <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Clinician</th>
+                  <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Overall Score</th>
+                  <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Lowest Domain</th>
+                  <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                  <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Next Eval</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'A. Brooks, LPC', score: 94, low: 'Documentation', status: 'Exceeds', next: '2027-06', ok: true },
+                  { name: 'T. Jackson, CADC', score: 88, low: 'MAT Knowledge', status: 'Meets', next: '2027-06', ok: true },
+                  { name: 'M. Rivera, MS', score: 71, low: 'Documentation', status: 'PIP', next: '2026-10', ok: false },
+                  { name: 'R. Torres, LPC-MHSP', score: 96, low: 'None', status: 'Exceeds', next: '2027-06', ok: true },
+                  { name: 'K. Nguyen, CADC-II', score: 79, low: 'Group Facilitation', status: 'Probationary', next: '2026-10', ok: false },
+                ].map(s => (
+                  <tr key={s.name} className={`hover:bg-gray-50 ${!s.ok ? 'bg-amber-50/40' : ''}`}>
+                    <td className="py-2 font-medium text-navy">{s.name}</td>
+                    <td className="py-2 text-center"><span className={`font-bold ${s.score >= 90 ? 'text-green-600' : s.score >= 80 ? 'text-blue-600' : 'text-red-600'}`}>{s.score}/100</span></td>
+                    <td className="py-2 text-center text-slate">{s.low}</td>
+                    <td className="py-2 text-center">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${s.status === 'Exceeds' ? 'bg-green-100 text-green-700' : s.status === 'Meets' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>{s.status}</span>
+                    </td>
+                    <td className="py-2 text-center text-slate">{s.next}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

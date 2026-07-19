@@ -70,7 +70,7 @@ const PRIORITY_STYLE: Record<OrderPriority, string> = {
 };
 
 export function PhysicianOrders({ navigate, readOnly }: Props) {
-  const [tab, setTab] = useState<'Active' | 'Pending' | 'History' | 'New Order'>('Active');
+  const [tab, setTab] = useState<'Active' | 'Pending' | 'History' | 'New Order' | 'Standing Orders' | 'Order Analytics' | 'Lab Reference'>('Active');
   const [filterType, setFilterType] = useState<OrderType | 'All'>('All');
   const [filterPatient, setFilterPatient] = useState('all');
   const [orderSubmitted, setOrderSubmitted] = useState(false);
@@ -125,7 +125,7 @@ export function PhysicianOrders({ navigate, readOnly }: Props) {
       )}
 
       <div className="flex gap-1 border-b border-border">
-        {(['Active', 'Pending', 'History', 'New Order'] as const).map(t => (
+        {(['Active', 'Pending', 'History', 'New Order', 'Standing Orders', 'Order Analytics', 'Lab Reference'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
             {t}
             {t === 'Pending' && pending.length > 0 && <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5">{pending.length}</span>}
@@ -271,6 +271,234 @@ export function PhysicianOrders({ navigate, readOnly }: Props) {
             <h2 className="text-lg font-bold text-navy">Order Placed</h2>
             <p className="text-slate text-sm mt-2">The order has been entered and is pending physician signature where required.</p>
             <button onClick={() => { setOrderSubmitted(false); setTab('Active'); }} className="btn-primary text-sm px-6 py-2 mt-5">Back to Orders</button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Standing Orders' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Pre-approved standing orders active for the current census. Standing orders reduce call volume and allow nursing to respond promptly to predictable clinical needs without individual physician contact.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Active Standing Orders', value: 8, sub: 'Facility-wide protocols', color: 'text-navy' },
+              { label: 'Uses This Month', value: 47, sub: 'Nurse-initiated without call', color: 'text-blue-600' },
+              { label: 'Physician Calls Avoided', value: 47, sub: 'Est. 2.3h call time saved', color: 'text-green-600' },
+              { label: 'Adverse Events', value: 0, sub: 'Related to standing orders', color: 'text-green-600' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-4">
+            {[
+              {
+                name: 'CIWA-Ar Alcohol Withdrawal — Symptom-Triggered Protocol',
+                authorized: 'Dr. Robert Chen, MD',
+                effectiveDate: '2026-01-01',
+                reviewDate: '2026-12-31',
+                eligibility: 'Patients admitted with AUD diagnosis and CIWA-Ar monitoring ordered',
+                orders: [
+                  'CIWA-Ar assessment q4h while awake; q8h if score < 8 × 24h',
+                  'Chlordiazepoxide (Librium) 50mg PO if CIWA ≥ 8–14; repeat q1h PRN; max 300mg/24h',
+                  'Chlordiazepoxide 100mg PO if CIWA ≥ 15–20; notify physician',
+                  'CIWA ≥ 21: IMMEDIATE physician notification; initiate IV access',
+                  'Thiamine 100mg PO/IM daily × 3 days (on admission)',
+                  'Folic acid 1mg PO daily',
+                  'MVI daily',
+                  'Vital signs q4h during active withdrawal; O2 saturation PRN',
+                ],
+                color: 'border-blue-200',
+              },
+              {
+                name: 'COWS Opioid Withdrawal — Comfort Measures Protocol',
+                authorized: 'Dr. Robert Chen, MD',
+                effectiveDate: '2026-01-01',
+                reviewDate: '2026-12-31',
+                eligibility: 'Patients on COWS monitoring for OWS not yet on buprenorphine induction',
+                orders: [
+                  'COWS assessment q4h; q8h if score < 5 × 24h',
+                  'Clonidine 0.1mg PO q6h PRN for COWS ≥ 5 (hold if SBP < 90)',
+                  'Loperamide 4mg PO × 1 dose PRN diarrhea; max 16mg/24h',
+                  'Ondansetron 4mg ODT q6h PRN for nausea/vomiting',
+                  'Ibuprofen 400mg PO q6h PRN for myalgias (if no contraindication)',
+                  'Hydroxyzine 25–50mg PO q6h PRN for anxiety/insomnia',
+                  'Vital signs q4h; COWS ≥ 25: notify physician immediately',
+                ],
+                color: 'border-purple-200',
+              },
+              {
+                name: 'General Detox Comfort — Symptomatic Relief Protocol',
+                authorized: 'Dr. Emily Stone, MD',
+                effectiveDate: '2026-03-01',
+                reviewDate: '2026-12-31',
+                eligibility: 'All residential detox patients unless contraindicated in admission orders',
+                orders: [
+                  'Acetaminophen 650mg PO q4h PRN for pain / fever (max 3g/24h)',
+                  'Maalox 30mL PO PRN for GI upset (not to exceed q4h)',
+                  'Melatonin 3–5mg PO QHS PRN insomnia (non-benzo)',
+                  'Ice pack / heating pad PRN for musculoskeletal comfort',
+                  'Oral hydration encouraged; IV fluids if PO intake < 500mL/shift',
+                  'Vital signs BID at minimum; CIWA/COWS per separate protocol',
+                ],
+                color: 'border-green-200',
+              },
+              {
+                name: 'Influenza-Like Illness (ILI) — Isolation & Symptomatic Protocol',
+                authorized: 'Dr. Robert Chen, MD',
+                effectiveDate: '2026-01-01',
+                reviewDate: '2026-12-31',
+                eligibility: 'Patient presenting with fever ≥ 100.4°F + cough or sore throat; no recent hospitalization in past 7 days',
+                orders: [
+                  'Contact + droplet precautions; isolate in single room',
+                  'Mask patient when leaving room for any reason',
+                  'Rapid influenza antigen test (RIFA) × 1',
+                  'Acetaminophen 650mg PO q4h PRN fever (max 3g/24h)',
+                  'Encourage PO fluids ≥ 2L/day',
+                  'Notify physician if temp > 103°F, O2 sat < 94%, or respiratory distress',
+                  'Roommate(s) if applicable: monitor for symptoms × 5 days',
+                ],
+                color: 'border-amber-200',
+              },
+            ].map(so => (
+              <div key={so.name} className={`card border ${so.color}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-semibold text-navy text-sm">{so.name}</h3>
+                    <div className="text-xs text-slate mt-0.5">Authorized by {so.authorized} · Effective {so.effectiveDate} · Review by {so.reviewDate}</div>
+                    <div className="text-xs text-slate mt-0.5">Eligibility: {so.eligibility}</div>
+                  </div>
+                  <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full whitespace-nowrap">Active</span>
+                </div>
+                <div className="text-xs space-y-1">
+                  {so.orders.map((o, i) => (
+                    <div key={i} className="flex gap-2">
+                      <span className="font-bold text-orange shrink-0">{i + 1}.</span>
+                      <span className="text-slate">{o}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {tab === 'Order Analytics' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Order volume, provider patterns, and compliance metrics for the trailing 30 days.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Total Orders (30d)', value: 284, color: 'text-navy', sub: '↑ 8% vs prior month' },
+              { label: 'Lab Orders', value: 91, color: 'text-blue-600', sub: '32% of total' },
+              { label: 'Medication Orders', value: 138, color: 'text-teal-600', sub: '49% of total' },
+              { label: 'Unsigned > 24h', value: 3, color: 'text-red-600', sub: 'Requires attention' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Order Volume by Category</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { cat: 'Medications / MAT', count: 138, pct: 49, color: 'bg-teal-500' },
+                  { cat: 'Laboratory', count: 91, pct: 32, color: 'bg-blue-500' },
+                  { cat: 'Consult / Referral', count: 24, pct: 8, color: 'bg-purple-500' },
+                  { cat: 'Nursing / Activity', count: 18, pct: 6, color: 'bg-orange-400' },
+                  { cat: 'Diagnostic Imaging', count: 9, pct: 3, color: 'bg-gray-400' },
+                  { cat: 'Dietary / Nutrition', count: 4, pct: 1, color: 'bg-green-400' },
+                ].map(c => (
+                  <div key={c.cat}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{c.cat}</span>
+                      <span className="font-semibold text-navy">{c.count} ({c.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${c.color}`} style={{ width: `${c.pct * 1.5}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Orders by Prescriber (30 Days)</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-slate">
+                    <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Prescriber</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Orders</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Avg Sign Time</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Unsigned</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { name: 'Dr. A. Okafor, MD', orders: 112, sign: '1.2h', unsigned: 1, ok: true },
+                    { name: 'Dr. L. Hernandez, DO', orders: 89, sign: '2.8h', unsigned: 2, ok: false },
+                    { name: 'Dr. S. Park, MD', orders: 54, sign: '0.9h', unsigned: 0, ok: true },
+                    { name: 'NP J. Williams', orders: 29, sign: '1.5h', unsigned: 0, ok: true },
+                  ].map(p => (
+                    <tr key={p.name} className="hover:bg-gray-50">
+                      <td className="py-2 font-medium text-navy">{p.name}</td>
+                      <td className="py-2 text-center text-slate">{p.orders}</td>
+                      <td className="py-2 text-center text-slate">{p.sign}</td>
+                      <td className="py-2 text-center">
+                        <span className={`font-bold ${p.unsigned > 0 ? 'text-red-600' : 'text-green-600'}`}>{p.unsigned}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Lab Reference' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Commonly ordered laboratory tests in SUD treatment — reference ranges, turnaround times, and clinical interpretation guidance.</div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Standard Lab Panel Reference</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  {['Test', 'Normal Range', 'TAT', 'Why Ordered', 'Critical Value Action'].map(h => (
+                    <th key={h} className="text-left px-2 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { test: 'CMP (Comprehensive Metabolic Panel)', range: 'See individual values', tat: '4–6h', why: 'Baseline organ function, electrolytes, glucose, kidney/liver assessment', crit: 'K <3.0 or >6.0 mEq/L → physician stat; Na <125 or >155 → physician stat' },
+                  { test: 'CBC with differential', range: 'WBC 4.5–11.0; HgB 12–17; PLT 150–400', tat: '4–6h', why: 'Infection screen, anemia, thrombocytopenia (alcohol-related)', crit: 'WBC >30 or <2 → physician stat; HgB <7 → physician stat' },
+                  { test: 'Liver Function Tests (LFTs)', range: 'AST/ALT <40 U/L; T.bili <1.2 mg/dL', tat: '4–6h', why: 'Alcohol/hepatotoxic drug-related liver damage assessment, Suboxone baseline', crit: 'AST/ALT >3x ULN → physician review; >10x ULN → physician stat' },
+                  { test: 'Lipase', range: '13–60 U/L', tat: '4–6h', why: 'Alcohol-related pancreatitis screen', crit: '>3x ULN with abdominal pain → physician stat' },
+                  { test: 'Prothrombin Time / INR', range: 'PT 11–13s; INR <1.1', tat: '4–6h', why: 'Hepatic synthetic function, alcohol-related coagulopathy', crit: 'INR >3.0 not therapeutic → physician review' },
+                  { test: 'Urine Drug Screen (GC-MS confirmation)', range: 'Negative', tat: '24–48h (confirm)', why: 'Treatment progress monitoring, PDMP correlation, MAT initiation baseline', crit: 'Unexpected fentanyl or adulterants → clinical team notification' },
+                  { test: 'Hepatitis C Antibody (HCV Ab)', range: 'Non-reactive', tat: '4–6h', why: 'IVDU screening — offered to all opioid/stimulant use patients per CDC guidelines', crit: 'Reactive → GI/hepatology referral; confirm with reflex RNA' },
+                  { test: 'HIV 1/2 Antigen/Antibody (4th Gen)', range: 'Non-reactive', tat: '4–6h', why: 'HIV screening offered to all patients per CDC universal testing guidelines', crit: 'Reactive → infectious disease referral, PDAP enrollment assistance' },
+                  { test: 'TSH (Thyroid-Stimulating Hormone)', range: '0.5–5.0 mIU/L', tat: '4–6h', why: 'Mood disorder differential; hypothyroidism often mimics MDD in SUD population', crit: 'TSH >10 or <0.1 → physician review' },
+                  { test: 'Serum Buprenorphine Level (LCMS)', range: 'Therapeutic: 1–10 ng/mL', tat: '24–72h (send-out)', why: 'Diversion concern, non-response at therapeutic doses, rapid metabolism', crit: 'Undetectable on therapeutic dose → diversion protocol' },
+                ].map(r => (
+                  <tr key={r.test} className="hover:bg-gray-50">
+                    <td className="px-2 py-2 font-semibold text-navy text-[10px]">{r.test}</td>
+                    <td className="px-2 py-2 text-slate text-[10px]">{r.range}</td>
+                    <td className="px-2 py-2 text-center text-navy text-[10px]">{r.tat}</td>
+                    <td className="px-2 py-2 text-slate text-[10px]">{r.why}</td>
+                    <td className="px-2 py-2 text-red-700 font-medium text-[10px]">{r.crit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

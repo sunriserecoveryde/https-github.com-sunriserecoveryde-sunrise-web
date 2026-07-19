@@ -176,8 +176,26 @@ export function CommandPalette({ onClose, navigate }: Props) {
               <span className="text-xs font-semibold text-slate uppercase tracking-wide">Quick Navigation</span>
             </div>
           )}
-          {results.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-slate">No results for &quot;{query}&quot;</div>
+          {results.length === 0 && query.trim() !== '' && (
+            <div className="px-4 py-8 text-center">
+              {!canSearchPatients && /[a-zA-Z]{2,}/.test(query) ? (
+                <>
+                  <div className="text-2xl mb-2">🔒</div>
+                  <div className="text-sm font-semibold text-navy">Patient records not available for this role</div>
+                  <div className="text-xs text-slate mt-1 max-w-xs mx-auto">
+                    Your current role cannot search patient records. Switch to a clinical role to look up patients by name or MRN.
+                  </div>
+                  <button
+                    onClick={() => { navigate('RoleExplorer'); onClose(); }}
+                    className="mt-3 text-xs text-orange font-semibold hover:underline"
+                  >
+                    View role permissions →
+                  </button>
+                </>
+              ) : (
+                <div className="text-sm text-slate">No results for &ldquo;{query}&rdquo;</div>
+              )}
+            </div>
           )}
           {results.map((r, i) => (
             <div

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_STAFF } from '../data/mockStaff';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 interface TrainingRecord {
   staffId: string;
@@ -79,8 +80,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   Medical: 'bg-purple-100 text-purple-700',
 };
 
-export function Training({ navigate }: Props) {
-  const [activeTab, setActiveTab] = useState<'Compliance Matrix' | 'Scheduled Training' | 'CEU Tracking'>('Compliance Matrix');
+export function Training({ navigate, readOnly }: Props) {
+  const [activeTab, setActiveTab] = useState<'Compliance Matrix' | 'Scheduled Training' | 'CEU Tracking' | 'Policies & SOPs' | 'Onboarding' | 'Training Library'>('Compliance Matrix');
   const [deptFilter, setDeptFilter] = useState<string>('All');
 
   const departments = Array.from(new Set(MOCK_STAFF.map(s => s.department)));
@@ -136,7 +137,7 @@ export function Training({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Training & Certification</h1>
           <p className="text-slate text-sm mt-0.5">Staff training compliance, certifications, and scheduled sessions</p>
         </div>
-        <button className="btn-primary text-sm px-4 py-2">+ Schedule Training</button>
+        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">+ Schedule Training</LockedButton>
       </div>
 
       {/* KPIs */}
@@ -177,7 +178,7 @@ export function Training({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Compliance Matrix', 'Scheduled Training', 'CEU Tracking'] as const).map(t => (
+        {(['Compliance Matrix', 'Scheduled Training', 'CEU Tracking', 'Policies & SOPs', 'Onboarding', 'Training Library'] as const).map(t => (
           <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -263,9 +264,9 @@ export function Training({ navigate }: Props) {
                 </div>
               </div>
               <div className="flex gap-2 mt-3">
-                <button className="btn-primary text-sm px-3 py-1.5">Register Staff</button>
+                <LockedButton locked={readOnly} className="btn-primary text-sm px-3 py-1.5">Register Staff</LockedButton>
                 <button className="btn-outline text-sm px-3 py-1.5">View Attendees</button>
-                <button className="btn-outline text-sm px-3 py-1.5">Edit Session</button>
+                <LockedButton locked={readOnly} className="btn-outline text-sm px-3 py-1.5">Edit Session</LockedButton>
               </div>
             </div>
           ))}
@@ -315,6 +316,227 @@ export function Training({ navigate }: Props) {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {activeTab === 'Policies & SOPs' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Active Policies', value: 48, sub: 'Current version', color: 'text-navy' },
+              { label: 'Due for Review', value: 5, sub: 'Within 30 days', color: 'text-amber-600' },
+              { label: 'Updated This Quarter', value: 11, sub: 'Reflecting reg changes', color: 'text-green-600' },
+              { label: 'Avg Staff Attestation', value: '91%', sub: 'Read & acknowledged', color: 'text-blue-600' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {[
+            {
+              category: '🏥 Clinical Operations',
+              items: [
+                { title: 'Admission & Intake Procedures', version: '3.2', revised: '2026-04-01', reviewDue: '2027-04-01', attestation: 94, status: 'Current' },
+                { title: 'Level of Care Placement (ASAM Criteria)', version: '2.0', revised: '2026-01-15', reviewDue: '2027-01-15', attestation: 89, status: 'Current' },
+                { title: 'Discharge Planning & Aftercare Coordination', version: '4.1', revised: '2026-03-10', reviewDue: '2027-03-10', attestation: 92, status: 'Current' },
+                { title: 'Treatment Plan Development & Review', version: '5.0', revised: '2026-06-01', reviewDue: '2027-06-01', attestation: 97, status: 'Current' },
+                { title: 'Group Therapy Facilitation Standards', version: '2.3', revised: '2025-12-01', reviewDue: '2026-12-01', attestation: 88, status: 'Current' },
+              ]
+            },
+            {
+              category: '💊 Medication Safety',
+              items: [
+                { title: 'Medication Administration — MAR Procedures', version: '6.0', revised: '2026-05-20', reviewDue: '2027-05-20', attestation: 98, status: 'Current' },
+                { title: 'Controlled Substance Count & Reconciliation', version: '4.4', revised: '2026-02-01', reviewDue: '2027-02-01', attestation: 100, status: 'Current' },
+                { title: 'MAT Induction & Monitoring Protocol', version: '3.1', revised: '2026-07-01', reviewDue: '2027-07-01', attestation: 85, status: 'Current' },
+                { title: 'Medication Error Reporting & Root Cause Analysis', version: '2.2', revised: '2025-11-01', reviewDue: '2026-11-01', attestation: 91, status: 'Due for Review' },
+              ]
+            },
+            {
+              category: '🔒 Privacy & Compliance',
+              items: [
+                { title: '42 CFR Part 2 — Confidentiality of SUD Records', version: '7.0', revised: '2026-03-25', reviewDue: '2027-03-25', attestation: 95, status: 'Current' },
+                { title: 'HIPAA Privacy & Security Policy', version: '5.1', revised: '2026-01-01', reviewDue: '2027-01-01', attestation: 93, status: 'Current' },
+                { title: 'Mandatory Reporting — Abuse/Neglect/Exploitation', version: '3.0', revised: '2025-09-01', reviewDue: '2026-09-01', attestation: 89, status: 'Due for Review' },
+                { title: 'Incident Reporting & Critical Event Management', version: '4.0', revised: '2026-04-15', reviewDue: '2027-04-15', attestation: 96, status: 'Current' },
+              ]
+            },
+            {
+              category: '🚨 Safety & Emergency',
+              items: [
+                { title: 'Suicide / Self-Harm Risk Assessment & Response', version: '5.2', revised: '2026-06-15', reviewDue: '2027-06-15', attestation: 99, status: 'Current' },
+                { title: 'AMS / Seizure Emergency Response Protocol', version: '2.1', revised: '2026-02-20', reviewDue: '2027-02-20', attestation: 97, status: 'Current' },
+                { title: 'Fire & Evacuation Procedures', version: '3.3', revised: '2025-10-01', reviewDue: '2026-10-01', attestation: 87, status: 'Due for Review' },
+                { title: 'Workplace Violence Prevention & De-escalation', version: '3.0', revised: '2025-08-01', reviewDue: '2026-08-01', attestation: 82, status: 'Due for Review' },
+                { title: 'Infection Control & Universal Precautions', version: '4.2', revised: '2026-05-01', reviewDue: '2027-05-01', attestation: 94, status: 'Current' },
+              ]
+            },
+          ].map(section => (
+            <div key={section.category} className="card p-0 overflow-hidden">
+              <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm">{section.category}</div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-bg text-slate">
+                    <th className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-wider">Policy / SOP</th>
+                    <th className="text-center px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Version</th>
+                    <th className="text-center px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Last Revised</th>
+                    <th className="text-center px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Review Due</th>
+                    <th className="text-center px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Attestation</th>
+                    <th className="text-center px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                    <th className="text-center px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {section.items.map(item => (
+                    <tr key={item.title} className={`hover:bg-gray-50 ${item.status === 'Due for Review' ? 'bg-amber-50/40' : ''}`}>
+                      <td className="px-4 py-2.5 font-medium text-navy">{item.title}</td>
+                      <td className="px-3 py-2.5 text-center font-mono text-slate">v{item.version}</td>
+                      <td className="px-3 py-2.5 text-center text-slate">{item.revised}</td>
+                      <td className="px-3 py-2.5 text-center text-slate">{item.reviewDue}</td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className={`font-bold ${item.attestation >= 95 ? 'text-green-600' : item.attestation >= 85 ? 'text-amber-600' : 'text-red-600'}`}>{item.attestation}%</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.status === 'Current' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{item.status}</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <button className="text-xs text-orange hover:underline font-medium">View</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+      {activeTab === 'Onboarding' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">New hire onboarding training checklist — tracks mandatory orientation modules, preceptorship milestones, and 90-day competency sign-offs.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Staff in Onboarding', value: 2, color: 'text-blue-600', sub: 'Current hire class' },
+              { label: 'Avg Days to Full Competency', value: '41d', color: 'text-navy', sub: 'Target: ≤45 days' },
+              { label: 'Modules Completed (30d)', value: 18, color: 'text-green-600', sub: 'Across all new hires' },
+              { label: 'Preceptor Assigned', value: '100%', color: 'text-teal-600', sub: 'All new hires paired' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">New Hire Onboarding Progress</h3>
+            <div className="space-y-4">
+              {[
+                {
+                  name: 'K. Nguyen, CADC-II', role: 'Primary Counselor', startDate: '2026-07-07', preceptor: 'T. Jackson, CADC',
+                  modules: [
+                    { name: 'Orientation & HR Policies', done: true, dueDate: 'Day 1' },
+                    { name: 'HIPAA & 42 CFR Part 2 Training', done: true, dueDate: 'Day 2' },
+                    { name: 'EHR System Access & Navigation', done: true, dueDate: 'Day 3' },
+                    { name: 'Documentation Standards & Note Writing', done: true, dueDate: 'Day 5' },
+                    { name: 'Clinical Protocols: Crisis & Safety', done: true, dueDate: 'Day 7' },
+                    { name: 'Group Facilitation Standards', done: true, dueDate: 'Day 10' },
+                    { name: 'Treatment Planning Competency', done: false, dueDate: 'Day 21' },
+                    { name: '90-Day Supervisor Evaluation', done: false, dueDate: 'Day 90' },
+                  ]
+                },
+                {
+                  name: 'M. Boyd, RN', role: 'Staff Nurse', startDate: '2026-07-14', preceptor: 'J. Torres, RN',
+                  modules: [
+                    { name: 'Orientation & HR Policies', done: true, dueDate: 'Day 1' },
+                    { name: 'HIPAA & 42 CFR Part 2 Training', done: true, dueDate: 'Day 2' },
+                    { name: 'MAR & Medication Administration', done: true, dueDate: 'Day 3' },
+                    { name: 'CIWA-Ar & COWS Protocol Training', done: false, dueDate: 'Day 5' },
+                    { name: 'Controlled Substance Count Procedures', done: false, dueDate: 'Day 7' },
+                    { name: 'Nursing Documentation Standards', done: false, dueDate: 'Day 10' },
+                    { name: 'Emergency Response / Narcan Admin', done: false, dueDate: 'Day 14' },
+                    { name: '90-Day DON Competency Evaluation', done: false, dueDate: 'Day 90' },
+                  ]
+                },
+              ].map(s => (
+                <div key={s.name} className="border border-border rounded-xl overflow-hidden">
+                  <div className="px-4 py-3 bg-gray-50 border-b border-border flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-navy">{s.name}</span>
+                      <span className="text-xs text-slate ml-2">— {s.role} · Start: {s.startDate}</span>
+                    </div>
+                    <div className="text-xs text-slate">Preceptor: <span className="font-medium text-navy">{s.preceptor}</span></div>
+                  </div>
+                  <div className="p-3 grid grid-cols-2 gap-2 text-xs">
+                    {s.modules.map(m => (
+                      <div key={m.name} className="flex items-start gap-2">
+                        <span className={`mt-0.5 text-sm shrink-0 ${m.done ? 'text-green-500' : 'text-slate/40'}`}>{m.done ? '✓' : '○'}</span>
+                        <div>
+                          <span className={m.done ? 'text-slate line-through' : 'text-navy'}>{m.name}</span>
+                          <span className="ml-1 text-[10px] text-slate">({m.dueDate})</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Training Library' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">On-demand training resource library — evidence-based SUD treatment modules, clinical skills videos, and compliance courses available to all staff.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Total Courses Available', value: 48, color: 'text-navy', sub: 'All categories combined' },
+              { label: 'Completed (YTD, avg)', value: 12.4, color: 'text-green-600', sub: 'Per staff member' },
+              { label: 'Clinical Modules', value: 22, color: 'text-blue-600', sub: 'SUD, MAT, trauma, co-occurring' },
+              { label: 'New This Quarter', value: 6, color: 'text-teal-600', sub: 'Recently added' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Featured Training Modules</h3>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              {[
+                { title: 'ASAM Criteria & LOC Decision-Making', cat: 'Clinical', duration: '2.0 CEU', format: 'Self-paced video + quiz', level: 'All clinical staff', new: false },
+                { title: 'Motivational Interviewing — Foundations (MI-1)', cat: 'Clinical', duration: '6.0 CEU', format: 'Video series + role-play', level: 'Counselors, CPRS', new: false },
+                { title: 'Trauma-Informed Care in SUD Settings', cat: 'Clinical', duration: '3.0 CEU', format: 'Self-paced video + quiz', level: 'All clinical staff', new: true },
+                { title: 'MAT Basics: Buprenorphine, Naltrexone, Methadone', cat: 'Clinical', duration: '2.5 CEU', format: 'Video + case studies', level: 'All clinical staff', new: false },
+                { title: 'CIWA-Ar / COWS Assessment Proficiency', cat: 'Nursing', duration: '1.5 CEU', format: 'Video + competency check', level: 'Nursing staff', new: false },
+                { title: 'Suicide Risk Assessment (Columbia C-SSRS)', cat: 'Safety', duration: '2.0 CEU', format: 'Video + scenario-based', level: 'All clinical staff', new: true },
+                { title: '42 CFR Part 2 & HIPAA for SUD Programs', cat: 'Compliance', duration: '1.0 CEU', format: 'Self-paced + attestation', level: 'All staff', new: false },
+                { title: 'Cultural Humility in Addiction Treatment', cat: 'Clinical', duration: '2.0 CEU', format: 'Video + reflection activity', level: 'All clinical staff', new: true },
+                { title: 'De-escalation Techniques — CPI Nonviolent', cat: 'Safety', duration: '8.0 CEU', format: 'In-person + certification', level: 'All clinical staff', new: false },
+                { title: 'Documentation Standards & CARF Compliance', cat: 'Compliance', duration: '1.5 CEU', format: 'Self-paced + quiz', level: 'All clinical staff', new: false },
+              ].map(m => (
+                <div key={m.title} className="border border-border rounded-xl p-3 flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="font-semibold text-navy">{m.title}</span>
+                      {m.new && <span className="text-[8px] font-bold bg-green-100 text-green-700 px-1 py-0.5 rounded-full uppercase">New</span>}
+                    </div>
+                    <div className="text-[10px] text-slate">{m.format} · {m.level}</div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="font-bold text-blue-700">{m.duration}</div>
+                    <div className="text-[9px] text-slate mt-0.5 uppercase tracking-wider">{m.cat}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

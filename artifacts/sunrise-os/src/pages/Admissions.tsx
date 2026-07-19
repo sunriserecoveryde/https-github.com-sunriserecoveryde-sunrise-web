@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+import { LockedButton } from '../components/common/LockedButton';
+
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type AdmitStatus = 'Inquiry' | 'Pre-Screen' | 'Insurance Verify' | 'Bed Assigned' | 'Admitted';
 
@@ -68,8 +71,36 @@ const CHECKLIST_ITEMS = [
 
 const STATUS_STEPS: AdmitStatus[] = ['Inquiry', 'Pre-Screen', 'Insurance Verify', 'Bed Assigned', 'Admitted'];
 
-export function Admissions({ navigate }: Props) {
-  const [activeTab, setActiveTab] = useState<'Pipeline' | 'Recent Admits' | 'Intake Checklist'>('Pipeline');
+const REFERRAL_SOURCE_DATA = [
+  { source: 'Hospital ER', count: 12 },
+  { source: 'Self/Family', count: 9 },
+  { source: 'Drug Court', count: 7 },
+  { source: 'Therapist', count: 6 },
+  { source: 'Step-Down', count: 5 },
+  { source: 'PCP', count: 4 },
+  { source: 'Employer EAP', count: 3 },
+];
+
+const INSURANCE_MIX = [
+  { name: 'BlueCross', value: 28, color: '#3b82f6' },
+  { name: 'Aetna', value: 22, color: '#22c55e' },
+  { name: 'TennCare', value: 18, color: '#a855f7' },
+  { name: 'United', value: 15, color: '#f59e0b' },
+  { name: 'Cigna', value: 10, color: '#ec4899' },
+  { name: 'Self-Pay', value: 7, color: '#64748b' },
+];
+
+const MONTHLY_ADMITS = [
+  { month: 'Feb', residential: 6, php: 4, iop: 3 },
+  { month: 'Mar', residential: 8, php: 5, iop: 4 },
+  { month: 'Apr', residential: 7, php: 6, iop: 5 },
+  { month: 'May', residential: 9, php: 4, iop: 6 },
+  { month: 'Jun', residential: 11, php: 7, iop: 5 },
+  { month: 'Jul', residential: 8, php: 5, iop: 4 },
+];
+
+export function Admissions({ navigate, readOnly }: Props) {
+  const [activeTab, setActiveTab] = useState<'Pipeline' | 'Recent Admits' | 'Intake Checklist' | 'Analytics' | 'VOB Queue' | 'LOC Criteria'>('Pipeline');
   const [selected, setSelected] = useState<PendingAdmission | null>(PENDING[0]);
   const [filterStatus, setFilterStatus] = useState<AdmitStatus | 'All'>('All');
 
@@ -85,7 +116,7 @@ export function Admissions({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Admissions / Intake</h1>
           <p className="text-slate text-sm mt-0.5">Pending referrals and intake pipeline</p>
         </div>
-        <button className="btn-primary text-sm px-4 py-2">+ New Referral</button>
+        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">+ New Referral</LockedButton>
       </div>
 
       {/* Pipeline Kanban Summary */}
@@ -104,7 +135,7 @@ export function Admissions({ navigate }: Props) {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
-        {(['Pipeline', 'Recent Admits', 'Intake Checklist'] as const).map(t => (
+        {(['Pipeline', 'Recent Admits', 'Intake Checklist', 'Analytics', 'VOB Queue', 'LOC Criteria'] as const).map(t => (
           <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -190,9 +221,9 @@ export function Admissions({ navigate }: Props) {
                 </div>
 
                 <div className="flex gap-2 mt-4">
-                  <button className="btn-primary text-sm px-4 py-2 flex-1">Advance Status</button>
-                  <button className="btn-outline text-sm px-4 py-2">Add Note</button>
-                  <button className="btn-outline text-sm px-4 py-2 text-red-600 border-red-200 hover:bg-red-50">Decline</button>
+                  <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex-1">Advance Status</LockedButton>
+                  <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2">Add Note</LockedButton>
+                  <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2 text-red-600 border-red-200 hover:bg-red-50">Decline</LockedButton>
                 </div>
               </div>
             </div>
@@ -231,6 +262,77 @@ export function Admissions({ navigate }: Props) {
         </div>
       )}
 
+      {activeTab === 'Analytics' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Admits (Jul)', value: 17, sub: '+3 vs Jun', color: 'text-navy' },
+              { label: 'Avg Days to Admit', value: '2.4d', sub: 'From inquiry to bed', color: 'text-navy' },
+              { label: 'Insurance Auth Rate', value: '81%', sub: 'Verified at admission', color: 'text-green-600' },
+              { label: 'Denial Rate', value: '8%', sub: 'Insurance denials', color: 'text-red-600' },
+            ].map(s => (
+              <div key={s.label} className="card">
+                <div className="text-xs text-slate font-semibold uppercase tracking-wide">{s.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${s.color}`}>{s.value}</div>
+                <div className="text-xs text-slate mt-0.5">{s.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            {/* Monthly admits by program */}
+            <div className="card">
+              <div className="text-sm font-semibold text-navy mb-4">Monthly Admissions by Program</div>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={MONTHLY_ADMITS} margin={{ top: 0, right: 10, bottom: 0, left: -15 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip />
+                    <Bar dataKey="residential" name="Residential" stackId="a" fill="#3b82f6" />
+                    <Bar dataKey="php" name="PHP" stackId="a" fill="#8b5cf6" />
+                    <Bar dataKey="iop" name="IOP" stackId="a" fill="#22c55e" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Insurance mix */}
+            <div className="card">
+              <div className="text-sm font-semibold text-navy mb-4">Insurance Payer Mix (YTD)</div>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={INSURANCE_MIX} cx="40%" cy="50%" outerRadius={70} dataKey="value" label={({ name, value }) => `${value}%`} labelLine={false}>
+                      {INSURANCE_MIX.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                    <Legend formatter={v => <span className="text-xs text-navy">{v}</span>} />
+                    <Tooltip formatter={(v) => [`${v}%`, 'Share']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Referral sources */}
+          <div className="card">
+            <div className="text-sm font-semibold text-navy mb-4">Referral Sources (Last 90 Days)</div>
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={REFERRAL_SOURCE_DATA} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                  <YAxis dataKey="source" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} width={90} />
+                  <Tooltip />
+                  <Bar dataKey="count" name="Admissions" fill="#f97316" radius={[0,4,4,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'Intake Checklist' && (
         <div className="grid grid-cols-2 gap-6">
           {PENDING.filter(p => p.status !== 'Admitted').map(p => (
@@ -257,6 +359,120 @@ export function Admissions({ navigate }: Props) {
               <div className="mt-3 text-xs text-slate">{Math.round((STATUS_STEPS.indexOf(p.status) * 2 / CHECKLIST_ITEMS.length) * 100)}% Complete</div>
             </div>
           ))}
+        </div>
+      )}
+      {activeTab === 'VOB Queue' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Verification of Benefits (VOB) queue — insurance verification status for pending and recent admissions.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'VOB Pending', value: 3, color: 'text-amber-600', sub: 'Awaiting payer response' },
+              { label: 'Verified Today', value: 2, color: 'text-green-600', sub: 'Ready to admit' },
+              { label: 'Auth Required', value: 4, color: 'text-blue-600', sub: 'PA in progress' },
+              { label: 'Denied / Appeal', value: 1, color: 'text-red-600', sub: 'Appeals team notified' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card overflow-hidden">
+            <h3 className="font-semibold text-navy text-sm mb-3">VOB Queue — Active Cases</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Referral</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Insurance</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">LOC Requested</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">VOB Specialist</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Submitted</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Deductible/OOP</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'Raymond Cole', ins: 'Aetna Behavioral', loc: 'Residential', spec: 'K. Santos', sub: '07/18', status: 'Verified', sColor: 'bg-green-100 text-green-700', financial: '$2,500 ded / $6,000 OOP' },
+                  { name: 'Brittney Walsh', ins: 'BCBS TN', loc: 'PHP', spec: 'K. Santos', sub: '07/18', status: 'Pending', sColor: 'bg-amber-100 text-amber-700', financial: 'TBD' },
+                  { name: 'Jerome Simmons', ins: 'Cigna', loc: 'Residential', spec: 'L. Park', sub: '07/17', status: 'Auth Req.', sColor: 'bg-blue-100 text-blue-700', financial: '$1,000 ded met / $8,150 OOP' },
+                  { name: 'Alicia Perkins', ins: 'TennCare (BlueCare)', loc: 'Residential', spec: 'K. Santos', sub: '07/16', status: 'Verified', sColor: 'bg-green-100 text-green-700', financial: '$0 ded — Medicaid' },
+                  { name: 'David Garza', ins: 'UHC / Optum', loc: 'IOP', spec: 'L. Park', sub: '07/15', status: 'Denied', sColor: 'bg-red-100 text-red-700', financial: 'Appeal in progress' },
+                  { name: 'Sophia Lambert', ins: 'Self-Pay', loc: 'Residential', spec: 'Admin', sub: '07/18', status: 'Scholarship', sColor: 'bg-purple-100 text-purple-700', financial: '75% scholarship applied' },
+                ].map(r => (
+                  <tr key={r.name} className="hover:bg-gray-50">
+                    <td className="px-3 py-2.5 font-medium text-navy">{r.name}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.ins}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.loc}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.spec}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.sub}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.sColor}`}>{r.status}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate">{r.financial}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'LOC Criteria' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Quick-reference ASAM-based level of care criteria — supports consistent admissions decision-making and medical necessity documentation for insurance authorization.</div>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              {
+                loc: 'Medically Managed Inpatient (Detox)', asam: 'Level 4-WM',
+                inclusion: ['CIWA-Ar ≥10 or COWS ≥13', 'History of complicated withdrawal (seizures, DTs)', 'Concurrent medical conditions requiring 24h nursing supervision', 'Failure of lower LOC withdrawal management'],
+                exclusion: ['Medically stable, no complicated withdrawal history', 'CIWA-Ar <8 with low seizure risk', 'Stable co-occurring psychiatric conditions'],
+                auth: 'Typically 3–7 days; requires daily progress notes and interdisciplinary team review',
+                color: 'border-red-300'
+              },
+              {
+                loc: 'Residential Treatment', asam: 'Level 3.5 / 3.1',
+                inclusion: ['Significant impairment requiring 24h structured environment', 'High relapse risk requiring 24h clinical supervision', 'Insufficient support in home environment for recovery', 'Multiple failed outpatient treatment attempts'],
+                exclusion: ['Stable living environment with adequate support', 'Medically complex requiring hospital-level monitoring', 'Active suicidality requiring inpatient psychiatric hold'],
+                auth: 'Typically 14–28 days; UR review every 5–7 days; discharge planning from Day 3',
+                color: 'border-amber-300'
+              },
+              {
+                loc: 'Partial Hospitalization Program (PHP)', asam: 'Level 2.5',
+                inclusion: ['Needs daily structure but stable enough to return home evenings', 'Step-down from residential with continued clinical instability', 'Co-occurring psychiatric conditions requiring intensive support', 'Motivation for recovery present with moderate relapse risk'],
+                exclusion: ['No safe housing to return to each evening', 'Active withdrawal requiring 24h monitoring', 'Unable to reliably transport to 5-day/week program'],
+                auth: 'Typically 10–14 days; UR review every 7 days; payer-specific minimum hours requirements',
+                color: 'border-blue-300'
+              },
+              {
+                loc: 'Intensive Outpatient (IOP)', asam: 'Level 2.1',
+                inclusion: ['Stable functioning but needs structured support ≥3 days/week', 'Step-down from PHP or residential with good progress', 'Mild-moderate withdrawal risk managed on outpatient basis', 'Adequate support system and safe housing environment'],
+                exclusion: ['Unable to maintain sobriety in less-than-daily program', 'Imminent danger to self or others', 'Unstable psychiatric symptoms requiring daily monitoring'],
+                auth: 'Typically 6–8 weeks; UR review every 2 weeks; attendance documentation required',
+                color: 'border-green-300'
+              },
+            ].map(l => (
+              <div key={l.loc} className={`card border-l-4 ${l.color}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-semibold text-navy">{l.loc}</div>
+                  <span className="font-mono text-blue-700 font-bold text-sm">{l.asam}</span>
+                </div>
+                <div className="text-xs space-y-2">
+                  <div>
+                    <div className="font-semibold text-green-700 mb-0.5">Inclusion Criteria</div>
+                    <ul className="space-y-0.5">{l.inclusion.map(c => <li key={c} className="text-navy flex gap-1"><span className="text-green-500 shrink-0">✓</span>{c}</li>)}</ul>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-red-600 mb-0.5">Exclusion Criteria</div>
+                    <ul className="space-y-0.5">{l.exclusion.map(c => <li key={c} className="text-navy flex gap-1"><span className="text-red-400 shrink-0">✗</span>{c}</li>)}</ul>
+                  </div>
+                  <div className="border-t border-border pt-1.5 text-slate"><span className="font-semibold text-slate">Authorization note:</span> {l.auth}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

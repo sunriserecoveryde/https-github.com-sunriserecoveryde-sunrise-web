@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { LockedButton } from '../components/common/LockedButton';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -55,8 +56,33 @@ const TYPE_ICONS: Record<DefType, string> = {
 
 const DEF_TYPES: DefType[] = ['Missing Co-sign', 'Overdue Note', 'Incomplete ASAM', 'Unsigned Treatment Plan', 'Missing UA', 'Expired Auth'];
 
+const DOC_TREND_DATA = [
+  { month: 'Feb', cosign: 6, overdue: 4, asam: 2, auth: 1, ua: 2, plan: 3 },
+  { month: 'Mar', cosign: 8, overdue: 5, asam: 3, auth: 2, ua: 1, plan: 2 },
+  { month: 'Apr', cosign: 4, overdue: 3, asam: 2, auth: 3, ua: 2, plan: 1 },
+  { month: 'May', cosign: 5, overdue: 4, asam: 1, auth: 2, ua: 3, plan: 2 },
+  { month: 'Jun', cosign: 7, overdue: 6, asam: 2, auth: 1, ua: 2, plan: 4 },
+  { month: 'Jul', cosign: 3, overdue: 1, asam: 1, auth: 1, ua: 1, plan: 1 },
+];
+
+const COMPLETENESS_TREND = [
+  { month: 'Feb', score: 74 },
+  { month: 'Mar', score: 72 },
+  { month: 'Apr', score: 81 },
+  { month: 'May', score: 79 },
+  { month: 'Jun', score: 76 },
+  { month: 'Jul', score: 88 },
+];
+
+const COUNSELOR_PERF = [
+  { name: 'Sarah Jenkins, LPC',     on_time: 92, avg_days: 0.9, deficiencies: 3, notes_month: 48 },
+  { name: 'Maria Gonzales, LCSW',   on_time: 85, avg_days: 1.4, deficiencies: 3, notes_month: 42 },
+  { name: 'David Odom, LMFT',       on_time: 91, avg_days: 1.0, deficiencies: 2, notes_month: 39 },
+  { name: 'Dr. Allen Hughes',       on_time: 97, avg_days: 0.5, deficiencies: 0, notes_month: 18 },
+];
+
 export function ChartReview({ navigate, readOnly }: Props) {
-  const [activeTab, setActiveTab] = useState<'Deficiencies' | 'Chart Completeness'>('Deficiencies');
+  const [activeTab, setActiveTab] = useState<'Deficiencies' | 'Chart Completeness' | 'Documentation Trends' | 'Peer Review' | 'Coding Audit'>('Deficiencies');
   const [typeFilter, setTypeFilter] = useState<DefType | 'All'>('All');
   const [priorityFilter, setPriorityFilter] = useState<'Critical' | 'High' | 'Moderate' | 'All'>('All');
   const [counselorFilter, setCounselorFilter] = useState<string>('All');
@@ -90,26 +116,125 @@ export function ChartReview({ navigate, readOnly }: Props) {
         </div>
       </div>
 
-      {/* Deficiency Type Summary */}
-      <div className="grid grid-cols-6 gap-3">
-        {countByType.map(ct => (
-          <button
-            key={ct.type}
-            onClick={() => setTypeFilter(typeFilter === ct.type ? 'All' : ct.type)}
-            className={`card text-center p-3 transition-all hover:shadow-md ${typeFilter === ct.type ? 'ring-2 ring-orange' : ''}`}
-          >
-            <div className="text-xl">{TYPE_ICONS[ct.type]}</div>
-            <div className="text-lg font-bold text-navy mt-1">{ct.count}</div>
-            <div className="text-xs text-slate leading-tight mt-0.5">{ct.type}</div>
-          </button>
-        ))}
-      </div>
-
       <div className="flex gap-1 border-b border-border">
-        {(['Deficiencies', 'Chart Completeness'] as const).map(t => (
+        {(['Deficiencies', 'Chart Completeness', 'Documentation Trends', 'Peer Review', 'Coding Audit'] as const).map(t => (
           <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
+
+      {activeTab === 'Documentation Trends' && (
+        <div className="space-y-6">
+          {/* Completeness trend */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-0.5">Chart Completeness Score — 6 Month Trend</h3>
+              <p className="text-xs text-slate mb-3">% charts with zero open deficiencies at end of month</p>
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={COMPLETENESS_TREND} margin={{ left: -10, right: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} />
+                  <YAxis domain={[60, 100]} tick={{ fontSize: 11 }} tickLine={false} unit="%" />
+                  <Tooltip formatter={(v: number) => [`${v}%`, 'Completeness']} contentStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey="score" name="Completeness %" stroke="#E8761A" strokeWidth={2} dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+              <div className="mt-2 flex justify-between text-xs">
+                <span className="text-slate">6-month avg: <span className="font-bold text-navy">78%</span></span>
+                <span className="text-green-700 font-semibold">↑ +12pts Jun→Jul (best month)</span>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-0.5">Deficiencies by Type — 6 Month Trend</h3>
+              <p className="text-xs text-slate mb-3">Open items at end of each month</p>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={DOC_TREND_DATA} margin={{ left: -10, right: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11 }} tickLine={false} />
+                  <Tooltip contentStyle={{ fontSize: 11 }} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Bar dataKey="cosign"  name="Co-sign"    stackId="a" fill="#ef4444" />
+                  <Bar dataKey="overdue" name="Overdue"    stackId="a" fill="#f59e0b" />
+                  <Bar dataKey="asam"    name="ASAM"       stackId="a" fill="#3b82f6" />
+                  <Bar dataKey="auth"    name="Auth"       stackId="a" fill="#8b5cf6" />
+                  <Bar dataKey="ua"      name="UA"         stackId="a" fill="#06b6d4" />
+                  <Bar dataKey="plan"    name="Tx Plan"    stackId="a" fill="#22c55e" radius={[3,3,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Counselor performance table */}
+          <div className="card p-0 overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-gray-50">
+              <h3 className="font-semibold text-navy text-sm">Documentation Performance by Clinician</h3>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-bg">
+                  {['Clinician', 'On-Time Notes', 'Avg Days to Sign', 'Open Deficiencies', 'Notes This Month', 'Action'].map(h => (
+                    <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {COUNSELOR_PERF.map(c => (
+                  <tr key={c.name} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-semibold text-navy">{c.name}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-1.5 bg-gray-100 rounded-full">
+                          <div className={`h-full rounded-full ${c.on_time >= 95 ? 'bg-green-500' : c.on_time >= 85 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${c.on_time}%` }} />
+                        </div>
+                        <span className={`text-xs font-bold ${c.on_time >= 95 ? 'text-green-700' : c.on_time >= 85 ? 'text-amber-700' : 'text-red-700'}`}>{c.on_time}%</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-sm font-bold ${c.avg_days <= 1 ? 'text-green-700' : c.avg_days <= 1.5 ? 'text-amber-700' : 'text-red-700'}`}>{c.avg_days}d</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {c.deficiencies > 0
+                        ? <span className="text-xs font-bold px-2 py-0.5 bg-red-100 text-red-700 rounded-full">{c.deficiencies} open</span>
+                        : <span className="text-xs font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full">None ✓</span>}
+                    </td>
+                    <td className="px-4 py-3 text-slate font-medium">{c.notes_month}</td>
+                    <td className="px-4 py-3">
+                      <LockedButton locked={readOnly} className="text-xs text-orange hover:underline">Send Reminder</LockedButton>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Policy reminders */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900">
+            <div className="font-semibold mb-2">📋 Documentation Policy Reminders</div>
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              <div><strong>Progress Notes:</strong> Must be signed within 24 hours of session. Co-sign required within 48 hours.</div>
+              <div><strong>Treatment Plans:</strong> Master TP within 72 hours of admission; updated every 30 days or at LOC change.</div>
+              <div><strong>ASAM Criteria:</strong> Full assessment within 24 hours of admission; all 6 dimensions required for billing.</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(activeTab === 'Deficiencies' || activeTab === 'Chart Completeness') && (
+        <div className="grid grid-cols-6 gap-3">
+          {countByType.map(ct => (
+            <button
+              key={ct.type}
+              onClick={() => setTypeFilter(typeFilter === ct.type ? 'All' : ct.type)}
+              className={`card text-center p-3 transition-all hover:shadow-md ${typeFilter === ct.type ? 'ring-2 ring-orange' : ''}`}
+            >
+              <div className="text-xl">{TYPE_ICONS[ct.type]}</div>
+              <div className="text-lg font-bold text-navy mt-1">{ct.count}</div>
+              <div className="text-xs text-slate leading-tight mt-0.5">{ct.type}</div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {activeTab === 'Deficiencies' && (
         <div className="space-y-4">
@@ -208,6 +333,117 @@ export function ChartReview({ navigate, readOnly }: Props) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {activeTab === 'Peer Review' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Structured peer review of clinical documentation — assesses quality, accuracy, and regulatory compliance across counselors and clinicians.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Reviews Completed (Q2)', value: 38, color: 'text-navy', sub: 'Target: 40 per quarter' },
+              { label: 'Avg Score', value: '87/100', color: 'text-green-600', sub: 'Above 85 threshold' },
+              { label: 'Action Plans Issued', value: 4, color: 'text-amber-600', sub: 'Remediation in progress' },
+              { label: 'Exemplary Notes', value: 9, color: 'text-teal-600', sub: 'Shared as best practice' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Recent Peer Reviews — Q2 2026</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Clinician Reviewed</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Note Type</th>
+                  <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Score</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Strengths</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Areas to Improve</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Reviewed By</th>
+                  <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Outcome</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { clinician: 'T. Jackson, CADC', type: 'Progress Note', score: 92, strength: 'Excellent CBT language', improve: 'Goal linkage', reviewer: 'Dr. Okafor', outcome: 'Exemplary', oColor: 'bg-green-100 text-green-700' },
+                  { clinician: 'M. Rivera, MS', type: 'Biopsychosocial', score: 88, strength: 'Thorough psychosocial hx', improve: 'SUD history detail', reviewer: 'A. Simms, LCSW', outcome: 'Satisfactory', oColor: 'bg-blue-100 text-blue-700' },
+                  { clinician: 'A. Brooks, LPC', type: 'Group Note', score: 74, strength: 'Good attendance tracking', improve: 'Individualized observations', reviewer: 'Dr. Okafor', outcome: 'Action Plan', oColor: 'bg-amber-100 text-amber-700' },
+                  { clinician: 'K. Santos, RN', type: 'Nursing Note', score: 95, strength: 'CIWA documentation thorough', improve: '—', reviewer: 'J. Martinez, DON', outcome: 'Exemplary', oColor: 'bg-green-100 text-green-700' },
+                  { clinician: 'D. Williams, CADC', type: 'Treatment Plan', score: 71, strength: 'Goal clarity', improve: 'Measurable objectives needed', reviewer: 'A. Simms, LCSW', outcome: 'Action Plan', oColor: 'bg-amber-100 text-amber-700' },
+                  { clinician: 'P. Chen, LMFT', type: 'Family Session Note', score: 90, strength: 'Systems lens applied well', improve: 'Follow-up documentation', reviewer: 'Dr. Okafor', outcome: 'Satisfactory', oColor: 'bg-blue-100 text-blue-700' },
+                ].map(r => (
+                  <tr key={r.clinician} className="hover:bg-gray-50">
+                    <td className="px-3 py-2.5 font-medium text-navy">{r.clinician}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.type}</td>
+                    <td className="py-2.5 text-center">
+                      <span className={`font-bold ${r.score >= 90 ? 'text-green-600' : r.score >= 80 ? 'text-blue-600' : 'text-amber-600'}`}>{r.score}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate">{r.strength}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.improve}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.reviewer}</td>
+                    <td className="py-2.5 text-center">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.oColor}`}>{r.outcome}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Coding Audit' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">ICD-10-CM / CPT coding accuracy audit — validates diagnosis coding, service codes, and modifier usage across clinical documentation for billing compliance.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Charts Audited (30d)', value: 48, color: 'text-navy', sub: 'Random sample + targeted review' },
+              { label: 'Coding Accuracy Rate', value: '94%', color: 'text-green-600', sub: '45 of 48 correct first submission' },
+              { label: 'Unbundling Errors', value: 0, color: 'text-green-600', sub: 'No unbundling identified' },
+              { label: 'Upcoding Flags', value: 2, color: 'text-amber-600', sub: 'Under review with Medical Director' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Most Frequently Used Codes — Accuracy by Code</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  {['Code', 'Description', 'Uses (30d)', 'Accurate', 'Accuracy %', 'Common Error'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { code: 'F11.20', desc: 'Opioid use disorder, unspecified', uses: 22, acc: 22, pct: 100, err: 'None identified' },
+                  { code: 'F10.20', desc: 'Alcohol use disorder, moderate', uses: 18, acc: 17, pct: 94, err: 'Severity specifier missing (mild vs mod)' },
+                  { code: 'H0001', desc: 'Alcohol and/or drug assessment', uses: 31, acc: 31, pct: 100, err: 'None identified' },
+                  { code: 'H0015', desc: 'Alcohol and/or drug treatment, residential', uses: 41, acc: 40, pct: 98, err: 'Missing required ASAM level modifier on 1 claim' },
+                  { code: '99213', desc: 'Office visit, established, moderate complexity', uses: 14, acc: 12, pct: 86, err: 'MDM documentation insufficient for level billed (2 charts)' },
+                  { code: 'F33.1', desc: 'MDD, recurrent, moderate', uses: 11, acc: 11, pct: 100, err: 'None identified' },
+                ].map(r => (
+                  <tr key={r.code} className={`hover:bg-gray-50 ${r.pct < 90 ? 'bg-amber-50/30' : ''}`}>
+                    <td className="px-3 py-2 font-mono font-bold text-blue-700">{r.code}</td>
+                    <td className="px-3 py-2 text-navy">{r.desc}</td>
+                    <td className="px-3 py-2 text-center text-slate">{r.uses}</td>
+                    <td className="px-3 py-2 text-center text-navy">{r.acc}</td>
+                    <td className="px-3 py-2 text-center"><span className={`font-bold ${r.pct === 100 ? 'text-green-600' : r.pct >= 90 ? 'text-blue-600' : 'text-amber-600'}`}>{r.pct}%</span></td>
+                    <td className="px-3 py-2 text-slate italic">{r.err}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

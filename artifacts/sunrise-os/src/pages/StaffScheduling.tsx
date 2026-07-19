@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Clock, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Clock, User, Plus } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type ShiftType = 'Day' | 'Evening' | 'Night';
 type StaffRole = 'Physician' | 'Psychiatrist' | 'Nurse' | 'Counselor' | 'LCSW' | 'BHT' | 'Admin';
@@ -109,8 +110,8 @@ const SHIFT_STATUS_STYLE: Record<string, string> = {
 
 const ROLE_ORDER: StaffRole[] = ['Physician', 'Psychiatrist', 'Nurse', 'Counselor', 'LCSW', 'BHT', 'Admin'];
 
-export function StaffScheduling({ navigate }: Props) {
-  const [view, setView] = useState<'Weekly' | 'Staff' | 'Coverage'>('Weekly');
+export function StaffScheduling({ navigate, readOnly }: Props) {
+  const [view, setView] = useState<'Weekly' | 'Staff' | 'Coverage' | 'PTO Requests' | 'Overtime & Fatigue' | 'Labor Analytics'>('Weekly');
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
 
   const totalHours = STAFF.length * DAYS.length * 8; // rough
@@ -143,7 +144,7 @@ export function StaffScheduling({ navigate }: Props) {
           <button className="p-1.5 hover:bg-gray-100 rounded"><ChevronLeft className="w-4 h-4 text-slate" /></button>
           <span className="text-sm font-semibold text-navy px-2">Week of July 14–20, 2026</span>
           <button className="p-1.5 hover:bg-gray-100 rounded"><ChevronRight className="w-4 h-4 text-slate" /></button>
-          <button className="ml-2 btn-primary text-sm px-4 py-2">+ Add Shift</button>
+          <LockedButton locked={readOnly} className="ml-2 btn-primary text-sm px-4 py-2">+ Add Shift</LockedButton>
         </div>
       </div>
 
@@ -164,8 +165,8 @@ export function StaffScheduling({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Weekly', 'Staff', 'Coverage'] as const).map(v => (
-          <button key={v} onClick={() => setView(v)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${view === v ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{v} View</button>
+        {(['Weekly', 'Staff', 'Coverage', 'PTO Requests', 'Overtime & Fatigue', 'Labor Analytics'] as const).map(v => (
+          <button key={v} onClick={() => setView(v)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${view === v ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{v}</button>
         ))}
       </div>
 
@@ -328,6 +329,230 @@ export function StaffScheduling({ navigate }: Props) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {view === 'PTO Requests' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Pending Requests', value: 3, sub: 'Awaiting approval', color: 'text-amber-600' },
+              { label: 'Approved This Month', value: 7, sub: 'Scheduled PTO', color: 'text-green-600' },
+              { label: 'Denied', value: 1, sub: 'Insufficient coverage', color: 'text-red-600' },
+              { label: 'PTO Days Used YTD', value: 38, sub: 'Across all staff', color: 'text-navy' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card p-0 overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm flex items-center justify-between">
+              <span>PTO & Leave Requests</span>
+              <LockedButton locked={readOnly} className="text-xs btn-primary px-3 py-1.5 flex items-center gap-1"><Plus className="w-3 h-3" />Submit Request</LockedButton>
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-bg text-slate">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Staff Member</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Role</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Type</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Dates</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Days</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Coverage Plan</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'Jessica Torres, RN', role: 'Nurse', type: 'Vacation', dates: 'Jul 28 – Aug 1', days: 5, coverage: 'A. Patel covers Day / Per diem hired for Eve', status: 'Pending' },
+                  { name: 'David Odom, LMFT', role: 'Counselor', type: 'Personal', dates: 'Jul 25', days: 1, coverage: 'Group re-assigned to Sarah Jenkins', status: 'Pending' },
+                  { name: 'Marcus Davis, BHT', role: 'BHT', type: 'Sick Leave', dates: 'Jul 19 – 20', days: 2, coverage: 'Kevin Smith covers both days', status: 'Pending' },
+                  { name: 'Sarah Jenkins, LPC', role: 'Counselor', type: 'Vacation', dates: 'Aug 4 – 8', days: 5, coverage: 'Temp counselor scheduled. Caseload split 3-way.', status: 'Approved' },
+                  { name: 'Anita Patel, RN', role: 'Nurse', type: 'FMLA', dates: 'Jul 21 – Aug 15', days: 18, coverage: 'Per diem staff + agency coverage approved', status: 'Approved' },
+                  { name: 'Kevin Smith, BHT', role: 'BHT', type: 'Vacation', dates: 'Aug 11 – 12', days: 2, coverage: 'Marcus Davis / per diem', status: 'Approved' },
+                  { name: 'Robert Davis, BHT', role: 'BHT', type: 'Vacation', dates: 'Jul 22 – 23', days: 2, coverage: 'Denied — insufficient BHT coverage per ratio policy', status: 'Denied' },
+                ].map(r => (
+                  <tr key={r.name} className={`hover:bg-gray-50 ${r.status === 'Pending' ? 'bg-amber-50/40' : r.status === 'Denied' ? 'bg-red-50/40' : ''}`}>
+                    <td className="px-4 py-3 font-medium text-navy whitespace-nowrap">{r.name}</td>
+                    <td className="px-4 py-3 text-slate">{r.role}</td>
+                    <td className="px-4 py-3"><span className="text-[10px] font-medium bg-slate-100 text-slate px-1.5 py-0.5 rounded">{r.type}</span></td>
+                    <td className="px-4 py-3 text-slate whitespace-nowrap">{r.dates}</td>
+                    <td className="px-4 py-3 text-center font-bold text-navy">{r.days}</td>
+                    <td className="px-4 py-3 text-slate max-w-[200px]">{r.coverage}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === 'Approved' ? 'bg-green-100 text-green-700' : r.status === 'Denied' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{r.status}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {r.status === 'Pending' && (
+                        <div className="flex gap-1 justify-center">
+                          <LockedButton locked={readOnly} className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">✓ Approve</LockedButton>
+                          <LockedButton locked={readOnly} className="text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">✕ Deny</LockedButton>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {view === 'Overtime & Fatigue' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Staff hours tracking — overtime threshold alerts, consecutive-shift flags, and fatigue risk monitoring to prevent burnout and regulatory violations.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Overtime Hours (This Week)', value: '14.5 hrs', sub: 'Across 3 staff', color: 'text-amber-600' },
+              { label: 'Approaching OT Threshold', value: 2, sub: 'Staff at 36–40 hrs', color: 'text-amber-600' },
+              { label: 'Consecutive Shifts ≥4', value: 1, sub: 'Jessica Torres — DON', color: 'text-red-600' },
+              { label: 'Agency Shifts This Week', value: 3, sub: 'Float pool RNs', color: 'text-navy' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card p-0 overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm">Staff Hours — Current Week (Jul 14–20, 2026)</div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-bg text-slate">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Staff Member</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Role</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Shifts</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Hours</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">OT Hours</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Consecutive</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Risk</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'Jessica Torres', role: 'DON / RN', shifts: 5, hours: 46, ot: 6, consec: 5, risk: 'High' },
+                  { name: 'Michael Boyd', role: 'RN', shifts: 4, hours: 42, ot: 2, consec: 4, risk: 'Med' },
+                  { name: 'Dr. James Carter', role: 'Clinical Director', shifts: 5, hours: 43, ot: 3, consec: 3, risk: 'Med' },
+                  { name: 'Sarah Jenkins', role: 'LPC', shifts: 5, hours: 40, ot: 0, consec: 5, risk: 'Low' },
+                  { name: 'Maria Gonzales', role: 'LCSW', shifts: 5, hours: 40, ot: 0, consec: 3, risk: 'Low' },
+                  { name: 'Marcus Thompson', role: 'PSS', shifts: 4, hours: 32, ot: 0, consec: 4, risk: 'Low' },
+                  { name: 'Dr. Robert Chen', role: 'Medical Director', shifts: 3, hours: 24, ot: 0, consec: 2, risk: 'Low' },
+                  { name: 'Float RN (Agency)', role: 'RN — Agency', shifts: 3, hours: 36, ot: 0, consec: 3, risk: 'N/A' },
+                ].map(r => (
+                  <tr key={r.name} className={`hover:bg-gray-50 ${r.risk === 'High' ? 'bg-red-50/40' : r.risk === 'Med' ? 'bg-amber-50/30' : ''}`}>
+                    <td className="px-4 py-2.5 font-medium text-navy">{r.name}</td>
+                    <td className="px-3 py-2.5 text-center text-slate">{r.role}</td>
+                    <td className="px-3 py-2.5 text-center text-slate">{r.shifts}</td>
+                    <td className="px-3 py-2.5 text-center font-bold text-navy">{r.hours}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={r.ot > 0 ? 'font-bold text-amber-600' : 'text-slate'}>{r.ot > 0 ? `+${r.ot}` : '—'}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center text-slate">{r.consec} days</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${r.risk === 'High' ? 'bg-red-100 text-red-700' : r.risk === 'Med' ? 'bg-amber-100 text-amber-700' : r.risk === 'Low' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-slate'}`}>{r.risk}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Regulatory Thresholds — Policy Reference</h3>
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              {[
+                { rule: 'Standard Workweek', threshold: '40 hrs / week', consequence: 'OT pay required after 40 hrs (FLSA)', status: 'Monitored' },
+                { rule: 'Mandatory Rest Between Shifts', threshold: '8 hrs minimum', consequence: 'Fatigue policy violation — must document waiver', status: 'Monitored' },
+                { rule: 'Consecutive Day Limit (Policy)', threshold: '≤5 days', consequence: 'Day 5+ triggers supervisor review', status: 'Active Alert' },
+                { rule: 'Licensed RN OT Cap (CARF Rec.)', threshold: '≤12 hrs/day', consequence: 'Documented variance required', status: 'Monitored' },
+              ].map(r => (
+                <div key={r.rule} className="p-3 border border-border rounded-lg">
+                  <div className="font-semibold text-navy">{r.rule}</div>
+                  <div className="text-orange font-bold mt-0.5">{r.threshold}</div>
+                  <div className="text-slate mt-0.5">{r.consequence}</div>
+                  <div className={`text-[10px] font-bold mt-1 ${r.status === 'Active Alert' ? 'text-red-600' : 'text-green-600'}`}>{r.status}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {view === 'Labor Analytics' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Staffing cost, hours, and workforce utilization analytics for the trailing 30 days — supports budget planning and agency staffing decisions.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Total Paid Hours (30d)', value: '1,284h', color: 'text-navy', sub: 'All staff classifications' },
+              { label: 'OT Hours', value: '94h', color: 'text-amber-600', sub: '7.3% of total — target ≤8%' },
+              { label: 'Agency / PRN Hours', value: '62h', color: 'text-blue-600', sub: '4.8% of total hours' },
+              { label: 'Labor Cost (Est.)', value: '$68,400', color: 'text-teal-600', sub: 'Based on avg pay rates' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Hours by Department (30 Days)</h3>
+              <div className="space-y-2.5 text-xs">
+                {[
+                  { dept: 'Nursing (RN + LPN)', hours: 418, pct: 33, color: 'bg-blue-500', ot: 38 },
+                  { dept: 'BHT / Residential Support', hours: 312, pct: 24, color: 'bg-teal-500', ot: 21 },
+                  { dept: 'Clinical (Counselors)', hours: 286, pct: 22, color: 'bg-purple-500', ot: 18 },
+                  { dept: 'Case Management', hours: 128, pct: 10, color: 'bg-orange-400', ot: 9 },
+                  { dept: 'Medical (MD + NP)', hours: 84, pct: 7, color: 'bg-green-500', ot: 5 },
+                  { dept: 'Administration', hours: 56, pct: 4, color: 'bg-gray-400', ot: 3 },
+                ].map(d => (
+                  <div key={d.dept}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{d.dept}</span>
+                      <span className="font-semibold text-navy">{d.hours}h ({d.pct}%) — OT: {d.ot}h</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${d.color}`} style={{ width: `${d.pct * 2.5}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Staffing Cost per Patient Day</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { loc: 'Residential', cpd: '$148', census: 14, target: '$155' },
+                    { loc: 'PHP', cpd: '$86', census: 8, target: '$95' },
+                    { loc: 'IOP', cpd: '$54', census: 11, target: '$60' },
+                    { loc: 'Detox', cpd: '$212', census: 3, target: '$225' },
+                  ].map(r => (
+                    <div key={r.loc} className="flex items-center justify-between border border-border rounded p-2.5">
+                      <div>
+                        <div className="font-medium text-navy">{r.loc} (census {r.census})</div>
+                        <div className="text-slate text-[10px]">Budget target: {r.target}/day</div>
+                      </div>
+                      <span className="font-bold text-2xl text-green-600">{r.cpd}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800">
+                <strong>Labor Note:</strong> All LOCs tracking below budget target for staffing cost per patient day. OT at 7.3% is within the ≤8% policy threshold. Agency hours driven by M. Boyd call-out (week of 07/14) — no agency dependency trend identified.
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

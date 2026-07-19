@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { CheckCircle, AlertTriangle, XCircle, Clock, Plus, FileText, TrendingUp } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type AuthStatus = 'Approved' | 'Pending' | 'Denied' | 'Expired' | 'Appealing';
 type LevelOfCare = 'Residential' | 'PHP' | 'IOP' | 'OP';
@@ -164,8 +165,8 @@ function daysUntil(dateStr: string) {
   return Math.ceil(d / (1000 * 60 * 60 * 24));
 }
 
-export function InsuranceAuthorization({ navigate }: Props) {
-  const [tab, setTab] = useState<'Active' | 'Expiring' | 'Analytics' | 'New'>('Active');
+export function InsuranceAuthorization({ navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Active' | 'Expiring' | 'Analytics' | 'New' | 'Appeal Tracker' | 'Payer Contacts'>('Active');
   const [expandedAuth, setExpandedAuth] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<AuthStatus | 'All'>('All');
   const [letterModal, setLetterModal] = useState<Authorization | null>(null);
@@ -189,9 +190,9 @@ export function InsuranceAuthorization({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Insurance Authorization / UR</h1>
           <p className="text-slate text-sm mt-0.5">Prior authorization tracking, concurrent review, and utilization management</p>
         </div>
-        <button onClick={() => setTab('New')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+        <LockedButton locked={readOnly} onClick={() => !readOnly && setTab('New')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
           <Plus className="w-4 h-4" /> Submit Auth Request
-        </button>
+        </LockedButton>
       </div>
 
       {/* Stats */}
@@ -227,7 +228,7 @@ export function InsuranceAuthorization({ navigate }: Props) {
       )}
 
       <div className="flex gap-1 border-b border-border">
-        {(['Active', 'Expiring', 'Analytics', 'New'] as const).map(t => (
+        {(['Active', 'Expiring', 'Analytics', 'New', 'Appeal Tracker', 'Payer Contacts'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
             {t}
             {t === 'Expiring' && expiring.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5">{expiring.length}</span>}
@@ -513,6 +514,115 @@ export function InsuranceAuthorization({ navigate }: Props) {
               <button className="flex-1 btn-primary text-sm py-2">Copy to Clipboard</button>
               <button className="flex-1 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg py-2 text-sm font-medium hover:bg-blue-100">Download PDF</button>
             </div>
+          </div>
+        </div>
+      )}
+      {tab === 'Appeal Tracker' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Denial appeal management — active appeals, win rate by payer, and documentation support for concurrent review disputes.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Active Appeals', value: 4, color: 'text-amber-600', sub: '2 first-level, 2 second-level' },
+              { label: 'Win Rate (90d)', value: '68%', color: 'text-green-600', sub: '13 of 19 appeals won' },
+              { label: 'Avg Days to Resolution', value: '11d', color: 'text-blue-600', sub: 'Target: ≤14 days' },
+              { label: 'Revenue Recovered (90d)', value: '$41,200', color: 'text-teal-600', sub: 'Won appeals, all LOCs' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Active Appeals</h3>
+            <div className="space-y-3 text-xs">
+              {[
+                {
+                  patient: 'Marcus Webb', payer: 'Cigna Behavioral', denied: 'Residential day 15+', level: '2nd Level',
+                  reason: 'Medical necessity for continued residential — peer reviewer disagreed on ASAM D3 severity.',
+                  action: 'Physician peer-to-peer call scheduled 07/21. Clinical notes and Columbia Suicide Severity forwarded.',
+                  filed: '07/12', due: '07/26', status: 'In Review', sColor: 'border-blue-200 bg-blue-50'
+                },
+                {
+                  patient: 'Samantha Choi', payer: 'UHC / Optum', denied: 'PHP x5 days', level: '1st Level',
+                  reason: 'Step-down from residential deemed premature; payer requested additional stabilization justification.',
+                  action: 'Discharge summary and treatment plan submitted 07/16. Awaiting UM review.',
+                  filed: '07/15', due: '07/29', status: 'Awaiting Response', sColor: 'border-amber-200 bg-amber-50'
+                },
+                {
+                  patient: 'James Thornton', payer: 'Aetna Behavioral', denied: 'IOP week 3', level: '1st Level',
+                  reason: 'Routine denial — UM cited "insufficient progress documentation".',
+                  action: 'Progress notes with objective PHQ-9 improvement submitted. Appeal has strong clinical basis.',
+                  filed: '07/17', due: '07/31', status: 'Strong Position', sColor: 'border-green-200 bg-green-50'
+                },
+                {
+                  patient: 'Patricia Holloway', payer: 'BCBS TN', denied: 'Residential day 20+', level: '2nd Level',
+                  reason: 'Payer position: patient no longer meets ASAM Residential criteria. Clinical team disagrees.',
+                  action: 'External IRO review requested 07/18. IRO decision binding under TN law.',
+                  filed: '07/10', due: '07/24', status: 'IRO Requested', sColor: 'border-purple-200 bg-purple-50'
+                },
+              ].map(a => (
+                <div key={a.patient} className={`border rounded-xl p-3 ${a.sColor}`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <span className="font-semibold text-navy">{a.patient}</span>
+                      <span className="text-slate ml-2">— {a.payer}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-3">
+                      <span className="text-[9px] bg-gray-100 text-slate px-1.5 py-0.5 rounded-full font-bold">{a.level}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${a.status === 'Strong Position' ? 'bg-green-100 text-green-700' : a.status === 'IRO Requested' ? 'bg-purple-100 text-purple-700' : a.status === 'In Review' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>{a.status}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><span className="font-semibold text-slate">Denied:</span> <span className="text-navy">{a.denied}</span></div>
+                    <div><span className="font-semibold text-slate">Reason:</span> <span className="text-navy">{a.reason}</span></div>
+                    <div><span className="font-semibold text-slate">Action:</span> <span className="text-navy">{a.action}</span></div>
+                  </div>
+                  <div className="mt-1.5 text-[10px] text-slate">Filed: {a.filed} · Due: {a.due}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Payer Contacts' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Payer contact directory — UM/authorizations lines, appeals contacts, and key policy reference numbers for top payers by volume.</div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Payer Contact Directory — Active Contracts</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  {['Payer', 'Auth / UM Line', 'Appeals', 'Fax (Auth)', 'Provider Portal', 'Notes'].map(h => (
+                    <th key={h} className="text-left px-2 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { payer: 'BlueCross BlueShield TN', auth: '800-555-0111', appeals: '800-555-0112', fax: '800-555-0113', portal: 'provider.bcbst.com', notes: 'Auth required for all residential; PHP/IOP req initial auth + UR every 7d' },
+                  { payer: 'Aetna', auth: '800-555-0221', appeals: '800-555-0222', fax: '800-555-0223', portal: 'provider.aetna.com', notes: 'Use Naviguard for UR; residential: 72h prior auth window' },
+                  { payer: 'Cigna Behavioral Health', auth: '800-555-0331', appeals: '800-555-0332', fax: '800-555-0333', portal: 'cignaforhcp.cigna.com', notes: 'ASAM LOC justification required; peer-to-peer available M–F 9–5 CT' },
+                  { payer: 'UnitedHealthcare/Optum', auth: '800-555-0441', appeals: '800-555-0442', fax: '800-555-0443', portal: 'uhcprovider.com', notes: 'Level-of-care auth via Optum portal; residential UR every 5 days' },
+                  { payer: 'Humana', auth: '800-555-0551', appeals: '800-555-0552', fax: '800-555-0553', portal: 'humanaone.com', notes: 'MAT does not require prior auth; residential requires ASAM criteria documentation' },
+                  { payer: 'TennCare / Amerigroup', auth: '800-555-0661', appeals: '800-555-0662', fax: '800-555-0663', portal: 'amerigrouptn.com', notes: 'Medicaid — residential requires prior auth; IOP: 12 sessions then UR' },
+                  { payer: 'TennCare / BlueCare', auth: '800-555-0771', appeals: '800-555-0772', fax: '800-555-0773', portal: 'bluecaretennessee.com', notes: 'Same ASAM criteria as commercial; peer-to-peer within 48h of denial' },
+                  { payer: 'Medicare (TrailBlazer)', auth: '800-555-0881', appeals: '800-555-0882', fax: '800-555-0883', portal: 'cgsmedicare.com', notes: 'No prior auth for detox; PHP/IOP: CERT documentation standards apply' },
+                ].map(r => (
+                  <tr key={r.payer} className="hover:bg-gray-50">
+                    <td className="px-2 py-2 font-semibold text-navy">{r.payer}</td>
+                    <td className="px-2 py-2 font-mono text-[10px] text-blue-700">{r.auth}</td>
+                    <td className="px-2 py-2 font-mono text-[10px] text-purple-700">{r.appeals}</td>
+                    <td className="px-2 py-2 font-mono text-[10px] text-slate">{r.fax}</td>
+                    <td className="px-2 py-2 text-[10px] text-teal-700 underline">{r.portal}</td>
+                    <td className="px-2 py-2 text-[10px] text-slate italic">{r.notes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

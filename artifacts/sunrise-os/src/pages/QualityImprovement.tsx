@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { CheckCircle, XCircle, AlertTriangle, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type IndicatorStatus = 'Met' | 'Not Met' | 'At Risk' | 'N/A';
 
@@ -94,9 +95,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   Outcomes:      'bg-orange-100 text-orange-700',
 };
 
-export function QualityImprovement({ navigate }: Props) {
+export function QualityImprovement({ navigate, readOnly }: Props) {
   const [category, setCategory] = useState<Category>('All');
-  const [tab, setTab] = useState<'Indicators' | 'Trends' | 'Action Plan'>('Indicators');
+  const [tab, setTab] = useState<'Indicators' | 'Trends' | 'Action Plan' | 'PDSA Cycles' | 'Staff Feedback' | 'Accreditation Prep'>('Indicators');
 
   const filtered = category === 'All' ? QI_INDICATORS : QI_INDICATORS.filter(i => i.category === category);
   const met = QI_INDICATORS.filter(i => i.status === 'Met').length;
@@ -124,7 +125,7 @@ export function QualityImprovement({ navigate }: Props) {
         </div>
         <div className="flex gap-2">
           <button className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50">Export Report</button>
-          <button className="btn-primary text-sm px-4 py-2">Schedule QI Meeting</button>
+          <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">Schedule QI Meeting</LockedButton>
         </div>
       </div>
 
@@ -153,7 +154,7 @@ export function QualityImprovement({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Indicators', 'Trends', 'Action Plan'] as const).map(t => (
+        {(['Indicators', 'Trends', 'Action Plan', 'PDSA Cycles', 'Staff Feedback', 'Accreditation Prep'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
             {t}
             {t === 'Action Plan' && (ACTION_ITEMS.length > 0) && <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5">{ACTION_ITEMS.length}</span>}
@@ -309,6 +310,231 @@ export function QualityImprovement({ navigate }: Props) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'PDSA Cycles' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Plan-Do-Study-Act improvement cycles currently tracked by the QI Committee. Each cycle targets one measurable indicator gap.</div>
+          {[
+            {
+              title: 'Improve Treatment Plan 72h Completion Rate',
+              indicator: 'Treatment plan documented within 72h of admission',
+              current: '84%', target: '95%', status: 'Study',
+              plan: 'Add automated EHR alert at 48h post-admission if treatment plan is missing. Assign backup counselor for high-volume admission days.',
+              do: 'Alert deployed July 1. Backup assignment protocol active since July 5.',
+              study: 'Two-week post-launch rate: 91% (↑7%). Alert acknowledged in avg 22 min.',
+              act: 'Proceeding to full adoption. Adding shift handoff reminder. Targeting 95% by Aug 1.',
+              lead: 'Sarah Jenkins, LPC',
+              started: '2026-06-15',
+              statusColor: 'bg-blue-100 text-blue-700',
+            },
+            {
+              title: 'Reduce Medication Error Rate Below 1%',
+              indicator: 'Medication administration error rate',
+              current: '1.8%', target: '<1%', status: 'Do',
+              plan: 'Implement nurse double-verification for all controlled substance administrations. Barcode scanning at MAR entry.',
+              do: 'Pilot launched on Unit 2 (July 8). All nurses trained. Scanner hardware installed.',
+              study: 'Pilot data collection ongoing — results expected July 22.',
+              act: 'Pending study results before full rollout.',
+              lead: 'Jessica Torres, RN',
+              started: '2026-07-08',
+              statusColor: 'bg-green-100 text-green-700',
+            },
+            {
+              title: 'Increase Group Therapy Attendance to 90%',
+              indicator: 'Patient group therapy attendance rate',
+              current: '82%', target: '90%', status: 'Act',
+              plan: 'Peer accountability system — patients with <75% attendance flagged for counselor check-in. Group topic survey to increase relevance.',
+              do: 'Accountability check-ins started June 25. Survey results used for Q3 group schedule.',
+              study: 'June avg: 86% (↑4%). Largest gains in Residential track. IOP still at 80%.',
+              act: 'Expanded to IOP track July 15. Targeting 90% by Q3 close. Monthly report to QI Committee.',
+              lead: 'David Odom, LMFT',
+              started: '2026-06-10',
+              statusColor: 'bg-purple-100 text-purple-700',
+            },
+            {
+              title: 'Improve 30-Day Readmission Prevention',
+              indicator: '30-day unplanned readmission / AMA return rate',
+              current: '22%', target: '<15%', status: 'Plan',
+              plan: 'Structured aftercare call protocol: 48h, 7d, 30d post-discharge. Assign each patient a peer specialist contact for first 30 days. Warm handoff to outpatient provider required before discharge.',
+              do: 'Protocol drafted. Awaiting clinical director approval.',
+              study: '—',
+              act: '—',
+              lead: 'James Carter (Clinical Director)',
+              started: '2026-07-15',
+              statusColor: 'bg-amber-100 text-amber-700',
+            },
+          ].map(cycle => (
+            <div key={cycle.title} className="card">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${cycle.statusColor}`}>Phase: {cycle.status}</span>
+                    <span className="text-xs text-slate">Started {cycle.started} · Lead: {cycle.lead}</span>
+                  </div>
+                  <h3 className="font-semibold text-navy">{cycle.title}</h3>
+                  <div className="text-xs text-slate mt-0.5">Indicator: {cycle.indicator} — Current: <span className="font-semibold text-red-600">{cycle.current}</span> → Target: <span className="font-semibold text-green-600">{cycle.target}</span></div>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-3 text-xs">
+                {[
+                  { phase: '📋 PLAN', text: cycle.plan, active: cycle.status === 'Plan' },
+                  { phase: '⚙️ DO', text: cycle.do, active: cycle.status === 'Do' },
+                  { phase: '🔬 STUDY', text: cycle.study, active: cycle.status === 'Study' },
+                  { phase: '✅ ACT', text: cycle.act, active: cycle.status === 'Act' },
+                ].map(p => (
+                  <div key={p.phase} className={`p-3 rounded-lg border ${p.active ? 'bg-navy/5 border-navy/20' : 'bg-gray-50 border-border'}`}>
+                    <div className={`font-bold mb-1.5 ${p.active ? 'text-navy' : 'text-slate'}`}>{p.phase}</div>
+                    <div className={p.text === '—' ? 'text-slate/40 italic' : 'text-slate leading-relaxed'}>{p.text}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {tab === 'Staff Feedback' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Aggregated staff feedback on quality processes — identifying barriers, suggestions, and department-level QI engagement.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Feedback Submissions (Q2)', value: 47, color: 'text-navy', sub: '68% response rate' },
+              { label: 'High-Priority Issues', value: 4, color: 'text-red-600', sub: 'Escalated to leadership' },
+              { label: 'Ideas Under Review', value: 11, color: 'text-amber-600', sub: 'QI committee queue' },
+              { label: 'Implemented This Quarter', value: 6, color: 'text-green-600', sub: 'Staff-originated improvements' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Recent Feedback Themes (Q2 2026)</h3>
+              <div className="space-y-3 text-xs">
+                {[
+                  { theme: 'Documentation Burden', count: 14, pct: 30, color: 'bg-red-500', action: 'Note template simplification in progress' },
+                  { theme: 'Staffing & Ratios', count: 11, pct: 23, color: 'bg-amber-500', action: 'Under review with HR — Q3 hiring plan' },
+                  { theme: 'Communication / Handoffs', count: 9, pct: 19, color: 'bg-orange-500', action: 'Shift handoff SBAR template piloted' },
+                  { theme: 'Group Room Scheduling', count: 7, pct: 15, color: 'bg-blue-500', action: 'New weekly group matrix implemented' },
+                  { theme: 'Patient Safety Concerns', count: 4, pct: 9, color: 'bg-purple-500', action: 'Incident review committee addressing' },
+                  { theme: 'Other / Positive', count: 2, pct: 4, color: 'bg-green-500', action: '—' },
+                ].map(t => (
+                  <div key={t.theme}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="font-medium text-navy">{t.theme}</span>
+                      <span className="text-slate">{t.count} ({t.pct}%)</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full mb-1">
+                      <div className={`h-2 rounded-full ${t.color}`} style={{ width: `${t.pct * 2.5}%` }} />
+                    </div>
+                    <div className="text-[10px] text-slate italic">Action: {t.action}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Staff-Suggested Improvements — Under Review</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { idea: 'Dedicated 15-minute peer-to-peer consult time built into counselor schedules', dept: 'Clinical', status: 'In Review', sColor: 'bg-blue-100 text-blue-700' },
+                    { idea: 'QR code on patient whiteboards for nursing to quick-log vitals', dept: 'Nursing', status: 'Piloting', sColor: 'bg-teal-100 text-teal-700' },
+                    { idea: 'Family session reminder automated via text 48h before appointment', dept: 'Case Mgmt', status: 'Approved', sColor: 'bg-green-100 text-green-700' },
+                    { idea: 'Anonymous weekly staff sentiment pulse survey (3 questions)', dept: 'HR', status: 'In Review', sColor: 'bg-blue-100 text-blue-700' },
+                    { idea: 'Rotate group facilitation assignments to reduce burnout', dept: 'Clinical', status: 'Implemented', sColor: 'bg-green-100 text-green-700' },
+                    { idea: 'Standing agenda item: "near miss" debrief in weekly clinical meeting', dept: 'Quality', status: 'Implemented', sColor: 'bg-green-100 text-green-700' },
+                  ].map(s => (
+                    <div key={s.idea} className="border border-border rounded p-2.5">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <span className="text-slate flex-1">{s.idea}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${s.sColor}`}>{s.status}</span>
+                      </div>
+                      <div className="text-[10px] text-slate">Dept: {s.dept}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Accreditation Prep' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">CARF accreditation preparation checklist — document readiness, survey findings remediation, and pre-survey mock audit status.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Standards Met', value: '94%', color: 'text-green-600', sub: 'Of applicable CARF standards' },
+              { label: 'Findings Under Remediation', value: 3, color: 'text-amber-600', sub: 'From 2024 survey cycle' },
+              { label: 'Documents Ready', value: '89%', color: 'text-blue-600', sub: '142 of 160 required docs' },
+              { label: 'Next Survey Window', value: '2027', color: 'text-navy', sub: '3-Year cycle · ~18 months out' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">CARF Domain Readiness — Current Status</h3>
+              <div className="space-y-2.5 text-xs">
+                {[
+                  { domain: 'Section 1 — Aspiring to Excellence', pct: 98, status: 'Ready', color: 'bg-green-500', sColor: 'text-green-700' },
+                  { domain: 'Section 2 — Leadership', pct: 96, status: 'Ready', color: 'bg-green-500', sColor: 'text-green-700' },
+                  { domain: 'Section 3 — Strategic Management', pct: 92, status: 'Ready', color: 'bg-green-500', sColor: 'text-green-700' },
+                  { domain: 'Section 4 — Input from Persons Served', pct: 88, status: 'In Progress', color: 'bg-blue-500', sColor: 'text-blue-700' },
+                  { domain: 'Section 5 — Rights of Persons Served', pct: 97, status: 'Ready', color: 'bg-green-500', sColor: 'text-green-700' },
+                  { domain: 'Section 6 — Service Delivery', pct: 91, status: 'In Progress', color: 'bg-blue-500', sColor: 'text-blue-700' },
+                  { domain: 'Section 7 — Health & Safety', pct: 95, status: 'Ready', color: 'bg-green-500', sColor: 'text-green-700' },
+                  { domain: 'CORE — SUD Residential Services', pct: 89, status: 'In Progress', color: 'bg-amber-500', sColor: 'text-amber-700' },
+                ].map(d => (
+                  <div key={d.domain}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{d.domain}</span>
+                      <div className="flex gap-2 items-center">
+                        <span className={`text-[9px] font-bold ${d.sColor}`}>{d.status}</span>
+                        <span className="font-semibold text-navy">{d.pct}%</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${d.color}`} style={{ width: `${d.pct}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Open 2024 Survey Findings</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { finding: 'F.1 — Person-Centered Planning documentation format not consistently individualized', remediation: 'New treatment plan template deployed July 2026; staff training completed', due: '2026-09-01', status: 'On Track' },
+                    { finding: 'F.2 — Satisfaction survey frequency below CARF minimum (quarterly required)', remediation: 'Automated quarterly survey schedule implemented; first cycle Aug 2026', due: '2026-08-15', status: 'On Track' },
+                    { finding: 'F.3 — Emergency drill documentation missing for Q2 2024', remediation: 'Retroactive documentation submitted; ongoing drill log system now in place', due: '2026-07-31', status: 'At Risk' },
+                  ].map(f => (
+                    <div key={f.finding} className={`border rounded-lg p-2.5 ${f.status === 'At Risk' ? 'border-amber-300 bg-amber-50' : 'border-border'}`}>
+                      <div className="flex items-start justify-between mb-1">
+                        <span className="font-semibold text-navy">{f.finding}</span>
+                        <span className={`shrink-0 ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${f.status === 'At Risk' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{f.status}</span>
+                      </div>
+                      <div className="text-slate">{f.remediation}</div>
+                      <div className="text-[10px] text-slate mt-0.5">Due: {f.due}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

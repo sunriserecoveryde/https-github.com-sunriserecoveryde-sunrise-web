@@ -4,7 +4,9 @@ import { MOCK_PATIENTS } from '../data/mockPatients';
 import { Heart, Star, Users, MessageSquare, Calendar, CheckCircle, Plus, Award, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+import { LockedButton } from '../components/common/LockedButton';
+
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 interface PeerSpecialist {
   id: string;
@@ -114,8 +116,8 @@ const OUTCOME_COLOR = {
   'Crisis Referral': 'bg-red-200 text-red-800',
 };
 
-export function PeerSupport({ navigate }: Props) {
-  const [tab, setTab] = useState<'Specialists' | 'Contacts' | 'Groups' | 'Outcomes'>('Specialists');
+export function PeerSupport({ navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Specialists' | 'Contacts' | 'Groups' | 'Outcomes' | 'Training' | 'Impact Stories' | 'CPRS Standards'>('Specialists');
   const [selectedPeer, setSelectedPeer] = useState<string>('PS-001');
 
   const peer = PEER_SPECIALISTS.find(p => p.id === selectedPeer)!;
@@ -130,7 +132,7 @@ export function PeerSupport({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Peer Support Program</h1>
           <p className="text-slate text-sm mt-0.5">Certified peer recovery specialists · Lived experience · Recovery community integration</p>
         </div>
-        <button className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Log Peer Contact</button>
+        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Log Peer Contact</LockedButton>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -149,7 +151,7 @@ export function PeerSupport({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Specialists', 'Contacts', 'Groups', 'Outcomes'] as const).map(t => (
+        {(['Specialists', 'Contacts', 'Groups', 'Outcomes', 'Training', 'Impact Stories', 'CPRS Standards'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -300,6 +302,188 @@ export function PeerSupport({ navigate }: Props) {
             ))}
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
               <strong>Evidence base:</strong> Patients with peer specialist engagement are 2.3x more likely to complete treatment and 40% less likely to AMA than matched controls (SAMHSA, 2023).
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Training' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Certified PSS on Staff', value: 4, sub: 'MHFA + CPRS certified', color: 'text-navy' },
+              { label: 'Training Hours YTD', value: 62, sub: 'Across all peer staff', color: 'text-blue-600' },
+              { label: 'Avg Competency Score', value: '88%', sub: 'Post-training assessment', color: 'text-green-600' },
+              { label: 'Continuing Ed Due', value: 1, sub: 'Within 30 days', color: 'text-amber-600' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card p-0 overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm">Peer Support Specialist Training Matrix</div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-bg text-slate">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Specialist</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">CPRS</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">MHFA</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Motivational Int.</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Boundaries & Ethics</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Documentation</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Crisis Response</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Total Hours</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'Marcus T.', cprs: '✓', mhfa: '✓', mi: '✓', ethics: '✓', docs: '✓', crisis: '✓', hours: 18 },
+                  { name: 'Sandra K.', cprs: '✓', mhfa: '✓', mi: '✓', ethics: '✓', docs: '✓', crisis: '✓', hours: 16 },
+                  { name: 'Devon R.', cprs: '✓', mhfa: '✓', mi: '○ Due Aug 15', ethics: '✓', docs: '✓', crisis: '✓', hours: 14 },
+                  { name: 'Priya M.', cprs: '✓', mhfa: '○ Due Sep 1', mi: '✓', ethics: '✓', docs: '✓', crisis: '○ Scheduled', hours: 14 },
+                ].map(r => (
+                  <tr key={r.name} className="hover:bg-gray-50">
+                    <td className="px-4 py-2.5 font-medium text-navy">{r.name}</td>
+                    {[r.cprs, r.mhfa, r.mi, r.ethics, r.docs, r.crisis].map((v, i) => (
+                      <td key={i} className={`px-3 py-2.5 text-center text-xs ${v === '✓' ? 'text-green-600 font-bold' : 'text-amber-600'}`}>{v}</td>
+                    ))}
+                    <td className="px-3 py-2.5 text-center font-bold text-navy">{r.hours}h</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Upcoming Training Events</h3>
+            <div className="space-y-3">
+              {[
+                { title: 'Motivational Interviewing — Advanced Skills Workshop', date: '2026-08-15', instructor: 'Addiction Counselor Institute (ACI)', audience: 'Devon R.', ceu: '6 CEUs', mode: 'Virtual' },
+                { title: 'Mental Health First Aid Recertification (8-hour)', date: '2026-09-01', instructor: 'SAMHSA-sponsored; local trainer', audience: 'Priya M.', ceu: '8 CEUs', mode: 'In-Person' },
+                { title: 'Peer Support Crisis Response — De-escalation Module', date: '2026-09-10', instructor: 'Dr. James Carter, PhD (internal)', audience: 'All PSS staff', ceu: '3 CEUs', mode: 'In-Person' },
+                { title: 'Documentation & Progress Notes for Peer Staff', date: '2026-10-01', instructor: 'Compliance Officer (internal)', audience: 'All PSS staff', ceu: '2 CEUs', mode: 'In-Person' },
+              ].map(e => (
+                <div key={e.title} className="flex items-center justify-between border border-border rounded-lg px-4 py-3 hover:bg-gray-50">
+                  <div>
+                    <div className="font-medium text-navy text-sm">{e.title}</div>
+                    <div className="text-xs text-slate mt-0.5">{e.date} · {e.instructor} · {e.audience}</div>
+                  </div>
+                  <div className="flex gap-2 items-center shrink-0">
+                    <span className="text-[10px] bg-blue-100 text-blue-700 font-medium px-2 py-0.5 rounded">{e.mode}</span>
+                    <span className="text-[10px] bg-green-100 text-green-700 font-medium px-2 py-0.5 rounded">{e.ceu}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {tab === 'Impact Stories' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Anonymized recovery stories from alumni who received peer support services — illustrates program impact and guides peer support strategy.</div>
+          <div className="grid grid-cols-2 gap-5">
+            {[
+              {
+                initials: 'M.W.', prog: 'Men\'s Residential → IOP', ps: 'R. Caldwell, CPRS', months: 14,
+                story: '"I didn\'t trust anyone when I walked in. My peer specialist was the first person in recovery I actually believed. He had the same story — different chapter. I\'m 14 months sober, working again, and my daughter talks to me."',
+                outcome: '14 months continuous sobriety, employed, family reconnected',
+              },
+              {
+                initials: 'S.C.', prog: 'Women\'s Residential', ps: 'L. Nguyen, CPS', months: 9,
+                story: '"I had been to treatment three times. What was different this time was having a peer who had also relapsed before making it — she didn\'t shame me. She helped me rebuild my relationship with myself."',
+                outcome: '9 months sobriety, enrolled in college, sober living graduate',
+              },
+              {
+                initials: 'J.T.', prog: 'PHP Step-down', ps: 'M. Osei, CPRS', months: 18,
+                story: '"My peer specialist helped me navigate the court system and MAT stigma at work. Nobody else could have done that. He spoke both languages — recovery and the real world."',
+                outcome: '18 months sobriety, case dismissed, promoted at job',
+              },
+              {
+                initials: 'D.P.', prog: 'IOP + Alumni', ps: 'R. Caldwell, CPRS', months: 7,
+                story: '"I almost left AMA twice. Both times, my peer met me at the door. Not to stop me — just to sit with me. That was enough. Seven months later I sponsor two guys in my home group."',
+                outcome: '7 months sobriety, active 12-step sponsor, community volunteer',
+              },
+            ].map(s => (
+              <div key={s.initials} className="card">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-navy text-white font-bold flex items-center justify-center shrink-0">{s.initials}</div>
+                  <div>
+                    <div className="text-xs font-semibold text-navy">{s.prog}</div>
+                    <div className="text-xs text-slate">Peer Specialist: {s.ps} · {s.months} months post-discharge</div>
+                  </div>
+                </div>
+                <blockquote className="text-xs text-slate italic leading-relaxed border-l-2 border-orange pl-3 mb-3">{s.story}</blockquote>
+                <div className="text-[10px] text-teal-700 bg-teal-50 rounded p-2 font-medium">✓ {s.outcome}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === 'CPRS Standards' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Certified Peer Recovery Specialist (CPRS) scope of practice, ethics standards, and Tennessee certification requirements.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'CPRS Certification Body', value: 'TDAMHSAS', color: 'text-navy', sub: 'Tennessee state certification' },
+              { label: 'CE Required (2yr renewal)', value: '40 hrs', color: 'text-blue-600', sub: '12h ethics required' },
+              { label: 'Supervised Hours (initial)', value: '500 hrs', color: 'text-teal-600', sub: 'Under qualified supervisor' },
+              { label: 'Recovery Requirement', value: '2 years', color: 'text-green-600', sub: 'Self-identified lived experience' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">CPRS Scope of Practice — What CPRS Can and Cannot Do</h3>
+              <div className="space-y-1.5 text-xs">
+                <div className="font-semibold text-green-700 uppercase text-[10px] tracking-wider mb-1">Within Scope</div>
+                {[
+                  'Share lived experience with recovery to instill hope',
+                  'Provide peer mentoring, coaching, and emotional support',
+                  'Assist with recovery planning and goal-setting',
+                  'Help navigate community resources, meetings, housing',
+                  'Provide warm handoffs and accompany to appointments',
+                  'Facilitate peer support groups (non-clinical facilitation)',
+                  'Advocate for patient needs within the care team',
+                  'Provide education about recovery and wellness concepts',
+                ].map(s => <div key={s} className="flex gap-1.5"><span className="text-green-500 shrink-0">✓</span><span className="text-navy">{s}</span></div>)}
+                <div className="font-semibold text-red-600 uppercase text-[10px] tracking-wider mb-1 mt-3">Outside Scope</div>
+                {[
+                  'Providing clinical assessment, diagnosis, or treatment planning',
+                  'Prescribing or administering medications',
+                  'Providing clinical psychotherapy or counseling',
+                  'Conducting ASAM or any standardized clinical assessment',
+                  'Providing crisis intervention without clinical backup',
+                  'Making LOC or discharge decisions',
+                ].map(s => <div key={s} className="flex gap-1.5"><span className="text-red-400 shrink-0">✗</span><span className="text-navy">{s}</span></div>)}
+              </div>
+            </div>
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">CPRS Ethics Standards — Tennessee TDAMHSAS</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { principle: 'Dignity and Respect', detail: 'Honor the rights, dignity, and self-determination of all individuals. Treat peers without judgment regarding their substance use, mental health, or personal choices.' },
+                  { principle: 'Confidentiality', detail: 'Maintain confidentiality of peer information. CPRS are bound by HIPAA and 42 CFR Part 2 the same as other staff. Share only on a need-to-know basis.' },
+                  { principle: 'Boundaries', detail: 'Maintain appropriate professional boundaries. Do not engage in dual relationships (e.g., employing peers, entering romantic relationships, financial transactions).' },
+                  { principle: 'Lived Experience Integrity', detail: 'Share personal recovery narrative authentically and appropriately. Avoid embellishment or fabrication. Protect your own recovery while supporting others.' },
+                  { principle: 'Scope of Practice Adherence', detail: 'Operate only within CPRS scope. Immediately refer clinical, safety, or medical concerns to the supervising licensed clinician.' },
+                  { principle: 'Cultural Humility', detail: 'Recognize and respect cultural, linguistic, and identity diversity. Approach peers with humility and openness rather than making assumptions.' },
+                ].map(p => (
+                  <div key={p.principle} className="border border-border rounded-lg p-2">
+                    <div className="font-semibold text-navy">{p.principle}</div>
+                    <div className="text-slate mt-0.5">{p.detail}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

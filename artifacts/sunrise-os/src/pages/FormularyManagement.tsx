@@ -127,7 +127,7 @@ const FORMULARY_STYLE: Record<FormularyStatus, string> = {
 };
 
 export function FormularyManagement({ navigate: _navigate }: Props) {
-  const [tab, setTab] = useState<'Formulary' | 'Interactions' | 'Policy'>('Formulary');
+  const [tab, setTab] = useState<'Formulary' | 'Interactions' | 'Policy' | 'Controlled Log' | 'Shortage Alerts' | 'Cost Analysis'>('Formulary');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterClass, setFilterClass] = useState<DrugClass | 'All'>('All');
   const [expandedDrug, setExpandedDrug] = useState<string | null>('D-001');
@@ -170,7 +170,7 @@ export function FormularyManagement({ navigate: _navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Formulary', 'Interactions', 'Policy'] as const).map(t => (
+        {(['Formulary', 'Interactions', 'Policy', 'Controlled Log', 'Shortage Alerts', 'Cost Analysis'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -352,6 +352,207 @@ export function FormularyManagement({ navigate: _navigate }: Props) {
               </ul>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'Controlled Log' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Transactions This Shift', value: 14, sub: 'All verified', color: 'text-navy' },
+              { label: 'Discrepancies', value: 0, sub: 'Running total', color: 'text-green-600' },
+              { label: 'Witness Sign-offs', value: 14, sub: '100% — dual-nurse rule met', color: 'text-green-600' },
+              { label: 'Wasted Doses', value: 2, sub: 'Logged & witnessed', color: 'text-amber-600' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card p-0 overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-border flex items-center justify-between">
+              <h3 className="font-semibold text-navy text-sm">Controlled Substance Administration Log — Current Shift</h3>
+              <span className="text-xs text-slate">Per DEA 21 CFR Part 1304 · Dual-nurse verification required</span>
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-bg text-slate">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Time</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Patient</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Medication</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Dose</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Qty Out</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Balance</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Administered By</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Witness</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Type</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { time: '06:00', patient: 'M. Webb', med: 'Buprenorphine 16mg SL', dose: '16mg', qty: 1, bal: 47, admin: 'J. Torres, RN', witness: 'A. Patel, RN', type: 'Administration' },
+                  { time: '06:05', patient: 'S. Choi', med: 'Buprenorphine 24mg SL', dose: '24mg', qty: 1, bal: 31, admin: 'J. Torres, RN', witness: 'A. Patel, RN', type: 'Administration' },
+                  { time: '06:10', patient: 'J. Thornton', med: 'Clonidine 0.1mg PO', dose: '0.1mg', qty: 1, bal: 22, admin: 'A. Patel, RN', witness: 'J. Torres, RN', type: 'Administration' },
+                  { time: '06:15', patient: 'E. Vasquez', med: 'Buprenorphine 8mg SL', dose: '8mg', qty: 1, bal: 19, admin: 'A. Patel, RN', witness: 'J. Torres, RN', type: 'Administration' },
+                  { time: '07:30', patient: 'R. Navarro', med: 'Promethazine 25mg PO', dose: '25mg', qty: 1, bal: 14, admin: 'J. Torres, RN', witness: 'A. Patel, RN', type: 'Administration' },
+                  { time: '08:00', patient: 'P. Holloway', med: 'Lorazepam 1mg IV', dose: '1mg', qty: 1, bal: 8, admin: 'J. Torres, RN', witness: 'A. Patel, RN', type: 'Administration' },
+                  { time: '08:00', patient: '—', med: 'Lorazepam 1mg IV', dose: '0.5mg', qty: 0, bal: 8, admin: 'J. Torres, RN', witness: 'A. Patel, RN', type: 'Waste' },
+                  { time: '09:15', patient: 'B. Kowalski', med: 'Naltrexone 50mg PO', dose: '50mg', qty: 1, bal: 11, admin: 'A. Patel, RN', witness: 'J. Torres, RN', type: 'Administration' },
+                ].map((row, i) => (
+                  <tr key={i} className={`hover:bg-gray-50 ${row.type === 'Waste' ? 'bg-amber-50' : ''}`}>
+                    <td className="px-4 py-2.5 font-mono text-slate">{row.time}</td>
+                    <td className="px-4 py-2.5 font-medium text-navy">{row.patient}</td>
+                    <td className="px-4 py-2.5 text-slate">{row.med}</td>
+                    <td className="px-4 py-2.5 text-center text-navy font-medium">{row.dose}</td>
+                    <td className="px-4 py-2.5 text-center text-navy">{row.qty}</td>
+                    <td className="px-4 py-2.5 text-center font-bold text-navy">{row.bal}</td>
+                    <td className="px-4 py-2.5 text-slate">{row.admin}</td>
+                    <td className="px-4 py-2.5 text-slate">{row.witness}</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${row.type === 'Waste' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{row.type}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="px-5 py-2.5 bg-green-50 border-t border-border text-xs text-green-800 flex items-center justify-between">
+              <span>✓ All transactions verified · No discrepancies · Count reconciled at shift change</span>
+              <button className="font-semibold text-green-700 hover:underline">Print Shift Report</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Shortage Alerts' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Active and anticipated drug shortage alerts affecting the current formulary — sourced from FDA, ASHP, and wholesaler notifications.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Active Shortages', value: 3, color: 'text-red-600', sub: 'Affecting current formulary' },
+              { label: 'Anticipatory Alerts', value: 2, color: 'text-amber-600', sub: 'Early warning — order ahead' },
+              { label: 'Therapeutic Alternatives', value: 5, color: 'text-green-600', sub: 'Substitutions identified' },
+              { label: 'Resolved This Month', value: 1, color: 'text-teal-600', sub: 'Supply restored' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Current Shortage Alerts</h3>
+            <div className="space-y-3 text-xs">
+              {[
+                {
+                  drug: 'Buprenorphine/Naloxone 8mg/2mg SL Film', severity: 'Critical', source: 'FDA + ASHP',
+                  impact: 'Primary MAT medication — affects 7 active patients',
+                  action: 'Switched to Zubsolv 5.7mg/1.4mg equivalent. Patients counseled. 30-day supply secured from backup wholesaler.',
+                  alt: 'Zubsolv, Suboxone brand (if available)', since: '2026-07-01',
+                  sColor: 'border-red-300 bg-red-50'
+                },
+                {
+                  drug: 'Lorazepam (Ativan) 2mg/mL Injectable', severity: 'High', source: 'Wholesaler',
+                  impact: 'Benzodiazepine taper PRN — affects acute CIWA protocols',
+                  action: 'Oral Ativan supply adequate. Diazepam injectable available as substitute for acute administration.',
+                  alt: 'Diazepam 5mg/mL, Oral lorazepam', since: '2026-07-10',
+                  sColor: 'border-amber-300 bg-amber-50'
+                },
+                {
+                  drug: 'Clonidine 0.1mg Tablets', severity: 'Moderate', source: 'ASHP',
+                  impact: 'Opioid withdrawal adjunct — affects 4 COWS protocol patients',
+                  action: 'Extended 30-day stock ordered from secondary supplier. No patient impact expected.',
+                  alt: 'Clonidine patch (Catapres TTS)', since: '2026-07-14',
+                  sColor: 'border-blue-300 bg-blue-50'
+                },
+                {
+                  drug: 'Ondansetron (Zofran) 4mg ODT', severity: 'Watch', source: 'FDA Early Warning',
+                  impact: 'Anti-nausea for detox — anticipatory shortage expected late July',
+                  action: 'Order 90-day supply now. Phenergan oral available as first-line substitute.',
+                  alt: 'Phenergan 25mg, Compazine 10mg', since: '2026-07-18',
+                  sColor: 'border-purple-300 bg-purple-50'
+                },
+                {
+                  drug: 'Thiamine (Vitamin B1) 100mg Tablets', severity: 'Watch', source: 'Wholesaler',
+                  impact: 'Alcohol detox protocol — anticipatory; current stock adequate for 3 weeks',
+                  action: 'Monitor stock levels. Source alternative supplier. IV thiamine stock adequate.',
+                  alt: 'IV Thiamine 100mg/mL', since: '2026-07-19',
+                  sColor: 'border-purple-300 bg-purple-50'
+                },
+              ].map(s => (
+                <div key={s.drug} className={`border rounded-xl p-3 ${s.sColor}`}>
+                  <div className="flex items-start justify-between mb-1.5">
+                    <div className="font-semibold text-navy">{s.drug}</div>
+                    <div className="flex items-center gap-2 shrink-0 ml-3">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${s.severity === 'Critical' ? 'bg-red-100 text-red-700' : s.severity === 'High' ? 'bg-amber-100 text-amber-700' : s.severity === 'Moderate' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{s.severity}</span>
+                      <span className="text-[9px] text-slate">Source: {s.source} · Since {s.since}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><span className="font-semibold text-slate">Impact:</span> <span className="text-navy">{s.impact}</span></div>
+                    <div><span className="font-semibold text-slate">Action:</span> <span className="text-navy">{s.action}</span></div>
+                    <div><span className="font-semibold text-slate">Alternatives:</span> <span className="text-navy">{s.alt}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Cost Analysis' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Medication cost analysis by drug category — total expenditure, cost-per-patient-day, and generic substitution opportunity reporting.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Total Pharmacy Spend (30d)', value: '$18,420', color: 'text-navy', sub: 'All drug categories' },
+              { label: 'Cost Per Patient Day', value: '$28.40', color: 'text-blue-600', sub: 'Medication only' },
+              { label: 'Generic Substitution Rate', value: '91%', color: 'text-green-600', sub: 'vs. 85% target' },
+              { label: 'Top Cost Driver', value: 'Suboxone', color: 'text-amber-600', sub: '38% of total pharmacy spend' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Pharmacy Spend by Drug Category (30d)</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  {['Category', 'Total Spend', 'Avg/Patient', 'Brand vs. Generic', 'Generic Opp'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { cat: 'Buprenorphine/Naloxone (MAT)', spend: '$7,040', avg: '$391/pt', bg: '92% brand', opp: 'None — generic parity reached' },
+                  { cat: 'Psychotropics (antidep/antipsych)', spend: '$3,860', avg: '$124/pt', bg: '88% generic', opp: '2 patients on brand Lexapro — consider generic escitalopram' },
+                  { cat: 'Benzodiazepines (detox protocol)', spend: '$2,100', avg: '$350/pt (detox)', bg: '100% generic', opp: 'None' },
+                  { cat: 'Non-opioid withdrawal adjuncts', spend: '$1,840', avg: '$153/pt', bg: '100% generic', opp: 'None' },
+                  { cat: 'Vitamins / supplements (Thiamine etc)', spend: '$820', avg: '$23/pt', bg: '100% generic', opp: 'None' },
+                  { cat: 'Antibiotics / general medical', spend: '$1,420', avg: '$46/pt', bg: '100% generic', opp: 'None' },
+                  { cat: 'GI / symptomatic', spend: '$780', avg: '$25/pt', bg: '100% generic', opp: 'None' },
+                  { cat: 'Other / PRN', spend: '$560', avg: '$18/pt', bg: '100% generic', opp: 'None' },
+                ].map(r => (
+                  <tr key={r.cat} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium text-navy">{r.cat}</td>
+                    <td className="px-3 py-2 font-bold text-navy">{r.spend}</td>
+                    <td className="px-3 py-2 text-slate">{r.avg}</td>
+                    <td className="px-3 py-2 text-slate">{r.bg}</td>
+                    <td className="px-3 py-2 text-slate italic">{r.opp}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

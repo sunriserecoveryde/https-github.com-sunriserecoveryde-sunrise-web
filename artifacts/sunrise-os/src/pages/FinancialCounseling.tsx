@@ -3,8 +3,9 @@ import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { DollarSign, CheckCircle, AlertTriangle, Clock, Plus, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type FundingSource = 'Commercial Insurance' | 'Medicare' | 'Medicaid (TennCare)' | 'Self-Pay' | 'Sliding Fee Scale' | 'Charity Care' | 'State Grant (BHSF)' | 'COBRA';
 type PaymentPlanStatus = 'Active' | 'Completed' | 'Delinquent' | 'Pending';
@@ -128,8 +129,8 @@ const SLIDING_FEE_SCHEDULE = [
   { fpl: '301%+', discount: 'Full rate', weeklyRate: 'Varies by program' },
 ];
 
-export function FinancialCounseling({ navigate }: Props) {
-  const [tab, setTab] = useState<'Patients' | 'Analytics' | 'Sliding Fee' | 'Payment Plans'>('Patients');
+export function FinancialCounseling({ navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Patients' | 'Analytics' | 'Sliding Fee' | 'Payment Plans' | 'Insurance Resources' | 'Grant Funding'>('Patients');
   const [expandedPatient, setExpandedPatient] = useState<string | null>('p5');
 
   const totalAR = FINANCIAL_DATA.reduce((a, f) => a + f.totalBalance, 0);
@@ -143,7 +144,7 @@ export function FinancialCounseling({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Financial Counseling</h1>
           <p className="text-slate text-sm mt-0.5">Sliding fee scale · Payment plans · Charity care · Insurance gaps · Revenue summary</p>
         </div>
-        <button className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />New Financial Screen</button>
+        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />New Financial Screen</LockedButton>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -162,7 +163,7 @@ export function FinancialCounseling({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Patients', 'Analytics', 'Sliding Fee', 'Payment Plans'] as const).map(t => (
+        {(['Patients', 'Analytics', 'Sliding Fee', 'Payment Plans', 'Insurance Resources', 'Grant Funding'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -325,6 +326,158 @@ export function FinancialCounseling({ navigate }: Props) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {tab === 'Insurance Resources' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Counselor reference guide — insurance verification workflow, appeal scripts, payer-specific authorization requirements, and patient rights.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Insurance Verification Workflow</h3>
+              <div className="space-y-2">
+                {[
+                  { step: 1, title: 'Collect Insurance Cards', detail: 'Scan front/back of all insurance cards at intake. Verify patient name matches ID exactly. Note group number, member ID, and payer phone.' },
+                  { step: 2, title: 'Verify Active Coverage', detail: 'Call payer\'s provider line or use online portal. Confirm: effective dates, active status, deductible ($__), out-of-pocket maximum ($__), and whether SUD benefits are carved out to a behavioral health payer.' },
+                  { step: 3, title: 'Check SUD/Behavioral Benefits', detail: 'Confirm: residential detox covered (Y/N), residential rehab covered (Y/N), PHP/IOP covered (Y/N). Ask about parity compliance under MHPAEA — document response.' },
+                  { step: 4, title: 'Pre-Authorization', detail: 'Submit prior auth with: diagnosis (DSM-5 SUD code), ASAM level requested, clinical justification. Request auth number and note auth period. Typical turnaround: 24–72h urgent, 3–5 days routine.' },
+                  { step: 5, title: 'Document & Communicate', detail: 'Enter auth number and verified benefits in EHR. Provide patient with Explanation of Benefits summary. Review cost-sharing at intake — get signed financial agreement.' },
+                  { step: 6, title: 'Concurrent Review', detail: 'Submit concurrent review per payer schedule (typically every 3–7 days). Use clinical notes as supporting documentation. Track denial dates — appeal windows are typically 60–180 days.' },
+                ].map(s => (
+                  <div key={s.step} className="flex gap-3 p-2.5 border border-border rounded-lg text-xs">
+                    <div className="w-6 h-6 bg-navy text-white text-[10px] font-bold rounded-full flex items-center justify-center shrink-0">{s.step}</div>
+                    <div>
+                      <div className="font-semibold text-navy mb-0.5">{s.title}</div>
+                      <div className="text-slate leading-relaxed">{s.detail}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Payer-Specific Authorization Requirements</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border text-slate">
+                        <th className="text-left py-2 pr-3 text-[10px] font-bold uppercase tracking-wider">Payer</th>
+                        <th className="text-center py-2 px-2 text-[10px] font-bold uppercase tracking-wider">Auth Required</th>
+                        <th className="text-left py-2 pl-2 text-[10px] font-bold uppercase tracking-wider">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {[
+                        { payer: 'BlueCross BlueShield', req: 'Yes — all levels', notes: 'BH carved out to Magellan; call 888-327-0671' },
+                        { payer: 'UnitedHealthcare', req: 'Yes — Detox + Res.', notes: 'PHP/IOP: notify-only within 48h; use Optum portal' },
+                        { payer: 'Cigna', req: 'Yes — all levels', notes: 'Evernorth/Cigna BH; fax auth to 800-735-1032' },
+                        { payer: 'Aetna', req: 'Yes — Detox + Res.', notes: 'PHP: retro auth within 24h acceptable; IOP notify-only' },
+                        { payer: 'TennCare (Medicaid)', req: 'Yes — Detox only', notes: 'Residential: CoC authorization via DHS; IOP/PHP: no auth' },
+                        { payer: 'Medicare', req: 'No (medically necessary)', notes: 'Document medical necessity; Res. covered only if SNF-level need' },
+                        { payer: 'Humana', req: 'Yes — all levels', notes: 'Use AvMed portal; auth turnaround 2 business days' },
+                      ].map(r => (
+                        <tr key={r.payer} className="hover:bg-gray-50">
+                          <td className="py-2 pr-3 font-medium text-navy">{r.payer}</td>
+                          <td className="py-2 px-2 text-center">
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.req.startsWith('Yes') ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{r.req}</span>
+                          </td>
+                          <td className="py-2 pl-2 text-slate">{r.notes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Denial Appeal Quick Reference</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { reason: 'Not Medically Necessary', response: 'Submit ASAM assessment, CIWA/COWS scores, prior treatment history, and letter of medical necessity from MD. Cite MHPAEA parity if outpatient criteria would not trigger denial for comparable medical condition.' },
+                    { reason: 'Experimental / Investigational', response: 'MAT (buprenorphine/methadone/naltrexone) denials on this basis are MHPAEA violations. Cite SAMHSA/ASAM evidence base and file parity complaint with TN DOC if not resolved.' },
+                    { reason: 'Concurrent Review Denied', response: 'Request peer-to-peer review with payer MD within 72h. Have prescriber document continued medical necessity. If denied after P2P, file expedited appeal — typically 72h turnaround.' },
+                    { reason: 'Out-of-Network', response: 'Confirm if facility is in-network first. If out-of-network, request in-network exception based on geographic access or continuity of care. Document No Surprises Act compliance.' },
+                  ].map(d => (
+                    <div key={d.reason} className="p-2.5 border border-border rounded-lg">
+                      <div className="font-semibold text-red-700 mb-1">Denial: {d.reason}</div>
+                      <div className="text-slate leading-relaxed">{d.response}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800">
+                <strong>Patient Rights Reminder:</strong> Under 42 CFR Part 2, substance use disorder records have heightened confidentiality protections. Never release records without explicit written consent, even to payers, without a compliant consent form. MHPAEA parity protections apply to all plans — document every parity-related denial for potential regulatory complaint.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Grant Funding' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Federal, state, and foundation grant funding supporting patient financial assistance, program operations, and capacity expansion.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Active Grants', value: 4, color: 'text-navy', sub: 'Current funding period' },
+              { label: 'Total Grant Revenue (FY26)', value: '$412K', color: 'text-green-600', sub: 'Across all funding sources' },
+              { label: 'Patients Served via Grant', value: 31, color: 'text-blue-600', sub: 'Receiving grant-funded services' },
+              { label: 'Upcoming Renewals', value: 2, color: 'text-amber-600', sub: 'Applications due in 90 days' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Active Grant Portfolio</h3>
+            <div className="space-y-3 text-xs">
+              {[
+                {
+                  name: 'SAMHSA SAPT Block Grant — TN Allocation', funder: 'SAMHSA / TDMHSAS', amount: '$187,000', period: 'FY2026 (Oct 2025 – Sep 2026)',
+                  purpose: 'Sliding-scale services for uninsured and underinsured individuals. Covers residential, PHP, and IOP LOCs.',
+                  patientsServed: 18, renewal: '2026-08-01', status: 'Active', sColor: 'bg-green-100 text-green-700'
+                },
+                {
+                  name: 'HRSA Rural Health SUD Access Grant', funder: 'HRSA', amount: '$125,000', period: 'Jul 2025 – Jun 2027',
+                  purpose: 'Telehealth expansion and outreach to rural Davidson/Cheatham County residents. Covers telemedicine equipment and care coordination.',
+                  patientsServed: 7, renewal: '2027-04-01', status: 'Active', sColor: 'bg-green-100 text-green-700'
+                },
+                {
+                  name: 'Tennessee REDLINE Opioid Response Funding', funder: 'TN Dept. of Finance', amount: '$68,000', period: 'FY2026',
+                  purpose: 'OUD rapid access slots — buprenorphine induction, MAT linkage, and peer recovery support for OUD-priority admissions.',
+                  patientsServed: 6, renewal: '2026-09-01', status: 'Renewal Due', sColor: 'bg-amber-100 text-amber-700'
+                },
+                {
+                  name: 'United Way of Metro Nashville — Recovery Fund', funder: 'United Way', amount: '$32,000', period: 'Jan 2026 – Dec 2026',
+                  purpose: 'Emergency financial assistance for patients — transportation, housing deposits, and essential needs post-discharge.',
+                  patientsServed: 0, renewal: '2026-10-15', status: 'Renewal Due', sColor: 'bg-amber-100 text-amber-700'
+                },
+              ].map(g => (
+                <div key={g.name} className="border border-border rounded-xl p-3">
+                  <div className="flex items-start justify-between mb-1.5">
+                    <div>
+                      <span className="font-semibold text-navy">{g.name}</span>
+                      <span className="text-slate ml-2">— {g.funder}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-3">
+                      <span className="font-bold text-green-700 text-sm">{g.amount}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${g.sColor}`}>{g.status}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><span className="font-semibold text-slate">Period:</span> <span className="text-navy">{g.period}</span></div>
+                    <div><span className="font-semibold text-slate">Purpose:</span> <span className="text-navy">{g.purpose}</span></div>
+                    <div><span className="font-semibold text-slate">Renewal Due:</span> <span className="text-navy">{g.renewal}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

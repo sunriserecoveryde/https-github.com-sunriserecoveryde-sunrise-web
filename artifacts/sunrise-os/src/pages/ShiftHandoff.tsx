@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { AlertTriangle, CheckCircle, Clock, ChevronDown, ChevronUp, Flag, Pill, Activity } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 interface HandoffNote {
   patientId: string;
@@ -51,10 +52,10 @@ const ACUITY_STYLE: Record<string, string> = {
 const MOOD_COLOR = (n: number) => n >= 7 ? 'text-green-600' : n >= 5 ? 'text-amber-600' : 'text-red-600';
 const CRAVING_COLOR = (n: number) => n <= 3 ? 'text-green-600' : n <= 6 ? 'text-amber-600' : 'text-red-600';
 
-export function ShiftHandoff({ navigate }: Props) {
+export function ShiftHandoff({ navigate, readOnly }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['p3', 'p9']));
   const [handoffSigned, setHandoffSigned] = useState(false);
-  const [tab, setTab] = useState<'Patients' | 'Controlled' | 'Incidents'>('Patients');
+  const [tab, setTab] = useState<'Patients' | 'Controlled' | 'Incidents' | 'Comms Log' | 'Action Items' | 'Staffing' | 'Handoff Metrics'>('Patients');
 
   const toggle = (id: string) => {
     setExpanded(prev => {
@@ -77,7 +78,7 @@ export function ShiftHandoff({ navigate }: Props) {
         </div>
         <div className="flex items-center gap-3">
           {!handoffSigned ? (
-            <button onClick={() => setHandoffSigned(true)} className="btn-primary text-sm px-5 py-2">Sign Handoff</button>
+            <LockedButton locked={readOnly} onClick={() => !readOnly && setHandoffSigned(true)} className="btn-primary text-sm px-5 py-2">Sign Handoff</LockedButton>
           ) : (
             <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm font-medium">
               <CheckCircle className="w-4 h-4" />
@@ -143,7 +144,7 @@ export function ShiftHandoff({ navigate }: Props) {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
-        {(['Patients', 'Controlled', 'Incidents'] as const).map(t => (
+        {(['Patients', 'Controlled', 'Incidents', 'Comms Log', 'Action Items', 'Staffing', 'Handoff Metrics'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -320,6 +321,245 @@ export function ShiftHandoff({ navigate }: Props) {
             <div className="flex justify-end mt-3">
               <button className="btn-primary text-sm px-4 py-2">Save Summary</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Comms Log' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Messages This Shift', value: 23, sub: 'Staff ↔ Staff communications', color: 'text-navy' },
+              { label: 'Physician Notifications', value: 4, sub: 'Calls + pages logged', color: 'text-blue-600' },
+              { label: 'Family Calls', value: 2, sub: '42 CFR consent verified', color: 'text-green-600' },
+              { label: 'Critical Escalations', value: 1, sub: 'Documented chain of command', color: 'text-red-600' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card p-0 overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-border flex items-center justify-between">
+              <h3 className="font-semibold text-navy text-sm">Shift Communication Log</h3>
+              <span className="text-xs text-slate">All clinical communications documented per Joint Commission standard RC.02.01.01</span>
+            </div>
+            <div className="divide-y divide-border">
+              {[
+                { time: '06:18', type: 'Physician Notification', from: 'J. Torres, RN', to: 'Dr. Robert Chen', subject: 'Patient M. Webb — COWS score 14 reported at morning check', outcome: 'Order received: Clonidine 0.1mg q4h PRN × 48h', priority: 'High' },
+                { time: '07:45', type: 'Internal Page', from: 'A. Patel, RN', to: 'Security / BHT floor staff', subject: 'Patient J. Thornton agitated in group room — requesting BHT support', outcome: 'BHT R. Davis responded in 3 min. Patient redirected to room.', priority: 'Urgent' },
+                { time: '08:30', type: 'Family Call', from: 'D. Odom, LMFT', to: 'Family of M. Webb', subject: 'Weekly family check-in call (consent on file)', outcome: 'Mother updated on treatment progress — no clinical details shared. Alumni program discussed.', priority: 'Routine' },
+                { time: '09:00', type: 'Physician Notification', from: 'J. Torres, RN', to: 'Dr. Emily Stone', subject: 'Patient P. Holloway — new complaint of chest tightness, vitals stable', outcome: 'Physician evaluated at 09:15. EKG ordered — results normal.', priority: 'High' },
+                { time: '10:15', type: 'Interdisciplinary', from: 'S. Jenkins, LPC', to: 'J. Torres, RN + D. Odom, LMFT', subject: 'Patient S. Choi — treatment team discussion re: safety plan update needed', outcome: 'Safety plan updated. Counselor to file updated safety plan in chart by EOD.', priority: 'High' },
+                { time: '11:00', type: 'Family Call', from: 'J. Torres, RN', to: 'Family of R. Navarro', subject: 'Family requesting medication information — 42 CFR consent NOT on file', outcome: 'Call declined per 42 CFR Part 2. Family directed to sign consent form on next visit.', priority: 'Routine' },
+                { time: '12:30', type: 'Physician Notification', from: 'A. Patel, RN', to: 'Dr. Robert Chen', subject: 'Patient E. Vasquez — pain complaint 7/10, last PRN dose >4h ago', outcome: 'PRN Ibuprofen 400mg authorized. Non-opioid only per treatment plan.', priority: 'Routine' },
+                { time: '13:45', type: 'Critical Escalation', from: 'J. Torres, RN', to: 'Dr. Robert Chen → Dr. James Carter (Clinical Director)', subject: 'Patient B. Kowalski — expressed SI with plan. Safety plan initiated.', outcome: 'Crisis assessment completed by Dr. Chen. Patient placed on 1:1 observation. Safety plan signed. Clinical director notified.', priority: 'Critical' },
+              ].map((entry, i) => (
+                <div key={i} className={`px-5 py-4 ${entry.priority === 'Critical' ? 'bg-red-50' : entry.priority === 'Urgent' ? 'bg-amber-50' : ''}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="font-mono text-xs text-slate">{entry.time}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${entry.priority === 'Critical' ? 'bg-red-200 text-red-800' : entry.priority === 'Urgent' ? 'bg-amber-100 text-amber-700' : entry.priority === 'High' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-slate'}`}>{entry.priority}</span>
+                        <span className="text-[10px] bg-navy/10 text-navy px-2 py-0.5 rounded-full font-medium">{entry.type}</span>
+                      </div>
+                      <div className="text-xs text-slate mb-1">{entry.from} → <span className="font-medium text-navy">{entry.to}</span></div>
+                      <div className="text-sm font-medium text-navy mb-1">{entry.subject}</div>
+                      <div className="text-xs text-slate bg-white border border-border rounded-lg px-3 py-2 mt-1">
+                        <span className="font-semibold text-navy">Outcome: </span>{entry.outcome}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Action Items' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Outstanding actions generated from shift handoff notes — assigned to incoming staff and tracked to completion.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Open Items', value: 8, color: 'text-red-600' },
+              { label: 'In Progress', value: 3, color: 'text-amber-600' },
+              { label: 'Completed Today', value: 14, color: 'text-green-600' },
+              { label: 'Overdue (prior shift)', value: 2, color: 'text-red-700' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {[
+              { id: 'ai1', priority: 'Critical', title: 'Marcus Webb — COWS re-assessment due 10 PM', patient: 'Marcus Webb', assignedTo: 'Night RN', due: '22:00', status: 'Open', source: 'Withdrawal Protocol' },
+              { id: 'ai2', priority: 'Critical', title: 'Robert Navarro — positive UDS confrontation must be documented before physician rounds', patient: 'Robert Navarro', assignedTo: 'Sarah Jenkins, LPC', due: '20:00', status: 'Overdue', source: 'UDS Protocol' },
+              { id: 'ai3', priority: 'High', title: 'James Thornton — discharge checklist: Vivitrol injection must be administered before 8 AM', patient: 'James Thornton', assignedTo: 'Jessica Torres, DON', due: '08:00 (tomorrow)', status: 'Open', source: 'Discharge Planning' },
+              { id: 'ai4', priority: 'High', title: 'Elena Vasquez — safety plan review with family (wife). 42 CFR consent on file?', patient: 'Elena Vasquez', assignedTo: 'Maria Gonzales, LCSW', due: '09:00 (tomorrow)', status: 'Open', source: 'Risk Protocol' },
+              { id: 'ai5', priority: 'Medium', title: 'Bed 4A — housekeeping notified for morning discharge deep-clean', patient: '', assignedTo: 'Charge RN', due: '07:00 (tomorrow)', status: 'Open', source: 'Discharge Planning' },
+              { id: 'ai6', priority: 'Medium', title: 'Pharmacy: Suboxone refill order for Webb, Marcus — confirm with Dr. Chen', patient: 'Marcus Webb', assignedTo: 'Dr. Robert Chen, MD', due: '08:00 (tomorrow)', status: 'Open', source: 'MAT Protocol' },
+              { id: 'ai7', priority: 'Medium', title: 'Patricia Holloway — family meeting rescheduled to 7/21 3PM. Update calendar.', patient: 'Patricia Holloway', assignedTo: 'David Odom, LMFT', due: 'Tomorrow', status: 'In Progress', source: 'Family Engagement' },
+              { id: 'ai8', priority: 'Routine', title: 'Morning group therapy roster — confirm attendance for 8 AM Relapse Prevention group', patient: '', assignedTo: 'Day Shift RN', due: '07:30 (tomorrow)', status: 'Open', source: 'Group Schedule' },
+            ].map(item => (
+              <div key={item.id} className={`card flex items-start gap-3 ${item.status === 'Overdue' ? 'border-red-300 bg-red-50/30' : item.priority === 'Critical' ? 'border-orange/40' : ''}`}>
+                <div className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full mt-0.5 ${
+                  item.priority === 'Critical' ? 'bg-red-100 text-red-700' :
+                  item.priority === 'High' ? 'bg-amber-100 text-amber-700' :
+                  item.priority === 'Medium' ? 'bg-blue-100 text-blue-700' :
+                  'bg-gray-100 text-slate'
+                }`}>{item.priority}</div>
+                <div className="flex-1">
+                  <div className="font-medium text-navy text-sm">{item.title}</div>
+                  <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate">
+                    {item.patient && <span><strong>Patient:</strong> {item.patient}</span>}
+                    <span><strong>Assigned:</strong> {item.assignedTo}</span>
+                    <span><strong>Due:</strong> {item.due}</span>
+                    <span><strong>Source:</strong> {item.source}</span>
+                  </div>
+                </div>
+                <div className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${
+                  item.status === 'Overdue' ? 'bg-red-200 text-red-800' :
+                  item.status === 'In Progress' ? 'bg-amber-100 text-amber-700' :
+                  'bg-gray-100 text-slate'
+                }`}>{item.status}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {tab === 'Staffing' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Current shift staffing overview — census-to-staff ratios, call-outs, on-call coverage, and any open positions flagged for the oncoming shift.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'On Shift (Current)', value: 8, color: 'text-navy', sub: 'Across all units' },
+              { label: 'Census / Staff Ratio', value: '4.5:1', color: 'text-green-600', sub: 'Target: ≤5:1 residential' },
+              { label: 'Call-outs Today', value: 1, color: 'text-amber-600', sub: 'PRN coverage arranged' },
+              { label: 'Open Shifts (Week)', value: 2, color: 'text-blue-600', sub: 'Schedule alerts sent' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Current Shift Roster — 7PM → 7AM</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-slate">
+                    <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Staff Member</th>
+                    <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Role</th>
+                    <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Unit</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { name: 'J. Torres, RN', role: 'Charge Nurse', unit: 'All Units', status: 'On Site', ok: true },
+                    { name: 'K. Santos, RN', role: 'Staff Nurse', unit: 'Men\'s Residential', status: 'On Site', ok: true },
+                    { name: 'D. Moore, BHT', role: 'BHT', unit: 'Men\'s Residential', status: 'On Site', ok: true },
+                    { name: 'L. Young, BHT', role: 'BHT', unit: 'Women\'s Residential', status: 'On Site', ok: true },
+                    { name: 'C. Davis, BHT', role: 'BHT', unit: 'Detox', status: 'On Site', ok: true },
+                    { name: 'R. Nguyen, BHT', role: 'BHT (PRN)', unit: 'Flex', status: 'On Call', ok: true },
+                    { name: 'M. Boyd, RN', role: 'Staff Nurse', unit: 'PHP Unit', status: 'Called Out', ok: false },
+                    { name: 'T. Adams, BHT', role: 'BHT', unit: 'Men\'s Residential', status: 'Covering (OT)', ok: true },
+                  ].map(s => (
+                    <tr key={s.name} className={`hover:bg-gray-50 ${!s.ok ? 'bg-red-50/40' : ''}`}>
+                      <td className="py-2 font-medium text-navy">{s.name}</td>
+                      <td className="py-2 text-slate">{s.role}</td>
+                      <td className="py-2 text-slate">{s.unit}</td>
+                      <td className="py-2 text-center">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${s.status === 'On Site' ? 'bg-green-100 text-green-700' : s.status === 'Called Out' ? 'bg-red-100 text-red-700' : s.status === 'On Call' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>{s.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Census-to-Staff Ratios by Unit</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { unit: 'Men\'s Residential', census: 11, nurses: 1, bhts: 2, ratio: '5.5:1', ok: false },
+                    { unit: 'Women\'s Residential', census: 5, nurses: 0, bhts: 1, ratio: '5:1', ok: true },
+                    { unit: 'Detox Unit', census: 3, nurses: 1, bhts: 1, ratio: '3:1', ok: true },
+                    { unit: 'PHP / Day', census: 0, nurses: 0, bhts: 0, ratio: 'N/A', ok: true },
+                  ].map(u => (
+                    <div key={u.unit} className="flex items-center justify-between border border-border rounded p-2.5">
+                      <div>
+                        <div className="font-medium text-navy">{u.unit}</div>
+                        <div className="text-slate text-[10px]">Census {u.census} · Nurses: {u.nurses} · BHTs: {u.bhts}</div>
+                      </div>
+                      <span className={`font-bold text-sm ${u.ok ? 'text-green-600' : 'text-red-600'}`}>{u.ratio}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                <strong>Staffing Note:</strong> Men's Residential currently at 5.5:1 ratio due to M. Boyd call-out. T. Adams covering on OT. Charge nurse notified. Ratio acceptable per facility variance policy for call-out coverage; no float required.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Handoff Metrics' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Shift handoff quality metrics — completeness rates, time-to-handoff, and communication pattern trends across nursing shifts.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Handoff Completion Rate (30d)', value: '97%', color: 'text-green-600', sub: 'Of expected end-of-shift handoffs' },
+              { label: 'Avg Handoff Duration', value: '18 min', color: 'text-navy', sub: 'Target ≤20 min' },
+              { label: 'Missed Items (30d)', value: 4, color: 'text-amber-600', sub: 'Flagged by oncoming nurse' },
+              { label: 'Controlled Count Discrepancies', value: 1, color: 'text-red-600', sub: 'Resolved within shift, no loss' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Handoff Completeness by Shift — Last 30 Days</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  {['Shift', 'Handoffs', 'Avg Completeness', 'Items Flagged', 'Controlled Discrepancies', 'Avg Time'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { shift: 'Day → Evening (3pm)', n: 29, complete: '98%', flagged: 1, discreqs: 0, time: '16 min' },
+                  { shift: 'Evening → Night (11pm)', n: 29, complete: '96%', flagged: 2, discreqs: 1, time: '20 min' },
+                  { shift: 'Night → Day (7am)', n: 29, complete: '97%', flagged: 1, discreqs: 0, time: '17 min' },
+                ].map(r => (
+                  <tr key={r.shift} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium text-navy">{r.shift}</td>
+                    <td className="px-3 py-2 text-center text-slate">{r.n}</td>
+                    <td className="px-3 py-2 text-center font-bold text-green-600">{r.complete}</td>
+                    <td className="px-3 py-2 text-center"><span className={r.flagged > 0 ? 'text-amber-600 font-bold' : 'text-green-600'}>{r.flagged}</span></td>
+                    <td className="px-3 py-2 text-center"><span className={r.discreqs > 0 ? 'text-red-600 font-bold' : 'text-green-600'}>{r.discreqs}</span></td>
+                    <td className="px-3 py-2 text-center text-slate">{r.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

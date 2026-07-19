@@ -67,7 +67,7 @@ const INDUCTION_COLORS: Record<string, string> = {
 };
 
 export function MATManagement({ navigate, readOnly }: Props) {
-  const [tab, setTab] = useState<'Active' | 'Pending' | 'Analytics'>('Active');
+  const [tab, setTab] = useState<'Active' | 'Pending' | 'Analytics' | 'Protocols' | 'Education' | 'PDMP Alerts' | 'Outcome Data'>('Active');
   const [filter, setFilter] = useState('All');
   const [showOrderModal, setShowOrderModal] = useState(false);
 
@@ -113,7 +113,7 @@ export function MATManagement({ navigate, readOnly }: Props) {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
-        {(['Active', 'Pending', 'Analytics'] as const).map(t => (
+        {(['Active', 'Pending', 'Analytics', 'Protocols', 'Education', 'PDMP Alerts', 'Outcome Data'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
             {t}
             {t === 'Pending' && MAT_PENDING.length > 0 && <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5">{MAT_PENDING.length}</span>}
@@ -362,6 +362,307 @@ export function MATManagement({ navigate, readOnly }: Props) {
             <div className="flex gap-3 mt-5">
               <button onClick={() => setShowOrderModal(false)} className="flex-1 border border-border rounded-lg py-2 text-sm text-slate">Cancel</button>
               <LockedButton locked={readOnly} onClick={() => setShowOrderModal(false)} className="flex-1 btn-primary text-sm py-2">Place MAT Order</LockedButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Protocols' && (
+        <div className="space-y-5">
+          {[
+            {
+              name: 'Buprenorphine (Suboxone/Subutex) Induction Protocol',
+              phase: 'Induction → Maintenance',
+              indication: 'Opioid Use Disorder (OUD)',
+              criteria: 'COWS ≥ 8; ≥ 12–24h since last opioid use; patient consent; negative pregnancy test if applicable',
+              steps: [
+                'Confirm COWS ≥ 8 before first dose (avoid precipitated withdrawal)',
+                'Starting dose: Buprenorphine/naloxone 2mg/0.5mg SL; observe 1 hour',
+                'If COWS remains ≥ 8 after 1h, give additional 2mg/0.5mg SL',
+                'Day 1 max: 8mg/2mg SL. Reassess COWS at 1h and 4h post-dose',
+                'Day 2: Increase to 12–16mg/day based on response; titrate q3–5 days',
+                'Maintenance target: 16–24mg/day; adjust based on cravings and side effects',
+                'Provide concurrent counseling and contingency management; random UA q week',
+              ],
+              monitoring: 'COWS q1h during induction. LFTs at baseline, 3 months, annually. UA weekly × 4 weeks, then monthly.',
+              contraindications: 'Acute intoxication; recent benzodiazepine or alcohol use; COWS < 8; known hypersensitivity to buprenorphine',
+              prescriber: 'DEA-X waivered physician required (or DATA 2000 practitioner)',
+              color: 'bg-blue-50 border-blue-200',
+            },
+            {
+              name: 'Naltrexone (Vivitrol) Induction Protocol',
+              phase: 'Post-detox Maintenance',
+              indication: 'OUD or Alcohol Use Disorder (AUD)',
+              criteria: '7–10 days opioid-free (OUD) or 5–7 days alcohol-free (AUD); confirmed by UA and COWS/CIWA; no liver disease',
+              steps: [
+                'Confirm opioid-free ≥ 7–10 days with negative UDS and COWS < 5',
+                'Naloxone challenge test optional: 0.8mg IV naloxone; observe for precipitated withdrawal 20 min',
+                'Oral naltrexone 25mg × 1 dose; observe for 1 hour for adverse effects',
+                'If tolerated: Vivitrol 380mg IM gluteal injection (alternate buttocks each month)',
+                'Schedule next injection 28–30 days later',
+                'Counsel patient: blocks opioid effect — do not attempt to override with high doses (fatal OD risk)',
+              ],
+              monitoring: 'LFTs at baseline, monthly × 3, then quarterly. Injection site assessment at each visit. UA monthly.',
+              contraindications: 'Current opioid use; LFTs > 3–5× ULN; acute hepatitis; on opioid analgesics; hypersensitivity',
+              prescriber: 'Licensed physician; no DEA waiver required',
+              color: 'bg-purple-50 border-purple-200',
+            },
+            {
+              name: 'Methadone Maintenance Protocol',
+              phase: 'Maintenance (OTP only)',
+              indication: 'Opioid Use Disorder (OUD) — severe/long-standing',
+              criteria: 'Diagnosis of OUD ≥ 1 year; ≥ 18 years old (or court order ≥ 16); enrollment in licensed OTP; physical exam completed',
+              steps: [
+                'Initial dose: 20–30mg oral liquid; observe 2–4 hours for oversedation',
+                'If COWS ≥ 6 after 2h, may give additional 5–10mg (max 40mg Day 1)',
+                'Titrate by 5–10mg every 5–7 days; therapeutic range typically 80–120mg/day',
+                'Daily observed dosing at clinic; take-home privileges based on compliance & stability (SAMHSA 8 criteria)',
+                'Take-home schedule: Phase 1 (90 days) → 1 day; Phase 2 (9 months) → 2 days; up to 28-day supply at 2 years',
+              ],
+              monitoring: 'QTc at baseline and 120mg. LFTs annually. UA on random schedule per OTP protocol.',
+              contraindications: 'QTc > 500ms; concurrent CNS depressants without close monitoring; respiratory disease',
+              prescriber: 'OTP-licensed physician only; DEA Schedule II prescribing authority required',
+              color: 'bg-green-50 border-green-200',
+            },
+          ].map(proto => (
+            <div key={proto.name} className={`card border ${proto.color}`}>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="font-bold text-navy text-base">{proto.name}</h3>
+                  <div className="flex gap-2 flex-wrap mt-1">
+                    <span className="text-[10px] bg-navy/10 text-navy px-2 py-0.5 rounded-full font-medium">{proto.indication}</span>
+                    <span className="text-[10px] bg-orange/10 text-orange px-2 py-0.5 rounded-full font-medium">{proto.phase}</span>
+                    <span className="text-[10px] bg-slate/10 text-slate px-2 py-0.5 rounded-full font-medium">Prescriber: {proto.prescriber}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-xs mb-4">
+                <div className="bg-white rounded-lg p-3 border border-border">
+                  <div className="font-bold text-navy mb-1">Eligibility Criteria</div>
+                  <p className="text-slate leading-relaxed">{proto.criteria}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-border">
+                  <div className="font-bold text-red-700 mb-1">Contraindications</div>
+                  <p className="text-slate leading-relaxed">{proto.contraindications}</p>
+                </div>
+              </div>
+
+              <div className="text-xs mb-4">
+                <div className="font-bold text-navy mb-2">Protocol Steps</div>
+                <div className="space-y-1">
+                  {proto.steps.map((step, i) => (
+                    <div key={i} className="flex gap-2">
+                      <span className="font-bold text-orange shrink-0">{i + 1}.</span>
+                      <span className="text-slate">{step}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="text-xs bg-white rounded-lg p-3 border border-border">
+                <span className="font-bold text-navy">Monitoring: </span>
+                <span className="text-slate">{proto.monitoring}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'Education' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">MAT patient education resources, counselor quick-reference, and evidence-based talking points to support informed consent and treatment engagement.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Buprenorphine (Suboxone) — Patient Education</h3>
+              <div className="space-y-3 text-xs">
+                {[
+                  { q: 'What is Suboxone?', a: 'Suboxone is a combination of buprenorphine (a partial opioid agonist) and naloxone (an abuse deterrent). It reduces cravings and withdrawal symptoms without producing the full euphoric effect of illicit opioids.' },
+                  { q: 'How does it work?', a: 'Buprenorphine attaches to the same brain receptors as other opioids but only partially activates them. This reduces cravings and prevents full agonists from binding — meaning if you use opioids while on Suboxone, the effect is significantly blunted.' },
+                  { q: 'What is the "ceiling effect"?', a: 'Buprenorphine has a ceiling effect — above a certain dose, additional medication doesn\'t increase the effect. This makes it significantly safer than full agonists and reduces overdose risk.' },
+                  { q: 'What is precipitated withdrawal?', a: 'If Suboxone is taken too soon after last opioid use (before withdrawal has begun), it can push the full agonist off receptors and cause sudden, severe withdrawal. Always wait until COWS ≥ 8 before first dose.' },
+                  { q: 'How long will I take it?', a: 'Duration is individualized. Research shows longer treatment duration leads to better outcomes. Many patients benefit from 12+ months or indefinite maintenance. This is a medical decision made with your doctor — not a sign of failure.' },
+                  { q: 'What are common side effects?', a: 'Constipation, headache, sweating, insomnia, and dry mouth are most common. Serious risks include respiratory depression (rare at therapeutic doses) and interactions with benzodiazepines or alcohol.' },
+                ].map(item => (
+                  <div key={item.q} className="border border-border rounded-lg p-2.5">
+                    <div className="font-semibold text-navy mb-1">{item.q}</div>
+                    <div className="text-slate leading-relaxed">{item.a}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Naltrexone (Vivitrol) — Patient Education</h3>
+                <div className="space-y-3 text-xs">
+                  {[
+                    { q: 'What is Vivitrol?', a: 'Vivitrol is a monthly injectable form of naltrexone — an opioid antagonist that completely blocks opioid receptors. It is used for both opioid use disorder (OUD) and alcohol use disorder (AUD).' },
+                    { q: 'How is it different from Suboxone?', a: 'Naltrexone is not an opioid — it has no potential for abuse or physical dependence. It does not reduce cravings the way Suboxone does, but it eliminates the rewarding effect of opioids entirely.' },
+                    { q: 'What are the requirements before starting?', a: 'Patient must be fully opioid-free for 7–10 days before the first injection. Taking Vivitrol while any opioids are in the system will cause immediate severe withdrawal. Urine drug screen required before each injection.' },
+                    { q: 'What if I need surgery or pain management?', a: 'Tell your surgeon and anesthesiologist you are on Vivitrol. Higher doses of opioids may be used for acute pain management. Non-opioid pain management strategies are preferred.' },
+                  ].map(item => (
+                    <div key={item.q} className="border border-border rounded-lg p-2.5">
+                      <div className="font-semibold text-navy mb-1">{item.q}</div>
+                      <div className="text-slate leading-relaxed">{item.a}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Methadone — Counselor Reference</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { label: 'Classification', value: 'Full opioid agonist — long-acting, Schedule II controlled substance' },
+                    { label: 'Administration', value: 'Daily oral dose at licensed OTP clinic (not dispenses in general treatment setting without OTP certification)' },
+                    { label: 'Starting dose', value: 'Typically 20–30mg/day; titrate slowly every 5–7 days; max initial dose 30mg Day 1' },
+                    { label: 'Therapeutic range', value: '60–120mg/day for most patients; individualized to cravings and withdrawal suppression' },
+                    { label: 'QTc monitoring', value: 'Baseline EKG; repeat at 30mg and 100mg doses; monitor for QTc > 500ms' },
+                    { label: 'Drug interactions', value: 'Significant CYP3A4 and CYP2D6 interactions; avoid benzodiazepines; alcohol increases OD risk' },
+                    { label: 'Take-home privileges', value: 'Earned through program compliance; Phase 1-4 progression per federal and state regulations' },
+                  ].map(r => (
+                    <div key={r.label} className="flex gap-2 text-xs border-b border-border pb-1 last:border-0 last:pb-0">
+                      <span className="font-semibold text-navy shrink-0 w-36">{r.label}:</span>
+                      <span className="text-slate">{r.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800">
+                <strong>Counselor Note — Common Stigma Responses:</strong> Patients often arrive with beliefs that "MAT is trading one addiction for another." Key talking points: MAT is evidence-based medicine (SAMHSA, ASAM, WHO); recovery is not about abstinence from medication — it's about improved function, safety, and quality of life; people manage other chronic conditions with medication (insulin, antihypertensives) without stigma. Engage with curiosity, not argument.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {tab === 'PDMP Alerts' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Tennessee CSMD (Controlled Substance Monitoring Database) alerts for current MAT patients — flags for concurrent prescribers, high morphine milligram equivalents, and behavioral concerns.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Patients Checked (30d)', value: 18, color: 'text-navy', sub: '100% of active MAT patients' },
+              { label: 'Concurrent Prescribers', value: 2, color: 'text-red-600', sub: 'Requires clinical review' },
+              { label: 'High MME Flags', value: 1, color: 'text-amber-600', sub: '>90 MME/day threshold' },
+              { label: 'Cleared (No Concerns)', value: 15, color: 'text-green-600', sub: 'PDMP check normal' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">PDMP Alert Review — Active Cases</h3>
+            <div className="space-y-3 text-xs">
+              {[
+                {
+                  patient: 'Marcus Webb', mrn: 'MRN-83921', alert: 'Concurrent Prescriber',
+                  detail: 'Buprenorphine prescribed by Dr. R. Evans (Nashville Health, 07/02) AND Dr. A. Okafor at Sunrise (07/05). Potential double prescribing — patient did not disclose.',
+                  action: 'Clinical team notified. Care coordination with Dr. Evans initiated. Patient counseled — concurrent prescriptions must cease by 07/25.',
+                  severity: 'High', sColor: 'border-red-300 bg-red-50'
+                },
+                {
+                  patient: 'James Thornton', mrn: 'MRN-62841', alert: 'Early Refill Pattern',
+                  detail: 'Suboxone 12mg refilled 8 days early twice in last 90 days. Obtained from community pharmacy. Possible diversion or misuse.',
+                  action: 'Weekly observed dosing initiated. UDS with confirmation ordered. MAT counseling session scheduled.',
+                  severity: 'High', sColor: 'border-red-300 bg-red-50'
+                },
+                {
+                  patient: 'Robert Navarro', mrn: 'MRN-44782', alert: 'High MME',
+                  detail: 'Outside Rx: Oxycodone 30mg x90 tablets (Dr. J. Patel, orthopedics, 07/10 — post-surgical). Total MME = 135/day combined with buprenorphine.',
+                  action: 'Opioid agonist reconciliation review ordered. Pain management team consulted. Buprenorphine dose evaluation in progress.',
+                  severity: 'Moderate', sColor: 'border-amber-300 bg-amber-50'
+                },
+              ].map(a => (
+                <div key={a.patient} className={`border rounded-xl p-3 ${a.sColor}`}>
+                  <div className="flex items-start justify-between mb-1.5">
+                    <div>
+                      <span className="font-semibold text-navy">{a.patient}</span>
+                      <span className="text-slate text-[10px] ml-2">{a.mrn}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-3">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${a.severity === 'High' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{a.severity}</span>
+                      <span className="text-[9px] text-slate">CSMD Alert: {a.alert}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><span className="font-semibold text-slate">Finding:</span> <span className="text-navy">{a.detail}</span></div>
+                    <div><span className="font-semibold text-slate">Clinical Action:</span> <span className="text-navy">{a.action}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Outcome Data' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">MAT program outcomes — retention rates, sobriety milestones, and comparative effectiveness data for all medication-assisted treatment patients.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'MAT Retention (6 months)', value: '74%', color: 'text-green-600', sub: 'Current cohort — all medications' },
+              { label: 'Negative UDS at 6 Months', value: '68%', color: 'text-teal-600', sub: 'Of retained patients' },
+              { label: 'Avg MOUD Duration', value: '8.4 mo', color: 'text-navy', sub: 'From induction to program exit' },
+              { label: 'MAT Discharge with Community Link', value: '89%', color: 'text-blue-600', sub: 'Warm handoff to community OTP/office' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Outcomes by Medication Type</h3>
+              <div className="space-y-3 text-xs">
+                {[
+                  { med: 'Buprenorphine/Naloxone (Suboxone)', n: 18, ret6: 78, negUDS: 71, dc: 92, color: 'text-blue-600' },
+                  { med: 'Extended-Release Naltrexone (Vivitrol)', n: 7, ret6: 62, negUDS: 65, dc: 85, color: 'text-purple-600' },
+                  { med: 'Methadone (OTP referral)', n: 3, ret6: 81, negUDS: 74, dc: 100, color: 'text-teal-600' },
+                  { med: 'Naltrexone (Oral)', n: 4, ret6: 55, negUDS: 58, dc: 75, color: 'text-orange-600' },
+                ].map(r => (
+                  <div key={r.med} className="border border-border rounded-lg p-2.5">
+                    <div className={`font-semibold mb-1 ${r.color}`}>{r.med} (n={r.n})</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center"><div className="text-slate text-[10px]">6-mo Retention</div><div className={`font-bold text-sm ${r.color}`}>{r.ret6}%</div></div>
+                      <div className="text-center"><div className="text-slate text-[10px]">Neg. UDS</div><div className="font-bold text-sm text-green-600">{r.negUDS}%</div></div>
+                      <div className="text-center"><div className="text-slate text-[10px]">Linked at DC</div><div className="font-bold text-sm text-teal-600">{r.dc}%</div></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">MAT vs. No-MAT Comparison (OUD, Residential)</h3>
+              <div className="space-y-2.5 text-xs">
+                {[
+                  { metric: '6-Month Retention in Treatment', mat: '74%', noMat: '41%', better: true },
+                  { metric: '12-Month Sobriety (self-reported)', mat: '61%', noMat: '38%', better: true },
+                  { metric: 'Opioid Overdose (12 months)', mat: '3%', noMat: '14%', better: true },
+                  { metric: 'Re-admission (12 months)', mat: '18%', noMat: '34%', better: true },
+                  { metric: 'Employment at 12 Months', mat: '56%', noMat: '42%', better: true },
+                  { metric: 'Criminal Justice Involvement', mat: '8%', noMat: '19%', better: true },
+                ].map(m => (
+                  <div key={m.metric} className="flex items-center justify-between border border-border rounded p-2">
+                    <span className="text-slate">{m.metric}</span>
+                    <div className="flex gap-4 shrink-0 ml-2">
+                      <span className="font-bold text-green-600">MAT: {m.mat}</span>
+                      <span className="text-slate">No MAT: {m.noMat}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded text-[10px] text-green-800">
+                Sunrise MAT outcomes consistent with SAMHSA TIP-63 evidence base. Source: internal 2024–2025 cohort data (n=32).
+              </div>
             </div>
           </div>
         </div>

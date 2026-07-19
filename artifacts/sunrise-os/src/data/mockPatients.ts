@@ -82,8 +82,8 @@ export const MOCK_PATIENTS: Patient[] = [
     recoveryScore: 42,
     amaRisk: 'High',
     los: 12,
-    admitDate: '2023-10-14',
-    expectedDischarge: '2023-11-13',
+    admitDate: '2026-07-14',
+    expectedDischarge: '2026-08-13',
     counselor: 'Sarah Jenkins, LPC',
     physician: 'Dr. Robert Chen',
     flags: [
@@ -94,11 +94,11 @@ export const MOCK_PATIENTS: Patient[] = [
     mood: 4,
     craving: 8,
     notes: [
-      { id: 'n1', date: '2023-10-25 14:30', type: 'Individual', author: 'Sarah Jenkins, LPC', status: 'Signed', format: 'BIRP', content: 'Client attended 1:1 session. Expressed high cravings and desire to leave AMA. Processed consequences of leaving. Client agreed to stay for next 24 hours.' },
-      { id: 'n2', date: '2023-10-24 09:00', type: 'Medical', author: 'Dr. Robert Chen', status: 'Signed', format: 'DAP', content: 'Suboxone stabilized at 16mg/day. Client reports reduced withdrawal symptoms but persistent cravings.' }
+      { id: 'n1', date: '2026-07-25 14:30', type: 'Individual', author: 'Sarah Jenkins, LPC', status: 'Signed', format: 'BIRP', content: 'Client attended 1:1 session. Expressed high cravings and desire to leave AMA. Processed consequences of leaving. Client agreed to stay for next 24 hours.' },
+      { id: 'n2', date: '2026-07-24 09:00', type: 'Medical', author: 'Dr. Robert Chen', status: 'Signed', format: 'DAP', content: 'Suboxone stabilized at 16mg/day. Client reports reduced withdrawal symptoms but persistent cravings.' }
     ],
     goals: [
-      { id: 'g1', category: 'Substance Use', problem: 'Inability to maintain abstinence from opioids', longTerm: 'Achieve 1 year continuous sobriety', shortTerm: 'Identify 3 craving triggers', status: 'In Progress', targetDate: '2023-11-01' }
+      { id: 'g1', category: 'Substance Use', problem: 'Inability to maintain abstinence from opioids', longTerm: 'Achieve 1 year continuous sobriety', shortTerm: 'Identify 3 craving triggers', status: 'In Progress', targetDate: '2026-08-01' }
     ],
     nextAppointment: 'Today, 2:00 PM',
     bed: '1A',
@@ -120,8 +120,8 @@ export const MOCK_PATIENTS: Patient[] = [
     recoveryScore: 78,
     amaRisk: 'Low',
     los: 34,
-    admitDate: '2023-09-22',
-    expectedDischarge: '2023-12-22',
+    admitDate: '2026-06-22',
+    expectedDischarge: '2026-09-22',
     counselor: 'David Odom, LMFT',
     physician: 'Dr. Emily Stone',
     flags: [
@@ -150,8 +150,8 @@ export const MOCK_PATIENTS: Patient[] = [
     recoveryScore: 55,
     amaRisk: 'Med',
     los: 8,
-    admitDate: '2023-10-18',
-    expectedDischarge: '2023-11-17',
+    admitDate: '2026-07-18',
+    expectedDischarge: '2026-08-17',
     counselor: 'Sarah Jenkins, LPC',
     physician: 'Dr. Robert Chen',
     flags: [
@@ -183,8 +183,8 @@ export const MOCK_PATIENTS: Patient[] = [
     recoveryScore: 85,
     amaRisk: 'Low',
     los: 65,
-    admitDate: '2023-08-22',
-    expectedDischarge: '2023-12-01',
+    admitDate: '2026-05-22',
+    expectedDischarge: '2026-09-01',
     counselor: 'Maria Gonzales, LCSW',
     physician: 'Dr. Emily Stone',
     flags: [
@@ -213,8 +213,8 @@ export const MOCK_PATIENTS: Patient[] = [
     recoveryScore: 62,
     amaRisk: 'Med',
     los: 4,
-    admitDate: '2023-10-22',
-    expectedDischarge: '2023-11-21',
+    admitDate: '2026-07-22',
+    expectedDischarge: '2026-08-21',
     counselor: 'David Odom, LMFT',
     physician: 'Dr. Robert Chen',
     flags: [
@@ -246,8 +246,8 @@ export const MOCK_PATIENTS: Patient[] = [
     recoveryScore: 71,
     amaRisk: 'Low',
     los: 15,
-    admitDate: '2023-10-11',
-    expectedDischarge: '2023-11-10',
+    admitDate: '2026-07-11',
+    expectedDischarge: '2026-08-10',
     counselor: 'Maria Gonzales, LCSW',
     physician: 'Dr. Emily Stone',
     flags: [
@@ -278,8 +278,8 @@ export const MOCK_PATIENTS: Patient[] = [
     recoveryScore: 48,
     amaRisk: 'Med',
     los: 22,
-    admitDate: '2023-10-04',
-    expectedDischarge: '2023-11-24',
+    admitDate: '2026-07-04',
+    expectedDischarge: '2026-08-24',
     counselor: 'Sarah Jenkins, LPC',
     physician: 'Dr. Robert Chen',
     flags: [],
@@ -306,8 +306,8 @@ export const MOCK_PATIENTS: Patient[] = [
     recoveryScore: 39,
     amaRisk: 'High',
     los: 6,
-    admitDate: '2023-10-20',
-    expectedDischarge: '2023-11-19',
+    admitDate: '2026-07-20',
+    expectedDischarge: '2026-08-19',
     counselor: 'Maria Gonzales, LCSW',
     physician: 'Dr. Emily Stone',
     flags: [
@@ -542,5 +542,132 @@ MOCK_PATIENTS.push(
       { id: 'g20b', category: 'Abstinence', problem: 'Cocaine/alcohol use linked to DV relationship', longTerm: '12 months abstinence from all substances', shortTerm: 'Identify 5 sober supports; begin step work with sponsor', status: 'In Progress', targetDate: '2026-06-22' },
     ],
     nextAppointment: 'Monday, 9:00 AM'
+  },
+  {
+    id: 'p21', mrn: 'MRN-39284', firstName: 'Rafael', lastName: 'Moreno',
+    dob: '1996-03-14', age: 30, gender: 'M', insurance: 'Medicaid',
+    program: 'Residential', primaryDiagnosis: 'Severe Opioid Use Disorder (Fentanyl)',
+    coOccurring: ['Hepatitis C (untreated)', 'Antisocial Personality Disorder traits'],
+    asam: { d1: 3, d2: 3, d3: 3, d4: 3, d5: 4, d6: 3 },
+    recoveryScore: 24, amaRisk: 'High', los: 3,
+    admitDate: '2026-07-15', expectedDischarge: '2026-08-12',
+    counselor: 'David Odom, LMFT', physician: 'Dr. Robert Chen',
+    flags: [
+      { type: 'Medical', note: 'HCV antibody positive — gastroenterology referral placed; Suboxone induction in progress' },
+      { type: 'AMA', note: 'Attempted to leave Day 2; de-escalated by BHT; safety plan signed' },
+      { type: 'Legal', note: 'Pending felony possession charge — legal aid referral initiated' }
+    ],
+    lastUa: 'Positive (FENT, BUP)', mood: 3, craving: 9,
+    notes: [{ id: 'n21a', date: '2026-07-17', type: 'Individual', author: 'David Odom, LMFT', status: 'Awaiting Co-sign', format: 'BIRP', content: 'Client extremely guarded. Disclosed prior treatment discharge AMA x3. Primary motivation is avoiding jail time. Utilized MI to explore intrinsic values — client mentioned wanting to "be present" for his son. Small but meaningful opening. COWS 9 on assessment. Medical monitoring ongoing. Discussed HCV treatment trajectory with Dr. Chen.' }],
+    goals: [
+      { id: 'g21a', category: 'Withdrawal & Medical', problem: 'Fentanyl physical dependence with HCV complication', longTerm: 'Complete MAT stabilization and begin HCV treatment', shortTerm: 'Maintain COWS below 8; attend all medical appointments', status: 'In Progress', targetDate: '2026-08-01' },
+      { id: 'g21b', category: 'Engagement', problem: 'Extreme treatment resistance and AMA history', longTerm: 'Complete 28-day residential episode', shortTerm: 'Attend 5 consecutive groups without avoidance', status: 'In Progress', targetDate: '2026-07-22' }
+    ],
+    nextAppointment: 'Today, 3:00 PM', bed: '3B', status: 'Occupied'
+  },
+  {
+    id: 'p22', mrn: 'MRN-36751', firstName: 'Jasmine', lastName: 'Carter',
+    dob: '1989-09-03', age: 36, gender: 'F', insurance: 'United',
+    program: 'Residential', primaryDiagnosis: 'Stimulant Use Disorder (Methamphetamine, Severe)',
+    coOccurring: ['Bipolar I Disorder', 'Psychosis NOS (stimulant-induced, resolving)'],
+    asam: { d1: 2, d2: 2, d3: 3, d4: 3, d5: 4, d6: 3 },
+    recoveryScore: 35, amaRisk: 'Med', los: 10,
+    admitDate: '2026-07-08', expectedDischarge: '2026-08-05',
+    counselor: 'Maria Gonzales, LCSW', physician: 'Dr. Allen Hughes',
+    flags: [
+      { type: 'Psychiatric', note: 'Stimulant-induced psychosis: auditory hallucinations resolving on Risperdal 2mg QHS — psychiatry monitoring' },
+      { type: 'Behavioral', note: 'Boundary issues with male peers — single-gender group recommended' }
+    ],
+    lastUa: 'Positive (METH)', mood: 5, craving: 6,
+    notes: [{ id: 'n22a', date: '2026-07-16', type: 'Psychiatric Eval', author: 'Dr. Allen Hughes', status: 'Signed', format: 'DAP', content: 'Follow-up psychiatric evaluation Day 8. Auditory hallucinations reduced from "constant" to "occasional whispers" since Risperdal initiation. No active delusions. Affect improving — brighter than Day 1. Mood cycling consistent with Bipolar I. Will continue Risperdal 2mg QHS and initiate Lamictal titration. Risk: not imminent. Manic episode screening negative.' }],
+    goals: [
+      { id: 'g22a', category: 'Psychiatric Stability', problem: 'Bipolar I + stimulant psychosis destabilizing functioning', longTerm: 'Achieve psychiatric stability and maintain for 6 months off METH', shortTerm: 'Medication compliance 100%; hallucinations resolved before discharge', status: 'In Progress', targetDate: '2026-08-05' },
+      { id: 'g22b', category: 'Abstinence', problem: 'METH as primary substance — 5-year daily use', longTerm: '12 months METH abstinence with ongoing MAT support', shortTerm: 'Complete all 3 weekly gender-specific process groups', status: 'In Progress', targetDate: '2026-09-01' }
+    ],
+    nextAppointment: 'Tomorrow, 10:00 AM', bed: '4A', status: 'Occupied'
+  },
+  {
+    id: 'p23', mrn: 'MRN-34128', firstName: 'William', lastName: 'Greer',
+    dob: '1958-01-29', age: 68, gender: 'M', insurance: 'Medicare',
+    program: 'Residential', primaryDiagnosis: 'Severe Alcohol Use Disorder (Relapse)',
+    coOccurring: ['Cirrhosis (Child-Pugh A)', 'Type 2 Diabetes', 'Coronary Artery Disease'],
+    asam: { d1: 2, d2: 3, d3: 2, d4: 2, d5: 2, d6: 2 },
+    recoveryScore: 55, amaRisk: 'Low', los: 5,
+    admitDate: '2026-07-13', expectedDischarge: '2026-08-10',
+    counselor: 'Sarah Jenkins, LPC', physician: 'Dr. Emily Stone',
+    flags: [
+      { type: 'Medical', note: 'Cirrhosis — LFTs elevated; no acetaminophen products; daily vitals; fall risk' },
+      { type: 'Medical', note: 'Diabetes — carb-controlled meals ordered; glucose monitoring TID' }
+    ],
+    lastUa: 'Negative', mood: 6, craving: 4,
+    notes: [{ id: 'n23a', date: '2026-07-15', type: 'Medical', author: 'Dr. Emily Stone', status: 'Signed', format: 'DAP', content: 'Day 3 admission. CIWA protocol complete — score dropped from 18 to 4. Librium taper completed. LFTs trending down. AST 188 (was 410 on admit). Glucose 142 — dietary adjustments working. Fall risk remains Moderate — bed alarm in place. Echo results from last year reviewed: EF 50%, no contraindication to current medication plan.' }],
+    goals: [
+      { id: 'g23a', category: 'Medical', problem: 'Cirrhosis risk escalation with continued alcohol use', longTerm: 'Abstain from alcohol — liver function stabilization', shortTerm: 'Complete medical detox; liver enzyme normalization within 2 weeks', status: 'In Progress', targetDate: '2026-07-29' },
+      { id: 'g23b', category: 'Relapse Prevention', problem: 'Fourth relapse in 10 years — pattern of abstinence followed by isolation', longTerm: 'Engage with AA home group for 12+ months post-discharge', shortTerm: 'Identify specific triggers from this relapse episode in session', status: 'Not Started', targetDate: '2026-08-10' }
+    ],
+    nextAppointment: 'Today, 4:00 PM', bed: '6B', status: 'Occupied'
+  },
+  {
+    id: 'p24', mrn: 'MRN-31602', firstName: 'Keisha', lastName: 'Watkins',
+    dob: '1993-06-17', age: 33, gender: 'F', insurance: 'Cigna',
+    program: 'PHP', primaryDiagnosis: 'Prescription Opioid Use Disorder (Moderate)',
+    coOccurring: ['Fibromyalgia', 'Somatic Symptom Disorder', 'Depression'],
+    asam: { d1: 1, d2: 1, d3: 1, d4: 2, d5: 2, d6: 2 },
+    recoveryScore: 69, amaRisk: 'Low', los: 21,
+    admitDate: '2026-06-27', expectedDischarge: '2026-07-25',
+    counselor: 'Maria Gonzales, LCSW', physician: 'Dr. Emily Stone',
+    flags: [
+      { type: 'Medical', note: 'Fibromyalgia — pain management integrated into treatment plan; non-opioid pain protocol active' },
+      { type: 'Medication', note: 'Buprenorphine 4mg/day — stable; pain management goals being addressed concurrently' }
+    ],
+    lastUa: 'Positive (BUP)', mood: 7, craving: 3,
+    notes: [{ id: 'n24a', date: '2026-07-14', type: 'Individual', author: 'Maria Gonzales, LCSW', status: 'Signed', format: 'BIRP', content: 'Client making strong connections between somatic pain flares and emotional distress. Identified 3 body-based coping strategies from mindfulness module. Reports pain at 4/10 today without opioids — first time in 4 years. Motivated and engaged. Discharge in ~10 days — aftercare planning initiated. Outpatient pain specialist referral sent.' }],
+    goals: [
+      { id: 'g24a', category: 'Pain Management', problem: 'Opioid use intertwined with fibromyalgia pain — difficulty distinguishing dependence from pain relief', longTerm: 'Manage fibromyalgia without opioids for 6 months', shortTerm: 'Complete pain management module; implement 2 non-pharmacological strategies daily', status: 'In Progress', targetDate: '2026-09-27' },
+      { id: 'g24b', category: 'MAT Taper', problem: 'Buprenorphine initiated for opioid dependence; taper planned', longTerm: 'Complete buprenorphine taper over 6–12 months as pain permits', shortTerm: 'Maintain stable dose and 100% compliance through discharge', status: 'In Progress', targetDate: '2026-07-25' }
+    ],
+    nextAppointment: 'Monday, 10:00 AM'
+  },
+  {
+    id: 'p25', mrn: 'MRN-29157', firstName: 'Antoine', lastName: 'Marshall',
+    dob: '1985-11-02', age: 40, gender: 'M', insurance: 'BlueCross',
+    program: 'IOP', primaryDiagnosis: 'Opioid Use Disorder (Heroin, Moderate — stable on MAT)',
+    coOccurring: ['HIV+ (undetectable)', 'Generalized Anxiety Disorder'],
+    asam: { d1: 0, d2: 1, d3: 1, d4: 2, d5: 2, d6: 1 },
+    recoveryScore: 82, amaRisk: 'Low', los: 35,
+    admitDate: '2026-06-13', expectedDischarge: '2026-07-18',
+    counselor: 'David Odom, LMFT', physician: 'Dr. Robert Chen',
+    flags: [
+      { type: 'Medical', note: 'HIV+ undetectable — infectious disease clinic coordinating care; ART continued' },
+      { type: 'Success', note: 'Longest sober streak in 12 years: 35 days' }
+    ],
+    lastUa: 'Negative', mood: 9, craving: 1,
+    notes: [{ id: 'n25a', date: '2026-07-14', type: 'Individual', author: 'David Odom, LMFT', status: 'Signed', format: 'DAP', content: 'Final week of IOP. Client in exceptional shape — mood 9/10, cravings nearly absent. HIV viral load undetectable; infectious disease team satisfied. Employment restored: returning to logistics coordinator role next week. Five-year chip ceremony planned at AA home group. Discharge summary initiated; outpatient therapy with Dr. Patel confirmed. Outstanding outcome.' }],
+    goals: [
+      { id: 'g25a', category: 'Abstinence', problem: 'Heroin OUD — 12-year history; multiple treatment episodes', longTerm: '1 year heroin-free on MAT', shortTerm: 'Complete IOP program; attend AA 4x/week', status: 'In Progress', targetDate: '2026-06-13' },
+      { id: 'g25b', category: 'Medical Integration', problem: 'HIV care coordination historically disrupted by active use', longTerm: 'Maintain undetectable viral load with consistent ART compliance', shortTerm: 'Attend all infectious disease appointments; ART compliance 100%', status: 'Met', targetDate: '2026-07-18' }
+    ],
+    nextAppointment: 'Today (Discharge), 11:00 AM'
+  },
+  {
+    id: 'p26', mrn: 'MRN-26803', firstName: 'Sandra', lastName: 'Dupree',
+    dob: '1971-07-30', age: 54, gender: 'F', insurance: 'Humana',
+    program: 'PHP', primaryDiagnosis: 'Alcohol Use Disorder (Severe) + Benzodiazepine Use Disorder',
+    coOccurring: ['Panic Disorder', 'Insomnia Disorder', 'Hypertension'],
+    asam: { d1: 2, d2: 2, d3: 2, d4: 2, d5: 3, d6: 2 },
+    recoveryScore: 58, amaRisk: 'Low', los: 12,
+    admitDate: '2026-07-06', expectedDischarge: '2026-08-03',
+    counselor: 'Sarah Jenkins, LPC', physician: 'Dr. Emily Stone',
+    flags: [
+      { type: 'Medical', note: 'Benzo taper: Valium equivalent taper protocol — Week 2 of 4; vitals stable' },
+      { type: 'Psychiatric', note: 'Panic disorder — benzodiazepine use began as self-medication; CBT for panic now primary treatment' }
+    ],
+    lastUa: 'Negative', mood: 7, craving: 3,
+    notes: [{ id: 'n26a', date: '2026-07-16', type: 'Individual', author: 'Sarah Jenkins, LPC', status: 'Signed', format: 'BIRP', content: 'Client making strong progress in Week 2. Benzo taper on schedule. Panic attacks reduced from daily to 2 in past week using diaphragmatic breathing and progressive muscle relaxation. Client described feeling "like myself again for the first time in 5 years." Alcohol cravings minimal — primary challenge remains anxiety management. Sleep improving: 5.5 hours without medication last night.' }],
+    goals: [
+      { id: 'g26a', category: 'Detox', problem: 'Dual alcohol and benzo dependence — cross-tolerance complicates taper', longTerm: 'Complete medically supervised benzo taper without seizure or rebound', shortTerm: 'Complete Week 2 of Valium taper; vitals checked BID', status: 'In Progress', targetDate: '2026-07-28' },
+      { id: 'g26b', category: 'Anxiety Management', problem: 'Panic disorder driving benzodiazepine use — need non-pharmacological replacement', longTerm: 'Manage panic disorder with CBT techniques; no benzodiazepines for 6 months', shortTerm: 'Complete CBT Panic Module (10 sessions); use coping skills during 2 panic episodes', status: 'In Progress', targetDate: '2026-08-03' }
+    ],
+    nextAppointment: 'Tomorrow, 9:30 AM'
   }
 );

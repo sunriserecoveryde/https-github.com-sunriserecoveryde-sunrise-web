@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { AlertTriangle, AlertCircle, CheckCircle, Clock, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type Severity = 'Critical' | 'High' | 'Moderate' | 'Low';
 type IncidentStatus = 'Open' | 'Under Review' | 'Documented' | 'Closed';
@@ -106,8 +107,8 @@ const STATUS_CONFIG: Record<IncidentStatus, string> = {
   'Closed':        'bg-green-100 text-green-700',
 };
 
-export function IncidentReporting({ navigate }: Props) {
-  const [tab, setTab] = useState<'Active' | 'All Incidents' | 'New Incident'>('Active');
+export function IncidentReporting({ navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Active' | 'All Incidents' | 'Analytics' | 'New Incident' | 'Root Cause' | 'QAPI Tracker'>('Active');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<Severity | 'All'>('All');
   const [filterType, setFilterType] = useState<string>('All');
@@ -130,9 +131,9 @@ export function IncidentReporting({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Incident Reporting</h1>
           <p className="text-slate text-sm mt-0.5">Clinical incident log, documentation, and quality improvement tracking</p>
         </div>
-        <button onClick={() => setTab('New Incident')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+        <LockedButton locked={readOnly} onClick={() => setTab('New Incident')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
           <Plus className="w-4 h-4" /> New Incident
-        </button>
+        </LockedButton>
       </div>
 
       {/* Stats */}
@@ -153,7 +154,7 @@ export function IncidentReporting({ navigate }: Props) {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
-        {(['Active', 'All Incidents', 'New Incident'] as const).map(t => (
+        {(['Active', 'All Incidents', 'Analytics', 'New Incident', 'Root Cause', 'QAPI Tracker'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
             {t} {t === 'Active' && open.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5">{open.length}</span>}
           </button>
@@ -248,8 +249,8 @@ export function IncidentReporting({ navigate }: Props) {
                         </div>
                       </div>
                       <div className="flex gap-2 pt-2">
-                        <button className="text-xs border border-orange text-orange px-3 py-1.5 rounded-lg hover:bg-orange/5">Add Follow-up</button>
-                        <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Update Status</button>
+                        <LockedButton locked={readOnly} className="text-xs border border-orange text-orange px-3 py-1.5 rounded-lg hover:bg-orange/5">Add Follow-up</LockedButton>
+                        <LockedButton locked={readOnly} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Update Status</LockedButton>
                         <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Print Report</button>
                       </div>
                     </div>
@@ -329,8 +330,229 @@ export function IncidentReporting({ navigate }: Props) {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setTab('Active')} className="border border-border rounded-lg px-5 py-2 text-sm text-slate hover:bg-gray-50">Cancel</button>
-              <button onClick={() => setFormSubmitted(true)} className="btn-primary text-sm px-5 py-2">Submit Incident Report</button>
+              <LockedButton locked={readOnly} onClick={() => setFormSubmitted(true)} className="btn-primary text-sm px-5 py-2">Submit Incident Report</LockedButton>
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Analytics' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Total This Quarter', value: 14, color: 'text-navy', sub: 'All incident types' },
+              { label: 'Critical / High', value: 5, color: 'text-red-600', sub: '36% of total — trending down' },
+              { label: 'Avg Days to Close', value: '3.4', color: 'text-green-600', sub: 'Target: ≤5 days' },
+              { label: 'Repeat Incidents', value: 2, color: 'text-amber-600', sub: 'Same patient / type pattern' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Incidents by Type</h3>
+              <div className="space-y-2.5">
+                {[
+                  { type: 'Behavioral Escalation', count: 4, color: 'bg-red-500' },
+                  { type: 'AMA Attempt',           count: 3, color: 'bg-amber-500' },
+                  { type: 'Self-Harm Ideation',    count: 2, color: 'bg-orange-500' },
+                  { type: 'Fall / Injury',          count: 2, color: 'bg-blue-500' },
+                  { type: 'Medication Error',       count: 1, color: 'bg-purple-500' },
+                  { type: 'Elopement',              count: 1, color: 'bg-pink-500' },
+                  { type: 'Other',                  count: 1, color: 'bg-slate-400' },
+                ].map(row => (
+                  <div key={row.type}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate">{row.type}</span>
+                      <span className="font-bold text-navy">{row.count}</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full">
+                      <div className={`h-2 rounded-full ${row.color}`} style={{ width: `${(row.count / 4) * 100}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Monthly Trend (Last 6 Months)</h3>
+              <div className="flex items-end gap-2 h-32 mt-2">
+                {[
+                  { month: 'Feb', total: 8, critical: 3 },
+                  { month: 'Mar', total: 11, critical: 4 },
+                  { month: 'Apr', total: 9, critical: 3 },
+                  { month: 'May', total: 7, critical: 2 },
+                  { month: 'Jun', total: 10, critical: 4 },
+                  { month: 'Jul', total: 14, critical: 5 },
+                ].map(d => (
+                  <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="w-full flex flex-col gap-0.5 items-center" style={{ height: `${(d.total / 14) * 110}px` }}>
+                      <div className="w-full bg-red-200 rounded-t" style={{ height: `${(d.critical / d.total) * 100}%` }} />
+                      <div className="w-full bg-blue-200 rounded-b flex-1" />
+                    </div>
+                    <div className="text-[10px] text-slate">{d.month}</div>
+                    <div className="text-[10px] font-bold text-navy">{d.total}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-4 mt-3 text-xs">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-200 rounded inline-block" />Critical/High</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-200 rounded inline-block" />Mod/Low</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Root Cause Analysis — Top Patterns</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-slate">
+                    <th className="text-left py-2 pr-4">Pattern / Root Cause</th>
+                    <th className="text-left py-2 px-2">Incident Types</th>
+                    <th className="text-center py-2 px-2">Freq</th>
+                    <th className="text-left py-2 px-2">QI Recommendation</th>
+                    <th className="text-center py-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { pattern: 'Evening shift coverage gap', types: 'Behavioral, Elopement', freq: 4, rec: 'Add 1 BHT per 10 patients after 8 PM', status: 'In Progress' },
+                    { pattern: 'Pre-discharge anxiety spike', types: 'AMA, Self-Harm Ideation', freq: 3, rec: 'Mandate predischarge 1:1 session + safety plan', status: 'Implemented' },
+                    { pattern: 'MAT dose timing misalignment', types: 'Medication Error', freq: 2, rec: 'Move morning MAT to 7 AM to match peak cravings', status: 'Under Review' },
+                    { pattern: 'New admission adjustment (Days 1–3)', types: 'Behavioral, Fall', freq: 3, rec: 'Buddy system during first 72 hours', status: 'Proposed' },
+                  ].map(r => (
+                    <tr key={r.pattern}>
+                      <td className="py-2.5 pr-4 font-medium text-navy">{r.pattern}</td>
+                      <td className="py-2.5 px-2 text-slate">{r.types}</td>
+                      <td className="py-2.5 px-2 text-center font-bold text-navy">{r.freq}</td>
+                      <td className="py-2.5 px-2 text-slate">{r.rec}</td>
+                      <td className="py-2.5 text-center">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === 'Implemented' ? 'bg-green-100 text-green-700' : r.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : r.status === 'Under Review' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-slate'}`}>{r.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Root Cause' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Root cause analysis (RCA) framework for closed and documented incidents — systematic investigation to prevent recurrence.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Incidents with RCA', value: 3, color: 'text-navy', sub: 'Of 7 closed incidents' },
+              { label: 'RCA Pending', value: 2, color: 'text-amber-600', sub: 'Awaiting assignment' },
+              { label: 'Corrective Actions Open', value: 4, color: 'text-red-600', sub: 'Across all RCAs' },
+              { label: 'Corrective Actions Closed', value: 7, color: 'text-green-600', sub: 'Verified complete' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-4">
+            {[
+              {
+                incidentId: 'INC-2026-041',
+                title: 'Patient Fall — Room 14 (Wet Floor, No Signage)',
+                date: '2026-07-08', severity: 'High', assignee: 'Jessica Park, RN', status: 'Completed',
+                rootCauses: [
+                  { category: 'Environment / Equipment', cause: 'Wet floor not marked during bathroom cleaning — housekeeper departed before signage placed' },
+                  { category: 'Process / Protocol', cause: 'Fall prevention hourly rounding form not completed at 0600 — documentation gap on day-shift start' },
+                ],
+                contributingFactors: ['Short-staffed day shift (1 RN, 2 BHTs covering 22 beds)', 'Patient had benzodiazepine PRN administered 30 min prior'],
+                correctiveActions: [
+                  { action: 'Mandatory wet floor signage policy update with new signage kits installed in all bathrooms', status: 'Closed', dueDate: '2026-07-15' },
+                  { action: 'Hourly rounding documentation audited weekly by charge RN; missed rounds flagged in next-shift handoff', status: 'Closed', dueDate: '2026-07-18' },
+                  { action: 'Post-PRN benzodiazepine fall risk protocol — document and increase monitoring for 60 min post-administration', status: 'Open', dueDate: '2026-07-31' },
+                ],
+              },
+              {
+                incidentId: 'INC-2026-039',
+                title: 'Medication Administration Error — Wrong Dose (Gabapentin)',
+                date: '2026-06-29', severity: 'Moderate', assignee: 'Dr. Robert Chen', status: 'Completed',
+                rootCauses: [
+                  { category: 'Human Factors', cause: 'Nurse drew from mislabeled blister pack — Gabapentin 600mg vs 300mg look-alike packaging' },
+                  { category: 'Process / Protocol', cause: 'Five Rights of Medication Administration not completed — dose check skipped due to high-census demand' },
+                ],
+                contributingFactors: ['Busy evening shift — 3 concurrent medication passes', 'LASA (look-alike, sound-alike) drug packaging not flagged in MAR'],
+                correctiveActions: [
+                  { action: 'LASA alert stickers applied to all Gabapentin 600mg packages; stored separately from 300mg', status: 'Closed', dueDate: '2026-07-05' },
+                  { action: 'MAR updated with visual dose-strength indicator for all LASA medications', status: 'Closed', dueDate: '2026-07-10' },
+                  { action: 'Mandatory medication safety refresher for all nursing staff — Five Rights competency check', status: 'Open', dueDate: '2026-08-01' },
+                ],
+              },
+              {
+                incidentId: 'INC-2026-033',
+                title: 'Patient Elopement — Perimeter Breach (Side Gate)',
+                date: '2026-06-14', severity: 'Critical', assignee: 'Clinical Director', status: 'In Progress',
+                rootCauses: [
+                  { category: 'Facility / Security', cause: 'Side gate latch found defective — gap between latch and frame allowed manual push-through from inside' },
+                  { category: 'Supervision', cause: 'Patient was on 30-minute check protocol but was not observed for 45-minute window during BHT break' },
+                ],
+                contributingFactors: ['Single BHT on overnight shift responsible for 3 units', 'Patient had verbalized elopement ideation 2 days prior — flag not escalated'],
+                correctiveActions: [
+                  { action: 'All perimeter gates inspected; defective latch on Side Gate C replaced with keypad-controlled magnetic lock', status: 'Closed', dueDate: '2026-06-17' },
+                  { action: 'Elopement risk flags in MAR to trigger automatic 15-min check protocol; flag escalation workflow added to handoff form', status: 'Open', dueDate: '2026-07-30' },
+                  { action: 'Overnight staffing policy review — minimum 2 BHTs per shift; no solo overnight shift for single unit', status: 'Open', dueDate: '2026-08-15' },
+                  { action: 'Tabletop simulation exercise for elopement response conducted with all BHTs and nursing', status: 'Open', dueDate: '2026-08-01' },
+                ],
+              },
+            ].map(rca => (
+              <div key={rca.incidentId} className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-gray-50">
+                  <span className="font-mono text-xs font-bold text-navy">{rca.incidentId}</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${rca.severity === 'Critical' ? 'bg-red-100 text-red-700' : rca.severity === 'High' ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'}`}>{rca.severity}</span>
+                  <span className="font-semibold text-navy text-sm flex-1">{rca.title}</span>
+                  <span className="text-xs text-slate">{rca.date}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${rca.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{rca.status}</span>
+                </div>
+                <div className="p-5 grid grid-cols-3 gap-5 text-xs">
+                  <div>
+                    <div className="font-semibold text-navy mb-2">Root Causes Identified</div>
+                    <div className="space-y-2">
+                      {rca.rootCauses.map(rc => (
+                        <div key={rc.category} className="p-2 border border-border rounded-lg">
+                          <div className="text-[10px] font-bold text-orange uppercase tracking-wide">{rc.category}</div>
+                          <div className="text-slate mt-0.5">{rc.cause}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="font-semibold text-navy mb-1 mt-3">Contributing Factors</div>
+                    {rca.contributingFactors.map(f => (
+                      <div key={f} className="flex items-start gap-1.5 text-slate mb-1"><span className="text-amber-500 shrink-0">•</span>{f}</div>
+                    ))}
+                  </div>
+                  <div className="col-span-2">
+                    <div className="font-semibold text-navy mb-2">Corrective Actions</div>
+                    <div className="space-y-2">
+                      {rca.correctiveActions.map(ca => (
+                        <div key={ca.action} className="flex items-start gap-3 p-2 border border-border rounded-lg">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 mt-0.5 ${ca.status === 'Closed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{ca.status}</span>
+                          <div className="flex-1">
+                            <div className="text-slate">{ca.action}</div>
+                            <div className="text-[10px] text-slate mt-0.5">Due: {ca.dueDate}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-[10px] text-slate mt-2">RCA Lead: {rca.assignee}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -342,6 +564,76 @@ export function IncidentReporting({ navigate }: Props) {
             <h2 className="text-xl font-bold text-navy">Incident Reported</h2>
             <p className="text-slate text-sm mt-2">The incident has been submitted and assigned to the clinical director for review. An incident number will be generated within the hour.</p>
             <button onClick={() => { setFormSubmitted(false); setTab('Active'); }} className="btn-primary text-sm px-6 py-2 mt-6">Return to Incidents</button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'QAPI Tracker' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Quality Assurance and Performance Improvement — active QAPI projects, performance indicators, and improvement initiative tracking as required by CARF and ASAM standards.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Active QAPI Projects', value: 4, color: 'text-navy', sub: 'Across 3 departments' },
+              { label: 'Indicators Monitored', value: 18, color: 'text-blue-600', sub: 'Monthly cycle' },
+              { label: 'Goals Met (Last Cycle)', value: '72%', color: 'text-green-600', sub: '13 of 18 indicators' },
+              { label: 'CARF Audit Ready', value: '✓ Yes', color: 'text-teal-600', sub: 'Documentation current' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Active QAPI Projects</h3>
+            <div className="space-y-3 text-xs">
+              {[
+                {
+                  project: 'AMA Rate Reduction', owner: 'Clinical Director', dept: 'Clinical', status: 'In Progress', priority: 'High',
+                  goal: 'Reduce AMA rate from 14% to ≤8% by Q4 2026', 
+                  interventions: 'Enhanced engagement protocols, peer support at Day 3 and Day 7, increased 1:1 counseling frequency',
+                  metric: 'AMA rate: currently 11% (↓ from 14% baseline)', pColor: 'bg-red-100 text-red-700'
+                },
+                {
+                  project: 'Documentation Timeliness', owner: 'QI Coordinator', dept: 'Clinical + Nursing', status: 'Monitoring', priority: 'Medium',
+                  goal: 'Progress notes completed within 24h for 95% of sessions',
+                  interventions: 'Template optimization, peer accountability, daily completion report to supervisors',
+                  metric: 'On-time completion: 91% (goal: 95%)', pColor: 'bg-amber-100 text-amber-700'
+                },
+                {
+                  project: 'MAT Engagement at Discharge', owner: 'Medical Director', dept: 'Medical', status: 'Completed', priority: 'High',
+                  goal: 'Increase % of OUD patients discharged with MAT plan from 62% to ≥80%',
+                  interventions: 'Buprenorphine-first protocol, prescriber education, warm handoff to community OTP',
+                  metric: 'Current: 83% — goal exceeded ✓', pColor: 'bg-green-100 text-green-700'
+                },
+                {
+                  project: 'Family Engagement Expansion', owner: 'Family Therapist', dept: 'Clinical', status: 'In Progress', priority: 'Medium',
+                  goal: 'Increase family session completion rate from 41% to ≥65% of eligible patients',
+                  interventions: 'CRAFT model adoption, expanded virtual family session availability, family liaison role created',
+                  metric: 'Current completion: 54% (target: 65%)', pColor: 'bg-blue-100 text-blue-700'
+                },
+              ].map(p => (
+                <div key={p.project} className="border border-border rounded-xl p-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <span className="font-semibold text-navy">{p.project}</span>
+                      <span className="text-slate ml-2">— {p.dept} · Owner: {p.owner}</span>
+                    </div>
+                    <div className="flex gap-2 shrink-0 ml-3">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${p.pColor}`}>{p.priority}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${p.status === 'Completed' ? 'bg-green-100 text-green-700' : p.status === 'Monitoring' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>{p.status}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><span className="font-semibold text-slate">Goal:</span> <span className="text-navy">{p.goal}</span></div>
+                    <div><span className="font-semibold text-slate">Interventions:</span> <span className="text-navy">{p.interventions}</span></div>
+                    <div><span className="font-semibold text-slate">Current Metric:</span> <span className={`font-medium ${p.status === 'Completed' ? 'text-green-600' : 'text-navy'}`}>{p.metric}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

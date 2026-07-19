@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { MessageSquare, Send, Lock, AlertTriangle, Plus, Search, Bell, Check, CheckCheck } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type MessageType = 'Patient-Staff' | 'Staff-Staff' | 'Team Alert' | 'Clinical Notification';
 type MessageStatus = 'Unread' | 'Read' | 'Acknowledged';
@@ -141,11 +142,12 @@ const STATUS_ICON = {
   'Acknowledged': <CheckCheck className="w-3.5 h-3.5 text-green-500" />,
 };
 
-export function SecureMessaging({ navigate }: Props) {
+export function SecureMessaging({ navigate, readOnly }: Props) {
   const [selectedThread, setSelectedThread] = useState<string | null>('T-001');
   const [newMessage, setNewMessage] = useState('');
   const [showCompose, setShowCompose] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [msgTab, setMsgTab] = useState<'Inbox' | 'Announcements' | 'Notifications' | 'Quick Templates' | 'Message Analytics'>('Inbox');
 
   const threads = MESSAGES.filter(m => m.id === m.id && !m.id.endsWith('r'));
   const filteredThreads = threads.filter(m =>
@@ -169,7 +171,7 @@ export function SecureMessaging({ navigate }: Props) {
           </h1>
           <p className="text-slate text-sm mt-0.5">HIPAA-compliant internal messaging · Clinical alerts · Patient-related communications</p>
         </div>
-        <button onClick={() => setShowCompose(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Compose</button>
+        <LockedButton locked={readOnly} onClick={() => !readOnly && setShowCompose(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Compose</LockedButton>
       </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3 text-sm">
@@ -177,7 +179,91 @@ export function SecureMessaging({ navigate }: Props) {
         <span className="text-amber-800"><strong>HIPAA Secure:</strong> All messages containing PHI are encrypted at rest and in transit. Do not use external email, SMS, or unencrypted platforms for patient-related communications.</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 h-[calc(100vh-340px)] min-h-[500px]">
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-border">
+        {(['Inbox', 'Announcements', 'Notifications', 'Quick Templates', 'Message Analytics'] as const).map(t => (
+          <button key={t} onClick={() => setMsgTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${msgTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
+        ))}
+      </div>
+
+      {msgTab === 'Announcements' && (
+        <div className="space-y-4">
+          {[
+            {
+              id: 'ann-1', priority: 'urgent', icon: '🚨',
+              title: 'Joint Commission Survey — Preparedness Reminder',
+              from: 'Quality Improvement Team', date: '2026-07-19 08:00',
+              body: 'Reminder that our Joint Commission triennial survey window opens September 1, 2026. All staff must review and attest to updated policies by August 15. Key focus areas: medication safety, suicide risk screening (SLMS/Columbia), and ligature risk mitigation. Please review the Mock Survey findings posted on the QI shared drive and complete attestation in the Training module.',
+              tag: 'Compliance',
+            },
+            {
+              id: 'ann-2', priority: 'normal', icon: '📋',
+              title: 'New BHT Morning Check-In Form — Effective July 20',
+              from: 'Dr. Robert Chen, MD (Medical Director)', date: '2026-07-18 14:30',
+              body: 'Effective July 20, 2026, the BHT morning check-in form has been updated to include a standardized mood rating (1–10) and brief craving screen. This data will feed directly into the clinical dashboard and alert nursing when scores cross thresholds. Training materials are available in the Training module. Please reach out to your BHT supervisor with questions.',
+              tag: 'Operations',
+            },
+            {
+              id: 'ann-3', priority: 'normal', icon: '💊',
+              title: 'Vivitrol Shipment Delay — Action Required for Pending Orders',
+              from: 'Pharmacy Liaison', date: '2026-07-17 11:00',
+              body: 'We have been notified by AmerisourceBergen of a 5–7 day delay in Vivitrol (naltrexone extended-release) shipments due to supply chain disruption. For any patient with a Vivitrol injection scheduled in the next 7 days: please contact Dr. Chen to discuss bridging options (oral naltrexone 50mg daily). Do not delay discharge planning — document the delay in the MAR and physician orders. We anticipate restocking by July 25.',
+              tag: 'Pharmacy',
+            },
+            {
+              id: 'ann-4', priority: 'normal', icon: '📅',
+              title: 'Staff Appreciation Luncheon — Friday July 25',
+              from: 'Program Director', date: '2026-07-16 09:00',
+              body: 'Please join us for our quarterly staff appreciation luncheon on Friday, July 25 from 12:00–1:30 PM in the conference room. Lunch will be provided. This is a non-mandatory event but we strongly encourage all staff to attend. We will recognize staff milestones and announce the Q2 Star Award recipients. BHT coverage during the luncheon will be provided by the float pool — coordinate with your supervisor if you plan to attend.',
+              tag: 'Staff',
+            },
+          ].map(ann => (
+            <div key={ann.id} className={`card border-l-4 ${ann.priority === 'urgent' ? 'border-l-critical' : 'border-l-navy'}`}>
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{ann.icon}</span>
+                  <div>
+                    <div className="font-semibold text-navy text-sm">{ann.title}</div>
+                    <div className="text-xs text-slate mt-0.5">{ann.from} · {ann.date}</div>
+                  </div>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${ann.priority === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{ann.tag}</span>
+              </div>
+              <p className="text-xs text-slate leading-relaxed">{ann.body}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {msgTab === 'Notifications' && (
+        <div className="space-y-3">
+          <div className="text-xs text-slate mb-2">System-generated clinical notifications — last 24 hours</div>
+          {[
+            { time: '08:14 AM', icon: '🚨', type: 'AMA Risk Alert', msg: 'Marcus Webb (MRN-83921) verbalized AMA intent. BHT check-in protocol activated.', level: 'critical' },
+            { time: '07:52 AM', icon: '⚠️', type: 'Psychiatry Consult', msg: 'Consult order placed for Samantha Choi (MRN-74563) by Dr. Stone. Dietary restriction active.', level: 'warning' },
+            { time: '07:30 AM', icon: '💊', type: 'MAR Alert', msg: 'Medication administration window open: 7:00 AM–8:00 AM. 3 patients have morning medications due.', level: 'info' },
+            { time: '06:18 AM', icon: '📊', type: 'Withdrawal Score Alert', msg: 'James Thornton (MRN-62841): COWS score increased from 6 → 9. Review MAT protocol.', level: 'warning' },
+            { time: '06:00 AM', icon: '🔔', type: 'Vitals Reminder', msg: 'Morning vitals due for all residential patients. 8 patients pending 06:00 assessment.', level: 'info' },
+            { time: '12:01 AM', icon: 'ℹ️', type: 'Shift Change', msg: 'Night shift handoff completed. 18 active patients. No critical incidents during night shift.', level: 'info' },
+            { time: 'Yesterday 10:30 PM', icon: '📋', type: 'Note Co-sign Due', msg: '4 progress notes awaiting co-sign are approaching 24-hour SLA deadline.', level: 'warning' },
+            { time: 'Yesterday 8:15 PM', icon: '🛡️', type: 'UA Chain of Custody', msg: 'UA chain-of-custody form missing for Destiny Williams (MRN-55129). Lab retest scheduled.', level: 'warning' },
+          ].map((n, i) => (
+            <div key={i} className={`flex gap-3 border rounded-lg px-4 py-3 ${n.level === 'critical' ? 'bg-red-50 border-red-200' : n.level === 'warning' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
+              <span className="text-lg shrink-0">{n.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className={`text-[10px] font-bold ${n.level === 'critical' ? 'text-red-700' : n.level === 'warning' ? 'text-amber-700' : 'text-blue-700'}`}>{n.type}</span>
+                  <span className="text-[10px] text-slate">{n.time}</span>
+                </div>
+                <p className="text-xs text-slate">{n.msg}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {msgTab === 'Inbox' && (
+      <div className="grid grid-cols-3 gap-4 h-[calc(100vh-400px)] min-h-[450px]">
         {/* Thread List */}
         <div className="border border-border rounded-xl overflow-hidden flex flex-col">
           <div className="p-3 border-b border-border">
@@ -275,9 +361,9 @@ export function SecureMessaging({ navigate }: Props) {
                     placeholder="Reply securely..."
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)} />
-                  <button className="btn-primary text-sm px-4 py-2 flex items-center gap-2" onClick={() => setNewMessage('')}>
+                  <LockedButton locked={readOnly} onClick={() => !readOnly && setNewMessage('')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
                     <Send className="w-4 h-4" /> Send
-                  </button>
+                  </LockedButton>
                 </div>
                 <div className="text-[10px] text-slate mt-1.5 flex items-center gap-1"><Lock className="w-3 h-3" />Encrypted end-to-end · HIPAA compliant · Stored in audit log</div>
               </div>
@@ -292,6 +378,7 @@ export function SecureMessaging({ navigate }: Props) {
           )}
         </div>
       </div>
+      )}
 
       {showCompose && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -344,6 +431,124 @@ export function SecureMessaging({ navigate }: Props) {
             <div className="flex gap-3">
               <button onClick={() => setShowCompose(false)} className="flex-1 border border-border text-slate rounded-lg px-4 py-2 text-sm">Cancel</button>
               <button onClick={() => setShowCompose(false)} className="flex-1 btn-primary text-sm flex items-center justify-center gap-2"><Send className="w-4 h-4" />Send Secure Message</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {msgTab === 'Quick Templates' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Pre-built message templates for common clinical communications — saves time and ensures consistent, HIPAA-compliant language.</div>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { category: 'Clinical Handoff', templates: [
+                'Patient [NAME] — status update: stable. No acute concerns this shift. Awaiting [TEST/CONSULT]. Continue current orders.',
+                '[NAME] showing withdrawal symptoms escalating — CIWA score [X]. Physician notified. PRN administered at [TIME]. Please monitor q2h.',
+                'Psych consult requested for [NAME] — SI ideation disclosed in session. Columbia protocol initiated. Safety plan attached.',
+              ]},
+              { category: 'Patient Communication', templates: [
+                'Reminder: You have an appointment with [PROVIDER] on [DATE] at [TIME]. Please arrive 10 minutes early.',
+                'Your lab results are available for review. Please contact the nursing station or your care coordinator at your earliest convenience.',
+                'Family session scheduled for [DATE] at [TIME]. Your family member [NAME] has confirmed attendance.',
+              ]},
+              { category: 'Care Team Coordination', templates: [
+                '[NAME] medically cleared for discharge pending final physician sign-off. Aftercare plan attached for review.',
+                'Urgent: co-sign required for [PATIENT] progress note before end of shift. Note contains time-sensitive clinical information.',
+                'Treatment plan review due: [NAME] — 30-day review overdue. Please complete by end of business [DATE].',
+              ]},
+              { category: 'Compliance / Admin', templates: [
+                'Incident report filed for [PATIENT] at [TIME]. Event summary attached. No patient injury sustained.',
+                'Reminder: mandatory training "[MODULE]" is due by [DATE]. Compliance rate for your team is currently [X]%.',
+                'Authorization expiring: [NAME] — current auth ends [DATE]. UR team has submitted renewal; approval pending.',
+              ]},
+            ].map(cat => (
+              <div key={cat.category} className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">{cat.category}</h3>
+                <div className="space-y-2">
+                  {cat.templates.map((t, i) => (
+                    <div key={i} className="group border border-border rounded-lg p-2.5 hover:border-orange/40 hover:bg-orange/5 transition-colors cursor-pointer">
+                      <div className="text-xs text-slate leading-relaxed">{t}</div>
+                      <button className="text-[9px] font-bold text-orange mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">Use Template →</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {msgTab === 'Message Analytics' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Secure messaging volume, response times, and communication pattern analytics — helps identify care coordination bottlenecks and workload distribution.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Messages Sent (30d)', value: 312, color: 'text-navy', sub: 'All staff, all categories' },
+              { label: 'Avg Response Time', value: '22 min', color: 'text-green-600', sub: 'To non-urgent messages' },
+              { label: 'Urgent Msg Avg Response', value: '4.8 min', color: 'text-teal-600', sub: 'Target ≤5 min' },
+              { label: 'Unread >4h (Today)', value: 3, color: 'text-amber-600', sub: 'Flagged for supervisor review' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Message Volume by Category (30d)</h3>
+              <div className="space-y-2.5 text-xs">
+                {[
+                  { cat: 'Clinical / Care Coordination', n: 118, pct: 38, color: 'bg-blue-500' },
+                  { cat: 'Medication / Nursing', n: 76, pct: 24, color: 'bg-teal-500' },
+                  { cat: 'Admissions / Discharge', n: 52, pct: 17, color: 'bg-purple-500' },
+                  { cat: 'Administrative', n: 38, pct: 12, color: 'bg-gray-400' },
+                  { cat: 'Urgent / Safety', n: 18, pct: 6, color: 'bg-red-500' },
+                  { cat: 'Other', n: 10, pct: 3, color: 'bg-amber-400' },
+                ].map(c => (
+                  <div key={c.cat}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{c.cat}</span>
+                      <span className="font-semibold text-navy">{c.n} ({c.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${c.color}`} style={{ width: `${c.pct * 2.4}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Top Senders by Volume (30d)</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50 text-slate">
+                    {['Staff', 'Role', 'Sent', 'Avg Response', 'Unread'].map(h => (
+                      <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { name: 'K. Santos, RN', role: 'Charge Nurse', sent: 62, resp: '18 min', unread: 0 },
+                    { name: 'A. Brooks, LPC', role: 'Counselor', sent: 48, resp: '31 min', unread: 1 },
+                    { name: 'Dr. M. Chen', role: 'Medical Director', sent: 41, resp: '12 min', unread: 0 },
+                    { name: 'T. Jackson, CADC', role: 'Counselor', sent: 37, resp: '44 min', unread: 2 },
+                    { name: 'L. Nguyen, CM', role: 'Case Manager', sent: 34, resp: '26 min', unread: 0 },
+                  ].map(r => (
+                    <tr key={r.name} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 font-medium text-navy">{r.name}</td>
+                      <td className="px-3 py-2 text-slate">{r.role}</td>
+                      <td className="px-3 py-2 text-center text-navy">{r.sent}</td>
+                      <td className="px-3 py-2 text-center text-slate">{r.resp}</td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={r.unread > 0 ? 'text-amber-600 font-bold' : 'text-green-600'}>{r.unread}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

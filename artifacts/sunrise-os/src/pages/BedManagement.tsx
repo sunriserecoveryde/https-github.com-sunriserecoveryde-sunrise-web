@@ -1,210 +1,470 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-import { Bed, Wrench, CheckCircle2, AlertCircle, Clock, Filter, RefreshCw } from 'lucide-react';
+import { Bed, CheckCircle, AlertTriangle, Clock, Wrench, Plus, Filter, RefreshCw } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
+
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
+
+type BedStatus = 'Occupied' | 'Available' | 'Housekeeping' | 'Maintenance' | 'Blocked';
+type Unit = 'All' | 'Detox' | 'Residential A' | 'Residential B' | 'Flex';
 
 interface BedRecord {
   id: string;
   room: string;
-  bed: string;
-  wing: string;
-  type: 'Residential' | 'Detox' | 'PHP';
-  status: 'Occupied' | 'Available' | 'Needs Cleaning' | 'Maintenance' | 'Hold' | 'Blocked';
+  unit: Exclude<Unit, 'All'>;
+  type: 'Private' | 'Semi-Private';
+  status: BedStatus;
   patient?: string;
   mrn?: string;
-  lastCleaned?: string;
-  cleanedBy?: string;
-  maintenanceNote?: string;
-  holdReason?: string;
-  admitDate?: string;
+  program?: string;
+  los?: number;
   expectedDischarge?: string;
+  assignedAt?: string;
+  cleanedBy?: string;
+  note?: string;
 }
 
 const BEDS: BedRecord[] = [
-  { id: 'b1', room: '101', bed: 'A', wing: 'North', type: 'Residential', status: 'Occupied', patient: 'Marcus Webb', mrn: 'MRN-83921', lastCleaned: '2023-10-14', cleanedBy: 'Housekeeping', admitDate: '2023-10-14', expectedDischarge: '2023-11-13' },
-  { id: 'b2', room: '101', bed: 'B', wing: 'North', type: 'Residential', status: 'Available', lastCleaned: '2023-10-25', cleanedBy: 'Maria L.' },
-  { id: 'b3', room: '102', bed: 'A', wing: 'North', type: 'Residential', status: 'Occupied', patient: 'Devon Patel', mrn: 'MRN-99321', lastCleaned: '2023-10-18', cleanedBy: 'Housekeeping', admitDate: '2023-10-18', expectedDischarge: '2023-11-17' },
-  { id: 'b4', room: '102', bed: 'B', wing: 'North', type: 'Residential', status: 'Needs Cleaning', lastCleaned: '2023-10-23', cleanedBy: 'Housekeeping' },
-  { id: 'b5', room: '103', bed: 'A', wing: 'North', type: 'Residential', status: 'Occupied', patient: 'Jamal Foster', mrn: 'MRN-55422', lastCleaned: '2023-10-22', cleanedBy: 'Maria L.', admitDate: '2023-10-22', expectedDischarge: '2023-11-21' },
-  { id: 'b6', room: '103', bed: 'B', wing: 'North', type: 'Residential', status: 'Maintenance', maintenanceNote: 'Window latch broken — work order #WO-4421 submitted', lastCleaned: '2023-10-20', cleanedBy: 'Housekeeping' },
-  { id: 'b7', room: '104', bed: 'A', wing: 'North', type: 'Residential', status: 'Occupied', patient: 'Elena Vasquez', mrn: 'MRN-88211', lastCleaned: '2023-10-11', cleanedBy: 'Housekeeping', admitDate: '2023-10-11', expectedDischarge: '2023-11-10' },
-  { id: 'b8', room: '104', bed: 'B', wing: 'North', type: 'Residential', status: 'Occupied', patient: 'Samantha Choi', mrn: 'MRN-22104', lastCleaned: '2023-10-20', cleanedBy: 'Maria L.', admitDate: '2023-10-20', expectedDischarge: '2023-11-19' },
-  { id: 'b9', room: '201', bed: 'A', wing: 'South', type: 'Detox', status: 'Occupied', patient: 'Patient9 Mock9', mrn: 'MRN-12843', lastCleaned: '2023-10-15', cleanedBy: 'Housekeeping', admitDate: '2023-10-15', expectedDischarge: '2023-11-30' },
-  { id: 'b10', room: '201', bed: 'B', wing: 'South', type: 'Detox', status: 'Available', lastCleaned: '2023-10-25', cleanedBy: 'Maria L.' },
-  { id: 'b11', room: '202', bed: 'A', wing: 'South', type: 'Detox', status: 'Needs Cleaning', lastCleaned: '2023-10-22', cleanedBy: 'Housekeeping' },
-  { id: 'b12', room: '202', bed: 'B', wing: 'South', type: 'Detox', status: 'Hold', holdReason: 'Reserved — incoming admission (pending insurance auth)' },
-  { id: 'b13', room: '203', bed: 'A', wing: 'South', type: 'PHP', status: 'Available', lastCleaned: '2023-10-24', cleanedBy: 'Maria L.' },
-  { id: 'b14', room: '203', bed: 'B', wing: 'South', type: 'PHP', status: 'Available', lastCleaned: '2023-10-24', cleanedBy: 'Maria L.' },
-  { id: 'b15', room: '204', bed: 'A', wing: 'South', type: 'PHP', status: 'Maintenance', maintenanceNote: 'HVAC unit not cooling — work order #WO-4419', lastCleaned: '2023-10-19', cleanedBy: 'Housekeeping' },
-  { id: 'b16', room: '204', bed: 'B', wing: 'South', type: 'PHP', status: 'Blocked', holdReason: 'Gender-specific bed reserve per census policy' },
+  { id: 'b1',  room: '1A', unit: 'Detox',         type: 'Private',      status: 'Occupied',     patient: 'Marcus Webb',     mrn: 'MRN-83921', program: 'Detox',       los: 5,  expectedDischarge: '2026-07-21', assignedAt: '2026-07-14' },
+  { id: 'b2',  room: '1B', unit: 'Detox',         type: 'Private',      status: 'Occupied',     patient: 'James Thornton',  mrn: 'MRN-62841', program: 'Detox',       los: 3,  expectedDischarge: '2026-07-22', assignedAt: '2026-07-16' },
+  { id: 'b3',  room: '1C', unit: 'Detox',         type: 'Private',      status: 'Maintenance',  note: 'Plumbing repair — call placed to contractor', cleanedBy: 'Facilities' },
+  { id: 'b4',  room: '1D', unit: 'Detox',         type: 'Private',      status: 'Available' },
+  { id: 'b5',  room: '2A', unit: 'Residential A',  type: 'Semi-Private', status: 'Occupied',     patient: 'Robert Navarro',  mrn: 'MRN-44782', program: 'Residential', los: 22, expectedDischarge: '2026-08-02', assignedAt: '2026-06-27' },
+  { id: 'b6',  room: '2B', unit: 'Residential A',  type: 'Semi-Private', status: 'Occupied',     patient: 'Linda Farris',    mrn: 'MRN-39018', program: 'Residential', los: 15, expectedDischarge: '2026-07-28', assignedAt: '2026-07-04' },
+  { id: 'b7',  room: '2C', unit: 'Residential A',  type: 'Private',      status: 'Housekeeping', cleanedBy: 'Maria L.', note: 'Deep clean — anticipated ready 4 PM' },
+  { id: 'b8',  room: '2D', unit: 'Residential A',  type: 'Private',      status: 'Available' },
+  { id: 'b9',  room: '3A', unit: 'Residential B',  type: 'Semi-Private', status: 'Occupied',     patient: 'Samantha Choi',   mrn: 'MRN-74563', program: 'Residential', los: 11, expectedDischarge: '2026-07-30', assignedAt: '2026-07-08' },
+  { id: 'b10', room: '3B', unit: 'Residential B',  type: 'Semi-Private', status: 'Occupied',     patient: 'Destiny Williams', mrn: 'MRN-55129', program: 'Residential', los: 18, expectedDischarge: '2026-07-25', assignedAt: '2026-07-01' },
+  { id: 'b11', room: '3C', unit: 'Residential B',  type: 'Private',      status: 'Occupied',     patient: 'Thomas Reilly',   mrn: 'MRN-91002', program: 'Detox',       los: 3,  expectedDischarge: '2026-07-22', assignedAt: '2026-07-16' },
+  { id: 'b12', room: '3D', unit: 'Residential B',  type: 'Private',      status: 'Available' },
+  { id: 'b13', room: '4A', unit: 'Flex',           type: 'Private',      status: 'Occupied',     patient: 'Elena Vasquez',   mrn: 'MRN-28841', program: 'PHP',        los: 8,  expectedDischarge: '2026-07-26', assignedAt: '2026-07-11' },
+  { id: 'b14', room: '4B', unit: 'Flex',           type: 'Private',      status: 'Blocked',      note: 'Reserved — incoming admission (T. Reilly step-up)' },
+  { id: 'b15', room: '4C', unit: 'Flex',           type: 'Semi-Private', status: 'Available' },
+  { id: 'b16', room: '4D', unit: 'Flex',           type: 'Semi-Private', status: 'Housekeeping', cleanedBy: 'Maria L.', note: 'Standard turn — ready in 1 hour' },
 ];
 
-const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: React.ReactNode; label: string }> = {
-  'Occupied':       { color: 'text-sunrise-blue', bg: 'bg-sunrise-blue/10 border-sunrise-blue/30', icon: <Bed className="w-4 h-4" />, label: 'Occupied' },
-  'Available':      { color: 'text-success', bg: 'bg-success/10 border-success/30', icon: <CheckCircle2 className="w-4 h-4" />, label: 'Available' },
-  'Needs Cleaning': { color: 'text-sunrise-amber', bg: 'bg-sunrise-amber/10 border-sunrise-amber/30', icon: <RefreshCw className="w-4 h-4" />, label: 'Needs Cleaning' },
-  'Maintenance':    { color: 'text-critical', bg: 'bg-critical/10 border-critical/30', icon: <Wrench className="w-4 h-4" />, label: 'Maintenance' },
-  'Hold':           { color: 'text-moderate', bg: 'bg-moderate/10 border-moderate/30', icon: <Clock className="w-4 h-4" />, label: 'Hold' },
-  'Blocked':        { color: 'text-slate', bg: 'bg-slate-100 border-slate-200', icon: <AlertCircle className="w-4 h-4" />, label: 'Blocked' },
+const STATUS_CONFIG: Record<BedStatus, { color: string; bg: string; border: string; icon: React.ReactNode; label: string }> = {
+  Occupied:     { color: 'text-blue-700',  bg: 'bg-blue-50',   border: 'border-blue-200',  icon: <Bed className="w-4 h-4" />,          label: 'Occupied' },
+  Available:    { color: 'text-green-700', bg: 'bg-green-50',  border: 'border-green-200', icon: <CheckCircle className="w-4 h-4" />,   label: 'Available' },
+  Housekeeping: { color: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-200', icon: <Clock className="w-4 h-4" />,         label: 'Housekeeping' },
+  Maintenance:  { color: 'text-red-700',   bg: 'bg-red-50',    border: 'border-red-200',   icon: <Wrench className="w-4 h-4" />,        label: 'Maintenance' },
+  Blocked:      { color: 'text-purple-700',bg: 'bg-purple-50', border: 'border-purple-200',icon: <AlertTriangle className="w-4 h-4" />, label: 'Blocked' },
 };
 
-export function BedManagement({ navigate }: { navigate: (s: Screen) => void }) {
-  const [filterStatus, setFilterStatus] = useState<string>('All');
-  const [filterWing, setFilterWing] = useState<string>('All');
+function BedCard({ bed, onClick }: { bed: BedRecord; onClick: () => void }) {
+  const cfg = STATUS_CONFIG[bed.status];
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left rounded-xl border-2 p-3 transition-all hover:shadow-md ${cfg.bg} ${cfg.border}`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <span className={`${cfg.color}`}>{cfg.icon}</span>
+          <span className="font-bold text-navy text-sm">Room {bed.room}</span>
+        </div>
+        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.color} border ${cfg.border}`}>{bed.type === 'Private' ? 'Pvt' : 'Semi'}</span>
+      </div>
+      {bed.status === 'Occupied' && bed.patient && (
+        <>
+          <div className="font-semibold text-navy text-xs truncate">{bed.patient}</div>
+          <div className="text-[10px] text-slate font-mono">{bed.mrn}</div>
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-[10px] bg-blue-100 text-blue-700 font-medium px-1.5 py-0.5 rounded">{bed.program}</span>
+            <span className="text-[10px] text-slate">LOS {bed.los}d</span>
+          </div>
+          <div className="text-[10px] text-slate mt-1">Discharge: {bed.expectedDischarge}</div>
+        </>
+      )}
+      {bed.status === 'Available' && (
+        <div className="text-xs text-green-600 font-medium mt-1">Ready for admission</div>
+      )}
+      {(bed.status === 'Housekeeping' || bed.status === 'Maintenance') && (
+        <>
+          <div className="text-[10px] text-slate mt-1 leading-snug line-clamp-2">{bed.note}</div>
+          {bed.cleanedBy && <div className="text-[10px] text-slate mt-0.5">Assigned: {bed.cleanedBy}</div>}
+        </>
+      )}
+      {bed.status === 'Blocked' && (
+        <div className="text-[10px] text-purple-700 mt-1 leading-snug">{bed.note}</div>
+      )}
+    </button>
+  );
+}
 
-  const filtered = BEDS.filter(b =>
-    (filterStatus === 'All' || b.status === filterStatus) &&
-    (filterWing === 'All' || b.wing === filterWing)
+export function BedManagement({ navigate, readOnly }: Props) {
+  const [unit, setUnit] = useState<Unit>('All');
+  const [statusFilter, setStatusFilter] = useState<BedStatus | 'All'>('All');
+  const [selected, setSelected] = useState<BedRecord | null>(null);
+  const [bedTab, setBedTab] = useState<'Board' | 'Housekeeping Queue' | 'Capacity Forecast' | 'Maintenance Log' | 'Occupancy Trends'>('Board');
+
+  const UNITS: Unit[] = ['All', 'Detox', 'Residential A', 'Residential B', 'Flex'];
+  const STATUSES: (BedStatus | 'All')[] = ['All', 'Occupied', 'Available', 'Housekeeping', 'Maintenance', 'Blocked'];
+
+  const visible = BEDS.filter(b =>
+    (unit === 'All' || b.unit === unit) &&
+    (statusFilter === 'All' || b.status === statusFilter)
   );
 
-  const counts = {
-    total: BEDS.length,
-    occupied: BEDS.filter(b => b.status === 'Occupied').length,
-    available: BEDS.filter(b => b.status === 'Available').length,
-    cleaning: BEDS.filter(b => b.status === 'Needs Cleaning').length,
-    maintenance: BEDS.filter(b => b.status === 'Maintenance').length,
-    hold: BEDS.filter(b => b.status === 'Hold' || b.status === 'Blocked').length,
+  const counts: Record<BedStatus, number> = {
+    Occupied: 0, Available: 0, Housekeeping: 0, Maintenance: 0, Blocked: 0,
   };
-
-  const summary = [
-    { label: 'Total Beds', value: counts.total, color: 'border-slate-200', text: 'text-navy' },
-    { label: 'Occupied', value: counts.occupied, color: 'border-sunrise-blue', text: 'text-sunrise-blue' },
-    { label: 'Available', value: counts.available, color: 'border-success', text: 'text-success' },
-    { label: 'Needs Cleaning', value: counts.cleaning, color: 'border-sunrise-amber', text: 'text-sunrise-amber' },
-    { label: 'Maintenance', value: counts.maintenance, color: 'border-critical', text: 'text-critical' },
-    { label: 'Hold / Blocked', value: counts.hold, color: 'border-slate-300', text: 'text-slate' },
-  ];
+  BEDS.forEach(b => counts[b.status]++);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-end">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold text-navy flex items-center gap-2">
             <Bed className="w-6 h-6 text-sunrise-blue" /> Bed Management
           </h1>
-          <p className="text-slate text-sm mt-1">Operations — housekeeping, maintenance, and physical bed status</p>
+          <p className="text-slate text-sm mt-0.5">Room-level occupancy, housekeeping, and maintenance · Updated 2:45 PM</p>
         </div>
         <div className="flex gap-2">
-          <button className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Export Report</button>
-          <button className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Work Order</button>
+          <button className="btn-outline text-xs flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button>
+          <LockedButton locked={readOnly} className="btn-primary text-xs flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" /> New Work Order</LockedButton>
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        {summary.map(s => (
-          <div key={s.label} className={`bg-white border-l-4 ${s.color} rounded-lg shadow-sm p-4`}>
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate mb-1">{s.label}</div>
-            <div className={`text-3xl font-bold ${s.text}`}>{s.value}</div>
-          </div>
+      {/* Status KPI Row */}
+      <div className="grid grid-cols-5 gap-3">
+        {(Object.entries(counts) as [BedStatus, number][]).map(([status, count]) => {
+          const cfg = STATUS_CONFIG[status];
+          return (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(statusFilter === status ? 'All' : status)}
+              className={`rounded-xl border-2 p-3 text-center transition-all ${statusFilter === status ? `${cfg.bg} ${cfg.border}` : 'bg-white border-border hover:border-slate-300'}`}
+            >
+              <div className={`text-2xl font-bold ${cfg.color}`}>{count}</div>
+              <div className="text-[10px] font-semibold text-slate mt-0.5">{status}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab Bar */}
+      <div className="flex gap-1 border-b border-border">
+        {(['Board', 'Housekeeping Queue', 'Capacity Forecast', 'Maintenance Log', 'Occupancy Trends'] as const).map(t => (
+          <button key={t} onClick={() => setBedTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${bedTab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="bg-white border border-border rounded-lg p-4 flex gap-4 items-center">
+      {bedTab === 'Housekeeping Queue' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Housekeeping and maintenance tasks requiring action before beds return to Available status.</div>
+          <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-border flex items-center justify-between">
+              <h3 className="font-semibold text-navy text-sm">Open Tasks</h3>
+              <LockedButton locked={readOnly} className="text-xs px-3 py-1.5 bg-navy text-white rounded font-medium hover:bg-navy/90">+ Add Task</LockedButton>
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-bg text-slate">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Room</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Unit</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Task Type</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Description</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Assigned To</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Priority</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Est. Ready</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { room: '1C', unit: 'Detox', type: 'Maintenance', desc: 'Plumbing repair — contractor scheduled', assignee: 'Facilities (Contractor)', priority: 'High', ready: 'Jul 20 AM', status: 'In Progress' },
+                  { room: '2C', unit: 'Res. A', type: 'Deep Clean', desc: 'Post-discharge deep clean — anticipated ready 4 PM', assignee: 'Maria L.', priority: 'Normal', ready: 'Today 4 PM', status: 'In Progress' },
+                  { room: '4D', unit: 'Flex', type: 'Turnover Clean', desc: 'Standard turnover — linens changed, surfaces wiped', assignee: 'John K.', priority: 'Normal', ready: 'Today 2 PM', status: 'Pending' },
+                  { room: '5A', unit: 'Flex', type: 'Inspection', desc: 'HVAC filter replacement — facilities inspection required', assignee: 'Facilities', priority: 'Low', ready: 'Jul 21', status: 'Scheduled' },
+                  { room: '3C', unit: 'Res. B', type: 'Biohazard', desc: 'Bodily fluid cleanup — specialized cleaning protocol required', assignee: 'BioCleanse Co.', priority: 'Urgent', ready: 'Today 6 PM', status: 'Pending' },
+                ].map(t => (
+                  <tr key={t.room + t.type} className={`hover:bg-gray-50 ${t.priority === 'Urgent' ? 'bg-red-50/20' : ''}`}>
+                    <td className="px-4 py-2.5 font-bold text-navy">{t.room}</td>
+                    <td className="px-4 py-2.5 text-slate">{t.unit}</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${t.type === 'Maintenance' ? 'bg-orange-100 text-orange-700' : t.type === 'Biohazard' ? 'bg-red-100 text-red-700' : t.type === 'Deep Clean' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>{t.type}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-slate">{t.desc}</td>
+                    <td className="px-3 py-2.5 text-center text-slate">{t.assignee}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${t.priority === 'Urgent' ? 'bg-red-100 text-red-700' : t.priority === 'High' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>{t.priority}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center text-slate">{t.ready}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${t.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : t.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{t.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800">
+            <strong>Beds returning today:</strong> Room 2C (Res A) ~4 PM · Room 4D (Flex) ~2 PM · Room 3C (Res B) ~6 PM — total +3 Available by end of shift.
+          </div>
+        </div>
+      )}
+
+      {bedTab === 'Capacity Forecast' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">7-day discharge and admission forecast — projected occupancy and available bed openings by unit.</div>
+          <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm">Projected Discharge Schedule — Next 7 Days</div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-bg text-slate">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Date</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Patient</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Room</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Unit</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Discharge Type</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Step-Down</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Bed Available</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { date: 'Jul 21', patient: 'James Thornton', room: '1B', unit: 'Detox', type: 'Planned', stepDown: 'Residential', avail: 'Jul 21 PM' },
+                  { date: 'Jul 21', patient: 'Thomas Reilly', room: '3C', unit: 'Res. B', type: 'Planned', stepDown: 'PHP', avail: 'Jul 21 PM' },
+                  { date: 'Jul 22', patient: 'Marcus Webb', room: '1A', unit: 'Detox', type: 'Planned', stepDown: 'Residential', avail: 'Jul 22 PM' },
+                  { date: 'Jul 24', patient: 'Elena Vasquez', room: '4A', unit: 'Flex', type: 'Planned', stepDown: 'IOP', avail: 'Jul 24 PM' },
+                  { date: 'Jul 25', patient: 'Destiny Williams', room: '3B', unit: 'Res. B', type: 'Planned', stepDown: 'Home w/ Aftercare', avail: 'Jul 25 PM' },
+                  { date: 'Jul 26', patient: 'Samantha Choi', room: '3A', unit: 'Res. B', type: 'Planned', stepDown: 'Sober Living', avail: 'Jul 26 PM' },
+                  { date: 'Jul 28', patient: 'Linda Farris', room: '2B', unit: 'Res. A', type: 'Planned', stepDown: 'PHP', avail: 'Jul 28 PM' },
+                ].map(d => (
+                  <tr key={d.patient} className="hover:bg-gray-50">
+                    <td className="px-4 py-2.5 font-semibold text-navy">{d.date}</td>
+                    <td className="px-4 py-2.5 text-navy">{d.patient}</td>
+                    <td className="px-3 py-2.5 text-center font-bold text-navy">{d.room}</td>
+                    <td className="px-3 py-2.5 text-center text-slate">{d.unit}</td>
+                    <td className="px-3 py-2.5 text-center"><span className="text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">{d.type}</span></td>
+                    <td className="px-3 py-2.5 text-center text-slate">{d.stepDown}</td>
+                    <td className="px-3 py-2.5 text-center text-green-600 font-medium">{d.avail}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { unit: 'Detox (4 beds)', occupied: 2, avail: 2, incoming: 3, color: 'border-blue-400' },
+              { unit: 'Residential A (4 beds)', occupied: 3, avail: 1, incoming: 2, color: 'border-teal-400' },
+              { unit: 'Residential B (4 beds)', occupied: 3, avail: 1, incoming: 1, color: 'border-purple-400' },
+              { unit: 'Flex (4 beds)', occupied: 2, avail: 1, incoming: 2, color: 'border-orange-400' },
+            ].map(u => (
+              <div key={u.unit} className={`card border-l-4 ${u.color}`}>
+                <h4 className="font-semibold text-navy text-xs mb-2">{u.unit}</h4>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between"><span className="text-slate">Occupied now</span><span className="font-bold text-navy">{u.occupied}</span></div>
+                  <div className="flex justify-between"><span className="text-slate">Available now</span><span className="font-bold text-green-600">{u.avail}</span></div>
+                  <div className="flex justify-between"><span className="text-slate">Incoming (7d)</span><span className="font-bold text-blue-600">{u.incoming}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {bedTab === 'Board' && (
+      <div className="space-y-5">
+      {/* Unit Filter */}
+      <div className="flex items-center gap-2 flex-wrap">
         <Filter className="w-4 h-4 text-slate" />
-        <div className="flex gap-3 items-center">
-          <label className="text-sm font-semibold text-slate">Status:</label>
-          {['All', 'Available', 'Occupied', 'Needs Cleaning', 'Maintenance', 'Hold', 'Blocked'].map(s => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
-              className={`text-sm px-3 py-1 rounded-full font-medium transition-colors ${filterStatus === s ? 'bg-navy text-white' : 'bg-bg text-slate hover:bg-slate-100 border border-border'}`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-        <div className="w-px h-6 bg-border" />
-        <div className="flex gap-3 items-center">
-          <label className="text-sm font-semibold text-slate">Wing:</label>
-          {['All', 'North', 'South'].map(w => (
-            <button
-              key={w}
-              onClick={() => setFilterWing(w)}
-              className={`text-sm px-3 py-1 rounded-full font-medium transition-colors ${filterWing === w ? 'bg-navy text-white' : 'bg-bg text-slate hover:bg-slate-100 border border-border'}`}
-            >
-              {w}
-            </button>
-          ))}
-        </div>
+        {UNITS.map(u => (
+          <button
+            key={u}
+            onClick={() => setUnit(u)}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${unit === u ? 'bg-sunrise-blue text-white' : 'bg-bg border border-border text-slate hover:border-sunrise-blue/50'}`}
+          >
+            {u}
+          </button>
+        ))}
+        <span className="ml-auto text-xs text-slate">{visible.length} beds shown</span>
       </div>
 
-      {/* Bed table */}
-      <div className="bg-white rounded-lg shadow-sm border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-bg border-b border-border">
-              <th className="px-4 py-3 text-left font-bold text-slate text-xs uppercase tracking-wider">Room/Bed</th>
-              <th className="px-4 py-3 text-left font-bold text-slate text-xs uppercase tracking-wider">Wing</th>
-              <th className="px-4 py-3 text-left font-bold text-slate text-xs uppercase tracking-wider">Type</th>
-              <th className="px-4 py-3 text-left font-bold text-slate text-xs uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-left font-bold text-slate text-xs uppercase tracking-wider">Patient / Note</th>
-              <th className="px-4 py-3 text-left font-bold text-slate text-xs uppercase tracking-wider">Last Cleaned</th>
-              <th className="px-4 py-3 text-left font-bold text-slate text-xs uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filtered.map(bed => {
-              const cfg = STATUS_CONFIG[bed.status];
-              return (
-                <tr key={bed.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 font-bold text-navy">
-                    Room {bed.room}{bed.bed}
-                  </td>
-                  <td className="px-4 py-3 text-slate">{bed.wing}</td>
-                  <td className="px-4 py-3 text-slate">{bed.type}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${cfg.bg} ${cfg.color}`}>
-                      {cfg.icon} {cfg.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {bed.patient && (
-                      <div>
-                        <div className="font-semibold text-navy">{bed.patient}</div>
-                        <div className="text-xs text-slate">{bed.mrn} · Exp. d/c: {bed.expectedDischarge}</div>
-                      </div>
-                    )}
-                    {bed.maintenanceNote && (
-                      <div className="text-xs text-critical font-medium flex items-center gap-1">
-                        <Wrench className="w-3 h-3" /> {bed.maintenanceNote}
-                      </div>
-                    )}
-                    {bed.holdReason && (
-                      <div className="text-xs text-moderate font-medium">{bed.holdReason}</div>
-                    )}
-                    {!bed.patient && !bed.maintenanceNote && !bed.holdReason && (
-                      <span className="text-slate text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate">
-                    {bed.lastCleaned ? (
-                      <div>
-                        <div className="font-medium">{bed.lastCleaned}</div>
-                        <div className="text-slate-light">{bed.cleanedBy}</div>
-                      </div>
-                    ) : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      {bed.status === 'Needs Cleaning' && (
-                        <button className="text-xs px-2 py-1 bg-success text-white rounded font-medium hover:bg-success/80">Mark Clean</button>
-                      )}
-                      {bed.status === 'Available' && (
-                        <button className="text-xs px-2 py-1 bg-sunrise-blue text-white rounded font-medium hover:bg-sunrise-blue-light">Assign</button>
-                      )}
-                      {bed.status === 'Maintenance' && (
-                        <button className="text-xs px-2 py-1 border border-critical text-critical rounded font-medium hover:bg-critical/10">Update WO</button>
-                      )}
-                      <button className="text-xs px-2 py-1 border border-border text-slate rounded font-medium hover:bg-slate-50">Note</button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* Bed Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        {visible.map(b => (
+          <BedCard key={b.id} bed={b} onClick={() => setSelected(selected?.id === b.id ? null : b)} />
+        ))}
       </div>
+
+      {/* Detail Panel */}
+      {selected && (
+        <div className="bg-white border border-border rounded-xl shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-semibold text-navy text-base">Room {selected.room} — {selected.unit}</div>
+            <button onClick={() => setSelected(null)} className="text-slate hover:text-navy text-xs font-medium">✕ Close</button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-0.5">Status</div>
+              <div className={`font-semibold ${STATUS_CONFIG[selected.status].color}`}>{selected.status}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-0.5">Room Type</div>
+              <div className="text-navy font-medium">{selected.type}</div>
+            </div>
+            {selected.status === 'Occupied' && <>
+              <div>
+                <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-0.5">Patient</div>
+                <div className="font-semibold text-navy">{selected.patient}</div>
+                <div className="text-xs text-slate font-mono">{selected.mrn}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-0.5">LOS / Discharge</div>
+                <div className="text-navy font-medium">Day {selected.los} · {selected.expectedDischarge}</div>
+              </div>
+            </>}
+            {selected.note && (
+              <div className="col-span-2 md:col-span-4">
+                <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-0.5">Notes</div>
+                <div className="text-navy">{selected.note}</div>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 mt-4">
+            {selected.status === 'Occupied' && (
+              <>
+                <button onClick={() => selected.mrn && navigate('PatientDetail', selected.mrn)} className="btn-primary text-xs px-3 py-1.5">View Patient Chart</button>
+                <LockedButton locked={readOnly} className="btn-outline text-xs px-3 py-1.5">Schedule Discharge</LockedButton>
+              </>
+            )}
+            {selected.status === 'Available' && (
+              <LockedButton locked={readOnly} className="btn-primary text-xs px-3 py-1.5">Assign to Patient</LockedButton>
+            )}
+            {(selected.status === 'Housekeeping' || selected.status === 'Maintenance') && (
+              <>
+                <LockedButton locked={readOnly} className="btn-primary text-xs px-3 py-1.5">Mark Ready</LockedButton>
+                <LockedButton locked={readOnly} className="btn-outline text-xs px-3 py-1.5">Update Note</LockedButton>
+              </>
+            )}
+            {selected.status === 'Blocked' && (
+              <LockedButton locked={readOnly} className="btn-outline text-xs px-3 py-1.5">Release Block</LockedButton>
+            )}
+          </div>
+        </div>
+      )}
+
+      </div>
+      )}
+
+      {bedTab === 'Maintenance Log' && (
+        <div className="space-y-4">
+          <div className="text-sm text-slate">Facility maintenance and work order tracking — open requests, scheduled preventive maintenance, and compliance items.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Open Work Orders', value: 4, color: 'text-amber-600', sub: 'Awaiting completion' },
+              { label: 'In Progress', value: 2, color: 'text-blue-600', sub: 'Facilities team on-site' },
+              { label: 'Completed This Month', value: 18, color: 'text-green-600', sub: 'Avg 2.1 days to resolve' },
+              { label: 'Compliance Due (30d)', value: 3, color: 'text-red-600', sub: 'Fire/safety inspections' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card overflow-hidden">
+            <h3 className="font-semibold text-navy text-sm mb-3">Open Work Orders</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">ID</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Location</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Issue</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Priority</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Reported</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Assigned To</th>
+                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { id: 'WO-0041', loc: 'Room 3A', issue: 'HVAC not cooling — temperature 78°F', priority: 'High', date: '07/17', assigned: 'Facilities', status: 'In Progress', sColor: 'bg-blue-100 text-blue-700' },
+                  { id: 'WO-0042', loc: 'Group Room B', issue: 'Ceiling tile damaged — water stain visible', priority: 'Medium', date: '07/17', assigned: 'Facilities', status: 'Open', sColor: 'bg-amber-100 text-amber-700' },
+                  { id: 'WO-0043', loc: 'Nurses Station', issue: 'Medication lockbox keypad malfunction', priority: 'High', date: '07/18', assigned: 'Security Sys.', status: 'In Progress', sColor: 'bg-blue-100 text-blue-700' },
+                  { id: 'WO-0044', loc: 'Room 1B', issue: 'Bathroom faucet dripping — high water waste', priority: 'Low', date: '07/18', assigned: 'Unassigned', status: 'Open', sColor: 'bg-amber-100 text-amber-700' },
+                  { id: 'WO-0045', loc: 'Common Area', issue: 'TV mount loose — safety concern', priority: 'Medium', date: '07/19', assigned: 'Facilities', status: 'Open', sColor: 'bg-amber-100 text-amber-700' },
+                  { id: 'WO-0046', loc: 'Kitchen', issue: 'Dishwasher not draining', priority: 'Medium', date: '07/19', assigned: 'Unassigned', status: 'Open', sColor: 'bg-amber-100 text-amber-700' },
+                ].map(r => (
+                  <tr key={r.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2.5 font-mono text-navy font-bold">{r.id}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.loc}</td>
+                    <td className="px-3 py-2.5 font-medium text-navy">{r.issue}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.priority === 'High' ? 'bg-red-100 text-red-700' : r.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-slate'}`}>{r.priority}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate">{r.date}</td>
+                    <td className="px-3 py-2.5 text-slate">{r.assigned}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.sColor}`}>{r.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {bedTab === 'Occupancy Trends' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">30-day occupancy trends by unit and room — identifies peak occupancy windows, seasonal patterns, and revenue optimization opportunities.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: '30-Day Avg Occupancy', value: '81%', color: 'text-green-600', sub: 'Up from 76% prior 30d' },
+              { label: 'Peak Occupancy Day', value: 'Monday', color: 'text-navy', sub: 'New admit + hold-over pattern' },
+              { label: 'Lowest Occupancy Day', value: 'Friday', color: 'text-slate', sub: 'Higher discharge volume' },
+              { label: 'Weekend Avg Occupancy', value: '74%', color: 'text-blue-600', sub: 'vs. 86% weekday avg' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Occupancy by Unit — Week-by-Week (Last 5 Weeks)</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  {['Unit', 'Beds', 'Jun 15', 'Jun 22', 'Jun 29', 'Jul 6', 'Jul 13', 'Trend'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { unit: "Men's Residential", beds: 10, w1: '80%', w2: '80%', w3: '90%', w4: '90%', w5: '90%', trend: '↑ Stable High' },
+                  { unit: "Women's Residential", beds: 8, w1: '75%', w2: '88%', w3: '88%', w4: '88%', w5: '88%', trend: '↑ Strong' },
+                  { unit: 'Detox / Med Mgd', beds: 6, w1: '67%', w2: '83%', w3: '83%', w4: '100%', w5: '83%', trend: '↑ High demand' },
+                  { unit: 'PHP Day Track', beds: 12, w1: '58%', w2: '67%', w3: '75%', w4: '83%', w5: '75%', trend: '↑ Building' },
+                  { unit: 'IOP Track', beds: 8, w1: '63%', w2: '63%', w3: '75%', w4: '75%', w5: '75%', trend: '→ Flat Growth' },
+                ].map(r => {
+                  const getColor = (v: string) => {
+                    const n = parseInt(v); return n >= 90 ? 'text-amber-600 font-bold' : n >= 75 ? 'text-green-600 font-semibold' : 'text-blue-600';
+                  };
+                  return (
+                    <tr key={r.unit} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 font-medium text-navy">{r.unit}</td>
+                      <td className="px-3 py-2 text-center text-slate">{r.beds}</td>
+                      {[r.w1, r.w2, r.w3, r.w4, r.w5].map((w, i) => (
+                        <td key={i} className={`px-3 py-2 text-center ${getColor(w)}`}>{w}</td>
+                      ))}
+                      <td className="px-3 py-2 text-slate italic text-[10px]">{r.trend}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

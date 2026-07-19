@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { Video, VideoOff, CheckCircle, Clock, Calendar, ExternalLink, Wifi, Monitor, Mic, Camera, Plus, AlertTriangle, Phone } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type SessionStatus = 'Scheduled' | 'In Progress' | 'Completed' | 'No Show' | 'Tech Failure' | 'Cancelled';
 type ModalityType = 'Individual Therapy' | 'Group Therapy' | 'Psychiatric Evaluation' | 'Medication Management' | 'Family Session' | 'Case Management';
@@ -107,8 +108,8 @@ const PLATFORM_STYLE: Record<string, string> = {
 
 const TECH_CHECK_ITEMS = ['Camera', 'Microphone', 'Internet speed ≥ 10 Mbps', 'Private location confirmed', 'HIPAA notice reviewed', 'Emergency address on file'];
 
-export function TelehealthConsults({ navigate }: Props) {
-  const [tab, setTab] = useState<'Today' | 'Upcoming' | 'History' | 'TechCheck' | 'Settings'>('Today');
+export function TelehealthConsults({ navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Today' | 'Upcoming' | 'History' | 'TechCheck' | 'Settings' | 'Analytics' | 'Platform Guide'>('Today');
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
 
@@ -127,9 +128,9 @@ export function TelehealthConsults({ navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Telehealth Consults</h1>
           <p className="text-slate text-sm mt-0.5">HIPAA-compliant virtual sessions · Zoom for Healthcare · Doxy.me</p>
         </div>
-        <button onClick={() => setNewSessionOpen(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+        <LockedButton locked={readOnly} onClick={() => setNewSessionOpen(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
           <Plus className="w-4 h-4" /> Schedule Session
-        </button>
+        </LockedButton>
       </div>
 
       {inProgressSession && (() => {
@@ -165,7 +166,7 @@ export function TelehealthConsults({ navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Today', 'Upcoming', 'History', 'TechCheck', 'Settings'] as const).map(t => (
+        {(['Today', 'Upcoming', 'History', 'TechCheck', 'Settings', 'Analytics', 'Platform Guide'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -301,7 +302,7 @@ export function TelehealthConsults({ navigate }: Props) {
                 <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Home — 123 Main St, Nashville, TN 37201" />
               </div>
             </div>
-            <button className="btn-primary text-sm px-5 py-2">Save Tech Check</button>
+            <LockedButton locked={readOnly} className="btn-primary text-sm px-5 py-2">Save Tech Check</LockedButton>
           </div>
           <div className="card">
             <h3 className="font-semibold text-navy mb-3">No-Show Protocol</h3>
@@ -391,7 +392,152 @@ export function TelehealthConsults({ navigate }: Props) {
             </div>
             <div className="flex gap-3 pt-2">
               <button onClick={() => setNewSessionOpen(false)} className="flex-1 border border-border text-slate rounded-lg px-4 py-2 text-sm">Cancel</button>
-              <button onClick={() => setNewSessionOpen(false)} className="flex-1 btn-primary text-sm">Schedule Session</button>
+              <LockedButton locked={readOnly} onClick={() => setNewSessionOpen(false)} className="flex-1 btn-primary text-sm">Schedule Session</LockedButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Analytics' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Telehealth program metrics — session volume, completion rates, platform performance, and patient engagement.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Sessions (30d)', value: 84, color: 'text-navy', sub: '↑ 22% vs prior month' },
+              { label: 'Completion Rate', value: '91%', color: 'text-green-600', sub: 'No-show/cancel: 9%' },
+              { label: 'Avg Session Length', value: '48min', color: 'text-blue-600', sub: 'Target: 45–60 min' },
+              { label: 'Patient Satisfaction', value: '4.6/5', color: 'text-teal-600', sub: 'n=71 responses' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Session Volume by Type</h3>
+              <div className="space-y-2.5 text-xs">
+                {[
+                  { type: 'Individual Therapy', count: 38, pct: 45, color: 'bg-blue-500' },
+                  { type: 'Psychiatric Evaluation', count: 21, pct: 25, color: 'bg-purple-500' },
+                  { type: 'Medication Management', count: 14, pct: 17, color: 'bg-teal-500' },
+                  { type: 'Family / Multi-party Session', count: 8, pct: 10, color: 'bg-orange-400' },
+                  { type: 'Case Management Check-in', count: 3, pct: 4, color: 'bg-gray-400' },
+                ].map(s => (
+                  <div key={s.type}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{s.type}</span>
+                      <span className="font-semibold text-navy">{s.count} ({s.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${s.color}`} style={{ width: `${s.pct * 1.8}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Platform Performance (30d)</h3>
+                <table className="w-full text-xs">
+                  <tbody className="divide-y divide-border">
+                    {[
+                      { metric: 'Sessions with tech issues', value: '4%', ok: true },
+                      { metric: 'Avg wait time to connect', value: '1.8 min', ok: true },
+                      { metric: 'Dropped calls / reconnects', value: '2.4%', ok: true },
+                      { metric: 'Mobile device usage', value: '61%', ok: true },
+                      { metric: 'Provider on-time rate', value: '94%', ok: true },
+                      { metric: 'No-show rate', value: '6%', ok: true },
+                    ].map(r => (
+                      <tr key={r.metric} className="hover:bg-gray-50">
+                        <td className="py-2 text-slate">{r.metric}</td>
+                        <td className="py-2 text-right font-semibold text-navy">{r.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800">
+                <strong>Program Note:</strong> Telehealth volume grew 22% MoM driven by IOP participants and step-down patients maintaining care after residential discharge. Rural access expansion accounts for 31% of new telehealth enrollments.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Platform Guide' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Telehealth platform reference — technical requirements, HIPAA-compliant platform comparison, DEA telehealth prescribing rules, and troubleshooting quick guide.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">DEA Telehealth Prescribing Rules — Post-PHE Summary</h3>
+              <div className="space-y-2 text-xs">
+                <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-800 font-medium">
+                  Post-COVID PHE rules: DEA has extended temporary flexibilities through 2025. Current policy allows buprenorphine initiation via telehealth without an in-person exam for existing and new patients.
+                </div>
+                {[
+                  { rule: 'Buprenorphine (Schedule III)', detail: 'May be initiated and continued via telehealth without prior in-person visit under current DEA rules. Audio-video required; audio-only NOT sufficient for initial prescribing.' },
+                  { rule: 'Stimulants (Schedule II)', detail: 'CANNOT be initiated via telehealth without a prior in-person visit per DEA rules. Continuation of existing prescriptions may be allowed under certain conditions — verify with Medical Director.' },
+                  { rule: 'Benzodiazepines (Schedule IV)', detail: 'May be initiated via audio-video telehealth if the prescriber has established a valid patient-provider relationship. Document medical necessity.' },
+                  { rule: 'Platform requirement', detail: 'Must use HIPAA-compliant, DEA-compliant audio-video platform. Consumer platforms (FaceTime, Zoom free) are NOT compliant. See approved platforms below.' },
+                ].map(r => (
+                  <div key={r.rule} className="border border-border rounded-lg p-2.5">
+                    <div className="font-semibold text-navy">{r.rule}</div>
+                    <div className="text-slate mt-0.5">{r.detail}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Approved HIPAA-Compliant Platforms at Sunrise</h3>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border bg-gray-50 text-slate">
+                      {['Platform', 'Use Case', 'DEA Compliant', 'BAA', 'Status'].map(h => (
+                        <th key={h} className="text-left px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {[
+                      { platform: 'Doxy.me (Clinical)', use: 'All telehealth visits', dea: '✓', baa: '✓ On file', status: 'Primary' },
+                      { platform: 'Epic MyChart Video', use: 'EHR-integrated visits', dea: '✓', baa: '✓ On file', status: 'Active' },
+                      { platform: 'Zoom for Healthcare', use: 'Group sessions, psych consults', dea: '✓', baa: '✓ On file', status: 'Active' },
+                      { platform: 'Spruce Health', use: 'Secure messaging + video', dea: '✓', baa: '✓ On file', status: 'Active' },
+                    ].map(r => (
+                      <tr key={r.platform} className="hover:bg-gray-50">
+                        <td className="px-2 py-1.5 font-medium text-navy">{r.platform}</td>
+                        <td className="px-2 py-1.5 text-slate">{r.use}</td>
+                        <td className="px-2 py-1.5 text-center text-green-600">{r.dea}</td>
+                        <td className="px-2 py-1.5 text-green-600">{r.baa}</td>
+                        <td className="px-2 py-1.5"><span className={`text-[9px] font-bold px-1 py-0.5 rounded ${r.status === 'Primary' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{r.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-2">Troubleshooting Quick Reference</h3>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    { issue: 'Patient cannot connect', fix: 'Verify browser is Chrome/Edge (not Safari); clear cache; check mic/camera permissions' },
+                    { issue: 'Video freezing / poor quality', fix: 'Ask patient to move closer to router, close background tabs, switch to audio-only if <5 Mbps' },
+                    { issue: 'Audio echo or feedback', fix: 'One party should use headphones; mute when not speaking' },
+                    { issue: 'Session drops unexpectedly', fix: 'Rejoin from visit link; document "technical interruption" in note' },
+                    { issue: 'Patient cannot locate link', fix: 'Resend from platform dashboard; have patient check spam folder' },
+                  ].map(t => (
+                    <div key={t.issue} className="flex gap-2">
+                      <span className="font-semibold text-amber-700 shrink-0">{t.issue}:</span>
+                      <span className="text-navy">{t.fix}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

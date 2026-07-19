@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { BookOpen, CheckCircle, Clock, Star, Plus, ChevronDown, ChevronUp, Download, Users } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type EvidenceLevel = 'Level I (RCT)' | 'Level II (Quasi-exp)' | 'Level III (Expert)' | 'SAMHSA EBP';
 type CurriculumStatus = 'Active' | 'Pilot' | 'Archived';
@@ -134,8 +135,8 @@ const WEEKLY_SCHEDULE = [
   { day: 'Friday', time: '11:00 AM', curriculum: 'TSF (Group B)', facilitator: 'Kevin Wright, CADC-I', room: 'Sunrise Room', enrolled: 9 },
 ];
 
-export function GroupTherapyCurriculum({ navigate: _navigate }: Props) {
-  const [tab, setTab] = useState<'Library' | 'Schedule' | 'Assignments'>('Library');
+export function GroupTherapyCurriculum({ navigate: _navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Library' | 'Schedule' | 'Assignments' | 'Enrollment' | 'Evidence Base' | 'Facilitator Guide'>('Library');
   const [expandedCurriculum, setExpandedCurriculum] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<CurriculumStatus | 'All'>('All');
 
@@ -148,7 +149,7 @@ export function GroupTherapyCurriculum({ navigate: _navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Group Therapy Curriculum</h1>
           <p className="text-slate text-sm mt-0.5">Evidence-based curricula library · Weekly schedule · Session assignments</p>
         </div>
-        <button className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />New Group</button>
+        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />New Group</LockedButton>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -167,7 +168,7 @@ export function GroupTherapyCurriculum({ navigate: _navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Library', 'Schedule', 'Assignments'] as const).map(t => (
+        {(['Library', 'Schedule', 'Assignments', 'Enrollment', 'Evidence Base', 'Facilitator Guide'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -229,7 +230,7 @@ export function GroupTherapyCurriculum({ navigate: _navigate }: Props) {
                       </div>
                       <div className="flex gap-3">
                         <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-white flex items-center gap-1"><Download className="w-3 h-3" />Materials</button>
-                        <button className="text-xs btn-primary px-3 py-1.5 flex items-center gap-1"><Plus className="w-3 h-3" />Schedule Group</button>
+                        <LockedButton locked={readOnly} className="text-xs btn-primary px-3 py-1.5 flex items-center gap-1"><Plus className="w-3 h-3" />Schedule Group</LockedButton>
                       </div>
                     </div>
                   </div>
@@ -298,6 +299,200 @@ export function GroupTherapyCurriculum({ navigate: _navigate }: Props) {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Enrollment' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Patients Enrolled', value: 18, sub: 'In ≥1 curriculum', color: 'text-navy' },
+              { label: 'Active Groups Running', value: CURRICULA.reduce((a, c) => a + c.activeGroups, 0), sub: 'This week', color: 'text-blue-600' },
+              { label: 'Avg Curricula / Patient', value: '2.1', sub: 'Multi-modal approach', color: 'text-green-600' },
+              { label: 'Completions YTD', value: CURRICULA.reduce((a, c) => a + c.completedCycles, 0), sub: 'Curriculum cycles', color: 'text-orange' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card p-0 overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-gray-50 flex items-center justify-between">
+              <h3 className="font-semibold text-navy text-sm">Patient Curriculum Enrollment</h3>
+              <span className="text-xs text-slate">Based on treatment plan goals and ASAM assessment</span>
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-bg">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate">Patient</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate">Program</th>
+                  {CURRICULA.filter(c => c.status === 'Active').map(c => (
+                    <th key={c.id} className="text-center px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate">
+                      <div className="text-[9px] leading-tight">{c.abbreviation}</div>
+                    </th>
+                  ))}
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { name: 'Marcus Webb', program: 'Residential', ids: ['CB-001', 'CB-004', 'CB-007'] },
+                  { name: 'Samantha Choi', program: 'Residential', ids: ['CB-001', 'CB-002', 'CB-005'] },
+                  { name: 'James Thornton', program: 'Residential', ids: ['CB-001', 'CB-003'] },
+                  { name: 'Patricia Holloway', program: 'Residential', ids: ['CB-001', 'CB-004', 'CB-006', 'CB-007'] },
+                  { name: 'Robert Navarro', program: 'Residential', ids: ['CB-003', 'CB-007'] },
+                  { name: 'Elena Vasquez', program: 'PHP', ids: ['CB-001', 'CB-002'] },
+                  { name: 'Brian Kowalski', program: 'PHP', ids: ['CB-001', 'CB-005'] },
+                  { name: 'Linda Farris', program: 'IOP', ids: ['CB-004'] },
+                  { name: 'Devon Price', program: 'PHP', ids: ['CB-001', 'CB-004', 'CB-006'] },
+                  { name: 'Marcus Webb Jr.', program: 'IOP', ids: ['CB-001'] },
+                ].map(row => {
+                  const active = CURRICULA.filter(c => c.status === 'Active');
+                  return (
+                    <tr key={row.name} className="hover:bg-gray-50">
+                      <td className="px-4 py-2.5 font-medium text-navy whitespace-nowrap">{row.name}</td>
+                      <td className="px-4 py-2.5"><span className="text-[10px] font-medium bg-slate-100 text-slate px-1.5 py-0.5 rounded">{row.program}</span></td>
+                      {active.map(c => (
+                        <td key={c.id} className="px-2 py-2.5 text-center">
+                          {row.ids.includes(c.id)
+                            ? <span className="text-green-600 font-bold">✓</span>
+                            : <span className="text-slate/30">–</span>}
+                        </td>
+                      ))}
+                      <td className="px-3 py-2.5 text-center">
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${row.ids.length >= 3 ? 'bg-green-100 text-green-700' : row.ids.length >= 2 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-slate'}`}>
+                          {row.ids.length}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div className="px-5 py-2 bg-gray-50 border-t border-border text-xs text-slate flex justify-between items-center">
+              <span>Recommended: ≥2 curricula for residential patients, ≥1 for PHP/IOP</span>
+              <LockedButton locked={readOnly} className="text-xs text-orange font-medium hover:underline">Export Enrollment Report</LockedButton>
+            </div>
+          </div>
+        </div>
+      )}
+      {tab === 'Evidence Base' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Clinical evidence supporting the group therapy modalities used at Sunrise — research summaries, efficacy data, and ASAM/SAMHSA alignment.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Modality Evidence Summary</h3>
+              <div className="space-y-3 text-xs">
+                {[
+                  { mod: 'Cognitive Behavioral Therapy (CBT)', evidence: 'Level A — 50+ RCTs. Reduces relapse rates 40–60% vs. control in AUD/OUD/stimulant SUD. SAMHSA TIP 35 endorsed.', strength: 'Strong', sColor: 'bg-green-100 text-green-700' },
+                  { mod: 'Motivational Interviewing (MI)', evidence: 'Level A — Meta-analyses show 1.5–2x engagement improvement. Most effective at pre-contemplation/contemplation stage. NIDA endorsed.', strength: 'Strong', sColor: 'bg-green-100 text-green-700' },
+                  { mod: 'Dialectical Behavior Therapy (DBT)', evidence: 'Level B — Strong for BPD+SUD comorbidity. Reduces self-harm, impulsivity, and substance use in dual-diagnosis populations.', strength: 'Moderate', sColor: 'bg-blue-100 text-blue-700' },
+                  { mod: '12-Step Facilitation', evidence: 'Level B — Project MATCH shows equivalence to CBT/MET at 1 year. Enhanced by peer accountability and spiritual framework.', strength: 'Moderate', sColor: 'bg-blue-100 text-blue-700' },
+                  { mod: 'Trauma-Informed Care / EMDR', evidence: 'Level B — Essential for co-occurring PTSD+SUD. Treating PTSD concurrently improves SUD outcomes and reduces dropout.', strength: 'Moderate', sColor: 'bg-blue-100 text-blue-700' },
+                  { mod: 'Relapse Prevention Skills', evidence: 'Level A — Core component of every evidence-based SUD treatment. Marlatt & Gordon model widely replicated. CSAT approved.', strength: 'Strong', sColor: 'bg-green-100 text-green-700' },
+                  { mod: 'Anger Management / Emotion Regulation', evidence: 'Level C — Targeted for stimulant SUD and co-occurring conduct issues. Limited RCTs but clinical consensus strong.', strength: 'Emerging', sColor: 'bg-amber-100 text-amber-700' },
+                  { mod: 'Family Systems Therapy', evidence: 'Level B — BSFT and CRAFT models show 60–80% improvement in engagement. Critical for adolescent and family-involved cases.', strength: 'Moderate', sColor: 'bg-blue-100 text-blue-700' },
+                ].map(m => (
+                  <div key={m.mod} className="border border-border rounded-lg p-2.5">
+                    <div className="flex items-start justify-between mb-1">
+                      <span className="font-semibold text-navy text-[11px] flex-1">{m.mod}</span>
+                      <span className={`ml-2 shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${m.sColor}`}>{m.strength}</span>
+                    </div>
+                    <div className="text-slate leading-relaxed">{m.evidence}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Regulatory &amp; Accreditation Alignment</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { body: 'SAMHSA TIP 47 — Group Therapy', align: 'CBT, MI, Psychoeducation, 12-Step', status: 'Compliant' },
+                    { body: 'CARF Standard — Group Services', align: 'Documented evidence base required per §6.A.9', status: 'Compliant' },
+                    { body: 'ASAM Criteria — LOC Group Tx Hours', align: 'Residential ≥5h/day, PHP ≥3h, IOP ≥3x/week', status: 'Compliant' },
+                    { body: 'TN DMHSAS Licensure Standards', align: 'Core groups: Psychoeducation + Relapse Prevention', status: 'Compliant' },
+                  ].map(r => (
+                    <div key={r.body} className="border border-border rounded p-2.5">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-navy">{r.body}</span>
+                        <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">{r.status}</span>
+                      </div>
+                      <div className="text-slate">{r.align}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800">
+                <strong>Clinical Note:</strong> Evidence levels follow SAMHSA's "Levels of Evidence" hierarchy (A = RCT; B = quasi-experimental; C = expert consensus). All core Sunrise curricula meet Level B or above thresholds. Evidence Base reviewed annually by Clinical Director.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Facilitator Guide' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Group facilitation reference guide — running groups effectively, managing therapeutic ruptures, handling challenging group dynamics, and documentation standards.</div>
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Group Stages — Yalom's Therapeutic Factors</h3>
+              <div className="space-y-2 text-xs">
+                {[
+                  { factor: 'Universality', desc: 'Recognition that others share similar struggles — reduces shame and isolation. Foster by normalizing and eliciting group member responses.' },
+                  { factor: 'Instillation of Hope', desc: 'Seeing peers further along in recovery gives hope to newcomers. Use alumni speakers and milestone recognition deliberately.' },
+                  { factor: 'Altruism', desc: 'Giving help to others in the group strengthens self-worth. Encourage peer support exchanges rather than therapist-only feedback.' },
+                  { factor: 'Cohesiveness', desc: 'Group belonging and trust. Build through consistent ground rules, confidentiality reinforcement, and reliable group structure.' },
+                  { factor: 'Interpersonal Learning', desc: 'Group as social microcosm — members enact relationship patterns. Process group-level interactions, not just content.' },
+                  { factor: 'Catharsis', desc: 'Emotional expression and processing within the safe group container. Create space and normalize emotional expression.' },
+                  { factor: 'Imitative Behavior', desc: 'Members model coping strategies from each other and the facilitator. Be deliberate about what behaviors you model.' },
+                ].map(f => (
+                  <div key={f.factor} className="border border-border rounded-lg p-2">
+                    <div className="font-semibold text-navy">{f.factor}</div>
+                    <div className="text-slate mt-0.5">{f.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-3">Challenging Group Situations — Facilitation Responses</h3>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { situation: 'Monopolizing member', response: 'Interrupt with gratitude and redirect: "Thanks for sharing — let\'s hear from someone who hasn\'t had a chance yet." Use seating and eye contact proactively.' },
+                    { situation: 'Silent / withdrawn member', response: 'Low-risk invitations: "Is there anything from what\'s been shared that resonates with you?" Avoid direct confrontation; normalize silence as valid.' },
+                    { situation: 'Conflict between members', response: 'Slow the process: "Let\'s pause." Reflect both parties. Ask the group: "What\'s happening in the room right now?" Use conflict as therapeutic material.' },
+                    { situation: 'Disclosure of active suicidality', response: 'Acknowledge, validate, hold the group calmly. Notify co-facilitator or floor staff via pre-arranged signal. Address patient individually after group if safe.' },
+                    { situation: 'Cross-talk / advice-giving', response: 'Redirect toward "I" statements and shared experience: "Instead of advice, can you share what this brings up for you personally?"' },
+                  ].map(s => (
+                    <div key={s.situation} className="border border-border rounded-lg p-2">
+                      <div className="font-semibold text-amber-700 mb-0.5">{s.situation}</div>
+                      <div className="text-navy">{s.response}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="card">
+                <h3 className="font-semibold text-navy text-sm mb-2">Group Note Documentation Standards</h3>
+                <div className="space-y-1 text-xs text-navy">
+                  {[
+                    'Record group title, date, time, duration, and facilitator name(s)',
+                    'List members present — do NOT name members in individual sections (use "a group member")',
+                    'Describe group theme, content covered, and primary therapeutic activities',
+                    'Note group-level dynamics (cohesion, affect, energy, notable interactions)',
+                    'For each individual: brief participation note, clinical observations, and any action items',
+                    'Flag any safety concerns in the group note AND via a separate incident note',
+                    'Co-facilitator cosign required if either facilitator is provisional',
+                  ].map(s => <div key={s} className="flex gap-2"><span className="text-blue-500 shrink-0">→</span><span>{s}</span></div>)}
+                </div>
+              </div>
             </div>
           </div>
         </div>

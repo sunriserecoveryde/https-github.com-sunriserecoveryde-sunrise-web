@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { Clock, CheckCircle, Phone, Plus, AlertTriangle, ArrowRight, Users, TrendingDown, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type WaitlistStatus = 'Active' | 'Offered — Pending Response' | 'Admitted' | 'Withdrew' | 'Declined Offer' | 'No Longer Needs' | 'Unresponsive';
 type LOC = 'Residential' | 'PHP' | 'IOP' | 'OP';
@@ -149,8 +150,8 @@ const WAITTIME_DATA = [
   { loc: 'OP', avg: 1.9, target: 2 },
 ];
 
-export function WaitlistManager({ navigate: _navigate }: Props) {
-  const [tab, setTab] = useState<'Active' | 'Analytics' | 'Add'>('Active');
+export function WaitlistManager({ navigate: _navigate, readOnly }: Props) {
+  const [tab, setTab] = useState<'Active' | 'Analytics' | 'Conversion' | 'Add' | 'Referral Sources' | 'Payer Mix Forecast'>('Active');
   const [filterLOC, setFilterLOC] = useState<LOC | 'All'>('All');
   const [filterPriority, setFilterPriority] = useState<Priority | 'All'>('All');
   const [expandedEntry, setExpandedEntry] = useState<string | null>('WL-001');
@@ -174,7 +175,7 @@ export function WaitlistManager({ navigate: _navigate }: Props) {
           <h1 className="text-2xl font-bold text-navy">Waitlist Manager</h1>
           <p className="text-slate text-sm mt-0.5">Pre-admission waitlist · Priority triage · Bed offer tracking</p>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Add to Waitlist</button>
+        <LockedButton locked={readOnly} onClick={() => setShowAddModal(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Add to Waitlist</LockedButton>
       </div>
 
       {p1Count > 0 && (
@@ -206,7 +207,7 @@ export function WaitlistManager({ navigate: _navigate }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Active', 'Analytics', 'Add'] as const).map(t => (
+        {(['Active', 'Analytics', 'Conversion', 'Add', 'Referral Sources', 'Payer Mix Forecast'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -320,6 +321,104 @@ export function WaitlistManager({ navigate: _navigate }: Props) {
         </div>
       )}
 
+      {tab === 'Conversion' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Inquiries This Month', value: 47, sub: 'Phone + web + referral', color: 'text-navy' },
+              { label: 'Converted to Admit', value: 19, sub: '40% conversion rate', color: 'text-green-600' },
+              { label: 'Lost — Insurance Denied', value: 8, sub: 'Largest drop-off point', color: 'text-red-600' },
+              { label: 'Lost — No Bed Available', value: 6, sub: 'Avg 4.2d before dropout', color: 'text-amber-600' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-4">Conversion Funnel</h3>
+              {[
+                { stage: 'Inquiry / Contact', n: 47, color: 'bg-navy' },
+                { stage: 'Clinical Assessment Scheduled', n: 34, color: 'bg-blue-500' },
+                { stage: 'Assessment Completed', n: 27, color: 'bg-teal-500' },
+                { stage: 'Insurance Authorized', n: 22, color: 'bg-green-500' },
+                { stage: 'Admitted', n: 19, color: 'bg-green-600' },
+              ].map((s, i, arr) => (
+                <div key={s.stage} className="flex items-center gap-3 mb-2">
+                  <div className={`h-7 rounded flex items-center justify-end pr-2 transition-all`} style={{ width: `${(s.n / arr[0].n) * 100}%`, backgroundColor: s.color === 'bg-navy' ? '#1e3a5f' : s.color === 'bg-blue-500' ? '#3b82f6' : s.color === 'bg-teal-500' ? '#14b8a6' : s.color === 'bg-green-500' ? '#22c55e' : '#16a34a' }}>
+                    <span className="text-white text-xs font-bold">{s.n}</span>
+                  </div>
+                  <span className="text-xs text-slate whitespace-nowrap">{s.stage}</span>
+                </div>
+              ))}
+              <div className="mt-3 pt-3 border-t border-border text-xs text-slate">
+                Overall conversion: <span className="font-bold text-green-600">40.4%</span> · Industry benchmark: 35–45%
+              </div>
+            </div>
+
+            <div className="card space-y-4">
+              <h3 className="font-semibold text-navy text-sm">Drop-off Reasons</h3>
+              {[
+                { reason: 'Insurance denial / auth failure', count: 8, pct: 62 },
+                { reason: 'No bed available — patient went elsewhere', count: 6, pct: 46 },
+                { reason: 'Patient not ready / withdrew', count: 4, pct: 31 },
+                { reason: 'Transportation barrier', count: 2, pct: 15 },
+                { reason: 'Family opposition', count: 1, pct: 8 },
+                { reason: 'Other / unknown', count: 2, pct: 15 },
+              ].map(d => (
+                <div key={d.reason}>
+                  <div className="flex justify-between text-xs mb-1"><span className="text-slate">{d.reason}</span><span className="font-bold text-navy">{d.count}</span></div>
+                  <div className="h-1.5 bg-gray-100 rounded-full"><div className="h-1.5 bg-red-400 rounded-full" style={{ width: `${d.pct}%` }} /></div>
+                </div>
+              ))}
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 mt-2">
+                <strong>Key lever:</strong> Reducing insurance denial rate from 17% → 10% would yield ~3 additional admissions per month at current inquiry volume.
+              </div>
+            </div>
+          </div>
+
+          <div className="card p-0 overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm">Conversion Rate by Referral Source</div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border text-slate">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Source</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Inquiries</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Admitted</th>
+                  <th className="text-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Conv. Rate</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Top Barrier</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { source: 'ER / Hospital Referral', inq: 14, adm: 9, rate: 64, barrier: 'Bed availability' },
+                  { source: 'Probation / Drug Court', inq: 8, adm: 5, rate: 63, barrier: 'Insurance auth' },
+                  { source: 'Physician Referral', inq: 6, adm: 3, rate: 50, barrier: 'Prior auth delays' },
+                  { source: 'Self-Referral (web/phone)', inq: 11, adm: 1, rate: 9,  barrier: 'Patient ambivalence' },
+                  { source: 'Alumni Referral', inq: 5, adm: 1, rate: 20, barrier: 'Insurance' },
+                  { source: 'Family Referral', inq: 3, adm: 0, rate: 0,  barrier: 'Patient not ready' },
+                ].map(r => (
+                  <tr key={r.source} className="hover:bg-gray-50">
+                    <td className="px-4 py-2.5 font-medium text-navy">{r.source}</td>
+                    <td className="px-4 py-2.5 text-center text-slate">{r.inq}</td>
+                    <td className="px-4 py-2.5 text-center text-slate">{r.adm}</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span className={`font-bold text-xs ${r.rate >= 50 ? 'text-green-600' : r.rate >= 20 ? 'text-amber-600' : 'text-red-600'}`}>{r.rate}%</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-slate">{r.barrier}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {tab === 'Add' && (
         <div className="max-w-2xl card space-y-4">
           <h3 className="font-semibold text-navy">Add Patient to Waitlist</h3>
@@ -369,7 +468,7 @@ export function WaitlistManager({ navigate: _navigate }: Props) {
               <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none" />
             </div>
           </div>
-          <button className="btn-primary text-sm px-5 py-2">Add to Waitlist</button>
+          <LockedButton locked={readOnly} className="btn-primary text-sm px-5 py-2">Add to Waitlist</LockedButton>
         </div>
       )}
 
@@ -380,6 +479,136 @@ export function WaitlistManager({ navigate: _navigate }: Props) {
             <h3 className="font-bold text-navy text-lg">Patient Added to Waitlist</h3>
             <p className="text-slate text-sm mt-1 mb-4">The patient has been added to the waitlist. A referral coordinator has been notified.</p>
             <button onClick={() => { setShowAddModal(false); setTab('Active'); }} className="btn-primary text-sm px-6 py-2">View Waitlist</button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Referral Sources' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Referral source analytics for the trailing 90 days — tracking volume, conversion, and geographic origin of waitlist inquiries.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Total Referrals (90d)', value: 84, color: 'text-navy', sub: '↑ 12% vs prior period' },
+              { label: 'Conversion to Admit', value: '61%', color: 'text-green-600', sub: '51 of 84 admitted' },
+              { label: 'Top Source', value: 'ERs', color: 'text-blue-600', sub: '31% of total referrals' },
+              { label: 'Avg Inquiry-to-Admit', value: '3.2d', color: 'text-teal-600', sub: 'Down from 4.8d prior qtr' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Referral Volume by Source</h3>
+              <div className="space-y-2.5 text-xs">
+                {[
+                  { source: 'Emergency Departments', count: 26, pct: 31, color: 'bg-red-500' },
+                  { source: 'Physician / PCP Referral', count: 18, pct: 21, color: 'bg-blue-500' },
+                  { source: 'Self-Referral (Website/Phone)', count: 14, pct: 17, color: 'bg-teal-500' },
+                  { source: 'Courts / Drug Court', count: 11, pct: 13, color: 'bg-purple-500' },
+                  { source: 'Insurance Case Managers', count: 8, pct: 10, color: 'bg-orange-500' },
+                  { source: 'Alumni / Peer Referral', count: 5, pct: 6, color: 'bg-green-500' },
+                  { source: 'Other Facilities / IOP → Res', count: 2, pct: 2, color: 'bg-gray-400' },
+                ].map(r => (
+                  <div key={r.source}>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-slate">{r.source}</span>
+                      <span className="font-semibold text-navy">{r.count} ({r.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.pct * 2.5}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="font-semibold text-navy text-sm mb-3">Conversion Rate by Source</h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-slate">
+                    <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Source</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Referrals</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Admitted</th>
+                    <th className="text-center py-2 text-[10px] font-bold uppercase tracking-wider">Conversion</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { source: 'Alumni / Peer', refs: 5, admits: 4, conv: 80 },
+                    { source: 'Courts / Drug Court', refs: 11, admits: 9, conv: 82 },
+                    { source: 'Physician / PCP', refs: 18, admits: 13, conv: 72 },
+                    { source: 'Emergency Dept.', refs: 26, admits: 17, conv: 65 },
+                    { source: 'Insurance CM', refs: 8, admits: 5, conv: 63 },
+                    { source: 'Self-Referral', refs: 14, admits: 3, conv: 21 },
+                  ].sort((a,b) => b.conv - a.conv).map(r => (
+                    <tr key={r.source} className="hover:bg-gray-50">
+                      <td className="py-2 text-navy font-medium">{r.source}</td>
+                      <td className="py-2 text-center text-slate">{r.refs}</td>
+                      <td className="py-2 text-center text-slate">{r.admits}</td>
+                      <td className="py-2 text-center">
+                        <span className={`font-bold ${r.conv >= 70 ? 'text-green-600' : r.conv >= 50 ? 'text-slate' : 'text-amber-600'}`}>{r.conv}%</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'Payer Mix Forecast' && (
+        <div className="space-y-5">
+          <div className="text-sm text-slate">Projected payer mix for incoming waitlist patients — helps Revenue Cycle and admissions plan for authorization workload and expected reimbursement.</div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Waitlist Patients (Total)', value: 28, color: 'text-navy', sub: 'Across all LOCs' },
+              { label: 'Commercially Insured', value: '46%', color: 'text-green-600', sub: '13 patients' },
+              { label: 'Medicaid / TennCare', value: '32%', color: 'text-blue-600', sub: '9 patients' },
+              { label: 'Self-Pay / Uninsured', value: '22%', color: 'text-amber-600', sub: '6 patients — may need SFS' },
+            ].map(k => (
+              <div key={k.label} className="card">
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+                <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card">
+            <h3 className="font-semibold text-navy text-sm mb-3">Payer Distribution by Requested LOC</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-gray-50 text-slate">
+                  {['LOC', 'Waitlist (n)', 'Commercial', 'TennCare', 'Medicare', 'Self-Pay', 'Est. Rev/Admit'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  { loc: 'Residential', n: 12, comm: 5, mc: 4, med: 1, sp: 2, rev: '$8,400' },
+                  { loc: 'PHP', n: 8, comm: 4, mc: 2, med: 0, sp: 2, rev: '$2,800' },
+                  { loc: 'IOP', n: 6, comm: 3, mc: 2, med: 0, sp: 1, rev: '$1,600' },
+                  { loc: 'Detox (Med Mgd)', n: 2, comm: 1, mc: 1, med: 0, sp: 0, rev: '$6,200' },
+                ].map(r => (
+                  <tr key={r.loc} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-semibold text-navy">{r.loc}</td>
+                    <td className="px-3 py-2 text-center text-navy">{r.n}</td>
+                    <td className="px-3 py-2 text-center text-green-700 font-medium">{r.comm}</td>
+                    <td className="px-3 py-2 text-center text-blue-700 font-medium">{r.mc}</td>
+                    <td className="px-3 py-2 text-center text-purple-700 font-medium">{r.med}</td>
+                    <td className="px-3 py-2 text-center text-amber-700 font-medium">{r.sp}</td>
+                    <td className="px-3 py-2 font-bold text-teal-600">{r.rev}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
