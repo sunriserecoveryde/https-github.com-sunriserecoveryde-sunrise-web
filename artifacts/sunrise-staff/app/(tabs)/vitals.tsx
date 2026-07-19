@@ -316,7 +316,7 @@ export default function VitalsScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{patientsWithScores.length}</Text>
-            <Text style={styles.statLabel}>On Protocol</Text>
+            <Text style={styles.statLabel}>{scoreFilter !== 'all' ? 'On Protocol (filtered)' : 'On Protocol'}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
