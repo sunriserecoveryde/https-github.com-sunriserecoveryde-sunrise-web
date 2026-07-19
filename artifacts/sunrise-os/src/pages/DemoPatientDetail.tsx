@@ -6,9 +6,12 @@ import { AcuityBadge } from '../components/ui/AcuityBadge';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 import {
   ArrowLeft, Activity, FileText, CheckCircle2, FlaskConical,
-  AlertCircle, Clock, Shield,
+  AlertCircle, Clock, Shield, CalendarDays,
 } from 'lucide-react';
 import { Screen } from '../App';
+
+/** Update this URL to point to your scheduling page (e.g. Calendly, HubSpot, etc.) */
+const DEMO_BOOKING_URL = 'mailto:demo@sunrisehealth.com?subject=Schedule%20a%20Live%20Demo';
 
 interface Props {
   patientId: string | null;
@@ -426,6 +429,23 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
           </div>
         )}
 
+      </div>
+
+      {/* Demo CTA sticky footer */}
+      <div className="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-3 bg-violet-600 border-x border-b border-violet-700 rounded-b-lg">
+        <div className="flex items-center gap-2 text-violet-100 text-sm">
+          <CalendarDays className="w-4 h-4 shrink-0 opacity-80" />
+          <span>Seen enough? Talk to our team and see Sunrise in your environment.</span>
+        </div>
+        <a
+          href={DEMO_BOOKING_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0 flex items-center gap-2 bg-white text-violet-700 hover:bg-violet-50 transition-colors text-sm font-semibold px-4 py-1.5 rounded shadow-sm"
+        >
+          <CalendarDays className="w-3.5 h-3.5" />
+          Schedule a live demo →
+        </a>
       </div>
     </div>
   );
