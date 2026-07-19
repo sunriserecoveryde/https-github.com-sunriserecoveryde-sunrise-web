@@ -32,9 +32,9 @@ import {
 } from '@/data/mockData';
 
 type NoteFilter = 'observation' | 'med-update' | 'incident';
-type Filter = 'All' | Acuity | 'Available' | NoteFilter;
+type AcuityFilter = 'All' | Acuity | 'Available';
 
-const ACUITY_FILTERS: Filter[] = ['All', 'Critical', 'High', 'Moderate', 'Routine', 'Available'];
+const ACUITY_FILTERS: AcuityFilter[] = ['All', 'Critical', 'High', 'Moderate', 'Routine', 'Available'];
 const NOTE_TYPE_FILTERS: { value: NoteFilter; label: string }[] = [
   { value: 'observation', label: 'Observation' },
   { value: 'med-update', label: 'Med Update' },
@@ -596,7 +596,8 @@ export default function CensusScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
-  const [filter, setFilter] = useState<Filter>('All');
+  const [acuityFilter, setAcuityFilter] = useState<AcuityFilter>('All');
+  const [noteFilter, setNoteFilter] = useState<NoteFilter | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [admitVisible, setAdmitVisible] = useState(false);
   const [shiftEndedToast, setShiftEndedToast] = useState(false);
@@ -669,14 +670,12 @@ export default function CensusScreen() {
     }
   }, [alertCount]);
 
-  const filteredPatients = filter === 'Available'
+  const filteredPatients = acuityFilter === 'Available'
     ? []
     : residentialPatients.filter(p => {
-        if (NOTE_FILTER_VALUES.includes(filter as string)) {
-          const notes = getNotesForPatient(p.id);
-          return notes.some(n => n.noteType === filter);
-        }
-        return filter === 'All' || p.acuity === filter;
+        const acuityMatch = acuityFilter === 'All' || p.acuity === acuityFilter;
+        const noteMatch = noteFilter == null || getNotesForPatient(p.id).some(n => n.noteType === noteFilter);
+        return acuityMatch && noteMatch;
       });
 
   const openPatient = (p: Patient) => {
@@ -720,7 +719,8 @@ export default function CensusScreen() {
                         clearNotes();
                         clearAcknowledgments();
                         setBannerDismissed(false);
-                        setFilter('All');
+                        setAcuityFilter('All');
+                        setNoteFilter(null);
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         // Show toast confirmation with slide-up entrance and fade-out exit
                         if (shiftEndedTimer.current) clearTimeout(shiftEndedTimer.current);
@@ -785,19 +785,34 @@ export default function CensusScreen() {
         style={[styles.filterScroll, { backgroundColor: colors.navyMid }]}
         contentContainerStyle={styles.filterContent}
       >
-        {ACUITY_FILTERS.map(f => (
-          <Pressable
-            key={f}
-            style={[styles.filterChip, filter === f && { backgroundColor: colors.orange }]}
-            onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
-          >
-            <Text style={[styles.filterChipText, { color: filter === f ? '#fff' : colors.slateLight }]}>{f}</Text>
-          </Pressable>
-        ))}
+        {ACUITY_FILTERS.map(f => {
+          const isAll = f === 'All';
+          // "All" is active only when both dimensions are reset
+          const isActive = isAll
+            ? acuityFilter === 'All' && noteFilter == null
+            : acuityFilter === f;
+          return (
+            <Pressable
+              key={f}
+              style={[styles.filterChip, isActive && { backgroundColor: colors.orange }]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                if (isAll) {
+                  setAcuityFilter('All');
+                  setNoteFilter(null);
+                } else {
+                  setAcuityFilter(prev => prev === f ? 'All' : f);
+                }
+              }}
+            >
+              <Text style={[styles.filterChipText, { color: isActive ? '#fff' : colors.slateLight }]}>{f}</Text>
+            </Pressable>
+          );
+        })}
         <View style={styles.filterDivider} />
         {NOTE_TYPE_FILTERS.map(({ value, label }) => {
           const count = noteTypeCounts[value];
-          const isActive = filter === value;
+          const isActive = noteFilter === value;
           const isZero = count === 0;
           return (
             <Pressable
@@ -807,7 +822,7 @@ export default function CensusScreen() {
                 isActive && { backgroundColor: colors.orange },
                 isZero && !isActive && { opacity: 0.45 },
               ]}
-              onPress={() => { Haptics.selectionAsync(); setFilter(prev => prev === value ? 'All' : value); }}
+              onPress={() => { Haptics.selectionAsync(); setNoteFilter(prev => prev === value ? null : value); }}
             >
               <Ionicons
                 name="document-text-outline"
@@ -817,7 +832,7 @@ export default function CensusScreen() {
               />
               <Text style={[styles.filterChipText, { color: isActive ? '#fff' : colors.slateLight }]}>{label}</Text>
               <View style={[
-                styles.noteCountBadge,
+                styles.filterCountBadge,
                 { backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : colors.navyLight },
               ]}>
                 <Text style={[styles.noteCountBadgeText, { color: isActive ? '#fff' : colors.slateLight }]}>
@@ -835,7 +850,7 @@ export default function CensusScreen() {
         </View>
       ) : (
         <FlatList
-          data={filter === 'Available' ? [] : filteredPatients}
+          data={acuityFilter === 'Available' ? [] : filteredPatients}
           keyExtractor={p => p.id}
           renderItem={({ item }) => <BedCard patient={item} onPress={() => openPatient(item)} />}
           contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}
@@ -848,7 +863,7 @@ export default function CensusScreen() {
               colors={[colors.navy]}
             />
           }
-          ListHeaderComponent={filter === 'Available' ? (
+          ListHeaderComponent={acuityFilter === 'Available' ? (
             <View>
               <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Non-Occupied Beds</Text>
               <View style={styles.availableGrid}>
@@ -856,7 +871,7 @@ export default function CensusScreen() {
               </View>
             </View>
           ) : null}
-          ListFooterComponent={filter !== 'Available' && nonOccupiedBeds.length > 0 ? (
+          ListFooterComponent={acuityFilter !== 'Available' && nonOccupiedBeds.length > 0 ? (
             <View style={styles.footerBeds}>
               <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Other Beds</Text>
               <View style={styles.availableGrid}>
@@ -975,7 +990,7 @@ const styles = StyleSheet.create({
   noteBadgeType: { fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.9)', fontFamily: 'Inter_600SemiBold', flexShrink: 1 },
   noteTypePill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, marginTop: 2 },
   noteTypePillText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold', flexShrink: 1 },
-  noteCountBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2, marginTop: 2 },
+  filterCountBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2, marginTop: 2 },
   noteCountText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold', color: '#fff' },
   // Role toggle
   roleToggle: { flexDirection: 'row', borderRadius: 8, overflow: 'hidden', padding: 2 },

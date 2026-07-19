@@ -446,7 +446,7 @@ export default function PatientDetailScreen() {
     lines.push('');
 
     sessionNotes.forEach(note => {
-      const lastEdit = note.history && note.history.length > 0 ? note.history[note.history.length - 1] : null;
+      const lastEdit = note.history?.[note.history.length - 1];
       const editSuffix = lastEdit ? ` (edited ${formatEditedTime(lastEdit.savedAt)})` : '';
       const typeLabel = NOTE_TYPES.find(x => x.value === note.noteType)?.label ?? note.noteType;
       lines.push(`[${typeLabel}] ${note.displayTime}${editSuffix}`);
@@ -980,9 +980,9 @@ export default function PatientDetailScreen() {
                     </View>
                     <View style={s.sessionNoteMeta}>
                       <Text style={[s.sessionNoteLabel, { color: colors.mutedForeground }]}>This session · {note.displayTime}</Text>
-                      {(note.history && note.history.length > 0) && (() => {
-                        const lastEdit = note.history![note.history!.length - 1];
+                      {note.history && note.history.length > 0 && (() => {
                         const isExpanded = expandedEditId === note.id;
+                        const lastEdit = note.history[note.history.length - 1];
                         const editTime = new Date(lastEdit.savedAt).toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit',
