@@ -185,11 +185,24 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
     }));
   }, []);
 
-  const restoreNote = useCallback((patientId: string, note: NursingNote, index: number) => {
+  const restoreNote = useCallback((patientId: string, note: NursingNote, _index: number) => {
     setNotesByPatient(prev => {
       const current = prev[patientId] ?? [];
       const next = [...current];
-      next.splice(Math.min(index, next.length), 0, note);
+
+      // Compute the correct insertion position from the note's timestamp so that
+      // the restored note lands in the right chronological slot even if another
+      // note was deleted (and committed) while the undo toast was still showing.
+      // Notes are stored newest-first, so we insert immediately before the first
+      // entry whose createdAt is strictly older than the note being restored.
+      const noteTime = new Date(note.createdAt).getTime();
+      let insertAt = next.findIndex(
+        n => new Date(n.createdAt).getTime() < noteTime,
+      );
+      // If every remaining note is newer (or the list is empty), append at the end.
+      if (insertAt === -1) insertAt = next.length;
+
+      next.splice(insertAt, 0, note);
       return { ...prev, [patientId]: next };
     });
   }, []);
