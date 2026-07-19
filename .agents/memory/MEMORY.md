@@ -1,0 +1,1 @@
+- [Sunrise OS architecture](sunrise-os-arch.md) — Screen union (43 values), data files, Sidebar sections, key conventions

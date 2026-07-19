@@ -2,12 +2,41 @@ import React from 'react';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { MetricCard } from '../components/ui/MetricCard';
 import { OccupancyRing } from '../components/ui/OccupancyRing';
-import { AlertTriangle, Clock, Flag as FlagIcon, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Clock, Flag as FlagIcon, ChevronRight, UserPlus, FileText, AlertOctagon, Droplets } from 'lucide-react';
 import { Screen } from '../App';
 import { FlagBadge } from '../components/ui/FlagBadge';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
+
+const CENSUS_TREND = [
+  { date: 'Jun 19', census: 16, capacity: 22 },
+  { date: 'Jun 22', census: 17, capacity: 22 },
+  { date: 'Jun 24', census: 19, capacity: 22 },
+  { date: 'Jun 27', census: 18, capacity: 22 },
+  { date: 'Jun 29', census: 20, capacity: 22 },
+  { date: 'Jul 1',  census: 21, capacity: 22 },
+  { date: 'Jul 3',  census: 20, capacity: 22 },
+  { date: 'Jul 6',  census: 19, capacity: 22 },
+  { date: 'Jul 8',  census: 20, capacity: 22 },
+  { date: 'Jul 10', census: 21, capacity: 22 },
+  { date: 'Jul 12', census: 20, capacity: 22 },
+  { date: 'Jul 14', census: 19, capacity: 22 },
+  { date: 'Jul 16', census: 21, capacity: 22 },
+  { date: 'Jul 18', census: 20, capacity: 22 },
+  { date: 'Jul 19', census: 18, capacity: 22 },
+];
+
+const ADMISSIONS_TREND = [
+  { week: 'W1 Jun', admissions: 4, discharges: 3 },
+  { week: 'W2 Jun', admissions: 5, discharges: 4 },
+  { week: 'W3 Jun', admissions: 3, discharges: 2 },
+  { week: 'W4 Jun', admissions: 6, discharges: 5 },
+  { week: 'W1 Jul', admissions: 4, discharges: 4 },
+  { week: 'W2 Jul', admissions: 5, discharges: 3 },
+  { week: 'W3 Jul', admissions: 2, discharges: 3 },
+];
 
 export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => void }) {
   const highRiskPatients = MOCK_PATIENTS.filter(p => p.amaRisk === 'High').slice(0, 8);
@@ -176,6 +205,84 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
               </table>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white border border-border rounded-lg px-4 py-3 shadow-sm">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-navy">Quick Actions</span>
+          <span className="text-xs text-slate">Common tasks for today</span>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-3">
+          {[
+            { label: 'New Admission', icon: UserPlus, screen: 'Admissions' as Screen, color: 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' },
+            { label: 'New Progress Note', icon: FileText, screen: 'ProgressNotes' as Screen, color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' },
+            { label: 'Co-sign Queue (4)', icon: FileText, screen: 'CosignQueue' as Screen, color: 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' },
+            { label: 'UA Results', icon: Droplets, screen: 'UADrugTesting' as Screen, color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' },
+            { label: 'Open Incidents (2)', icon: AlertTriangle, screen: 'IncidentReporting' as Screen, color: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' },
+            { label: 'Chart Deficiencies', icon: Clock, screen: 'ChartReview' as Screen, color: 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' },
+          ].map(({ label, icon: Icon, screen, color }) => (
+            <button key={label} onClick={() => navigate(screen)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${color}`}>
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Census Trend + Admissions */}
+      <div className="grid grid-cols-2 gap-6">
+        <div className="bg-white border border-border rounded-lg p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-bold text-navy text-sm">30-Day Census Trend</h3>
+            <button onClick={() => navigate('CensusBedBoard')} className="text-xs text-sunrise-blue font-medium hover:underline flex items-center gap-1">
+              Bed Board <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+          <p className="text-xs text-slate mb-4">Daily census vs. 22-bed capacity</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart data={CENSUS_TREND} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+              <defs>
+                <linearGradient id="censusGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#E8761A" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#E8761A" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="capGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#94a3b8" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+              <YAxis domain={[10, 22]} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v: number, name: string) => [v, name === 'census' ? 'Census' : 'Capacity']} />
+              <Area type="monotone" dataKey="capacity" stroke="#94a3b8" strokeWidth={1} strokeDasharray="4 2" fill="url(#capGrad)" name="capacity" />
+              <Area type="monotone" dataKey="census" stroke="#E8761A" strokeWidth={2} fill="url(#censusGrad)" name="census" dot={{ r: 2.5, fill: '#E8761A' }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-white border border-border rounded-lg p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-bold text-navy text-sm">Weekly Admissions vs. Discharges</h3>
+            <button onClick={() => navigate('Admissions')} className="text-xs text-sunrise-blue font-medium hover:underline flex items-center gap-1">
+              Admissions <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+          <p className="text-xs text-slate mb-4">7-week flow — admissions in, discharges out</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={ADMISSIONS_TREND} margin={{ top: 4, right: 8, bottom: 0, left: -20 }} barGap={2}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis dataKey="week" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+              <Bar dataKey="admissions" fill="#3B9ED4" radius={[3, 3, 0, 0]} name="Admissions" />
+              <Bar dataKey="discharges" fill="#E8761A" radius={[3, 3, 0, 0]} name="Discharges" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

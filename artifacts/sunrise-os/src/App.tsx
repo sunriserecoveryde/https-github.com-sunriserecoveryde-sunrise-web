@@ -28,6 +28,23 @@ import { BusinessDevelopment } from './pages/BusinessDevelopment';
 import { Training } from './pages/Training';
 import { Settings } from './pages/Settings';
 import { HelpSupport } from './pages/HelpSupport';
+import { UADrugTesting } from './pages/UADrugTesting';
+import { IncidentReporting } from './pages/IncidentReporting';
+import { StaffScheduling } from './pages/StaffScheduling';
+import { MATManagement } from './pages/MATManagement';
+import { FamilyEngagement } from './pages/FamilyEngagement';
+import { PhysicianOrders } from './pages/PhysicianOrders';
+import { PopulationAnalytics } from './pages/PopulationAnalytics';
+import { NursingMAR } from './pages/NursingMAR';
+import { ShiftHandoff } from './pages/ShiftHandoff';
+import { QualityImprovement } from './pages/QualityImprovement';
+import { InsuranceAuthorization } from './pages/InsuranceAuthorization';
+import { AftercarePlanning } from './pages/AftercarePlanning';
+import { MyCaseload } from './pages/MyCaseload';
+import { BiopsychosocialAssessment } from './pages/BiopsychosocialAssessment';
+import { DischargeSummary } from './pages/DischargeSummary';
+import { CrisisAssessment } from './pages/CrisisAssessment';
+import { AlumniProgram } from './pages/AlumniProgram';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export type Screen = 
@@ -56,6 +73,23 @@ export type Screen =
   | 'Training' 
   | 'Settings'
   | 'HelpSupport'
+  | 'UADrugTesting'
+  | 'IncidentReporting'
+  | 'StaffScheduling'
+  | 'MATManagement'
+  | 'FamilyEngagement'
+  | 'PhysicianOrders'
+  | 'PopulationAnalytics'
+  | 'NursingMAR'
+  | 'ShiftHandoff'
+  | 'QualityImprovement'
+  | 'InsuranceAuthorization'
+  | 'AftercarePlanning'
+  | 'MyCaseload'
+  | 'BiopsychosocialAssessment'
+  | 'DischargeSummary'
+  | 'CrisisAssessment'
+  | 'AlumniProgram'
   | 'PatientDetail';
 
 function App() {
@@ -98,6 +132,23 @@ function App() {
       case 'Training': return <Training navigate={navigateTo} />;
       case 'Settings': return <Settings navigate={navigateTo} />;
       case 'HelpSupport': return <HelpSupport navigate={navigateTo} />;
+      case 'UADrugTesting': return <UADrugTesting navigate={navigateTo} />;
+      case 'IncidentReporting': return <IncidentReporting navigate={navigateTo} />;
+      case 'StaffScheduling': return <StaffScheduling navigate={navigateTo} />;
+      case 'MATManagement': return <MATManagement navigate={navigateTo} />;
+      case 'FamilyEngagement': return <FamilyEngagement navigate={navigateTo} />;
+      case 'PhysicianOrders': return <PhysicianOrders navigate={navigateTo} />;
+      case 'PopulationAnalytics': return <PopulationAnalytics navigate={navigateTo} />;
+      case 'NursingMAR': return <NursingMAR navigate={navigateTo} />;
+      case 'ShiftHandoff': return <ShiftHandoff navigate={navigateTo} />;
+      case 'QualityImprovement': return <QualityImprovement navigate={navigateTo} />;
+      case 'InsuranceAuthorization': return <InsuranceAuthorization navigate={navigateTo} />;
+      case 'AftercarePlanning': return <AftercarePlanning navigate={navigateTo} />;
+      case 'MyCaseload': return <MyCaseload navigate={navigateTo} />;
+      case 'BiopsychosocialAssessment': return <BiopsychosocialAssessment navigate={navigateTo} />;
+      case 'DischargeSummary': return <DischargeSummary navigate={navigateTo} />;
+      case 'CrisisAssessment': return <CrisisAssessment navigate={navigateTo} />;
+      case 'AlumniProgram': return <AlumniProgram navigate={navigateTo} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow border border-border">
@@ -111,7 +162,7 @@ function App() {
   return (
     <div className="min-h-screen bg-bg flex flex-col font-sans">
       <DemoBanner />
-      <Topbar />
+      <Topbar navigate={navigateTo} currentScreen={activeScreen} />
       
       <div className="flex flex-1 pt-[calc(var(--banner-height)+var(--topbar-height))]">
         <Sidebar 
