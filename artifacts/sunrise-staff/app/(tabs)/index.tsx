@@ -99,6 +99,8 @@ function WithdrawalAlertBanner({
             {alertPatients.map(p => {
               const showCiwa = (p.ciwa ?? 0) >= WD_THRESHOLD;
               const score = showCiwa ? p.ciwa! : p.cows!;
+              const scoreKey = showCiwa ? 'ciwa' : 'cows';
+              const trend = getScoreTrend(p.id, scoreKey);
               return (
                 <Pressable
                   key={p.id}
@@ -107,6 +109,9 @@ function WithdrawalAlertBanner({
                 >
                   <Text style={styles.alertChipText}>
                     {p.bed}: {p.lastName} · {showCiwa ? 'CIWA' : 'COWS'} {score}
+                    {trend != null && (
+                      <Text style={{ color: trendColor(trend, colors), fontSize: 11, fontWeight: '700' }}>{trendArrow(trend)}</Text>
+                    )}
                   </Text>
                 </Pressable>
               );
