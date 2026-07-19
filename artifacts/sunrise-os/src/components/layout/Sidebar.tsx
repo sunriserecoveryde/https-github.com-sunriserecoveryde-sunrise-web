@@ -176,7 +176,7 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
                   <li key={item.id}>
                     <button
                       onClick={() => navigate(item.id)}
-                      className={`w-full flex items-center justify-between px-4 py-2 text-sm transition-colors ${
+                      className={`group w-full flex items-center justify-between px-4 py-2 text-sm transition-colors ${
                         isActive
                           ? 'bg-sunrise-blue/20 text-white border-r-2 border-sunrise-orange'
                           : isReadOnly
@@ -186,14 +186,14 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
                       title={isReadOnly ? `${item.label} — View only` : item.label}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <Icon className={`w-4 h-4 flex-none ${isActive ? 'text-sunrise-orange' : isReadOnly ? 'text-slate-600' : 'text-slate-400'}`} />
+                        <Icon className={`w-4 h-4 flex-none transition-colors ${isActive ? 'text-sunrise-orange' : isReadOnly ? 'text-slate-600 group-hover:text-slate-400' : 'text-slate-400'}`} />
                         <span className={`truncate ${isActive ? 'font-medium' : ''} ${isReadOnly ? 'italic' : ''}`}>
                           {item.label}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 flex-none ml-1">
                         {isReadOnly && (
-                          <Eye className={`w-3 h-3 flex-none ${isActive ? 'text-white/60' : 'text-slate-600'}`} />
+                          <Eye className={`w-3 h-3 flex-none transition-colors ${isActive ? 'text-white/60' : 'text-slate-600 group-hover:text-slate-400'}`} />
                         )}
                         {item.badge && (
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
