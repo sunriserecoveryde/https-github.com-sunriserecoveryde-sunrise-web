@@ -17,6 +17,7 @@ import { useRole } from '@/context/RoleContext';
 import {
   BEDS,
   PATIENTS,
+  VITALS,
   Patient,
   Acuity,
   acuityColor,
@@ -33,6 +34,34 @@ function getScoreStyle(score: number, threshold: number, colors: ReturnType<type
   if (score >= mid) return { bg: colors.highBg, text: colors.high };
   if (score >= mid * 0.5) return { bg: colors.moderateBg, text: colors.moderate };
   return { bg: colors.successBg, text: colors.success };
+}
+
+// ─── Score trend helper ───────────────────────────────────────────────────────
+
+type Trend = 'rising' | 'falling' | 'stable';
+
+function getScoreTrend(patientId: string, key: 'cows' | 'ciwa'): Trend | null {
+  const entries = VITALS[patientId];
+  if (!entries || entries.length < 2) return null;
+  // entries[0] is most recent, entries[1] is previous
+  const latest = entries[0][key];
+  const prev   = entries[1][key];
+  if (latest == null || prev == null) return null;
+  if (latest > prev) return 'rising';
+  if (latest < prev) return 'falling';
+  return 'stable';
+}
+
+function trendArrow(trend: Trend): string {
+  if (trend === 'rising')  return ' ↑';
+  if (trend === 'falling') return ' ↓';
+  return ' →';
+}
+
+function trendColor(trend: Trend, colors: ReturnType<typeof useColors>): string {
+  if (trend === 'rising')  return colors.critical;
+  if (trend === 'falling') return colors.success;
+  return colors.mutedForeground;
 }
 
 // ─── Withdrawal threshold ─────────────────────────────────────────────────────
@@ -196,17 +225,29 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
         <View style={styles.scoresRow}>
           {showCows && (() => {
             const c = getScoreStyle(patient.cows!, 13, colors);
+            const trend = getScoreTrend(patient.id, 'cows');
             return (
               <View style={[styles.scorePill, { backgroundColor: c.bg }]}>
-                <Text style={[styles.scoreText, { color: c.text }]}>COWS {patient.cows}</Text>
+                <Text style={[styles.scoreText, { color: c.text }]}>
+                  {'COWS ' + patient.cows}
+                  {trend != null && (
+                    <Text style={{ color: trendColor(trend, colors) }}>{trendArrow(trend)}</Text>
+                  )}
+                </Text>
               </View>
             );
           })()}
           {showCiwa && (() => {
             const c = getScoreStyle(patient.ciwa!, 15, colors);
+            const trend = getScoreTrend(patient.id, 'ciwa');
             return (
               <View style={[styles.scorePill, { backgroundColor: c.bg }]}>
-                <Text style={[styles.scoreText, { color: c.text }]}>CIWA {patient.ciwa}</Text>
+                <Text style={[styles.scoreText, { color: c.text }]}>
+                  {'CIWA ' + patient.ciwa}
+                  {trend != null && (
+                    <Text style={{ color: trendColor(trend, colors) }}>{trendArrow(trend)}</Text>
+                  )}
+                </Text>
               </View>
             );
           })()}
