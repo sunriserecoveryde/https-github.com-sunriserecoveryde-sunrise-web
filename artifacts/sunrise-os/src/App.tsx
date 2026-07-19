@@ -132,10 +132,16 @@ export type Screen =
 function AppInner() {
   const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [lastDemoPatientId, setLastDemoPatientId] = useState<string | null>(null);
   const { getPermissionForScreen } = useRole();
 
   const navigateTo = (screen: Screen, patientId?: string) => {
-    if (patientId) setSelectedPatientId(patientId);
+    if (patientId) {
+      setSelectedPatientId(patientId);
+      if (screen === 'DemoPatientDetail') {
+        setLastDemoPatientId(patientId);
+      }
+    }
     setActiveScreen(screen);
     window.scrollTo(0, 0);
   };
@@ -220,7 +226,7 @@ function AppInner() {
       case 'FormularyManagement':     return withAccess('FormularyManagement',     <FormularyManagement navigate={navigateTo} />);
       case 'StaffAdmin':              return <StaffAdmin navigate={navigateTo} />;
       case 'WithdrawalMonitor':       return withAccessReadOnlyProp('WithdrawalMonitor', ro => <WithdrawalMonitor navigate={navigateTo} readOnly={ro} />);
-      case 'DemoPatientDetail':       return <DemoPatientDetail patientId={selectedPatientId} navigate={navigateTo} returnTo='Dashboard' />;
+      case 'DemoPatientDetail':       return <DemoPatientDetail patientId={lastDemoPatientId ?? selectedPatientId} navigate={navigateTo} returnTo='Dashboard' />;
       case 'RoleExplorer':            return <RoleExplorer navigate={navigateTo} />;
       default:
         return (

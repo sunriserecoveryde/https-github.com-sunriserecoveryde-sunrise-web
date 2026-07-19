@@ -990,7 +990,7 @@ const styles = StyleSheet.create({
   noteBadgeType: { fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.9)', fontFamily: 'Inter_600SemiBold', flexShrink: 1 },
   noteTypePill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, marginTop: 2 },
   noteTypePillText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold', flexShrink: 1 },
-  filterCountBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2, marginTop: 2 },
+  noteCountBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2, marginTop: 2 },
   noteCountText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold', color: '#fff' },
   // Role toggle
   roleToggle: { flexDirection: 'row', borderRadius: 8, overflow: 'hidden', padding: 2 },
