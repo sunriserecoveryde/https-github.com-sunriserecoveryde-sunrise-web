@@ -279,11 +279,15 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
   const isAlert = isWithdrawalAlert(patient);
   const notes = getNotesForPatient(patient.id);
   const noteCount = notes.length;
-  // Show the most urgent note type across all notes: Incident > Med Update > (none for Observation-only)
-  const urgentNoteType: typeof notes[0]['noteType'] | null = notes.some(n => n.noteType === 'incident')
-    ? 'incident'
-    : notes.some(n => n.noteType === 'med-update')
-    ? 'med-update'
+  // Count non-Observation note types separately
+  const incidentCount  = notes.filter(n => n.noteType === 'incident').length;
+  const medUpdateCount = notes.filter(n => n.noteType === 'med-update').length;
+  const nonObsTypes    = (incidentCount > 0 ? 1 : 0) + (medUpdateCount > 0 ? 1 : 0);
+  // When >1 non-obs type exists show the per-type breakdown; otherwise fall back to single pill
+  const showBreakdown = nonObsTypes > 1;
+  // Used for the single-pill fallback (Incident > Med Update > null for obs-only)
+  const urgentNoteType: 'incident' | 'med-update' | null = !showBreakdown
+    ? (incidentCount > 0 ? 'incident' : medUpdateCount > 0 ? 'med-update' : null)
     : null;
 
   return (
@@ -314,7 +318,22 @@ function BedCard({ patient, onPress }: { patient: Patient; onPress: () => void }
               <Text style={styles.noteCountText}>{noteCount}</Text>
             </View>
           )}
-          {urgentNoteType != null && (() => {
+          {showBreakdown ? (
+            <View style={styles.noteTypeBreakdownRow}>
+              {incidentCount > 0 && (
+                <View style={[styles.noteTypeChip, { backgroundColor: colors.criticalBg, borderColor: colors.critical }]}>
+                  <Ionicons name="warning-outline" size={10} color={colors.critical} />
+                  <Text style={[styles.noteTypeChipText, { color: colors.critical }]}>{incidentCount}</Text>
+                </View>
+              )}
+              {medUpdateCount > 0 && (
+                <View style={[styles.noteTypeChip, { backgroundColor: colors.moderateBg, borderColor: colors.moderate }]}>
+                  <Ionicons name="medkit-outline" size={10} color={colors.moderate} />
+                  <Text style={[styles.noteTypeChipText, { color: colors.moderate }]}>{medUpdateCount}</Text>
+                </View>
+              )}
+            </View>
+          ) : urgentNoteType != null && (() => {
             const tc = urgentNoteType === 'incident'
               ? { bg: colors.criticalBg, text: colors.critical }
               : { bg: colors.moderateBg, text: colors.moderate };
@@ -1008,6 +1027,9 @@ const styles = StyleSheet.create({
   noteTypePillText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold', flexShrink: 1 },
   noteCountBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2, marginTop: 2 },
   noteCountText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold', color: '#fff' },
+  noteTypeBreakdownRow: { flexDirection: 'row', gap: 4, marginTop: 2 },
+  noteTypeChip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2, borderWidth: 1 },
+  noteTypeChipText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   // Role toggle
   roleToggle: { flexDirection: 'row', borderRadius: 8, overflow: 'hidden', padding: 2 },
   roleBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6 },
