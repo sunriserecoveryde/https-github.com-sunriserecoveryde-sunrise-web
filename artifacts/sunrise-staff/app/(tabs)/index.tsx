@@ -603,6 +603,8 @@ export default function CensusScreen() {
                       style: 'destructive',
                       onPress: () => {
                         clearNotes();
+                        setBannerDismissed(false);
+                        setFilter('All');
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                       },
                     },
