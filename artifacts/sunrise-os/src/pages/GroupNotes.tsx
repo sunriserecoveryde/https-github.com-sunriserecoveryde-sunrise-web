@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 interface GroupSession {
   id: string;
@@ -81,7 +82,7 @@ const NOTE_STATUS_COLORS: Record<string, string> = {
   None: 'bg-gray-100 text-slate',
 };
 
-export function GroupNotes({ navigate }: Props) {
+export function GroupNotes({ navigate, readOnly }: Props) {
   const [selectedDate, setSelectedDate] = useState<'2026-07-18' | '2026-07-17'>('2026-07-18');
   const [selected, setSelected] = useState<GroupSession | null>(SESSIONS[0]);
   const [noteText, setNoteText] = useState('');
@@ -107,7 +108,7 @@ export function GroupNotes({ navigate }: Props) {
               </button>
             ))}
           </div>
-          <button className="btn-primary text-sm px-4 py-2">+ New Session</button>
+          <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">+ New Session</LockedButton>
         </div>
       </div>
 
@@ -205,7 +206,7 @@ export function GroupNotes({ navigate }: Props) {
                 <div className="mt-4 bg-gray-50 border border-border rounded-lg p-3">
                   <div className="flex items-center justify-between mb-1">
                     <div className="text-xs font-semibold text-slate uppercase tracking-wide">Group Note</div>
-                    <button onClick={() => { setNoteText(selected.note || ''); setShowNoteEditor(true); }} className="text-xs text-orange hover:underline">Edit</button>
+                    {!readOnly && <button onClick={() => { setNoteText(selected.note || ''); setShowNoteEditor(true); }} className="text-xs text-orange hover:underline">Edit</button>}
                   </div>
                   <p className="text-sm text-navy">{selected.note}</p>
                 </div>
@@ -223,9 +224,9 @@ export function GroupNotes({ navigate }: Props) {
                     className="w-full border border-border rounded-lg p-3 text-sm min-h-[120px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50"
                   />
                   <div className="flex gap-2 mt-2">
-                    <button className="btn-primary text-sm px-4 py-2">Sign Note</button>
-                    <button className="btn-outline text-sm px-4 py-2">Save Draft</button>
-                    <button onClick={() => navigate('CosignQueue')} className="btn-outline text-sm px-4 py-2">Send for Co-sign</button>
+                    <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">Sign Note</LockedButton>
+                    <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2">Save Draft</LockedButton>
+                    <LockedButton locked={readOnly} onClick={() => !readOnly && navigate('CosignQueue')} className="btn-outline text-sm px-4 py-2">Send for Co-sign</LockedButton>
                     {showNoteEditor && <button onClick={() => setShowNoteEditor(false)} className="btn-outline text-sm px-4 py-2 text-slate">Cancel</button>}
                   </div>
                 </div>
@@ -239,7 +240,7 @@ export function GroupNotes({ navigate }: Props) {
 
               {!selected.note && selected.status === 'Completed' && !showNoteEditor && (
                 <div className="mt-4">
-                  <button onClick={() => setShowNoteEditor(true)} className="btn-primary text-sm px-4 py-2 w-full">Write Group Note</button>
+                  <LockedButton locked={readOnly} onClick={() => !readOnly && setShowNoteEditor(true)} className="btn-primary text-sm px-4 py-2 w-full">Write Group Note</LockedButton>
                 </div>
               )}
             </div>

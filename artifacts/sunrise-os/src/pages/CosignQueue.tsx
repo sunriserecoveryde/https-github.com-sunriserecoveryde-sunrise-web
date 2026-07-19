@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type NoteType = 'BIRP' | 'DAP' | 'Psychiatric Eval' | 'Group Note' | 'Nursing Note' | 'Med Order';
 
@@ -93,7 +94,7 @@ const PRIORITY_COLORS = {
   Routine: 'bg-gray-50 border-gray-200',
 };
 
-export function CosignQueue({ navigate }: Props) {
+export function CosignQueue({ navigate, readOnly }: Props) {
   const [selected, setSelected] = useState<CosignItem | null>(QUEUE[0]);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [comments, setComments] = useState('');
@@ -237,8 +238,8 @@ export function CosignQueue({ navigate }: Props) {
                     className="w-full border border-border rounded-lg p-3 text-sm min-h-[72px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50"
                   />
                   <div className="flex gap-2 mt-3">
-                    <button onClick={() => handleApprove(selected.id)} className="btn-primary text-sm px-6 py-2 flex-1">✓ Co-sign &amp; Approve</button>
-                    <button className="btn-outline text-sm px-4 py-2 text-amber-700 border-amber-300 hover:bg-amber-50">Request Revision</button>
+                    <LockedButton locked={readOnly} onClick={() => !readOnly && handleApprove(selected.id)} className="btn-primary text-sm px-6 py-2 flex-1">✓ Co-sign &amp; Approve</LockedButton>
+                    <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2 text-amber-700 border-amber-300 hover:bg-amber-50">Request Revision</LockedButton>
                     <button onClick={() => navigate('PatientDetail', selected.patientId)} className="btn-outline text-sm px-4 py-2">Open Chart</button>
                   </div>
                   <p className="text-xs text-slate mt-2">By co-signing, you attest that you have reviewed this note and it meets clinical documentation standards.</p>

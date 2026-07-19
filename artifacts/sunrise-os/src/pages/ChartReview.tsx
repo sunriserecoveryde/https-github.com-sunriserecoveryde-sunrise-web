@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type DefType = 'Missing Co-sign' | 'Overdue Note' | 'Incomplete ASAM' | 'Unsigned Treatment Plan' | 'Missing UA' | 'Expired Auth';
 
@@ -54,7 +55,7 @@ const TYPE_ICONS: Record<DefType, string> = {
 
 const DEF_TYPES: DefType[] = ['Missing Co-sign', 'Overdue Note', 'Incomplete ASAM', 'Unsigned Treatment Plan', 'Missing UA', 'Expired Auth'];
 
-export function ChartReview({ navigate }: Props) {
+export function ChartReview({ navigate, readOnly }: Props) {
   const [activeTab, setActiveTab] = useState<'Deficiencies' | 'Chart Completeness'>('Deficiencies');
   const [typeFilter, setTypeFilter] = useState<DefType | 'All'>('All');
   const [priorityFilter, setPriorityFilter] = useState<'Critical' | 'High' | 'Moderate' | 'All'>('All');
@@ -155,7 +156,7 @@ export function ChartReview({ navigate }: Props) {
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={() => navigate('CosignQueue')} className="text-xs bg-white border border-current px-3 py-1.5 rounded-lg font-medium hover:opacity-80 transition-opacity">Resolve</button>
+                    <LockedButton locked={readOnly} onClick={() => !readOnly && navigate('CosignQueue')} className="text-xs bg-white border border-current px-3 py-1.5 rounded-lg font-medium hover:opacity-80 transition-opacity">Resolve</LockedButton>
                     <button onClick={() => navigate('PatientDetail', d.patientId)} className="text-xs bg-white border border-current px-3 py-1.5 rounded-lg font-medium hover:opacity-80 transition-opacity">Open Chart</button>
                   </div>
                 </div>

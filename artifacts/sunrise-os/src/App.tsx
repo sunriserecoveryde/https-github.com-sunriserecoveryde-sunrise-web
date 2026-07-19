@@ -165,7 +165,7 @@ function AppInner() {
       case 'CensusBedBoard':          return withAccess('CensusBedBoard',          <CensusBedBoard navigate={navigateTo} />);
       case 'PatientList':             return withAccess('PatientList',             <PatientList navigate={navigateTo} />);
       case 'PatientDetail':           return withAccess('PatientDetail',           <PatientDetail patientId={selectedPatientId} navigate={navigateTo} />);
-      case 'ASAMAssessments':         return withAccess('ASAMAssessments',         <ASAMAssessments navigate={navigateTo} />);
+      case 'ASAMAssessments':         return withAccessReadOnlyProp('ASAMAssessments',    ro => <ASAMAssessments navigate={navigateTo} readOnly={ro} />);
       case 'ProgressNotes':           return withAccessReadOnlyProp('ProgressNotes',   ro => <ProgressNotes navigate={navigateTo} readOnly={ro} />);
       case 'TreatmentPlans':          return withAccessReadOnlyProp('TreatmentPlans',  ro => <TreatmentPlans navigate={navigateTo} readOnly={ro} />);
       case 'AppointmentCalendar':     return withAccess('AppointmentCalendar',     <AppointmentCalendar navigate={navigateTo} />);
@@ -179,9 +179,9 @@ function AppInner() {
       case 'CommandCenter':           return withAccess('CommandCenter',           <CommandCenter navigate={navigateTo} />);
       case 'Admissions':              return withAccess('Admissions',              <Admissions navigate={navigateTo} />);
       case 'Discharges':              return withAccess('Discharges',              <Discharges navigate={navigateTo} />);
-      case 'ChartReview':             return withAccess('ChartReview',             <ChartReview navigate={navigateTo} />);
-      case 'GroupNotes':              return withAccess('GroupNotes',              <GroupNotes navigate={navigateTo} />);
-      case 'CosignQueue':             return withAccess('CosignQueue',             <CosignQueue navigate={navigateTo} />);
+      case 'ChartReview':             return withAccessReadOnlyProp('ChartReview',        ro => <ChartReview navigate={navigateTo} readOnly={ro} />);
+      case 'GroupNotes':              return withAccessReadOnlyProp('GroupNotes',          ro => <GroupNotes navigate={navigateTo} readOnly={ro} />);
+      case 'CosignQueue':             return withAccessReadOnlyProp('CosignQueue',         ro => <CosignQueue navigate={navigateTo} readOnly={ro} />);
       case 'RevenueCycle':            return withAccess('RevenueCycle',            <RevenueCycle navigate={navigateTo} />);
       case 'BusinessDevelopment':     return withAccess('BusinessDevelopment',     <BusinessDevelopment navigate={navigateTo} />);
       case 'Training':                return withAccess('Training',                <Training navigate={navigateTo} />);
@@ -200,7 +200,7 @@ function AppInner() {
       case 'InsuranceAuthorization':  return withAccess('InsuranceAuthorization',  <InsuranceAuthorization navigate={navigateTo} />);
       case 'AftercarePlanning':       return withAccess('AftercarePlanning',       <AftercarePlanning navigate={navigateTo} />);
       case 'MyCaseload':              return withAccess('MyCaseload',              <MyCaseload navigate={navigateTo} />);
-      case 'BiopsychosocialAssessment': return withAccess('BiopsychosocialAssessment', <BiopsychosocialAssessment navigate={navigateTo} />);
+      case 'BiopsychosocialAssessment': return withAccessReadOnlyProp('BiopsychosocialAssessment', ro => <BiopsychosocialAssessment navigate={navigateTo} readOnly={ro} />);
       case 'DischargeSummary':        return withAccess('DischargeSummary',        <DischargeSummary navigate={navigateTo} />);
       case 'CrisisAssessment':        return withAccess('CrisisAssessment',        <CrisisAssessment navigate={navigateTo} />);
       case 'AlumniProgram':           return withAccess('AlumniProgram',           <AlumniProgram navigate={navigateTo} />);

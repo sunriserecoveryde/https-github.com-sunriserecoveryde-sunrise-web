@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { CheckCircle, ChevronDown, ChevronRight, AlertTriangle, FileText, Save, Printer } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type SectionKey = 'presenting' | 'substances' | 'medical' | 'psychiatric' | 'legal' | 'family' | 'social' | 'trauma' | 'strengths' | 'diagnostic' | 'summary';
 
@@ -71,7 +72,7 @@ Z63.0  — Relationship Distress with Spouse or Intimate Partner`,
   assessmentCompleted: 'Assessment completed by Sarah Jenkins, LPC (Primary Counselor) with co-assessment by Dr. James Carter, CADC-III (Clinical Director). Reviewed and signed by Dr. Robert Chen, MD (Medical Director).',
 };
 
-export function BiopsychosocialAssessment({ navigate }: Props) {
+export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
   const [selectedPatient, setSelectedPatient] = useState('p1');
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(new Set(['presenting']));
   const [completedSections, setCompletedSections] = useState<Set<SectionKey>>(new Set(['presenting', 'substances', 'medical', 'psychiatric', 'legal', 'family', 'social', 'trauma', 'strengths', 'diagnostic', 'summary']));
@@ -99,7 +100,7 @@ export function BiopsychosocialAssessment({ navigate }: Props) {
         </div>
         <div className="flex gap-2">
           <button className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><Printer className="w-4 h-4" /> Print / PDF</button>
-          <button onClick={() => setSaved(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Save className="w-4 h-4" />{saved ? 'Saved ✓' : 'Save Assessment'}</button>
+          <LockedButton locked={readOnly} onClick={() => !readOnly && setSaved(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Save className="w-4 h-4" />{saved ? 'Saved ✓' : 'Save Assessment'}</LockedButton>
         </div>
       </div>
 
@@ -175,8 +176,10 @@ export function BiopsychosocialAssessment({ navigate }: Props) {
                   {key === 'summary' && <SummarySection data={DEMO_DATA} />}
                   <div className="flex justify-end gap-3 pt-2 border-t border-border">
                     <button onClick={() => toggleSection(key)} className="text-sm border border-border text-slate px-4 py-2 rounded-lg hover:bg-gray-50">Close</button>
-                    <button
+                    <LockedButton
+                      locked={readOnly}
                       onClick={() => {
+                        if (readOnly) return;
                         setCompletedSections(prev => new Set([...prev, key]));
                         toggleSection(key);
                         const nextIdx = SECTIONS_ORDER.indexOf(key) + 1;
@@ -187,7 +190,7 @@ export function BiopsychosocialAssessment({ navigate }: Props) {
                       className="btn-primary text-sm px-4 py-2 flex items-center gap-2"
                     >
                       <CheckCircle className="w-4 h-4" /> Mark Complete & Next
-                    </button>
+                    </LockedButton>
                   </div>
                 </div>
               )}
@@ -206,7 +209,7 @@ export function BiopsychosocialAssessment({ navigate }: Props) {
             </div>
           </div>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => navigate('CosignQueue')} className="text-sm border border-green-300 text-green-700 bg-white px-4 py-2 rounded-lg hover:bg-green-50">Send to Co-sign Queue</button>
+            <LockedButton locked={readOnly} onClick={() => !readOnly && navigate('CosignQueue')} className="text-sm border border-green-300 text-green-700 bg-white px-4 py-2 rounded-lg hover:bg-green-50">Send to Co-sign Queue</LockedButton>
             <button className="btn-primary text-sm px-4 py-2">Print Assessment</button>
           </div>
         </div>

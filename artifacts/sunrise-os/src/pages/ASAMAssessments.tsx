@@ -3,8 +3,9 @@ import { MOCK_PATIENTS } from '../data/mockPatients';
 import { Screen } from '../App';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { Search, Filter, FileCheck, AlertCircle } from 'lucide-react';
+import { LockedButton } from '../components/common/LockedButton';
 
-export function ASAMAssessments({ navigate }: { navigate: (s: Screen, id?: string) => void }) {
+export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, id?: string) => void; readOnly?: boolean }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Sort by highest d5 (relapse potential) for demonstration
@@ -24,9 +25,9 @@ export function ASAMAssessments({ navigate }: { navigate: (s: Screen, id?: strin
           <h1 className="text-2xl font-bold text-navy">ASAM Assessments</h1>
           <p className="text-slate text-sm mt-1">Review and manage multidimensional assessments across the census</p>
         </div>
-        <button className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium shadow-sm hover:bg-sunrise-blue-light transition-colors">
+        <LockedButton locked={readOnly} className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium shadow-sm hover:bg-sunrise-blue-light transition-colors">
           New Assessment
-        </button>
+        </LockedButton>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -131,7 +132,7 @@ export function ASAMAssessments({ navigate }: { navigate: (s: Screen, id?: strin
                   </td>
                   <td className="p-4 text-slate">10/24/2023</td>
                   <td className="p-4">
-                    <button className="text-sunrise-blue text-xs font-medium hover:underline">Review</button>
+                    <LockedButton locked={readOnly} className="text-sunrise-blue text-xs font-medium hover:underline">Review</LockedButton>
                   </td>
                 </tr>
               ))}
