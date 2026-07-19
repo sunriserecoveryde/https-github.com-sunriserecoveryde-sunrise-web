@@ -404,16 +404,18 @@ export default function PatientDetailScreen() {
   // ─── Scroll-to-notes support ───────────────────────────────────────────────
   const scrollViewRef = useRef<import('react-native').ScrollView>(null);
   const notesSectionY = useRef<number | null>(null);
+  // Set to true when a deep-link scroll is requested; cleared after the scroll fires.
+  const pendingScrollToNotes = useRef(false);
 
   useEffect(() => {
     if (scrollTo !== 'notes') return;
-    // Give the layout a moment to settle before scrolling
-    const timer = setTimeout(() => {
-      if (scrollViewRef.current != null && notesSectionY.current != null) {
-        scrollViewRef.current.scrollTo({ y: notesSectionY.current, animated: true });
-      }
-    }, 350);
-    return () => clearTimeout(timer);
+    // If layout has already fired (e.g. navigating to an already-mounted screen),
+    // scroll immediately. Otherwise mark the intent so onLayout can fire it.
+    if (scrollViewRef.current != null && notesSectionY.current != null) {
+      scrollViewRef.current.scrollTo({ y: notesSectionY.current, animated: true });
+    } else {
+      pendingScrollToNotes.current = true;
+    }
   }, [scrollTo]);
 
   // ─── Swipe-to-delete: one-row-at-a-time + tap-outside-to-close ───────────
@@ -1183,7 +1185,13 @@ export default function PatientDetailScreen() {
         {/* ─── Handoff note ─── */}
         <View
           style={s.section}
-          onLayout={(e) => { notesSectionY.current = e.nativeEvent.layout.y; }}
+          onLayout={(e) => {
+            notesSectionY.current = e.nativeEvent.layout.y;
+            if (pendingScrollToNotes.current && scrollViewRef.current != null) {
+              pendingScrollToNotes.current = false;
+              scrollViewRef.current.scrollTo({ y: e.nativeEvent.layout.y, animated: true });
+            }
+          }}
         >
           <View style={s.handoffSectionHeader}>
             {/* Title + count badge */}
