@@ -1265,7 +1265,7 @@ export default function PatientDetailScreen() {
                 }}
                 onDelete={() => { handleDeleteNote(note, index); closeOpenRow(); }}
                 onLongPress={handleLongPress}
-                hintKey={index === 0 ? 'nursing-notes' : undefined}
+                hintKey={index === 0 ? SWIPE_HINT_KEY : undefined}
                 onOpen={() => handleRowOpen(note.id)}
               >
                 <View
