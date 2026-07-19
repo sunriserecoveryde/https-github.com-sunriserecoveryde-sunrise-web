@@ -3,6 +3,7 @@ import {
   FlatList,
   Platform,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -149,7 +150,7 @@ export default function HandoffScreen() {
   const insets = useSafeAreaInsets();
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const { role, setRole } = useRole();
-  const { clearNotes } = useNursingNotes();
+  const { clearNotes, getNotesForPatient } = useNursingNotes();
   const { clearAcknowledgments } = useMdAcknowledgment();
   const { clearFilters } = useWithdrawalFilters();
   const [shift, setShift] = useState<Shift>('day');
@@ -208,6 +209,72 @@ export default function HandoffScreen() {
     (a, b) => acuitySortOrder(a.acuity) - acuitySortOrder(b.acuity)
   );
 
+  function formatEditedTime(isoString: string): string {
+    try {
+      const d = new Date(isoString);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch {
+      return '';
+    }
+  }
+
+  function handleShareAll() {
+    const date = new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    const shiftLabel = SHIFTS.find(s => s.id === shift)!;
+    const lines: string[] = [];
+    lines.push(`SHIFT HANDOFF — ${shiftLabel.label} Shift (${shiftLabel.time})`);
+    lines.push(date);
+    lines.push('');
+
+    sortedPatients.forEach(patient => {
+      // Patient header
+      lines.push(`─── Bed ${patient.bed} · ${patient.firstName} ${patient.lastName} · ${patient.acuity} ───`);
+      lines.push(`${patient.primaryDiagnosis} · LOS ${patient.los}d`);
+
+      // Vitals chips
+      const vitalsChips: string[] = [];
+      if (patient.cows != null) vitalsChips.push(`COWS ${patient.cows}`);
+      if (patient.ciwa != null) vitalsChips.push(`CIWA ${patient.ciwa}`);
+      vitalsChips.push(`Mood ${patient.mood}/10`);
+      vitalsChips.push(`UA: ${patient.lastUa}`);
+      lines.push(vitalsChips.join(' · '));
+
+      // Flags
+      if (patient.flags.length > 0) {
+        lines.push(`Flags: ${patient.flags.join(', ')}`);
+      }
+
+      // Nursing notes from context
+      const nursingNotes = getNotesForPatient(patient.id);
+      if (nursingNotes.length > 0) {
+        lines.push('');
+        lines.push('Nursing Notes:');
+        nursingNotes.forEach(note => {
+          const editSuffix = note.editedAt ? ` (edited ${formatEditedTime(note.editedAt)})` : '';
+          const typeLabel =
+            note.noteType === 'observation' ? 'Observation'
+            : note.noteType === 'med-update' ? 'Med Update'
+            : 'Incident';
+          lines.push(`  [${typeLabel}] ${note.displayTime}${editSuffix}`);
+          lines.push(`  ${note.text}`);
+        });
+      }
+
+      // Handoff note (from tab's local state)
+      const handoffNote = notes[patient.id];
+      if (handoffNote) {
+        lines.push('');
+        lines.push('Handoff Note:');
+        lines.push(handoffNote);
+      }
+
+      lines.push('');
+    });
+
+    const message = lines.join('\n').trim();
+    Share.share({ message });
+  }
+
   function handleComplete() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     clearNotes();
@@ -225,19 +292,28 @@ export default function HandoffScreen() {
             <Text style={styles.headerTitle}>Shift Handoff</Text>
             <Text style={styles.headerSubtitle}>Jul 19, 2026 · {RESIDENTIAL_PATIENTS.length} patients</Text>
           </View>
-          <View style={[styles.roleToggle, { backgroundColor: colors.navyLight }]}>
+          <View style={styles.headerActions}>
             <Pressable
-              style={[styles.roleBtn, role === 'nursing' && { backgroundColor: colors.orange }]}
-              onPress={() => { Haptics.selectionAsync(); setRole('nursing'); }}
+              style={[styles.exportBtn, { backgroundColor: colors.navyLight }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleShareAll(); }}
             >
-              <Text style={[styles.roleBtnText, { color: role === 'nursing' ? '#fff' : colors.slateLight }]}>RN</Text>
+              <Ionicons name="share-outline" size={16} color={colors.slateLight} />
+              <Text style={[styles.exportBtnText, { color: colors.slateLight }]}>Export</Text>
             </Pressable>
-            <Pressable
-              style={[styles.roleBtn, role === 'bht' && { backgroundColor: colors.orange }]}
-              onPress={() => { Haptics.selectionAsync(); setRole('bht'); }}
-            >
-              <Text style={[styles.roleBtnText, { color: role === 'bht' ? '#fff' : colors.slateLight }]}>BHT</Text>
-            </Pressable>
+            <View style={[styles.roleToggle, { backgroundColor: colors.navyLight }]}>
+              <Pressable
+                style={[styles.roleBtn, role === 'nursing' && { backgroundColor: colors.orange }]}
+                onPress={() => { Haptics.selectionAsync(); setRole('nursing'); }}
+              >
+                <Text style={[styles.roleBtnText, { color: role === 'nursing' ? '#fff' : colors.slateLight }]}>RN</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.roleBtn, role === 'bht' && { backgroundColor: colors.orange }]}
+                onPress={() => { Haptics.selectionAsync(); setRole('bht'); }}
+              >
+                <Text style={[styles.roleBtnText, { color: role === 'bht' ? '#fff' : colors.slateLight }]}>BHT</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </View>
@@ -291,6 +367,9 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2, fontFamily: 'Inter_400Regular' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  exportBtnText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   roleToggle: { flexDirection: 'row', borderRadius: 8, overflow: 'hidden', padding: 2 },
   roleBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6 },
   roleBtnText: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold' },
