@@ -26,6 +26,8 @@ import { CosignQueue } from './pages/CosignQueue';
 import { RevenueCycle } from './pages/RevenueCycle';
 import { BusinessDevelopment } from './pages/BusinessDevelopment';
 import { Training } from './pages/Training';
+import { Settings } from './pages/Settings';
+import { HelpSupport } from './pages/HelpSupport';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export type Screen = 
@@ -52,6 +54,8 @@ export type Screen =
   | 'RevenueCycle' 
   | 'AuditCompliance' 
   | 'Training' 
+  | 'Settings'
+  | 'HelpSupport'
   | 'PatientDetail';
 
 function App() {
@@ -92,6 +96,8 @@ function App() {
       case 'RevenueCycle': return <RevenueCycle navigate={navigateTo} />;
       case 'BusinessDevelopment': return <BusinessDevelopment navigate={navigateTo} />;
       case 'Training': return <Training navigate={navigateTo} />;
+      case 'Settings': return <Settings navigate={navigateTo} />;
+      case 'HelpSupport': return <HelpSupport navigate={navigateTo} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow border border-border">

@@ -6,9 +6,10 @@ interface MetricCardProps {
   subtitle?: string;
   trend?: { value: string; direction: 'up' | 'down' | 'neutral' };
   color?: 'blue' | 'orange' | 'amber' | 'red' | 'green';
+  onClick?: () => void;
 }
 
-export function MetricCard({ title, value, subtitle, trend, color = 'blue' }: MetricCardProps) {
+export function MetricCard({ title, value, subtitle, trend, color = 'blue', onClick }: MetricCardProps) {
   const colorMap = {
     blue: 'border-l-sunrise-blue',
     orange: 'border-l-sunrise-orange',
@@ -18,7 +19,10 @@ export function MetricCard({ title, value, subtitle, trend, color = 'blue' }: Me
   };
 
   return (
-    <div className={`bg-white p-4 rounded-lg shadow-sm border border-border border-l-4 ${colorMap[color]} flex flex-col`}>
+    <div
+      onClick={onClick}
+      className={`bg-white p-4 rounded-lg shadow-sm border border-border border-l-4 ${colorMap[color]} flex flex-col ${onClick ? 'cursor-pointer hover:shadow-md hover:border-orange transition-all' : ''}`}
+    >
       <h3 className="text-sm font-medium text-slate mb-1">{title}</h3>
       <div className="text-2xl font-bold text-navy flex items-baseline gap-2">
         {value}

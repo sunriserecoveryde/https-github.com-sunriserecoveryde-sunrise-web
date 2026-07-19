@@ -119,12 +119,18 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
         ))}
       </div>
       <div className="p-4 border-t border-navy-light space-y-1">
-        <button className="w-full flex items-center gap-3 px-2 py-2 text-sm hover:text-white transition-colors">
-          <Settings className="w-4 h-4 text-slate-400" />
+        <button
+          onClick={() => navigate('Settings' as Screen)}
+          className={`w-full flex items-center gap-3 px-2 py-2 text-sm transition-colors ${currentScreen === 'Settings' ? 'text-white' : 'hover:text-white'}`}
+        >
+          <Settings className={`w-4 h-4 ${currentScreen === 'Settings' ? 'text-sunrise-orange' : 'text-slate-400'}`} />
           Settings
         </button>
-        <button className="w-full flex items-center gap-3 px-2 py-2 text-sm hover:text-white transition-colors">
-          <HelpCircle className="w-4 h-4 text-slate-400" />
+        <button
+          onClick={() => navigate('HelpSupport' as Screen)}
+          className={`w-full flex items-center gap-3 px-2 py-2 text-sm transition-colors ${currentScreen === 'HelpSupport' ? 'text-white' : 'hover:text-white'}`}
+        >
+          <HelpCircle className={`w-4 h-4 ${currentScreen === 'HelpSupport' ? 'text-sunrise-orange' : 'text-slate-400'}`} />
           Help & Support
         </button>
       </div>

@@ -40,11 +40,11 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <MetricCard title="Census" value="18/22" subtitle="81.8% Occupancy" color="orange" />
-        <MetricCard title="AMA Risk" value="2" subtitle="High Risk Clients" color="red" />
-        <MetricCard title="Pending Co-signs" value="4" subtitle="Action Required" color="amber" />
-        <MetricCard title="Avg LOS" value="18.4" subtitle="Days" trend={{ value: '1.2', direction: 'down' }} color="blue" />
-        <MetricCard title="Discharges" value="3" subtitle="This Week" color="green" />
+        <MetricCard title="Census" value="18/22" subtitle="81.8% Occupancy" color="orange" onClick={() => navigate('CensusBedBoard')} />
+        <MetricCard title="AMA Risk" value="2" subtitle="High Risk Clients" color="red" onClick={() => navigate('RiskDashboard')} />
+        <MetricCard title="Pending Co-signs" value="4" subtitle="Action Required" color="amber" onClick={() => navigate('CosignQueue')} />
+        <MetricCard title="Avg LOS" value="18.4" subtitle="Days" trend={{ value: '1.2', direction: 'down' }} color="blue" onClick={() => navigate('OutcomeTracking')} />
+        <MetricCard title="Discharges" value="3" subtitle="This Week" color="green" onClick={() => navigate('Discharges')} />
       </div>
 
       {/* Main 2-Col */}
