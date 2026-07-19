@@ -161,13 +161,13 @@ export function CommandPalette({ onClose, navigate }: Props) {
           <input
             ref={inputRef}
             value={query}
-            onChange={e => { const v = e.target.value; setQuery(v); if (v) _lastQuery = v; }}
+            onChange={e => { const v = e.target.value; setQuery(v); _lastQuery = v; }}
             placeholder={canSearchPatients ? "Search patients, screens, or actions…" : "Search screens or actions…"}
             className="flex-1 text-sm focus:outline-none text-navy placeholder:text-slate"
           />
           <div className="flex items-center gap-2">
             {query && (
-              <button onClick={() => setQuery('')} className="p-1 hover:bg-gray-100 rounded">
+              <button onClick={() => { setQuery(''); _lastQuery = ''; }} className="p-1 hover:bg-gray-100 rounded">
                 <X className="w-3.5 h-3.5 text-slate" />
               </button>
             )}
