@@ -643,7 +643,19 @@ export default function PatientDetailScreen() {
         {/* ─── Handoff note ─── */}
         <View style={s.section}>
           <View style={s.handoffSectionHeader}>
-            <SectionTitle title="NURSING HANDOFF NOTE" colors={colors} />
+            {/* Title + count badge */}
+            <View style={s.handoffTitleRow}>
+              <SectionTitle title="NURSING HANDOFF NOTE" colors={colors} />
+              {(() => {
+                const totalNotes = getNotesForPatient(patient.id).length + (patient.handoffNote ? 1 : 0);
+                if (totalNotes === 0) return null;
+                return (
+                  <View style={[s.noteCountBadge, { backgroundColor: colors.navy }]}>
+                    <Text style={s.noteCountBadgeText}>{totalNotes}</Text>
+                  </View>
+                );
+              })()}
+            </View>
             <Pressable
               onPress={openNoteModal}
               style={({ pressed }) => [
@@ -857,6 +869,9 @@ const s = StyleSheet.create({
   mdAckButtonText: { fontSize: 14, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   // Handoff / Add Note
   handoffSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  handoffTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  noteCountBadge: { borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
+  noteCountBadgeText: { color: '#fff', fontSize: 11, fontFamily: 'Inter_700Bold', fontWeight: '700' },
   addNoteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
   addNoteBtnText: { color: '#fff', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   // Session notes
