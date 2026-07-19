@@ -510,12 +510,16 @@ export default function PatientDetailScreen() {
   };
 
   const handleDeleteNote = (note: NursingNote, index: number) => {
+    // Guard: if this note is already pending deletion (undo toast visible), do nothing.
+    if (pendingDelete?.note.id === note.id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     // Commit any in-flight deletion before starting a new one
     if (deleteTimerRef.current) {
       clearTimeout(deleteTimerRef.current);
       deleteTimerRef.current = null;
     }
+    // Clean up the row ref immediately so no stale ref lingers during the undo window.
+    rowRefsMap.current.delete(note.id);
     removeNote(id, note.id);
     setPendingDelete({ note, patientId: id, originalIndex: index });
     Animated.spring(toastAnim, {
