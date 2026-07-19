@@ -112,6 +112,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
   const [selected, setSelected] = useState(0);
   const [demoMode, setDemoMode] = useState(false);
   const [demoQuery, setDemoQuery] = useState(_lastDemoQuery);
+  const [recentQueries, setRecentQueries] = useState<string[]>([..._recentDemoQueries]);
   const inputRef = useRef<HTMLInputElement>(null);
   const demoInputRef = useRef<HTMLInputElement>(null);
   const { roleId, canAccessScreen } = useRole();
@@ -127,6 +128,16 @@ export function CommandPalette({ onClose, navigate }: Props) {
     try { sessionStorage.setItem(DEMO_QUERY_KEY, v); } catch { /* ignore */ }
   };
 
+
+  const handleAddRecentQuery = (q: string) => {
+    addRecentDemoQuery(q);
+    setRecentQueries([..._recentDemoQueries]);
+  };
+
+  const handleClearRecentQueries = () => {
+    _recentDemoQueries.length = 0;
+    setRecentQueries([]);
+  };
 
   const go = (screen: Screen, patientId?: string) => { navigate(screen, patientId); onClose(); };
 
@@ -221,7 +232,7 @@ export function CommandPalette({ onClose, navigate }: Props) {
             <input
               ref={demoInputRef}
               value={demoQuery}
-              onChange={e => { updateDemoQuery(e.target.value); addRecentDemoQuery(e.target.value); }}
+              onChange={e => { updateDemoQuery(e.target.value); handleAddRecentQuery(e.target.value); }}
               placeholder="Search demo patients by name, MRN, diagnosis, or program…"
               className="flex-1 text-sm focus:outline-none text-navy placeholder:text-slate"
             />
@@ -239,10 +250,10 @@ export function CommandPalette({ onClose, navigate }: Props) {
                 <span className="text-xs font-semibold text-slate uppercase tracking-wide">
                   {DEMO_PATIENTS.length} anonymized patients · click any patient to explore their chart
                 </span>
-                {_recentDemoQueries.length > 0 && (
+                {recentQueries.length > 0 && (
                   <div className="flex items-center gap-1.5 flex-wrap mt-2">
                     <span className="text-[10px] text-slate uppercase tracking-wide font-semibold">Recent:</span>
-                    {_recentDemoQueries.map(q => (
+                    {recentQueries.map(q => (
                       <button
                         key={q}
                         onClick={() => { updateDemoQuery(q); }}
@@ -252,6 +263,12 @@ export function CommandPalette({ onClose, navigate }: Props) {
                         {q}
                       </button>
                     ))}
+                    <button
+                      onClick={handleClearRecentQueries}
+                      className="text-[11px] font-medium text-slate hover:text-navy ml-1 underline underline-offset-2 transition-colors"
+                    >
+                      Clear
+                    </button>
                   </div>
                 )}
               </div>
