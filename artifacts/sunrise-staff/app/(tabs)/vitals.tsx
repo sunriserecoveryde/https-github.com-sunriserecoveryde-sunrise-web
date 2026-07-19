@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
+  Animated,
   FlatList,
   Modal,
   Platform,
@@ -300,6 +301,30 @@ export default function VitalsScreen() {
     (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
   ).length;
 
+  // ── Alert count animation ────────────────────────────────────────────────────
+  const alertScaleAnim = useRef(new Animated.Value(1)).current;
+  const prevAlertCount = useRef(totalAlertCount);
+
+  useEffect(() => {
+    if (totalAlertCount > prevAlertCount.current) {
+      Animated.sequence([
+        Animated.spring(alertScaleAnim, {
+          toValue: 1.4,
+          useNativeDriver: true,
+          speed: 60,
+          bounciness: 14,
+        }),
+        Animated.spring(alertScaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          speed: 20,
+          bounciness: 6,
+        }),
+      ]).start();
+    }
+    prevAlertCount.current = totalAlertCount;
+  }, [totalAlertCount]);
+
   const openModal = (patient: Patient) => {
     setSelectedPatient(patient);
     setModalVisible(true);
@@ -320,7 +345,15 @@ export default function VitalsScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: criticalCount > 0 ? colors.critical : colors.success }]}>{criticalCount}</Text>
+            <Animated.Text
+              style={[
+                styles.statValue,
+                { color: criticalCount > 0 ? colors.critical : colors.success },
+                { transform: [{ scale: alertScaleAnim }] },
+              ]}
+            >
+              {criticalCount}
+            </Animated.Text>
             <Text style={styles.statLabel}>{scoreFilter !== 'all' ? 'Alerts (filtered)' : 'Alerts'}</Text>
           </View>
           <View style={styles.statDivider} />
