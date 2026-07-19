@@ -270,7 +270,23 @@ function MoodBar({ value, colors }: { value: number; colors: ReturnType<typeof u
   );
 }
 
-function BedCard({ patient, onPress, onNoteBadgePress, onNoteTypeChipPress }: { patient: Patient; onPress: () => void; onNoteBadgePress?: () => void; onNoteTypeChipPress?: (type: 'incident' | 'med-update') => void }) {
+function BedCard({
+  patient,
+  onPress,
+  onNoteBadgePress,
+  onNoteTypeChipPress,
+  onScorePillPress,
+  onVitalsPress,
+}: {
+  patient: Patient;
+  onPress: () => void;
+  onNoteBadgePress?: () => void;
+  onNoteTypeChipPress?: (type: 'incident' | 'med-update') => void;
+  /** Tapping a COWS/CIWA pill jumps directly to the Scores section. */
+  onScorePillPress?: () => void;
+  /** Tapping the vitals hint jumps directly to the Vitals section. */
+  onVitalsPress?: () => void;
+}) {
   const colors = useColors();
   const { getNotesForPatient } = useNursingNotes();
   const ac = acuityColor(patient.acuity);
@@ -385,28 +401,36 @@ function BedCard({ patient, onPress, onNoteBadgePress, onNoteTypeChipPress }: { 
             const c = getScoreStyle(patient.cows!, 13, colors);
             const trend = getScoreTrend(patient.id, 'cows');
             return (
-              <View style={[styles.scorePill, { backgroundColor: c.bg }]}>
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onScorePillPress?.(); }}
+                hitSlop={6}
+                style={({ pressed }) => [styles.scorePill, { backgroundColor: c.bg, opacity: pressed ? 0.75 : 1 }]}
+              >
                 <Text style={[styles.scoreText, { color: c.text }]}>
                   {'COWS ' + patient.cows}
                   {trend != null && (
                     <Text style={{ color: trendColor(trend, colors) }}>{trendArrow(trend)}</Text>
                   )}
                 </Text>
-              </View>
+              </Pressable>
             );
           })()}
           {showCiwa && (() => {
             const c = getScoreStyle(patient.ciwa!, 15, colors);
             const trend = getScoreTrend(patient.id, 'ciwa');
             return (
-              <View style={[styles.scorePill, { backgroundColor: c.bg }]}>
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onScorePillPress?.(); }}
+                hitSlop={6}
+                style={({ pressed }) => [styles.scorePill, { backgroundColor: c.bg, opacity: pressed ? 0.75 : 1 }]}
+              >
                 <Text style={[styles.scoreText, { color: c.text }]}>
                   {'CIWA ' + patient.ciwa}
                   {trend != null && (
                     <Text style={{ color: trendColor(trend, colors) }}>{trendArrow(trend)}</Text>
                   )}
                 </Text>
-              </View>
+              </Pressable>
             );
           })()}
         </View>
@@ -416,7 +440,12 @@ function BedCard({ patient, onPress, onNoteBadgePress, onNoteTypeChipPress }: { 
         </View>
       </View>
 
-      <Text style={[styles.tapHint, { color: colors.mutedForeground }]}>Tap for vitals history</Text>
+      <Pressable
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onVitalsPress?.(); }}
+        hitSlop={8}
+      >
+        <Text style={[styles.tapHint, { color: colors.mutedForeground }]}>Tap for vitals history →</Text>
+      </Pressable>
     </Pressable>
   );
 }
@@ -734,6 +763,16 @@ export default function CensusScreen() {
     router.push(`/patient/${p.id}?scrollTo=notes&noteFilter=${noteType}` as any);
   };
 
+  const openPatientVitals = (p: Patient) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/patient/${p.id}?scrollTo=vitals` as any);
+  };
+
+  const openPatientScores = (p: Patient) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/patient/${p.id}?scrollTo=scores` as any);
+  };
+
   // ─── Shift label (computed once on mount; stable within a session) ─────────
   const [shiftLabel] = useState(getShiftLabel);
 
@@ -921,6 +960,8 @@ export default function CensusScreen() {
               onPress={() => openPatient(item)}
               onNoteBadgePress={() => openPatientNotes(item)}
               onNoteTypeChipPress={(type) => openPatientNotesFiltered(item, type)}
+              onScorePillPress={() => openPatientScores(item)}
+              onVitalsPress={() => openPatientVitals(item)}
             />
           )}
           contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}

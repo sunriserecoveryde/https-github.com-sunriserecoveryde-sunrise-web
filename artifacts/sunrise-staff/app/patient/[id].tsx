@@ -402,10 +402,14 @@ export default function PatientDetailScreen() {
   // ─── Add Note state ────────────────────────────────────────────────────────
   const { getNotesForPatient, addNote: addNoteToStore, updateNote, removeNote, restoreNote } = useNursingNotes();
 
-  // ─── Scroll-to-notes support ───────────────────────────────────────────────
-  // Both code paths (already-mounted and fresh-mount) are handled by the hook.
+  // ─── Scroll-to-section support ────────────────────────────────────────────
+  // All three targets share one ScrollView ref (primary call owns it; secondary
+  // calls receive it via the third argument).  Both already-mounted and
+  // fresh-mount paths are handled by the hook.
   // See hooks/useScrollToSection.ts and __tests__/useScrollToSection.test.ts.
   const { scrollViewRef, onSectionLayout: onNotesSectionLayout, scrollNow: scrollToNotes } = useScrollToSection(scrollTo, 'notes');
+  const { onSectionLayout: onVitalsSectionLayout } = useScrollToSection(scrollTo, 'vitals', scrollViewRef);
+  const { onSectionLayout: onScoresSectionLayout } = useScrollToSection(scrollTo, 'scores', scrollViewRef);
 
   // ─── Swipe-to-delete: one-row-at-a-time + tap-outside-to-close ───────────
   const openRowRef = useRef<SwipeableNoteRowHandle | null>(null);
@@ -971,7 +975,7 @@ export default function PatientDetailScreen() {
 
         {/* ─── Withdrawal scores ─── */}
         {(hasCows || hasCiwa) && (
-          <View style={s.section}>
+          <View style={s.section} onLayout={onScoresSectionLayout}>
             <SectionTitle title="WITHDRAWAL SCORES" colors={colors} />
             <View style={s.scoreRow}>
               {hasCows && (() => {
@@ -999,7 +1003,7 @@ export default function PatientDetailScreen() {
         )}
 
         {/* ─── Vitals trend sparklines ─── */}
-        <View style={s.section}>
+        <View style={s.section} onLayout={onVitalsSectionLayout}>
           <SectionTitle title="VITALS TREND" colors={colors} />
           {hasSparklines ? (
             <Card colors={colors} style={s.sparkCard}>

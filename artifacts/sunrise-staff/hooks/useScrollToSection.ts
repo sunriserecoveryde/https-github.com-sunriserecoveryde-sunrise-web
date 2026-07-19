@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import type { RefObject } from 'react';
 import type { ScrollView, LayoutChangeEvent } from 'react-native';
 import {
   handleTargetParamChange,
@@ -19,19 +20,26 @@ import {
  * The core logic lives in `scrollToSectionLogic.ts` and is unit-tested there
  * independently of the React / React-Native runtime.
  *
- * Usage:
+ * Usage (primary — owns the ScrollView ref):
  *   const { scrollViewRef, onSectionLayout } = useScrollToSection(scrollTo, 'notes');
+ *   <ScrollView ref={scrollViewRef} …>…<View onLayout={onSectionLayout} />…</ScrollView>
  *
- *   <ScrollView ref={scrollViewRef} …>
- *     …
- *     <View onLayout={onSectionLayout}>…</View>
- *   </ScrollView>
+ * Usage (secondary — shares an existing ScrollView ref for additional sections):
+ *   const { onSectionLayout } = useScrollToSection(scrollTo, 'vitals', scrollViewRef);
+ *   <View onLayout={onSectionLayout} />
  */
 export function useScrollToSection(
   targetParam: string | undefined,
   targetValue: string,
+  /**
+   * Pass the `scrollViewRef` returned by a primary `useScrollToSection` call so
+   * multiple hook instances can share a single ScrollView.  When omitted, a new
+   * ref is created (primary usage).
+   */
+  sharedScrollViewRef?: RefObject<ScrollView>,
 ) {
-  const scrollViewRef = useRef<ScrollView>(null);
+  const ownScrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = (sharedScrollViewRef ?? ownScrollViewRef) as RefObject<ScrollView>;
   const sectionY = useRef<number | null>(null);
   const pendingScroll = useRef(false);
 
