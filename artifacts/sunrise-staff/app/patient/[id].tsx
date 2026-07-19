@@ -23,6 +23,7 @@ import * as Haptics from 'expo-haptics';
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';
 import { useSwipeHint } from '@/hooks/useSwipeHint';
+import { useScrollToSection } from '@/hooks/useScrollToSection';
 import { usePatients } from '@/context/PatientContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
 import { useNursingNotes, NursingNote, NoteHistoryEntry } from '@/context/NursingNotesContext';
@@ -402,21 +403,9 @@ export default function PatientDetailScreen() {
   const { getNotesForPatient, addNote: addNoteToStore, updateNote, removeNote, restoreNote } = useNursingNotes();
 
   // ─── Scroll-to-notes support ───────────────────────────────────────────────
-  const scrollViewRef = useRef<import('react-native').ScrollView>(null);
-  const notesSectionY = useRef<number | null>(null);
-  // Set to true when a deep-link scroll is requested; cleared after the scroll fires.
-  const pendingScrollToNotes = useRef(false);
-
-  useEffect(() => {
-    if (scrollTo !== 'notes') return;
-    // If layout has already fired (e.g. navigating to an already-mounted screen),
-    // scroll immediately. Otherwise mark the intent so onLayout can fire it.
-    if (scrollViewRef.current != null && notesSectionY.current != null) {
-      scrollViewRef.current.scrollTo({ y: notesSectionY.current, animated: true });
-    } else {
-      pendingScrollToNotes.current = true;
-    }
-  }, [scrollTo]);
+  // Both code paths (already-mounted and fresh-mount) are handled by the hook.
+  // See hooks/useScrollToSection.ts and __tests__/useScrollToSection.test.ts.
+  const { scrollViewRef, onSectionLayout: onNotesSectionLayout, scrollNow: scrollToNotes } = useScrollToSection(scrollTo, 'notes');
 
   // ─── Swipe-to-delete: one-row-at-a-time + tap-outside-to-close ───────────
   const openRowRef = useRef<SwipeableNoteRowHandle | null>(null);
@@ -733,9 +722,7 @@ export default function PatientDetailScreen() {
     Haptics.selectionAsync();
     setNoteTypeFilter(prev => (prev === type ? null : type));
     setTimeout(() => {
-      if (scrollViewRef.current != null && notesSectionY.current != null) {
-        scrollViewRef.current.scrollTo({ y: notesSectionY.current, animated: true });
-      }
+      scrollToNotes();
     }, 50);
   };
   const hasCows = patient.cows != null && patient.cows > 0;
@@ -1264,13 +1251,7 @@ export default function PatientDetailScreen() {
         {/* ─── Handoff note ─── */}
         <View
           style={s.section}
-          onLayout={(e) => {
-            notesSectionY.current = e.nativeEvent.layout.y;
-            if (pendingScrollToNotes.current && scrollViewRef.current != null) {
-              pendingScrollToNotes.current = false;
-              scrollViewRef.current.scrollTo({ y: e.nativeEvent.layout.y, animated: true });
-            }
-          }}
+          onLayout={onNotesSectionLayout}
         >
           <View style={s.handoffSectionHeader}>
             {/* Title + count badge */}
