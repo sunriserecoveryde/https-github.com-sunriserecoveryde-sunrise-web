@@ -545,6 +545,8 @@ export default function PatientDetailScreen() {
   const [noteText, setNoteText] = useState('');
   const [noteType, setNoteType] = useState<NoteType>('observation');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  // Active filter set by tapping a breakdown chip in the header
+  const [noteTypeFilter, setNoteTypeFilter] = useState<'incident' | 'med-update' | null>(null);
   const slideAnim = useRef(new Animated.Value(400)).current;
 
   // ─── History modal state ───────────────────────────────────────────────────
@@ -694,6 +696,22 @@ export default function PatientDetailScreen() {
   const vitals: VitalEntry[] = VITALS[patient.id] ?? [];
   const medications: Medication[] = (MEDICATIONS[patient.id] ?? []).filter(m => m.status === 'Active');
   const ac = acuityColor(patient.acuity);
+
+  // ─── Note type breakdown (for header chips) ───────────────────────────────
+  const sessionNotes = getNotesForPatient(id);
+  const incidentCount  = sessionNotes.filter(n => n.noteType === 'incident').length;
+  const medUpdateCount = sessionNotes.filter(n => n.noteType === 'med-update').length;
+  const showNoteBreakdown = incidentCount > 0 && medUpdateCount > 0;
+
+  const handleBreakdownChipPress = (type: 'incident' | 'med-update') => {
+    Haptics.selectionAsync();
+    setNoteTypeFilter(prev => (prev === type ? null : type));
+    setTimeout(() => {
+      if (scrollViewRef.current != null && notesSectionY.current != null) {
+        scrollViewRef.current.scrollTo({ y: notesSectionY.current, animated: true });
+      }
+    }, 50);
+  };
   const hasCows = patient.cows != null && patient.cows > 0;
   const hasCiwa = patient.ciwa != null && patient.ciwa > 0;
   const topPad = insets.top + (Platform.OS === 'web' ? 67 : 0);
@@ -779,6 +797,43 @@ export default function PatientDetailScreen() {
             <Text style={s.quickStatValue}>{patient.mood}/10 · {patient.cravings}/10</Text>
           </View>
         </View>
+
+        {/* Note type breakdown — only when >1 non-observation type exists */}
+        {showNoteBreakdown && (
+          <View style={s.noteBreakdownRow}>
+            <Pressable
+              onPress={() => handleBreakdownChipPress('incident')}
+              style={[
+                s.noteBreakdownChip,
+                { backgroundColor: colors.criticalBg, borderColor: noteTypeFilter === 'incident' ? colors.critical : 'rgba(255,255,255,0.25)' },
+                noteTypeFilter === 'incident' && s.noteBreakdownChipActive,
+              ]}
+            >
+              <Ionicons name="warning-outline" size={11} color={colors.critical} />
+              <Text style={[s.noteBreakdownChipText, { color: colors.critical }]}>{incidentCount}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => handleBreakdownChipPress('med-update')}
+              style={[
+                s.noteBreakdownChip,
+                { backgroundColor: colors.moderateBg, borderColor: noteTypeFilter === 'med-update' ? colors.moderate : 'rgba(255,255,255,0.25)' },
+                noteTypeFilter === 'med-update' && s.noteBreakdownChipActive,
+              ]}
+            >
+              <Ionicons name="medkit-outline" size={11} color={colors.moderate} />
+              <Text style={[s.noteBreakdownChipText, { color: colors.moderate }]}>{medUpdateCount}</Text>
+            </Pressable>
+            {noteTypeFilter != null && (
+              <Pressable
+                onPress={() => { setNoteTypeFilter(null); Haptics.selectionAsync(); }}
+                style={[s.noteBreakdownChip, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.3)' }]}
+              >
+                <Ionicons name="close" size={11} color="rgba(255,255,255,0.8)" />
+                <Text style={[s.noteBreakdownChipText, { color: 'rgba(255,255,255,0.8)' }]}>All</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
       </View>
 
       {/* ─── Add Note Modal ─── */}
@@ -1233,6 +1288,8 @@ export default function PatientDetailScreen() {
 
           {/* Session notes (persisted in context, most recent first) */}
           {getNotesForPatient(patient.id).map((note, index) => {
+            // Filter by header chip selection; keep original index for undo/restore
+            if (noteTypeFilter != null && note.noteType !== noteTypeFilter) return null;
             const tc = noteTypeColor(note.noteType);
             const nt = NOTE_TYPES.find(x => x.value === note.noteType)!;
             const handleLongPress = () => {
@@ -1585,6 +1642,11 @@ const s = StyleSheet.create({
   headerName: { fontSize: 20, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   headerMeta: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 2, fontFamily: 'Inter_400Regular' },
   headerDx: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 3, fontFamily: 'Inter_400Regular' },
+  // Note type breakdown chips in header
+  noteBreakdownRow: { flexDirection: 'row', gap: 6, marginTop: 10 },
+  noteBreakdownChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 4, borderWidth: 1 },
+  noteBreakdownChipActive: { borderWidth: 2 },
+  noteBreakdownChipText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   // Quick stats strip
   quickStats: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: 10, gap: 0 },
   quickStat: { flex: 1, alignItems: 'center', gap: 2 },
