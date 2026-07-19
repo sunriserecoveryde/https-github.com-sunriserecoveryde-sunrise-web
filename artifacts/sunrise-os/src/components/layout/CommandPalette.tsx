@@ -303,8 +303,17 @@ export function CommandPalette({ onClose, navigate }: Props) {
 
         <div className="overflow-y-auto max-h-80">
           {query.trim() === '' && (
-            <div className="px-4 pt-3 pb-1">
+            <div className="px-4 pt-3 pb-1 flex items-center gap-3">
               <span className="text-xs font-semibold text-slate uppercase tracking-wide">Quick Navigation</span>
+              {!canSearchPatients && (
+                <button
+                  onClick={() => setDemoMode(true)}
+                  className="flex items-center gap-1 text-[11px] font-medium text-violet-600 hover:text-violet-800 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-full px-2 py-0.5 transition-colors"
+                >
+                  <FlaskConical className="w-3 h-3" />
+                  Try patient search demo
+                </button>
+              )}
             </div>
           )}
           {!canSearchPatients && query.trim() !== '' && (
