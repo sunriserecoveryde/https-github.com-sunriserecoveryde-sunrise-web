@@ -432,14 +432,23 @@ export default function PatientDetailScreen() {
     }, 2000);
   }, [dischargePendingHintAnim]);
 
-  // Cancel the hint auto-dismiss timer if the component unmounts while it is
-  // still counting down (e.g. the undo window expires and navigates back to the
-  // census board). Without this, the setState inside the timeout fires on an
-  // unmounted component and produces a React warning.
+  // Cancel the hint auto-dismiss timer, the countdown animation, and the
+  // halfway haptic if the component unmounts while any of them are still
+  // running (e.g. the nurse navigates away mid-toast). Without this, the
+  // animation keeps ticking in the background and the haptic may still fire
+  // after the screen is gone, producing stray callbacks on an unmounted tree.
   useEffect(() => {
     return () => {
       if (dischargePendingHintTimerRef.current) {
         clearTimeout(dischargePendingHintTimerRef.current);
+      }
+      if (dischargeCountdownAnimRef.current) {
+        dischargeCountdownAnimRef.current.stop();
+        dischargeCountdownAnimRef.current = null;
+      }
+      if (dischargeHalfwayHapticRef.current) {
+        clearTimeout(dischargeHalfwayHapticRef.current);
+        dischargeHalfwayHapticRef.current = null;
       }
     };
   }, []);
