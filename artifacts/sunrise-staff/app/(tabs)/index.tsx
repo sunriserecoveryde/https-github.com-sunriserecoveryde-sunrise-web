@@ -690,10 +690,19 @@ export default function CensusScreen() {
   const dischargeToastShownRef = useRef(pendingDischarge !== null);
   /** When true the next toast dismissal skips the slide-out animation (e.g. shift-end). */
   const skipDischargeToastExitRef = useRef(false);
-  /** Countdown bar: 1 = full, 0 = empty. JS-driven so width % works. */
-  const dischargeCountdownAnim = useRef(new Animated.Value(pendingDischarge !== null ? 1 : 1)).current;
+  /** Countdown bar: 1 = full, 0 = empty. JS-driven so width % works.
+   *  On remount mid-window we seed the correct proportional fill so the bar
+   *  starts at the right position instead of jumping back to full. */
+  const dischargeCountdownAnim = useRef(new Animated.Value(
+    pendingDischarge !== null
+      ? Math.max(0, Math.min(1, (pendingDischarge.expiresAt - Date.now()) / 4000))
+      : 1,
+  )).current;
   /** Reference to the running countdown so it can be stopped on re-trigger. */
   const countdownAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+  /** True only on the very first run of the discharge useEffect.
+   *  Lets us distinguish "remount with pre-seeded toast" from "new discharge". */
+  const isInitialEffectRunRef = useRef(true);
   const { clearNotes, getNotesForPatient } = useNursingNotes();
   const { clearAcknowledgments } = useMdAcknowledgment();
   const residentialPatients = patients.filter(p => p.bed != null);
@@ -794,10 +803,18 @@ export default function CensusScreen() {
   useEffect(() => {
     const active = pendingDischarge !== null;
 
-    /** Start (or restart) the countdown bar. Duration matches the 4-second undo window. */
-    function startCountdown(durationMs: number) {
+    /**
+     * Start (or restart) the countdown bar.
+     * @param durationMs  How long the remaining animation should run.
+     * @param resetToFull When true (default), reset the bar to 1 before animating.
+     *                    Pass false on remount so the pre-seeded proportional value
+     *                    is preserved and the bar continues from where it left off.
+     */
+    function startCountdown(durationMs: number, resetToFull = true) {
       countdownAnimRef.current?.stop();
-      dischargeCountdownAnim.setValue(1);
+      if (resetToFull) {
+        dischargeCountdownAnim.setValue(1);
+      }
       countdownAnimRef.current = Animated.timing(dischargeCountdownAnim, {
         toValue: 0,
         duration: durationMs,
@@ -806,8 +823,12 @@ export default function CensusScreen() {
       countdownAnimRef.current.start();
     }
 
+    const remainingMs = pendingDischarge ? Math.max(0, pendingDischarge.expiresAt - Date.now()) : 0;
+    const isRemount = isInitialEffectRunRef.current && dischargeToastShownRef.current;
+    isInitialEffectRunRef.current = false;
+
     if (active && !dischargeToastShownRef.current) {
-      // First discharge — slide in and start countdown.
+      // Fresh discharge — slide in and start countdown from full.
       dischargeToastShownRef.current = true;
       setDischargeToastVisible(true);
       Animated.spring(dischargeToastAnim, {
@@ -816,10 +837,15 @@ export default function CensusScreen() {
         damping: 20,
         stiffness: 200,
       }).start();
-      startCountdown(4000);
+      startCountdown(remainingMs);
+    } else if (active && isRemount) {
+      // Remount mid-window (tab switch and return): the toast anim value is already
+      // seeded to 0 (visible) and the countdown value is already seeded to the
+      // correct proportional fill — just resume the animation without any resets.
+      startCountdown(remainingMs, false /* do NOT reset to full */);
     } else if (active && dischargeToastShownRef.current) {
-      // Second discharge while first toast is still open.
-      // Re-animate so the nurse clearly sees a new event, and reset the countdown.
+      // New discharge while the previous toast is still open — re-animate and
+      // reset the countdown to full for the new 4-second window.
       dischargeToastAnim.setValue(100);
       Animated.spring(dischargeToastAnim, {
         toValue: 0,
@@ -827,7 +853,7 @@ export default function CensusScreen() {
         damping: 20,
         stiffness: 200,
       }).start();
-      startCountdown(4000);
+      startCountdown(remainingMs);
     } else if (!active && dischargeToastShownRef.current) {
       // Dismissed (undo or timer) — slide out and stop countdown.
       dischargeToastShownRef.current = false;
