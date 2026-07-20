@@ -27,6 +27,7 @@ interface PendingAdmission {
 }
 
 const PENDING: PendingAdmission[] = [
+  { id: 'pa_demo', name: 'Jonny Quest', age: 36, gender: 'M', phone: '(301) 555-8821', referralSource: 'Self-Referral', primaryDx: 'Alcohol Use Disorder (Moderate)', program: 'IOP', insurance: 'CareFirst BlueCross BlueShield', insuranceStatus: 'Verified', status: 'Insurance Verify', coordinator: 'Amanda Lewis', createdDate: '2026-07-18', notes: 'Auth #CFBC-7741-IOP confirmed through 10/20/2026. ASAM pre-screen indicates IOP (2.1) level of care. CIWA-Ar: 2 — no medical detox required. First IOP session slot to be confirmed pending formal admission. All checklist items complete and editable below.', asamPre: { d1: 1, d2: 0, d6: 1 } },
   { id: 'pa1', name: 'Thomas Reilly', age: 44, gender: 'M', phone: '(615) 882-4471', referralSource: 'Vanderbilt ER', primaryDx: 'Severe Alcohol Use Disorder', program: 'Residential', insurance: 'Aetna', insuranceStatus: 'Verified', status: 'Bed Assigned', coordinator: 'Amanda Lewis', createdDate: '2026-07-17', notes: 'CIWA 14 on intake screen. Medically supervised detox required. Bed 3C confirmed.', asamPre: { d1: 3, d2: 3, d6: 3 } },
   { id: 'pa2', name: 'Nicole Harrison', age: 32, gender: 'F', phone: '(629) 551-0034', referralSource: 'Cumberland Heights', primaryDx: 'Opioid Use Disorder (Moderate)', program: 'PHP', insurance: 'BlueCross', insuranceStatus: 'Verified', status: 'Insurance Verify', coordinator: 'Amanda Lewis', createdDate: '2026-07-16', notes: 'Step-down from residential at Cumberland. Currently on Suboxone 16mg/day.', asamPre: { d1: 2, d2: 1, d6: 2 } },
   { id: 'pa3', name: 'Andre Simmons', age: 29, gender: 'M', phone: '(901) 774-3820', referralSource: 'Drug Court — Judge Wallace', primaryDx: 'Methamphetamine Use Disorder', program: 'Residential', insurance: 'TennCare', insuranceStatus: 'Pending', status: 'Pre-Screen', coordinator: 'Amanda Lewis', createdDate: '2026-07-18', notes: 'Court-mandated. Must confirm Level 3.7 clinical necessity for TennCare. Pre-screen scheduled 10 AM.', asamPre: { d1: 3, d2: 2, d6: 3 } },
@@ -69,6 +70,19 @@ const CHECKLIST_ITEMS = [
   'Bed assignment finalized',
 ];
 
+const IOP_CHECKLIST_ITEMS = [
+  'Initial inquiry call logged',
+  'ASAM pre-screening completed',
+  'Insurance eligibility verified',
+  'Auth / prior authorization submitted',
+  'IOP schedule availability confirmed',
+  'Admission paperwork sent',
+  'First session appointment confirmed',
+  'Medical history collected',
+  'Consent forms signed',
+  'Program orientation scheduled',
+];
+
 const STATUS_STEPS: AdmitStatus[] = ['Inquiry', 'Pre-Screen', 'Insurance Verify', 'Bed Assigned', 'Admitted'];
 
 const REFERRAL_SOURCE_DATA = [
@@ -103,6 +117,31 @@ export function Admissions({ navigate, readOnly }: Props) {
   const [activeTab, setActiveTab] = useState<'Pipeline' | 'Recent Admits' | 'Intake Checklist' | 'Analytics' | 'VOB Queue' | 'LOC Criteria'>('Pipeline');
   const [selected, setSelected] = useState<PendingAdmission | null>(PENDING[0]);
   const [filterStatus, setFilterStatus] = useState<AdmitStatus | 'All'>('All');
+  // Interactive checklist state — pre-check all items for Jonny Quest (demo patient)
+  const [checklistState, setChecklistState] = useState<Record<string, boolean[]>>(() => ({
+    pa_demo: IOP_CHECKLIST_ITEMS.map(() => true),
+  }));
+
+  const getChecked = (p: PendingAdmission, idx: number): boolean => {
+    if (checklistState[p.id]) return checklistState[p.id][idx];
+    const stepIdx = STATUS_STEPS.indexOf(p.status);
+    return idx < stepIdx * 2;
+  };
+
+  const toggleItem = (patientId: string, idx: number) => {
+    if (readOnly) return;
+    setChecklistState(prev => {
+      const p = PENDING.find(x => x.id === patientId)!;
+      const items = p.program === 'IOP' ? IOP_CHECKLIST_ITEMS : CHECKLIST_ITEMS;
+      const existing = prev[patientId] ?? items.map((_, i) => {
+        const stepIdx = STATUS_STEPS.indexOf(p.status);
+        return i < stepIdx * 2;
+      });
+      const updated = [...existing];
+      updated[idx] = !updated[idx];
+      return { ...prev, [patientId]: updated };
+    });
+  };
 
   const filtered = filterStatus === 'All' ? PENDING : PENDING.filter(p => p.status === filterStatus);
   const pipeline: Record<AdmitStatus, number> = { Inquiry: 0, 'Pre-Screen': 0, 'Insurance Verify': 0, 'Bed Assigned': 0, Admitted: 0 };
@@ -335,30 +374,46 @@ export function Admissions({ navigate, readOnly }: Props) {
 
       {activeTab === 'Intake Checklist' && (
         <div className="grid grid-cols-2 gap-6">
-          {PENDING.filter(p => p.status !== 'Admitted').map(p => (
-            <div key={p.id} className="card">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="font-semibold text-navy">{p.name}</div>
-                  <div className="text-xs text-slate">{p.program} · {p.insurance}</div>
+          {PENDING.map(p => {
+            const items = p.program === 'IOP' ? IOP_CHECKLIST_ITEMS : CHECKLIST_ITEMS;
+            const checkedCount = items.filter((_, idx) => getChecked(p, idx)).length;
+            return (
+              <div key={p.id} className={`card ${p.id === 'pa_demo' ? 'ring-2 ring-sunrise-blue/40' : ''}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="font-semibold text-navy flex items-center gap-2">
+                      {p.name}
+                      {p.id === 'pa_demo' && <span className="text-[10px] bg-sunrise-blue/10 text-sunrise-blue px-2 py-0.5 rounded-full font-semibold">Demo</span>}
+                    </div>
+                    <div className="text-xs text-slate">{p.program} · {p.insurance}</div>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[p.status]}`}>{p.status}</span>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[p.status]}`}>{p.status}</span>
+                <div className="space-y-1.5">
+                  {items.map((item, idx) => {
+                    const checked = getChecked(p, idx);
+                    return (
+                      <label
+                        key={idx}
+                        className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 rounded px-1 py-0.5 -mx-1 transition-colors"
+                        onClick={() => toggleItem(p.id, idx)}
+                      >
+                        <input type="checkbox" checked={checked} readOnly className="accent-orange pointer-events-none" />
+                        <span className={checked ? 'line-through text-slate' : 'text-navy'}>{item}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="text-xs text-slate">{checkedCount}/{items.length} complete</div>
+                  <div className="h-1.5 w-28 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-success rounded-full transition-all" style={{ width: `${Math.round(checkedCount/items.length*100)}%` }} />
+                  </div>
+                  <div className="text-xs font-semibold text-success">{Math.round(checkedCount/items.length*100)}%</div>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                {CHECKLIST_ITEMS.map((item, idx) => {
-                  const stepIdx = STATUS_STEPS.indexOf(p.status);
-                  const checked = idx < stepIdx * 2;
-                  return (
-                    <label key={idx} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="checkbox" readOnly checked={checked} className="accent-orange" />
-                      <span className={checked ? 'line-through text-slate' : 'text-navy'}>{item}</span>
-                    </label>
-                  );
-                })}
-              </div>
-              <div className="mt-3 text-xs text-slate">{Math.round((STATUS_STEPS.indexOf(p.status) * 2 / CHECKLIST_ITEMS.length) * 100)}% Complete</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {activeTab === 'VOB Queue' && (

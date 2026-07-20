@@ -66,6 +66,7 @@ import { ReadOnlyBanner } from './components/common/ReadOnlyBanner';
 import { RoleProvider } from './context/RoleContext';
 import { useRole } from './context/RoleContext';
 import { AuthProvider } from './context/AuthContext';
+import { SessionChartProvider } from './context/SessionChartContext';
 import { useAuth } from './context/AuthContext';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -290,9 +291,11 @@ function AppWithAuth() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppWithAuth />
-    </AuthProvider>
+    <SessionChartProvider>
+      <AuthProvider>
+        <AppWithAuth />
+      </AuthProvider>
+    </SessionChartProvider>
   );
 }
 

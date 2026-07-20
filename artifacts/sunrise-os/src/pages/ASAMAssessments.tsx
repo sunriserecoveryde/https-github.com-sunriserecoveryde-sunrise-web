@@ -48,12 +48,14 @@ const LAST_UPDATED: Record<string, string> = {
   p1: '2026-07-14', p2: '2026-07-12', p3: '2026-07-15',
   p4: '2026-07-16', p5: '2026-07-10', p6: '2026-07-17',
   p7: '2026-07-11', p8: '2026-07-13', p9: '2026-07-09',
+  p_demo: '2026-07-20',
 };
 
 const NEXT_REVIEW: Record<string, string> = {
   p1: '2026-07-21', p2: '2026-07-26', p3: '2026-07-22',
   p4: '2026-07-23', p5: '2026-07-17', p6: '2026-07-24',
   p7: '2026-07-18', p8: '2026-07-20', p9: '2026-07-16',
+  p_demo: '2026-07-27',
 };
 
 const TODAY = '2026-07-19';
@@ -61,6 +63,14 @@ const TODAY = '2026-07-19';
 // ─── Narrative mock per patient ───────────────────────────────────────────────
 
 const ASAM_NARRATIVES: Record<string, Record<string, string>> = {
+  p_demo: {
+    d1: 'CIWA-Ar: 2 at intake — minimal withdrawal risk. No acute intoxication. Last drink approximately 20 hours prior to intake evaluation. Medical supervision for detox not clinically indicated. IOP participation appropriate.',
+    d2: 'No significant medical comorbidities identified at intake. Vital signs within normal limits (BP 128/82, HR 74). No current medications. Pre-admission labs ordered: CMP, CBC, LFTs, UA, UDS, HCV Ab, HIV.',
+    d3: 'Self-reports anxiety symptoms (chronic worry, muscle tension, difficulty sleeping). GAD-7 pending formal administration at intake session. No SI/HI. No psychiatric hospitalizations. No current psychiatric medications.',
+    d4: 'Self-referred — demonstrates Contemplation to Preparation stage per TTM. Primary motivation: "I want to be present for my family and get ahead of this before it gets worse." Expressed willingness to attend IOP schedule.',
+    d5: 'Identifies work stress and social drinking environment as primary relapse triggers. Limited formal relapse prevention skills — no prior SUD treatment. Moderate insight into alcohol use patterns. Denies blackout history.',
+    d6: 'Stable housing with family. Employed full-time as project manager; flexible schedule accommodates IOP. No current legal issues. Insurance (CareFirst BCBS) confirmed through 10/20/2026. Strong family support identified.',
+  },
   p1: {
     d1: 'Active alcohol withdrawal — CIWA 14 on admission. Librium taper initiated. No seizure history. Monitor Q4H.',
     d2: 'Hypertension managed with Lisinopril 10mg. No acute medical co-morbidities.',

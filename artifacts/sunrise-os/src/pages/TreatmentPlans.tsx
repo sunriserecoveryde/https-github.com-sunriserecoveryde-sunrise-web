@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MOCK_PATIENTS, Patient, TreatmentGoal } from '../data/mockPatients';
 import { Screen } from '../App';
+import { useSessionChart } from '../context/SessionChartContext';
 import {
   Target, CheckCircle2, Clock, Search, ChevronDown, ChevronUp,
   AlertTriangle, TrendingUp, BarChart3, PenTool, Plus, Calendar,
@@ -162,18 +163,83 @@ function GoalRow({
   );
 }
 
+// ─── Add Goal Form ────────────────────────────────────────────────────────────
+
+function AddGoalForm({ onSave, onCancel }: { onSave: (g: TreatmentGoal) => void; onCancel: () => void }) {
+  const [category, setCategory] = useState('Substance Use');
+  const [problem, setProblem] = useState('');
+  const [longTerm, setLongTerm] = useState('');
+  const [shortTerm, setShortTerm] = useState('');
+  const [targetDate, setTargetDate] = useState('2026-10-20');
+  const [status, setStatus] = useState<TreatmentGoal['status']>('Not Started');
+
+  const handleSubmit = () => {
+    if (!problem.trim()) return;
+    onSave({
+      id: `sg-${Date.now()}`,
+      category, problem: problem.trim(),
+      longTerm: longTerm.trim() || '(To be specified)',
+      shortTerm: shortTerm.trim() || '(To be specified)',
+      targetDate, status,
+    });
+  };
+
+  return (
+    <div className="border border-sunrise-blue/30 rounded-lg p-4 bg-blue-50/30 space-y-3 mt-3">
+      <div className="text-xs font-bold text-navy uppercase tracking-wide">New Treatment Goal</div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Category</label>
+          <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-white border border-border rounded px-2 py-1.5 text-sm">
+            {Object.keys(CATEGORY_COLORS).map(c => <option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Initial Status</label>
+          <select value={status} onChange={e => setStatus(e.target.value as TreatmentGoal['status'])} className="w-full bg-white border border-border rounded px-2 py-1.5 text-sm">
+            <option>Not Started</option><option>In Progress</option><option>Met</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Problem / Focus Area *</label>
+        <input value={problem} onChange={e => setProblem(e.target.value)} placeholder="e.g. Alcohol use disorder — pattern of daily use" className="w-full bg-white border border-border rounded px-3 py-1.5 text-sm focus:outline-none focus:border-sunrise-blue" />
+      </div>
+      <div>
+        <label className="block text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Long-Term Goal</label>
+        <input value={longTerm} onChange={e => setLongTerm(e.target.value)} placeholder="e.g. Maintain sobriety and establish community supports" className="w-full bg-white border border-border rounded px-3 py-1.5 text-sm focus:outline-none focus:border-sunrise-blue" />
+      </div>
+      <div>
+        <label className="block text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Short-Term Objective</label>
+        <input value={shortTerm} onChange={e => setShortTerm(e.target.value)} placeholder="e.g. Attend all scheduled IOP sessions this week" className="w-full bg-white border border-border rounded px-3 py-1.5 text-sm focus:outline-none focus:border-sunrise-blue" />
+      </div>
+      <div>
+        <label className="block text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Target Date</label>
+        <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} className="bg-white border border-border rounded px-3 py-1.5 text-sm focus:outline-none focus:border-sunrise-blue" />
+      </div>
+      <div className="flex gap-2 pt-1">
+        <button onClick={handleSubmit} disabled={!problem.trim()} className="px-4 py-1.5 bg-sunrise-blue text-white text-sm font-semibold rounded hover:bg-sunrise-blue-light disabled:opacity-40 disabled:cursor-not-allowed">Add Goal</button>
+        <button onClick={onCancel} className="px-4 py-1.5 border border-border text-slate text-sm rounded hover:bg-gray-50">Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Patient Plan Card ────────────────────────────────────────────────────────
 
 function PatientPlanCard({
-  patient, readOnly, goalStatuses, onStatusChange
+  patient, readOnly, goalStatuses, onStatusChange, sessionGoals = [], onAddGoal,
 }: {
   patient: Patient;
   readOnly?: boolean;
   goalStatuses: Record<string, TreatmentGoal['status']>;
   onStatusChange: (id: string, status: TreatmentGoal['status']) => void;
+  sessionGoals?: TreatmentGoal[];
+  onAddGoal?: (g: TreatmentGoal) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const goals = getGoals(patient).map(g => ({ ...g, status: goalStatuses[g.id] ?? g.status }));
+  const [showAddForm, setShowAddForm] = useState(false);
+  const goals = [...getGoals(patient), ...sessionGoals].map(g => ({ ...g, status: goalStatuses[g.id] ?? g.status }));
   const metCount = goals.filter(g => g.status === 'Met').length;
   const inProgressCount = goals.filter(g => g.status === 'In Progress').length;
   const notStartedCount = goals.filter(g => g.status === 'Not Started').length;
@@ -182,7 +248,35 @@ function PatientPlanCard({
   const reviewOverdue = nextReview && isOverdue(nextReview);
   const reviewSoon = nextReview && isDueWithin7(nextReview);
 
-  if (goals.length === 0) return null;
+  if (goals.length === 0 && !onAddGoal) return null;
+
+  // Empty-state card for demo patient with no goals yet
+  if (goals.length === 0 && onAddGoal) {
+    return (
+      <div className="bg-white border border-dashed border-sunrise-blue/40 rounded-xl shadow-sm overflow-hidden mb-4">
+        <div className="flex items-center gap-4 p-4">
+          <PatientAvatar first={patient.firstName} last={patient.lastName} program={patient.program} size="md" />
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-navy">{patient.firstName} {patient.lastName}</span>
+              <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{patient.program}</span>
+              <span className="text-[10px] text-slate font-mono">{patient.mrn}</span>
+            </div>
+            <div className="text-xs text-slate mt-0.5">{patient.counselor.split(',')[0]} · Pending Intake — No treatment goals yet</div>
+          </div>
+        </div>
+        <div className="border-t border-dashed border-sunrise-blue/30 px-4 py-3 bg-blue-50/30">
+          {!readOnly && (showAddForm ? (
+            <AddGoalForm onSave={(g) => { onAddGoal(g); setShowAddForm(false); }} onCancel={() => setShowAddForm(false)} />
+          ) : (
+            <button onClick={() => setShowAddForm(true)} className="flex items-center gap-2 text-sm font-semibold text-sunrise-blue hover:underline">
+              <Plus className="w-4 h-4" /> Add First Treatment Goal
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`bg-white border rounded-xl shadow-sm overflow-hidden mb-4 ${reviewOverdue ? 'border-critical/40' : reviewSoon ? 'border-sunrise-amber/40' : 'border-border'}`}>
@@ -247,9 +341,10 @@ function PatientPlanCard({
             <div className="text-xs font-bold text-slate uppercase tracking-wider">Treatment Goals & Objectives</div>
             <LockedButton
               locked={readOnly}
+              onClick={() => setShowAddForm(s => !s)}
               className="flex items-center gap-1 text-xs font-semibold text-sunrise-blue hover:underline"
             >
-              <Plus className="w-3.5 h-3.5" /> Add Goal
+              <Plus className="w-3.5 h-3.5" /> {showAddForm ? 'Cancel' : 'Add Goal'}
             </LockedButton>
           </div>
           {goals.map(g => (
@@ -260,6 +355,12 @@ function PatientPlanCard({
               onStatusChange={onStatusChange}
             />
           ))}
+          {showAddForm && onAddGoal && !readOnly && (
+            <AddGoalForm
+              onSave={(g) => { onAddGoal(g); setShowAddForm(false); }}
+              onCancel={() => setShowAddForm(false)}
+            />
+          )}
         </div>
       )}
     </div>
@@ -276,6 +377,8 @@ export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) =
   const [planView, setPlanView] = useState<'Plans' | 'Goal Analytics' | 'Plan Templates' | 'Outcomes' | 'Evidence Base' | 'Compliance Checklist'>('Plans');
   const [search, setSearch] = useState('');
   const [goalStatuses, setGoalStatuses] = useState<Record<string, TreatmentGoal['status']>>({});
+  const { goals: sessionGoals, addGoal } = useSessionChart();
+  const demoPatient = MOCK_PATIENTS.find(p => p.id === 'p_demo');
 
   const handleStatusChange = (id: string, status: TreatmentGoal['status']) => {
     setGoalStatuses(prev => ({ ...prev, [id]: status }));
@@ -477,13 +580,25 @@ export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) =
         </div>
 
         <div className="p-4">
-          {filtered.length === 0 ? (
+          {/* Demo patient — Jonny Quest always shown at top */}
+          {demoPatient && (
+            <PatientPlanCard
+              key="p_demo"
+              patient={demoPatient}
+              readOnly={readOnly}
+              goalStatuses={goalStatuses}
+              onStatusChange={handleStatusChange}
+              sessionGoals={sessionGoals['p_demo'] ?? []}
+              onAddGoal={(g) => addGoal('p_demo', g)}
+            />
+          )}
+          {filtered.filter(p => p.id !== 'p_demo').length === 0 && !demoPatient ? (
             <div className="text-center py-10 text-slate">
               <Target className="w-10 h-10 mx-auto mb-2 text-border" />
               <div className="font-semibold text-navy">No patients match this filter.</div>
             </div>
           ) : (
-            filtered.map(p => (
+            filtered.filter(p => p.id !== 'p_demo').map(p => (
               <PatientPlanCard
                 key={p.id}
                 patient={p}

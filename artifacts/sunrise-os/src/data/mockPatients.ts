@@ -799,5 +799,27 @@ MOCK_PATIENTS.push(
       { id: 'g26b', category: 'Anxiety Management', problem: 'Panic disorder driving benzodiazepine use — need non-pharmacological replacement', longTerm: 'Manage panic disorder with CBT techniques; no benzodiazepines for 6 months', shortTerm: 'Complete CBT Panic Module (10 sessions); use coping skills during 2 panic episodes', status: 'In Progress', targetDate: '2026-08-03' }
     ],
     nextAppointment: 'Tomorrow, 9:30 AM'
+  },
+
+  // ── Demo patient — IOP pending intake for live walkthroughs ──────────────
+  {
+    id: 'p_demo', mrn: 'MRN-00001', firstName: 'Jonny', lastName: 'Quest',
+    dob: '1990-01-15', age: 36, gender: 'M', insurance: 'CareFirst BlueCross BlueShield',
+    program: 'IOP',
+    primaryDiagnosis: 'Alcohol Use Disorder (Moderate)',
+    coOccurring: ['Generalized Anxiety Disorder'],
+    asam: { d1: 1, d2: 0, d3: 2, d4: 2, d5: 2, d6: 1 },
+    recoveryScore: 55, amaRisk: 'Low', los: 0,
+    admitDate: '2026-07-20', expectedDischarge: '2026-10-20',
+    counselor: 'Sarah Jenkins, LPC, CAC-AD',
+    physician: 'Dr. Emily Stone',
+    flags: [
+      { type: 'Behavioral', note: '🧪 Demo patient — intake complete. Complete the clinical chart in-session. All entered data resets on page refresh.' },
+    ],
+    lastUa: '— Pending at Intake —', mood: 6, craving: 4,
+    notes: [],
+    goals: [],
+    nextAppointment: '2026-07-22, 10:00 AM — IOP Orientation',
+    status: 'Occupied',
   }
 );

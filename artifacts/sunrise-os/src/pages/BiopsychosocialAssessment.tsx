@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
+import { useSessionChart } from '../context/SessionChartContext';
 import { CheckCircle, ChevronDown, ChevronRight, AlertTriangle, FileText, Save, Printer } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
@@ -70,18 +71,36 @@ Z63.0  — Relationship Distress with Spouse or Intimate Partner`,
 
   clinicalSummary: 'Marcus Webb is a 38-year-old Army veteran presenting with severe OUD, co-occurring PTSD and MDD, and a recent life-threatening opioid overdose. His opioid use disorder developed in the context of undertreated combat PTSD — substances have been the primary coping mechanism for hyperarousal, nightmares, and emotional numbing. Buprenorphine/naloxone (Suboxone) is medically indicated and patient consents. Trauma-focused therapy (EMDR or CPT) following stabilization is the evidence-based recommendation for co-occurring PTSD.\n\nRisk factors include high COWS at admission (withdrawal severity), passive SI, AMA risk (restlessness reported), history of relapse after treatment, and limited recovery network. Protective factors are substantial: strong internal motivation, employment, family support, prior 8-month sobriety, and VA benefits eligibility.',
   treatmentRecommendations: 'Level of Care: Residential (ASAM 3.7) — medically necessary per ASAM D1:3, D3:3, D4:2, D5:4, D6:2.\n\nImmediate:\n1. Buprenorphine induction (Dr. Chen to write orders)\n2. Psychiatric evaluation within 72h for PTSD/MDD pharmacotherapy\n3. Safety planning — passive SI monitoring daily\n4. HCV treatment candidacy evaluation (GI referral)\n\nShort-Term (Weeks 1-2):\n5. Individual trauma-informed counseling — 3x/week\n6. Group therapy — morning process, relapse prevention, trauma psychoeducation\n7. Family session with wife — 42 CFR Part 2 consent required\n8. Veterans\' group — VA peer support\n\nLong-Term / Discharge Planning:\n9. Suboxone maintenance (community MAT provider)\n10. EMDR or CPT intensive (post-stabilization)\n11. AA/NA with veteran-specific meeting group\n12. VA re-enrollment for VA mental health services\n13. Couples counseling (if wife willing)\n14. Aftercare: sober living recommended if marital home unavailable',
-  assessmentCompleted: 'Assessment completed by Sarah Jenkins, LPC (Primary Counselor) with co-assessment by James S. Collins III, CADC-III (Clinical Director). Reviewed and signed by Dr. Robert Chen, MD (Medical Director).',
+  assessmentCompleted: 'Assessment completed by Sarah Jenkins, LPC, CAC-AD (Primary Counselor) with co-assessment by James S. Collins III, CAC-AD, BAS (Clinical Supervisor). Reviewed and signed by Dr. Robert Chen, MD (Medical Director).',
+};
+
+// Pre-filled intake-level data for Jonny Quest (p_demo — IOP pending intake)
+// Reflects intake call + pre-screening only. Clinical sections left blank for demo completion.
+const JONNY_QUEST_INTAKE_DATA: Record<string, string> = {
+  chiefComplaint: 'Client self-referred stating: "I\'ve been drinking more than I should for a while now and it\'s starting to affect my home life. My wife told me I need to get help and I know she\'s right."',
+  presentingProblem: 'Jonny Quest is a 36-year-old male presenting voluntarily for IOP evaluation for Alcohol Use Disorder. Patient reports escalating alcohol use over the past 18 months, initially as a coping mechanism for work stress following a career transition. Currently consuming approximately 4-6 standard drinks per evening, 5-6 days per week. Reports multiple self-initiated attempts to cut back without sustained success (longest: 3 weeks). Employed full-time as a project manager; states work performance has not yet been significantly impacted but reports fatigue and difficulty concentrating on morning following drinking. CIWA-Ar at intake: 2 — no clinical withdrawal requiring medical management. Appropriate for outpatient (IOP) level of care.',
+  currentCrisis: 'No active SI/HI at time of intake evaluation. No psychotic symptoms. Mood self-reported 6/10. CIWA-Ar: 2 — minimal withdrawal risk; medically supervised detox not indicated. Last drink approximately 20 hours prior to intake. Patient alert and oriented x4. Appropriate for outpatient level of care.',
+
+  medicalHistory: 'No known drug allergies. No current prescription medications. Medical history notable for occasional tension headaches (managed with OTC ibuprofen PRN). No prior surgeries. No hospitalizations. Last physical exam: March 2026 (PCP: Dr. Sarah Williams, Bethesda, MD).\n\nVital signs at intake: BP 128/82, HR 74, RR 14, Temp 98.4°F, O2 Sat 99% RA.',
+  medicalConcerns: 'CIWA-Ar: 2 — no clinical withdrawal requiring medical management. Pre-admission labs ordered (CMP, CBC, LFTs, UA, UDS, HCV Ab, HIV). No acute medical contraindications to IOP participation.',
+
+  legalHistory: 'No current legal matters. No prior arrests, charges, or criminal history reported at intake. Treatment is voluntary with no court mandate or legal involvement.',
 };
 
 export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
   const editRoles = getRolesWithEditAccess('BiopsychosocialAssessment');
   const [selectedPatient, setSelectedPatient] = useState('p1');
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(new Set(['presenting']));
-  const [completedSections, setCompletedSections] = useState<Set<SectionKey>>(new Set(['presenting', 'substances', 'medical', 'psychiatric', 'legal', 'family', 'social', 'trauma', 'strengths', 'diagnostic', 'summary']));
-  const [saved, setSaved] = useState(false);
+  const [savedByPatient, setSavedByPatient] = useState<Record<string, boolean>>({});
   const [bpsTab, setBpsTab] = useState<'Assessment' | 'Population Summary' | 'SUD Epidemiology' | 'Diagnostic Coding' | 'Assessment Quality' | 'Screening Tools'>('Assessment');
 
+  const { bioCompletedSections, completeBioSection } = useSessionChart();
+  const completedSections = new Set<SectionKey>((bioCompletedSections[selectedPatient] ?? []) as SectionKey[]);
+  const saved = savedByPatient[selectedPatient] ?? false;
+
   const p = MOCK_PATIENTS.find(pt => pt.id === selectedPatient) ?? MOCK_PATIENTS[0];
+  // Use intake-level seed data for demo patient (Jonny Quest), full DEMO_DATA for all others
+  const sectionData = selectedPatient === 'p_demo' ? JONNY_QUEST_INTAKE_DATA : DEMO_DATA;
 
   const toggleSection = (key: SectionKey) => {
     setExpandedSections(prev => {
@@ -103,7 +122,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
         </div>
         <div className="flex gap-2">
           <button className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><Printer className="w-4 h-4" /> Print / PDF</button>
-          <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && setSaved(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Save className="w-4 h-4" />{saved ? 'Saved ✓' : 'Save Assessment'}</LockedButton>
+          <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && setSavedByPatient(prev => ({ ...prev, [selectedPatient]: true }))} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Save className="w-4 h-4" />{saved ? 'Saved ✓' : 'Save Assessment'}</LockedButton>
         </div>
       </div>
 
@@ -291,17 +310,17 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
 
               {isOpen && (
                 <div className="px-6 py-5 border-t border-border bg-white space-y-4">
-                  {key === 'presenting' && <PresentingSection data={DEMO_DATA} />}
-                  {key === 'substances' && <SubstancesSection data={DEMO_DATA} />}
-                  {key === 'medical' && <MedicalSection data={DEMO_DATA} />}
-                  {key === 'psychiatric' && <PsychiatricSection data={DEMO_DATA} />}
-                  {key === 'legal' && <LegalSection data={DEMO_DATA} />}
-                  {key === 'family' && <FamilySection data={DEMO_DATA} />}
-                  {key === 'social' && <SocialSection data={DEMO_DATA} />}
-                  {key === 'trauma' && <TraumaSection data={DEMO_DATA} />}
-                  {key === 'strengths' && <StrengthsSection data={DEMO_DATA} />}
-                  {key === 'diagnostic' && <DiagnosticSection data={DEMO_DATA} />}
-                  {key === 'summary' && <SummarySection data={DEMO_DATA} />}
+                  {key === 'presenting' && <PresentingSection data={sectionData} />}
+                  {key === 'substances' && <SubstancesSection data={sectionData} />}
+                  {key === 'medical' && <MedicalSection data={sectionData} />}
+                  {key === 'psychiatric' && <PsychiatricSection data={sectionData} />}
+                  {key === 'legal' && <LegalSection data={sectionData} />}
+                  {key === 'family' && <FamilySection data={sectionData} />}
+                  {key === 'social' && <SocialSection data={sectionData} />}
+                  {key === 'trauma' && <TraumaSection data={sectionData} />}
+                  {key === 'strengths' && <StrengthsSection data={sectionData} />}
+                  {key === 'diagnostic' && <DiagnosticSection data={sectionData} />}
+                  {key === 'summary' && <SummarySection data={sectionData} />}
                   <div className="flex justify-end gap-3 pt-2 border-t border-border">
                     <button onClick={() => toggleSection(key)} className="text-sm border border-border text-slate px-4 py-2 rounded-lg hover:bg-gray-50">Close</button>
                     <LockedButton
@@ -309,7 +328,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
                       editRoles={editRoles}
                       onClick={() => {
                         if (readOnly) return;
-                        setCompletedSections(prev => new Set([...prev, key]));
+                        completeBioSection(selectedPatient, key);
                         toggleSection(key);
                         const nextIdx = SECTIONS_ORDER.indexOf(key) + 1;
                         if (nextIdx < SECTIONS_ORDER.length) {

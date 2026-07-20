@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MOCK_PATIENTS, Patient, ProgressNote } from '../data/mockPatients';
 import { Screen } from '../App';
+import { useSessionChart, SessionNote } from '../context/SessionChartContext';
+import { useAuth } from '../context/AuthContext';
 import {
   Search, Filter, PenTool, CheckCircle, Clock, ChevronDown, ChevronUp,
   FileText, AlertTriangle, Plus, Download, Eye
@@ -206,14 +208,42 @@ function NoteRow({
 
 // ─── New Note Form ────────────────────────────────────────────────────────────
 
-function NewNoteForm({ onClose }: { onClose: () => void }) {
+function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: SessionNote) => void }) {
   const [format, setFormat] = useState<'BIRP' | 'DAP'>('BIRP');
   const [type, setType] = useState('Individual');
-  const [patient, setPatient] = useState('');
+  const [patient, setPatient] = useState('p_demo'); // default to Jonny Quest
   const birpFields = ['Behavior', 'Intervention', 'Response', 'Plan'];
   const dapFields = ['Data', 'Assessment', 'Plan'];
   const fields = format === 'BIRP' ? birpFields : dapFields;
   const [values, setValues] = useState<Record<string, string>>({});
+  const { currentStaff } = useAuth();
+  const authorLabel = currentStaff
+    ? `${currentStaff.firstName} ${currentStaff.lastName}${(currentStaff.credentials ?? []).length ? ', ' + (currentStaff.credentials ?? []).join(', ') : ''}`
+    : 'Staff Member';
+
+  const handleSave = (status: ProgressNote['status']) => {
+    const pt = MOCK_PATIENTS.find(p => p.id === patient);
+    if (!pt || !patient) return;
+    const contentParts = format === 'BIRP' ? birpFields : dapFields;
+    const content = contentParts.map(f => `${f}: ${values[f] ?? '(not entered)'}`).join('\n');
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    onSave({
+      id: `session-${Date.now()}`,
+      date: dateStr,
+      type,
+      author: authorLabel,
+      status,
+      format,
+      content,
+      patientId: pt.id,
+      patientFirstName: pt.firstName,
+      patientLastName: pt.lastName,
+      program: pt.program,
+    });
+    onClose();
+  };
 
   return (
     <div className="bg-white border border-border rounded-xl shadow-sm p-5 mb-6">
@@ -276,8 +306,8 @@ function NewNoteForm({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-        <button className="px-4 py-2 bg-sunrise-blue text-white text-sm font-semibold rounded hover:bg-sunrise-blue-light">Submit for Co-sign</button>
-        <button className="px-4 py-2 border border-border text-slate text-sm font-semibold rounded hover:bg-slate-50">Save as Draft</button>
+        <button onClick={() => handleSave('Awaiting Co-sign')} disabled={!patient} className="px-4 py-2 bg-sunrise-blue text-white text-sm font-semibold rounded hover:bg-sunrise-blue-light disabled:opacity-40 disabled:cursor-not-allowed">Submit for Co-sign</button>
+        <button onClick={() => handleSave('Draft')} disabled={!patient} className="px-4 py-2 border border-border text-slate text-sm font-semibold rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">Save as Draft</button>
         <button onClick={onClose} className="px-4 py-2 text-slate text-sm">Cancel</button>
       </div>
     </div>
@@ -295,7 +325,11 @@ export function ProgressNotes({ navigate, readOnly }: { navigate: (s: Screen) =>
   const [typeFilter, setTypeFilter] = useState('All Types');
   const [showNewForm, setShowNewForm] = useState(false);
 
-  const allNotes = getAllNotes();
+  const { notes: sessionNotes, addNote } = useSessionChart();
+  const allNotes = useMemo(
+    () => [...sessionNotes, ...getAllNotes()].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [sessionNotes],
+  );
 
   const pending = allNotes.filter(n => n.status === 'Awaiting Co-sign').length;
   const drafts = allNotes.filter(n => n.status === 'Draft').length;
@@ -348,7 +382,7 @@ export function ProgressNotes({ navigate, readOnly }: { navigate: (s: Screen) =>
       </div>
 
       {/* New note form */}
-      {showNewForm && !readOnly && <NewNoteForm onClose={() => setShowNewForm(false)} />}
+      {showNewForm && !readOnly && <NewNoteForm onClose={() => setShowNewForm(false)} onSave={addNote} />}
 
       {/* Notes list */}
       <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
