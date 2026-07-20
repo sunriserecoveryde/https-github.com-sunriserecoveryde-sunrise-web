@@ -92,8 +92,15 @@ export function LoginPage() {
       background: 'linear-gradient(135deg, #0e1c30 0%, #152238 50%, #1a2840 100%)'
     }}>
       {/* Demo Mode Banner */}
-      <div className="bg-purple-900/60 border-b border-purple-500/30 text-purple-200 text-xs text-center py-1.5 font-medium tracking-wide">
-        DEMO MODE &nbsp;·&nbsp; Fictitious patient data only &nbsp;·&nbsp; Not for clinical use
+      <div className="bg-gradient-to-r from-violet-800 via-purple-700 to-indigo-600 border-b border-purple-500/30 text-white flex items-center px-4" style={{ height: '52px' }}>
+        <div className="w-1/3 flex items-center">
+          <img src={sunriseLogo} alt="Sunrise OS" className="h-9 w-auto object-contain" style={{ mixBlendMode: 'multiply' }} />
+        </div>
+        <div className="flex-1 flex items-center justify-center gap-2 text-xs font-medium">
+          <span className="bg-white/25 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">Demo Mode</span>
+          <span className="text-white/80 hidden sm:inline">Fictitious patient data only · Not for clinical use</span>
+        </div>
+        <div className="w-1/3" />
       </div>
 
       {/* Main content */}

@@ -59,6 +59,7 @@ import { FormularyManagement } from './pages/FormularyManagement';
 import { RoleExplorer } from './pages/RoleExplorer';
 import { StaffAdmin } from './pages/StaffAdmin';
 import { WithdrawalMonitor } from './pages/WithdrawalMonitor';
+import { AIAssistant } from './pages/AIAssistant';
 import { LoginPage } from './pages/LoginPage';
 import { AccessDenied } from './components/common/AccessDenied';
 import { ReadOnlyBanner } from './components/common/ReadOnlyBanner';
@@ -125,6 +126,7 @@ export type Screen =
   | 'RoleExplorer'
   | 'StaffAdmin'
   | 'WithdrawalMonitor'
+  | 'AIAssistant'
   | 'DemoPatientDetail';
 
 // ─── Inner app (needs RoleContext) ───────────────────────────────────────────
@@ -226,6 +228,7 @@ function AppInner() {
       case 'FormularyManagement':     return withAccess('FormularyManagement',     <FormularyManagement navigate={navigateTo} />);
       case 'StaffAdmin':              return <StaffAdmin navigate={navigateTo} />;
       case 'WithdrawalMonitor':       return withAccessReadOnlyProp('WithdrawalMonitor', ro => <WithdrawalMonitor navigate={navigateTo} readOnly={ro} />);
+      case 'AIAssistant':             return withAccess('AIAssistant', <AIAssistant navigate={navigateTo} />);
       case 'DemoPatientDetail':       return <DemoPatientDetail patientId={lastDemoPatientId ?? selectedPatientId} navigate={navigateTo} returnTo='Dashboard' />;
       case 'RoleExplorer':            return <RoleExplorer navigate={navigateTo} />;
       default:

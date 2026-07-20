@@ -11,7 +11,7 @@ import {
   ArrowLeftRight, Star, CreditCard, MapPin, BookUser, Download,
   Video, UserCheck, FolderOpen, DollarSign, BookOpen, HandHelping,
   Award, ClipboardCheck, MessageSquare, ListOrdered, Grid3X3,
-  Eye
+  Eye, Sparkles
 } from 'lucide-react';
 import { Screen } from '../../App';
 import { useRole } from '../../context/RoleContext';
@@ -139,6 +139,12 @@ const ALL_SECTIONS: SidebarSection[] = [
     title: 'SECURITY & ADMIN',
     items: [
       { id: 'StaffAdmin', label: 'Staff Administration', icon: ShieldCheck },
+    ]
+  },
+  {
+    title: 'AI TOOLS',
+    items: [
+      { id: 'AIAssistant', label: 'Sunrise AI (HITL)', icon: Sparkles },
     ]
   },
 ];
