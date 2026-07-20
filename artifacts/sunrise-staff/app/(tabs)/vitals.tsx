@@ -277,19 +277,15 @@ export default function VitalsScreen() {
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [filterNoticeDismissed, setFilterNoticeDismissed] = useState(false);
-  const { bannerDismissed, dismissBanner, scoreFilter, setScoreFilter } = useWithdrawalFilters();
+  const { bannerDismissed, dismissBanner, scoreFilter, setScoreFilter, filterNoticeDismissedForPatientId, dismissFilterNotice, trackDischargePatientId } = useWithdrawalFilters();
   const { residentialPatients, pendingDischarge } = usePatients();
 
-  // Reset notice dismissal whenever a new discharge event starts (or clears)
-  const prevPendingDischargeId = useRef<string | null>(null);
+  // Track the current discharge patient ID in context so it persists across tab navigation.
+  // trackDischargePatientId is idempotent when the ID hasn't changed, so calling it on every
+  // render is safe and won't spuriously reset the dismissed state on remount.
   useEffect(() => {
-    const currentId = pendingDischarge?.patient.id ?? null;
-    if (currentId !== prevPendingDischargeId.current) {
-      setFilterNoticeDismissed(false);
-      prevPendingDischargeId.current = currentId;
-    }
-  }, [pendingDischarge]);
+    trackDischargePatientId(pendingDischarge?.patient.id ?? null);
+  }, [pendingDischarge, trackDischargePatientId]);
 
   // Re-insert the pending-discharge patient so nurses can see they haven't left yet.
   const displayedPatients = React.useMemo(() => {
@@ -300,50 +296,51 @@ export default function VitalsScreen() {
     return [pd, ...residentialPatients];
   }, [residentialPatients, pendingDischarge]);
 
-  const allPatientsWithScores = displayedPatients.filter(p =>
-    (p.cows != null && p.cows > 0) || (p.ciwa != null && p.ciwa > 0)
-  );
-  const patientsWithoutScores = displayedPatients.filter(p =>
-    !(p.cows != null && p.cows > 0) && !(p.ciwa != null && p.ciwa > 0)
-  );
+  const allPatientsWithScores = React.useMemo(() =>
+    displayedPatients.filter(p =>
+      (p.cows != null && p.cows > 0) || (p.ciwa != null && p.ciwa > 0)
+    ), [displayedPatients]);
 
-  const patientsWithScores = (() => {
-    const filtered = (() => {
-      switch (scoreFilter) {
-        case 'cows':
-          return allPatientsWithScores.filter(p => p.cows != null && p.cows > 0);
-        case 'ciwa':
-          return allPatientsWithScores.filter(p => p.ciwa != null && p.ciwa > 0);
-        case 'alerts':
-          return allPatientsWithScores.filter(p =>
-            (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
-          );
-        default:
-          return allPatientsWithScores;
-      }
-    })();
+  const patientsWithoutScores = React.useMemo(() =>
+    displayedPatients.filter(p =>
+      !(p.cows != null && p.cows > 0) && !(p.ciwa != null && p.ciwa > 0)
+    ), [displayedPatients]);
 
-    // Re-insert the pending-discharge patient if the active filter removed them
-    // but they are score-eligible, so the Discharging… pill always appears
-    // regardless of which filter chip is active.
-    if (pendingDischarge) {
-      const pd = pendingDischarge.patient;
-      const scoreEligible = allPatientsWithScores.some(p => p.id === pd.id);
-      if (scoreEligible && !filtered.some(p => p.id === pd.id)) {
-        return [pd, ...filtered];
-      }
+  // Raw filter results before any re-insertion of the pending-discharge patient.
+  // Used to correctly compute pendingDischargeHiddenByFilter.
+  const rawFilteredPatients = React.useMemo(() => {
+    switch (scoreFilter) {
+      case 'cows':
+        return allPatientsWithScores.filter(p => p.cows != null && p.cows > 0);
+      case 'ciwa':
+        return allPatientsWithScores.filter(p => p.ciwa != null && p.ciwa > 0);
+      case 'alerts':
+        return allPatientsWithScores.filter(p =>
+          (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
+        );
+      default:
+        return allPatientsWithScores;
     }
-    return filtered;
-  })();
+  }, [scoreFilter, allPatientsWithScores]);
 
-  // True when the pending-discharge patient has scores but the current filter hides them
+  // True when the pending-discharge patient has scores but the current filter hides them.
+  // Computed from rawFilteredPatients (before re-insertion) so the flag is accurate.
   const pendingDischargeHiddenByFilter = React.useMemo(() => {
     if (!pendingDischarge) return false;
     const pd = pendingDischarge.patient;
     const inAllScores = allPatientsWithScores.some(p => p.id === pd.id);
-    if (!inAllScores) return false; // already absent from scored list regardless of filter
-    return !patientsWithScores.some(p => p.id === pd.id);
-  }, [pendingDischarge, allPatientsWithScores, patientsWithScores]);
+    if (!inAllScores) return false; // absent from scored list regardless of filter
+    return !rawFilteredPatients.some(p => p.id === pd.id);
+  }, [pendingDischarge, allPatientsWithScores, rawFilteredPatients]);
+
+  // Final display list: re-insert the pending-discharge patient if the filter hid them,
+  // so the Discharging… pill always appears regardless of which filter chip is active.
+  const patientsWithScores = React.useMemo(() => {
+    if (pendingDischargeHiddenByFilter && pendingDischarge) {
+      return [pendingDischarge.patient, ...rawFilteredPatients];
+    }
+    return rawFilteredPatients;
+  }, [rawFilteredPatients, pendingDischarge, pendingDischargeHiddenByFilter]);
 
   const criticalCount = patientsWithScores.filter(p =>
     (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
@@ -475,8 +472,9 @@ export default function VitalsScreen() {
         })}
       </View>
 
-      {/* Filter notice — shown when the pending-discharge patient is hidden by the active filter */}
-      {pendingDischargeHiddenByFilter && !filterNoticeDismissed && (
+      {/* Filter notice — shown when the pending-discharge patient is hidden by the active filter.
+          Dismissed state is stored in context so it persists across tab navigation. */}
+      {pendingDischargeHiddenByFilter && filterNoticeDismissedForPatientId !== pendingDischarge?.patient.id && (
         <View style={[styles.filterNotice, { backgroundColor: colors.moderateBg, borderBottomColor: colors.moderate }]}>
           <Ionicons name="eye-off-outline" size={16} color={colors.moderate} />
           <Text style={[styles.filterNoticeText, { color: colors.moderate }]}>
@@ -489,7 +487,7 @@ export default function VitalsScreen() {
             </Text>
             {' '}to see Discharging… status
           </Text>
-          <Pressable onPress={() => setFilterNoticeDismissed(true)} hitSlop={8}>
+          <Pressable onPress={() => pendingDischarge && dismissFilterNotice(pendingDischarge.patient.id)} hitSlop={8}>
             <Ionicons name="close" size={16} color={colors.moderate} />
           </Pressable>
         </View>
