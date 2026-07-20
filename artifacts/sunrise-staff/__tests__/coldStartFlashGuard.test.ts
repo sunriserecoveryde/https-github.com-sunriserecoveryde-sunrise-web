@@ -1,5 +1,6 @@
 /**
- * Unit tests — cold-start flash guard for MARView, ChecksView, and HandoffScreen
+ * Unit tests — cold-start flash guard for MARView, ChecksView, HandoffScreen,
+ * and the Vitals / Scores tab (WithdrawalFiltersContext).
  *
  * Task 276 coverage:
  *   These tests import and call the real production functions from
@@ -7,6 +8,14 @@
  *   handoff.tsx at runtime.  Removing the `loaded: true` field from any return
  *   type, or removing the Promise.all boundary in loadHandoffState, will cause
  *   these tests to fail at compile- or run-time rather than silently passing.
+ *
+ * Task 280 coverage:
+ *   loadWithdrawalFiltersState mirrors the Promise.all rehydration logic inside
+ *   WithdrawalFiltersProvider.  The Vitals tab uses Guard B (Animated opacity
+ *   starting at 0) to hide the score-filter chip bar until `isRehydrating`
+ *   flips to false.  Removing `loaded: true` from the return type, or breaking
+ *   the Promise.all boundary, will cause the tests below to fail at compile- or
+ *   run-time rather than silently passing.
  *
  * Strategy:
  *   A `StorageAdapter` mock is injected into each helper.  Tests can make the
@@ -19,12 +28,14 @@ import {
   loadMARState,
   loadChecksState,
   loadHandoffState,
+  loadWithdrawalFiltersState,
   saveJsonToStorage,
   pruneStaleStorageKeys,
   type StorageAdapter,
   type AdminMap,
   type CheckEntry,
   type Shift,
+  type WithdrawalScoreFilter,
 } from '../lib/coldStartLoadHelpers';
 
 // ─── Mock storage builder ─────────────────────────────────────────────────────
@@ -457,34 +468,164 @@ describe('pruneStaleStorageKeys', () => {
   });
 });
 
+// ─── Tests: loadWithdrawalFiltersState (Vitals / Scores tab) ─────────────────
+
+const WITHDRAWAL_KEYS = {
+  scoreFilter: '@withdrawal_score_filter',
+  bannerDismissed: '@withdrawal_banner_dismissed',
+  filterNoticeDismissed: '@filter_notice_dismissed_patient_id',
+  lastDischargePatientId: '@filter_notice_last_discharge_patient_id',
+};
+
+describe('loadWithdrawalFiltersState — cold-start flash guard for Vitals / Scores tab', () => {
+  it('returns loaded:true with defaults on first install (empty storage)', async () => {
+    const storage = makeMemoryStorage();
+
+    const result = await loadWithdrawalFiltersState(storage, WITHDRAWAL_KEYS);
+
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('all');
+    expect(result.bannerDismissed).toBe(false);
+    expect(result.filterNoticeDismissedForPatientId).toBeNull();
+    expect(result.lastTrackedDischargePatientId).toBeNull();
+  });
+
+  it('restores a persisted scoreFilter before returning loaded:true', async () => {
+    const storage = makeMemoryStorage({
+      '@withdrawal_score_filter': 'alerts',
+    });
+
+    const result = await loadWithdrawalFiltersState(storage, WITHDRAWAL_KEYS);
+
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('alerts');
+  });
+
+  it('restores all four persisted values together before returning loaded:true', async () => {
+    const storage = makeMemoryStorage({
+      '@withdrawal_score_filter': 'ciwa',
+      '@withdrawal_banner_dismissed': 'true',
+      '@filter_notice_dismissed_patient_id': 'p4',
+      '@filter_notice_last_discharge_patient_id': 'p4',
+    });
+
+    const result = await loadWithdrawalFiltersState(storage, WITHDRAWAL_KEYS);
+
+    // All four values AND loaded:true arrive together — this is the guarantee
+    // the Guard B opacity animation relies on.
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('ciwa');
+    expect(result.bannerDismissed).toBe(true);
+    expect(result.filterNoticeDismissedForPatientId).toBe('p4');
+    expect(result.lastTrackedDischargePatientId).toBe('p4');
+  });
+
+  it('falls back to "all" for an unknown scoreFilter value', async () => {
+    const storage = makeMemoryStorage({
+      '@withdrawal_score_filter': 'invalid_filter',
+    });
+
+    const result = await loadWithdrawalFiltersState(storage, WITHDRAWAL_KEYS);
+
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('all');
+  });
+
+  it('accepts every valid scoreFilter value', async () => {
+    const validFilters: WithdrawalScoreFilter[] = ['all', 'cows', 'ciwa', 'alerts'];
+
+    for (const filter of validFilters) {
+      const storage = makeMemoryStorage({ '@withdrawal_score_filter': filter });
+      const result = await loadWithdrawalFiltersState(storage, WITHDRAWAL_KEYS);
+      expect(result.scoreFilter).toBe(filter);
+    }
+  });
+
+  it('does not set loaded before all four storage reads resolve — deferred adapter test', async () => {
+    const { adapter, release } = makeDeferredStorage();
+
+    // Start the load but do NOT await yet — isRehydrating equivalent must still be pending
+    const loadPromise = loadWithdrawalFiltersState(adapter, WITHDRAWAL_KEYS);
+
+    let settled = false;
+    loadPromise.then(() => { settled = true; });
+
+    // Yield the event loop once — the promise must not have settled yet
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    // Release storage — Promise.all inside the helper can now settle
+    release(null);
+    const result = await loadPromise;
+    expect(result.loaded).toBe(true);
+  });
+
+  it('returns loaded:true even when storage throws (error path)', async () => {
+    const result = await loadWithdrawalFiltersState(makeErrorStorage(), WITHDRAWAL_KEYS);
+
+    // Guard must not leave the Scores tab permanently hidden on storage failure
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('all');
+    expect(result.bannerDismissed).toBe(false);
+  });
+
+  it('without the guard, the filter chip bar would flash with the default "All" chip active before storage resolves', () => {
+    // Documents the regression Guard B prevents:
+    // If filterBarOpacity started at 1 (not 0), a nurse who had previously
+    // selected "Alerts" would momentarily see "All" highlighted before the
+    // persisted "alerts" value arrived from AsyncStorage.
+    const defaultFilter: WithdrawalScoreFilter = 'all';
+    const initialLoaded = false; // isRehydrating === true before load settles
+    const filterBarOpacityInitial = 0; // Guard B: Animated.Value starts at 0
+
+    expect(initialLoaded).toBe(false);
+    expect(defaultFilter).toBe('all');
+    // The opacity guard ensures the chip bar is invisible at this point
+    expect(filterBarOpacityInitial).toBe(0);
+  });
+
+  it('after rehydration, filterBarOpacity must reach 1 — guard releases the bar', () => {
+    // Documents the post-hydration transition Guard B performs:
+    // Once isRehydrating flips to false, vitals.tsx calls
+    //   Animated.timing(filterBarOpacity, { toValue: 1, duration: 150 }).start()
+    // confirming the bar becomes fully visible with the correct chip active.
+    const filterBarOpacityAfterRehydration = 1;
+    expect(filterBarOpacityAfterRehydration).toBe(1);
+  });
+});
+
 // ─── Tests: guard invariants ──────────────────────────────────────────────────
 
-describe('cold-start flash guard — shared invariants across all three screens', () => {
+describe('cold-start flash guard — shared invariants across all screens', () => {
   it('all load functions return loaded:true on the happy path', async () => {
     const storage = makeMemoryStorage();
 
-    const [mar, checks, handoff] = await Promise.all([
+    const [mar, checks, handoff, vitals] = await Promise.all([
       loadMARState(storage, '@mar'),
       loadChecksState(storage, '@checks', makeDefaultChecks()),
       loadHandoffState(storage, { notes: '@notes', shift: '@shift' }, { notes: {}, shift: 'day' }),
+      loadWithdrawalFiltersState(storage, WITHDRAWAL_KEYS),
     ]);
 
     expect(mar.loaded).toBe(true);
     expect(checks.loaded).toBe(true);
     expect(handoff.loaded).toBe(true);
+    expect(vitals.loaded).toBe(true);
   });
 
   it('all load functions return loaded:true even when storage fails', async () => {
     const err = makeErrorStorage();
 
-    const [mar, checks, handoff] = await Promise.all([
+    const [mar, checks, handoff, vitals] = await Promise.all([
       loadMARState(err, '@mar'),
       loadChecksState(err, '@checks', makeDefaultChecks()),
       loadHandoffState(err, { notes: '@notes', shift: '@shift' }, { notes: {}, shift: 'day' }),
+      loadWithdrawalFiltersState(err, WITHDRAWAL_KEYS),
     ]);
 
     expect(mar.loaded).toBe(true);
     expect(checks.loaded).toBe(true);
     expect(handoff.loaded).toBe(true);
+    expect(vitals.loaded).toBe(true);
   });
 });

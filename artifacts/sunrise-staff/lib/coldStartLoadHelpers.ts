@@ -137,6 +137,78 @@ export async function loadChecksState(
   return { checks, loaded: true };
 }
 
+// ─── Withdrawal filters load (Vitals / Scores tab) ───────────────────────────
+
+export type WithdrawalScoreFilter = 'all' | 'cows' | 'ciwa' | 'alerts';
+
+const VALID_WITHDRAWAL_FILTERS: WithdrawalScoreFilter[] = ['all', 'cows', 'ciwa', 'alerts'];
+
+/**
+ * Mirrors the mount Promise.all inside WithdrawalFiltersProvider:
+ *   Promise.all([
+ *     AsyncStorage.getItem(SCORE_FILTER_KEY),
+ *     AsyncStorage.getItem(BANNER_DISMISSED_KEY),
+ *     AsyncStorage.getItem(FILTER_NOTICE_DISMISSED_KEY),
+ *     AsyncStorage.getItem(LAST_DISCHARGE_PATIENT_KEY),
+ *   ]).then(([...]) => { ...; setState({ ..., isRehydrating: false }); })
+ *
+ * Key property: ALL four keys are read together via a single Promise.all before
+ * `loaded: true` is returned.  The score filter chip bar uses Guard B (Animated
+ * opacity starting at 0) to stay invisible until this settles.
+ *
+ * Errors are caught so `loaded: true` is always returned — the Scores tab must
+ * not stay permanently invisible if storage fails.
+ */
+export interface WithdrawalFiltersLoaded {
+  loaded: true;
+  scoreFilter: WithdrawalScoreFilter;
+  bannerDismissed: boolean;
+  filterNoticeDismissedForPatientId: string | null;
+  lastTrackedDischargePatientId: string | null;
+}
+
+export async function loadWithdrawalFiltersState(
+  storage: StorageAdapter,
+  keys: {
+    scoreFilter: string;
+    bannerDismissed: string;
+    filterNoticeDismissed: string;
+    lastDischargePatientId: string;
+  },
+): Promise<WithdrawalFiltersLoaded> {
+  try {
+    const [storedFilter, storedBanner, storedDismissed, storedLastDischarge] =
+      await Promise.all([
+        storage.getItem(keys.scoreFilter),
+        storage.getItem(keys.bannerDismissed),
+        storage.getItem(keys.filterNoticeDismissed),
+        storage.getItem(keys.lastDischargePatientId),
+      ]);
+
+    const scoreFilter: WithdrawalScoreFilter =
+      storedFilter && VALID_WITHDRAWAL_FILTERS.includes(storedFilter as WithdrawalScoreFilter)
+        ? (storedFilter as WithdrawalScoreFilter)
+        : 'all';
+
+    return {
+      loaded: true,
+      scoreFilter,
+      bannerDismissed: storedBanner === 'true',
+      filterNoticeDismissedForPatientId: storedDismissed ?? null,
+      lastTrackedDischargePatientId: storedLastDischarge ?? null,
+    };
+  } catch {
+    // Even on storage failure, clear the guard so the screen doesn't stay hidden.
+    return {
+      loaded: true,
+      scoreFilter: 'all',
+      bannerDismissed: false,
+      filterNoticeDismissedForPatientId: null,
+      lastTrackedDischargePatientId: null,
+    };
+  }
+}
+
 // ─── Handoff load ─────────────────────────────────────────────────────────────
 
 export type Shift = 'day' | 'eve' | 'night';
