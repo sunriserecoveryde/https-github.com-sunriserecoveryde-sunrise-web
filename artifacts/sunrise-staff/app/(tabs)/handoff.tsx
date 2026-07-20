@@ -353,7 +353,7 @@ export default function HandoffScreen() {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.headerTitle}>Shift Handoff</Text>
-            <Text style={styles.headerSubtitle}>Jul 19, 2026 · {RESIDENTIAL_PATIENTS.length} patients</Text>
+            <Text style={styles.headerSubtitle}>{new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} · {RESIDENTIAL_PATIENTS.length} patients</Text>
           </View>
           <View style={styles.headerActions}>
             <Pressable
