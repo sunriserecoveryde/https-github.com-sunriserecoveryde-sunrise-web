@@ -147,6 +147,41 @@ function computePatientsWithScores(
   );
 }
 
+type ScoreFilter = 'all' | 'cows' | 'ciwa' | 'alerts';
+
+/**
+ * Mirrors the `patientsWithScores` derived value in VitalsScreen — the list
+ * that is actually rendered after the active score-filter chip is applied.
+ *
+ * Note: this operates on `allPatientsWithScores` (i.e. the output of
+ * `computePatientsWithScores`), which already includes the re-inserted
+ * pending-discharge patient.  The filter chip is applied on top.
+ *
+ * Design decision: a pending-discharge patient whose score does NOT match the
+ * active filter will be absent from the rendered list.  This is accepted
+ * behaviour (documented in task 250) — the nurse can switch to "All" to see
+ * the Discharging… pill.  The tests below make this contract explicit.
+ */
+function computeFilteredPatientsWithScores(
+  patients: Patient[],
+  pendingDischarge: PendingDischargeRecord | null,
+  scoreFilter: ScoreFilter,
+): Patient[] {
+  const allWithScores = computePatientsWithScores(patients, pendingDischarge);
+  switch (scoreFilter) {
+    case 'cows':
+      return allWithScores.filter(p => p.cows != null && p.cows > 0);
+    case 'ciwa':
+      return allWithScores.filter(p => p.ciwa != null && p.ciwa > 0);
+    case 'alerts':
+      return allWithScores.filter(
+        p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15),
+      );
+    default:
+      return allWithScores;
+  }
+}
+
 /**
  * Mirrors `isPendingDischarge` prop passed to PatientScoreRow:
  *   `pendingDischarge?.patient.id === patient.id`
@@ -343,6 +378,173 @@ describe('Scores tab — timer-expiry path (undo window closes while nurse is on
 
     // After timer: list is empty — p1 was committed, not restored
     expect(computePatientsWithScores(state.patients, state.pendingDischarge)).toHaveLength(0);
+  });
+});
+
+describe('Scores tab — score filter chips and pending-discharge interaction', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  // ── "All" filter ────────────────────────────────────────────────────────────
+
+  it('"All" filter: pending-discharge patient with COWS score is shown with the pill', () => {
+    const p1 = makePatient('p1', { cows: 10, ciwa: undefined });
+    const p2 = makePatient('p2', { cows: 5 });
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'all');
+
+    expect(visible.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
+  });
+
+  // ── "COWS Only" filter ──────────────────────────────────────────────────────
+
+  it('"COWS Only" filter: pending-discharge patient with a COWS score is shown with the pill', () => {
+    // Patient has COWS — the filter should include them
+    const p1 = makePatient('p1', { cows: 10, ciwa: undefined });
+    const p2 = makePatient('p2', { cows: 5 });
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'cows');
+
+    expect(visible.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
+  });
+
+  it('"COWS Only" filter: pending-discharge patient with CIWA-only score is absent (acceptable — nurse should switch to "All")', () => {
+    // Patient has only CIWA — "COWS Only" filter legitimately excludes them.
+    // This is the scenario described in task 250: acceptable, but documented.
+    const p1 = makePatient('p1', { cows: undefined, ciwa: 9 });
+    const p2 = makePatient('p2', { cows: 5 });
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'cows');
+
+    // p1 has no COWS score so "COWS Only" legitimately hides them
+    expect(visible.some(p => p.id === 'p1')).toBe(false);
+    // Switching to "All" would reveal them — verify via the unfiltered helper
+    const all = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'all');
+    expect(all.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
+  });
+
+  // ── "CIWA Only" filter ──────────────────────────────────────────────────────
+
+  it('"CIWA Only" filter: pending-discharge patient with a CIWA score is shown with the pill', () => {
+    // Patient has CIWA — the filter should include them
+    const p1 = makePatient('p1', { cows: undefined, ciwa: 9 });
+    const p2 = makePatient('p2', { ciwa: 6 });
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'ciwa');
+
+    expect(visible.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
+  });
+
+  it('"CIWA Only" filter: pending-discharge patient with COWS-only score is absent (acceptable — nurse should switch to "All")', () => {
+    const p1 = makePatient('p1', { cows: 10, ciwa: undefined });
+    const p2 = makePatient('p2', { ciwa: 6 });
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'ciwa');
+
+    expect(visible.some(p => p.id === 'p1')).toBe(false);
+    // "All" still shows the Discharging… patient
+    const all = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'all');
+    expect(all.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
+  });
+
+  // ── "Alerts" filter ─────────────────────────────────────────────────────────
+
+  it('"Alerts" filter: pending-discharge patient whose COWS score is at or above threshold is shown with the pill', () => {
+    const p1 = makePatient('p1', { cows: 13, ciwa: undefined }); // exactly at COWS threshold
+    const p2 = makePatient('p2', { cows: 5 });
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'alerts');
+
+    expect(visible.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
+  });
+
+  it('"Alerts" filter: pending-discharge patient whose CIWA score is at or above threshold is shown with the pill', () => {
+    const p1 = makePatient('p1', { cows: undefined, ciwa: 15 }); // exactly at CIWA threshold
+    const p2 = makePatient('p2', { cows: 5 });
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'alerts');
+
+    expect(visible.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
+  });
+
+  it('"Alerts" filter: pending-discharge patient with sub-threshold scores is absent (acceptable — nurse should switch to "All")', () => {
+    // p1 has a COWS score of 8 — below the 13 alert threshold
+    const p1 = makePatient('p1', { cows: 8, ciwa: undefined });
+    const p2 = makePatient('p2', { cows: 14 }); // above threshold → stays visible
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'alerts');
+
+    // p1 is below alert threshold — "Alerts" filter legitimately hides them
+    expect(visible.some(p => p.id === 'p1')).toBe(false);
+    // p2 is above threshold so must remain visible
+    expect(visible.some(p => p.id === 'p2')).toBe(true);
+    // "All" would still show the Discharging… patient
+    const all = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'all');
+    expect(all.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
+  });
+
+  // ── Cross-filter consistency ─────────────────────────────────────────────────
+
+  it('a patient with both COWS and CIWA scores appears under both "COWS Only" and "CIWA Only" filters while pending-discharge', () => {
+    const p1 = makePatient('p1', { cows: 10, ciwa: 9 });
+    let state = makeInitialState([p1]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const cowsView = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'cows');
+    const ciwaView = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'ciwa');
+
+    expect(cowsView.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
+    expect(ciwaView.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
+  });
+
+  it('filter does not affect other patients — non-discharge patients respect the filter normally', () => {
+    const p1 = makePatient('p1', { cows: 10, ciwa: undefined }); // pending discharge
+    const p2 = makePatient('p2', { cows: undefined, ciwa: 8 }); // ciwa only — hidden by 'cows' filter
+    const p3 = makePatient('p3', { cows: 6 }); // cows — shown by 'cows' filter
+    let state = makeInitialState([p1, p2, p3]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'cows');
+
+    expect(visible.some(p => p.id === 'p1')).toBe(true);  // discharge patient has COWS → shown
+    expect(visible.some(p => p.id === 'p2')).toBe(false); // p2 has no COWS → hidden
+    expect(visible.some(p => p.id === 'p3')).toBe(true);  // p3 has COWS → shown
   });
 });
 
