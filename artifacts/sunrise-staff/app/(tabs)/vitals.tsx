@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
+import { useRehydratedValue } from '@/hooks/useRehydratedValue';
 import { useWithdrawalFilters } from '@/context/WithdrawalFiltersContext';
 import { usePatients } from '@/context/PatientContext';
 import { VITALS, Patient, VitalEntry, acuityColor } from '@/data/mockData';
@@ -277,7 +278,12 @@ export default function VitalsScreen() {
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const { bannerDismissed, dismissBanner, scoreFilter, setScoreFilter, filterNoticeDismissedForPatientId, dismissFilterNotice, trackDischargePatientId, isRehydrating } = useWithdrawalFilters();
+  const { bannerDismissed: rawBannerDismissed, dismissBanner, scoreFilter, setScoreFilter, filterNoticeDismissedForPatientId, dismissFilterNotice, trackDischargePatientId, isRehydrating } = useWithdrawalFilters();
+
+  // Guard A — useRehydratedValue: treat banner as dismissed while loading so it
+  // never flashes on cold start. See hooks/useRehydratedValue.ts for the pattern
+  // and WithdrawalFiltersContext.tsx for the full registry of guarded keys.
+  const bannerDismissed = useRehydratedValue(isRehydrating, rawBannerDismissed, true);
   const { residentialPatients, pendingDischarge } = usePatients();
 
   // Track the current discharge patient ID in context so it persists across tab navigation.
@@ -440,8 +446,9 @@ export default function VitalsScreen() {
         </View>
       </View>
 
-      {/* Score filter bar — hidden (opacity 0) while AsyncStorage is rehydrating so the
-          chip doesn't briefly flash as 'All' before the persisted selection loads. */}
+      {/* Score filter bar — Guard B (opacity animation): starts invisible so the chip
+          doesn't flash as 'All' before AsyncStorage resolves. Fades in once isRehydrating
+          is false. See WithdrawalFiltersContext.tsx for the full guard registry. */}
       <Animated.View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border, opacity: filterBarOpacity }]}>
         {([
           { key: 'all', label: 'All', count: allPatientsWithScores.length },
@@ -488,8 +495,9 @@ export default function VitalsScreen() {
       </Animated.View>
 
       {/* Filter notice — shown when the pending-discharge patient is hidden by the active filter.
-          Dismissed state is stored in context so it persists across tab navigation.
-          Hidden while AsyncStorage is still rehydrating to prevent a flash on cold start. */}
+          Guard C (raw !isRehydrating): the condition involves a runtime patient ID so
+          !isRehydrating is checked explicitly to keep the intent clear. See
+          WithdrawalFiltersContext.tsx for the full guard registry. */}
       {!isRehydrating && pendingDischargeHiddenByFilter && filterNoticeDismissedForPatientId !== pendingDischarge?.patient.id && (
         <View style={[styles.filterNotice, { backgroundColor: colors.moderateBg, borderBottomColor: colors.moderate }]}>
           <Ionicons name="eye-off-outline" size={16} color={colors.moderate} />
@@ -510,9 +518,9 @@ export default function VitalsScreen() {
       )}
 
       {/* Alert banner — dismissable; cleared on shift handoff.
-          Hidden while AsyncStorage is still rehydrating so a nurse who dismissed
-          the banner doesn't see it briefly re-appear on cold start. */}
-      {!isRehydrating && criticalCount > 0 && !bannerDismissed && (
+          bannerDismissed is guarded by useRehydratedValue (Guard A) so it is
+          treated as `true` while AsyncStorage is loading — no cold-start flash. */}
+      {criticalCount > 0 && !bannerDismissed && (
         <View style={[styles.alertBanner, { backgroundColor: '#FEF2F2', borderBottomColor: colors.critical }]}>
           <Ionicons name="warning" size={18} color={colors.critical} />
           <Text style={[styles.alertText, { color: colors.critical }]}>

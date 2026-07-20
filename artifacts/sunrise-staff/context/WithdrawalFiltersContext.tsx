@@ -3,6 +3,37 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 
 export type WithdrawalScoreFilter = 'all' | 'cows' | 'ciwa' | 'alerts';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Persisted keys and their cold-start flash guards
+// ─────────────────────────────────────────────────────────────────────────────
+// Every AsyncStorage key managed by this context is registered here.  When you
+// add a new key you MUST add a matching row and choose the guard style that
+// prevents the UI from flashing incorrect content on cold start.
+//
+// Guard styles (see hooks/useRehydratedValue.ts for the canonical pattern):
+//   A) useRehydratedValue(isRehydrating, value, loadingValue)
+//      Best for booleans and enums where the loading placeholder is obvious.
+//   B) Opacity animation — start at 0, fade to 1 once !isRehydrating.
+//      Best for chip/tab bars where a value change is visually jarring.
+//   C) Raw !isRehydrating guard in JSX — use when the condition involves a
+//      runtime value (e.g. a patient ID) so the intent stays explicit.
+//
+// ┌──────────────────────────────────────────────┬──────────────────────┬───────┐
+// │ AsyncStorage key                             │ Context field        │ Guard │
+// ├──────────────────────────────────────────────┼──────────────────────┼───────┤
+// │ @withdrawal_score_filter                     │ scoreFilter          │ B     │
+// │ @withdrawal_banner_dismissed                 │ bannerDismissed      │ A     │
+// │ @filter_notice_dismissed_patient_id          │ filterNoticeDismissed│ C     │
+// │                                              │   ForPatientId       │       │
+// │ @filter_notice_last_discharge_patient_id     │ lastTrackedDischarge │ —     │
+// │                                              │   PatientId          │       │
+// │                                              │ (internal only;      │       │
+// │                                              │  not used in render) │       │
+// └──────────────────────────────────────────────┴──────────────────────┴───────┘
+//
+// See vitals.tsx for the reference implementation of each guard style.
+// ─────────────────────────────────────────────────────────────────────────────
+
 const SCORE_FILTER_KEY = '@withdrawal_score_filter';
 const BANNER_DISMISSED_KEY = '@withdrawal_banner_dismissed';
 const FILTER_NOTICE_DISMISSED_KEY = '@filter_notice_dismissed_patient_id';
