@@ -675,8 +675,13 @@ export default function CensusScreen() {
   const toastAnim = useRef(new Animated.Value(0)).current;
   const hasFiredHaptic = useRef(false);
 
+  // ─── Discharge undo toast (driven by PatientContext.pendingDischarge) ───────
+  const [dischargeToastVisible, setDischargeToastVisible] = useState(false);
+  const dischargeToastAnim = useRef(new Animated.Value(100)).current;
+  const dischargeToastShownRef = useRef(false);
+
   // ─── Live census data from context ────────────────────────────────────────
-  const { patients, bedStatusMap, refreshFromApi } = usePatients();
+  const { patients, bedStatusMap, refreshFromApi, pendingDischarge, undoDischarge } = usePatients();
   const { clearNotes, getNotesForPatient } = useNursingNotes();
   const { clearAcknowledgments } = useMdAcknowledgment();
   const residentialPatients = patients.filter(p => p.bed != null);
@@ -771,6 +776,33 @@ export default function CensusScreen() {
   const openPatientScores = (p: Patient) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/patient/${p.id}?scrollTo=scores` as any);
+  };
+
+  // Drive the discharge undo toast from context
+  useEffect(() => {
+    const active = pendingDischarge !== null;
+    if (active && !dischargeToastShownRef.current) {
+      dischargeToastShownRef.current = true;
+      setDischargeToastVisible(true);
+      Animated.spring(dischargeToastAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 200,
+      }).start();
+    } else if (!active && dischargeToastShownRef.current) {
+      dischargeToastShownRef.current = false;
+      Animated.timing(dischargeToastAnim, {
+        toValue: 100,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => setDischargeToastVisible(false));
+    }
+  }, [pendingDischarge]);
+
+  const handleUndoDischarge = () => {
+    undoDischarge();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   // ─── Shift label (computed once on mount; stable within a session) ─────────
@@ -1005,6 +1037,25 @@ export default function CensusScreen() {
         availableBeds={availableBedIds}
       />
 
+      {/* ─── Discharge undo toast ─── */}
+      {dischargeToastVisible && (
+        <Animated.View
+          style={[
+            styles.dischargeUndoToast,
+            { bottom: Math.max(insets.bottom, 8) + 16, transform: [{ translateY: dischargeToastAnim }] },
+          ]}
+        >
+          <Text style={styles.dischargeUndoToastText}>Patient discharged</Text>
+          <Pressable
+            onPress={handleUndoDischarge}
+            hitSlop={12}
+            style={styles.dischargeUndoBtn}
+          >
+            <Text style={styles.dischargeUndoBtnText}>Undo</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+
       {/* Shift-ended toast */}
       {shiftEndedToast && (
         <Animated.View
@@ -1122,6 +1173,19 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
   // Loading
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // Discharge undo toast
+  dischargeUndoToast: {
+    position: 'absolute', left: 16, right: 16,
+    backgroundColor: '#1C2B3A', borderRadius: 12,
+    paddingVertical: 13, paddingHorizontal: 18,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22, shadowRadius: 12, elevation: 10,
+    zIndex: 999,
+  },
+  dischargeUndoToastText: { fontSize: 14, color: '#fff', fontFamily: 'Inter_400Regular' },
+  dischargeUndoBtn: { paddingVertical: 4, paddingHorizontal: 10 },
+  dischargeUndoBtnText: { fontSize: 14, fontWeight: '700', color: '#4FC3F7', fontFamily: 'Inter_700Bold' },
   // Shift-ended toast
   toastContainer: {
     position: 'absolute', bottom: 100, left: 0, right: 0, alignItems: 'center', zIndex: 999,

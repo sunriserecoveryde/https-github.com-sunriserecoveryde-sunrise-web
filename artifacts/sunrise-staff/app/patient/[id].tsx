@@ -396,7 +396,7 @@ export default function PatientDetailScreen() {
   const insets = useSafeAreaInsets();
   const { role } = useRole();
   const nurseDisplayName = role === 'bht' ? 'James T., BHT' : 'Sarah M., RN';
-  const { patients, dischargePatient } = usePatients();
+  const { patients, startPendingDischarge, pendingDischarge, undoDischarge } = usePatients();
   const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
 
   // ─── Add Note state ────────────────────────────────────────────────────────
@@ -435,6 +435,38 @@ export default function PatientDetailScreen() {
     openRowRef.current?.close();
     openRowRef.current = null;
   }, []);
+
+  // ─── Undo-discharge toast ──────────────────────────────────────────────────
+  // pendingDischarge lives in PatientContext so it survives navigation.
+  const [dischargeToastVisible, setDischargeToastVisible] = useState(false);
+  const dischargeToastAnim = useRef(new Animated.Value(100)).current;
+  const dischargeToastShownRef = useRef(false);
+
+  useEffect(() => {
+    const active = pendingDischarge !== null;
+    if (active && !dischargeToastShownRef.current) {
+      dischargeToastShownRef.current = true;
+      setDischargeToastVisible(true);
+      Animated.spring(dischargeToastAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 200,
+      }).start();
+    } else if (!active && dischargeToastShownRef.current) {
+      dischargeToastShownRef.current = false;
+      Animated.timing(dischargeToastAnim, {
+        toValue: 100,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => setDischargeToastVisible(false));
+    }
+  }, [pendingDischarge]);
+
+  const handleUndoDischarge = () => {
+    undoDischarge();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
 
   // ─── Undo-delete toast ─────────────────────────────────────────────────────
   // pendingDelete lives in NursingNotesContext so it survives navigation.
@@ -1537,6 +1569,21 @@ export default function PatientDetailScreen() {
 
       </ScrollView>
 
+      {/* ─── Undo discharge toast ─── */}
+      {dischargeToastVisible && (
+        <Animated.View
+          style={[
+            s.undoToast,
+            { bottom: Math.max(insets.bottom, 8) + 64, transform: [{ translateY: dischargeToastAnim }] },
+          ]}
+        >
+          <Text style={s.undoToastText}>Patient discharged</Text>
+          <Pressable onPress={handleUndoDischarge} hitSlop={12} style={s.undoBtn}>
+            <Text style={s.undoBtnText}>Undo</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+
       {/* ─── Undo delete toast ─── */}
       {toastVisible && (
         <Animated.View
@@ -1708,7 +1755,7 @@ export default function PatientDetailScreen() {
             <Text style={[s.modalBody, { color: colors.mutedForeground }]}>
               {patient.firstName} {patient.lastName} will be removed from the active census,
               MAR, and morning check lists. Bed {patient.bed ?? '—'} will be marked available.
-              This cannot be undone from the app.
+              You'll have a few seconds to undo if you tap the wrong patient.
             </Text>
             <View style={s.modalActions}>
               <Pressable
@@ -1723,9 +1770,9 @@ export default function PatientDetailScreen() {
               <Pressable
                 style={[s.modalBtn, s.modalBtnConfirm, { backgroundColor: colors.critical }]}
                 onPress={() => {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                   setDischargeModalVisible(false);
-                  dischargePatient(patient.id);
+                  startPendingDischarge(patient);
                   router.back();
                 }}
               >

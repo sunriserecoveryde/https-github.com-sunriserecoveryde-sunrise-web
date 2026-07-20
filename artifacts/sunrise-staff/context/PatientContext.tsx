@@ -5,7 +5,7 @@
  * Replaces direct imports of PATIENTS / RESIDENTIAL_PATIENTS from mockData.ts
  * so that admits and discharges survive app restarts.
  */
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PATIENTS, BEDS as STATIC_BEDS, Patient, BedStatus } from '@/data/mockData';
 import { fetchCensus } from '@/lib/api';
@@ -46,6 +46,13 @@ export function deriveBedStatus(patients: Patient[]): Record<string, BedStatus> 
 
 // ── Context definition ─────────────────────────────────────────────────────────
 
+/** Pending-discharge intent — survives navigation within the same app session */
+export interface PendingDischargeRecord {
+  patient: Patient;
+  /** epoch-ms when the 4-second undo window closes */
+  expiresAt: number;
+}
+
 interface PatientContextValue {
   /** All active (non-discharged) patients */
   patients: Patient[];
@@ -53,8 +60,20 @@ interface PatientContextValue {
   residentialPatients: Patient[];
   /** Bed ID → BedStatus, computed from live patients */
   bedStatusMap: Record<string, BedStatus>;
-  /** Mark a patient as discharged (removes from active roster) */
+  /** Mark a patient as discharged immediately (no undo window) */
   dischargePatient: (id: string) => void;
+  /**
+   * Optimistically remove the patient and open a 4-second undo window.
+   * The discharge is finalised when the timer fires or clearPendingDischarge is
+   * called; call undoDischarge() within the window to reverse it.
+   */
+  startPendingDischarge: (patient: Patient) => void;
+  /** Restore the pending patient and close the undo window. */
+  undoDischarge: () => void;
+  /** Close the undo window without restoring (called when the timer fires). */
+  clearPendingDischarge: () => void;
+  /** Active pending-discharge record (survives navigation). */
+  pendingDischarge: PendingDischargeRecord | null;
   /** Admit a new patient (adds to active roster) */
   admitPatient: (patient: Patient) => void;
   /** True while loading from storage */
@@ -72,6 +91,10 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   /** IDs discharged locally — never re-added from API refresh. */
   const dischargedIds = React.useRef<Set<string>>(new Set());
+
+  // ── Pending-discharge undo window ─────────────────────────────────────────
+  const [pendingDischarge, setPendingDischarge] = useState<PendingDischargeRecord | null>(null);
+  const pendingDischargeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load persisted patient list on mount.
   // We use a sentinel key to distinguish "never saved" from "saved as empty":
@@ -120,6 +143,54 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     setPatients(prev => prev.filter(p => p.id !== id));
   }, []);
 
+  const clearPendingDischarge = useCallback(() => {
+    if (pendingDischargeTimerRef.current) {
+      clearTimeout(pendingDischargeTimerRef.current);
+      pendingDischargeTimerRef.current = null;
+    }
+    setPendingDischarge(null);
+  }, []);
+
+  const startPendingDischarge = useCallback((patient: Patient) => {
+    // Cancel any previously open window
+    if (pendingDischargeTimerRef.current) {
+      clearTimeout(pendingDischargeTimerRef.current);
+      pendingDischargeTimerRef.current = null;
+    }
+    // Optimistically remove the patient and mark as discharged
+    dischargedIds.current.add(patient.id);
+    AsyncStorage.setItem(DISCHARGED_IDS_KEY, JSON.stringify([...dischargedIds.current])).catch(() => {});
+    setPatients(prev => prev.filter(p => p.id !== patient.id));
+
+    const expiresAt = Date.now() + 4000;
+    setPendingDischarge({ patient, expiresAt });
+    pendingDischargeTimerRef.current = setTimeout(() => {
+      setPendingDischarge(null);
+      pendingDischargeTimerRef.current = null;
+    }, 4000);
+  }, []);
+
+  const undoDischarge = useCallback(() => {
+    setPendingDischarge(pd => {
+      if (!pd) return null;
+      // Cancel the timer
+      if (pendingDischargeTimerRef.current) {
+        clearTimeout(pendingDischargeTimerRef.current);
+        pendingDischargeTimerRef.current = null;
+      }
+      // Un-mark as discharged so API refresh can bring them back
+      dischargedIds.current.delete(pd.patient.id);
+      AsyncStorage.setItem(DISCHARGED_IDS_KEY, JSON.stringify([...dischargedIds.current])).catch(() => {});
+      // Re-add the patient to the roster
+      setPatients(prev => {
+        // Avoid duplicates in case of rapid double-tap
+        if (prev.some(p => p.id === pd.patient.id)) return prev;
+        return [...prev, pd.patient];
+      });
+      return null;
+    });
+  }, []);
+
   const admitPatient = useCallback((patient: Patient) => {
     setPatients(prev => [...prev, patient]);
   }, []);
@@ -155,7 +226,11 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <PatientContext.Provider
-      value={{ patients, residentialPatients, bedStatusMap, dischargePatient, admitPatient, loading, refreshFromApi }}
+      value={{
+        patients, residentialPatients, bedStatusMap,
+        dischargePatient, startPendingDischarge, undoDischarge, clearPendingDischarge, pendingDischarge,
+        admitPatient, loading, refreshFromApi,
+      }}
     >
       {children}
     </PatientContext.Provider>
