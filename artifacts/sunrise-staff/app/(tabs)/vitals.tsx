@@ -509,8 +509,10 @@ export default function VitalsScreen() {
         </View>
       )}
 
-      {/* Alert banner — dismissable; cleared on shift handoff */}
-      {criticalCount > 0 && !bannerDismissed && (
+      {/* Alert banner — dismissable; cleared on shift handoff.
+          Hidden while AsyncStorage is still rehydrating so a nurse who dismissed
+          the banner doesn't see it briefly re-appear on cold start. */}
+      {!isRehydrating && criticalCount > 0 && !bannerDismissed && (
         <View style={[styles.alertBanner, { backgroundColor: '#FEF2F2', borderBottomColor: colors.critical }]}>
           <Ionicons name="warning" size={18} color={colors.critical} />
           <Text style={[styles.alertText, { color: colors.critical }]}>
