@@ -84,12 +84,12 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
   return (
     <div className="space-y-6">
       {/* Role Banner */}
-      <div className={`border px-4 py-3 rounded-lg shadow-sm flex items-center justify-between ${role.color} ${role.borderColor}`}>
+      <div className="bg-navy border border-white/10 px-5 py-3 rounded-lg shadow-sm flex items-center justify-between">
         <div className="font-medium text-white">
-          <span className={`font-bold mr-2 ${role.textColor}`}>{role.label}</span>
+          <span className="font-bold mr-2 text-sunrise-orange">{role.label}</span>
           <span className="text-slate-300">— Sunrise Recovery Center</span>
         </div>
-        <div className="flex gap-4 text-sm text-slate-300">
+        <div className="flex gap-5 text-sm text-slate-300">
           <span>Active Census: <strong className="text-white">18/22</strong></span>
           <span>Shift: <strong className="text-white">Day</strong></span>
           {isFinancial && <span>MTD Revenue: <strong className="text-white">$310K</strong></span>}
