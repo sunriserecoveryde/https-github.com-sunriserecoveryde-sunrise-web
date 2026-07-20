@@ -44,6 +44,16 @@ export function deriveBedStatus(patients: Patient[]): Record<string, BedStatus> 
   return map;
 }
 
+// ── Discharge undo ─────────────────────────────────────────────────────────────
+
+/** Pending-discharge intent — kept in context so the undo window survives
+ *  brief tab-switches (same pattern as PendingDeleteRecord in NursingNotesContext). */
+export interface PendingDischargeRecord {
+  patient: Patient;
+  /** epoch-ms when the 4-second undo window closes */
+  expiresAt: number;
+}
+
 // ── Context definition ─────────────────────────────────────────────────────────
 
 /** Pending-discharge intent — survives navigation within the same app session */
@@ -83,6 +93,8 @@ interface PatientContextValue {
 }
 
 const PatientContext = createContext<PatientContextValue | null>(null);
+
+const DISCHARGE_UNDO_MS = 4000;
 
 // ── Provider ───────────────────────────────────────────────────────────────────
 
@@ -172,14 +184,14 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(DISCHARGED_IDS_KEY, JSON.stringify([...dischargedIds.current])).catch(() => {});
     setPatients(prev => prev.filter(p => p.id !== patient.id));
 
-    const expiresAt = Date.now() + 4000;
+    const expiresAt = Date.now() + DISCHARGE_UNDO_MS;
     pendingDischargeIdRef.current = patient.id;
     setPendingDischarge({ patient, expiresAt });
     pendingDischargeTimerRef.current = setTimeout(() => {
       pendingDischargeIdRef.current = null;
       setPendingDischarge(null);
       pendingDischargeTimerRef.current = null;
-    }, 4000);
+    }, DISCHARGE_UNDO_MS);
   }, []);
 
   const undoDischarge = useCallback(() => {

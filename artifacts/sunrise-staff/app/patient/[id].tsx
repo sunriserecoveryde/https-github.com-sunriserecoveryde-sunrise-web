@@ -396,8 +396,17 @@ export default function PatientDetailScreen() {
   const insets = useSafeAreaInsets();
   const { role } = useRole();
   const nurseDisplayName = role === 'bht' ? 'James T., BHT' : 'Sarah M., RN';
-  const { patients, startPendingDischarge, pendingDischarge, undoDischarge } = usePatients();
+  const { patients, pendingDischarge, startPendingDischarge, undoDischarge, loading: patientsLoading } = usePatients();
   const [dischargeModalVisible, setDischargeModalVisible] = useState(false);
+
+  // ─── Discharge undo toast ──────────────────────────────────────────────────
+  const [dischargeToastVisible, setDischargeToastVisible] = useState(false);
+  const dischargeToastAnim = useRef(new Animated.Value(100)).current;
+  const dischargeCountdownAnim = useRef(new Animated.Value(1)).current;
+  const dischargeCountdownAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+  const dischargeHalfwayHapticRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dischargeToastActiveRef = useRef(false);
+  const [dischargeToastWidth, setDischargeToastWidth] = useState(0);
 
   // ─── Add Note state ────────────────────────────────────────────────────────
   const {
@@ -409,6 +418,99 @@ export default function PatientDetailScreen() {
     undoPendingDelete,
     clearPendingDelete,
   } = useNursingNotes();
+
+  // ─── Auto-navigate back when discharge undo window expires ────────────────
+  // startPendingDischarge removes the patient from the roster immediately
+  // (optimistic), but the patient detail screen stays open (using the static
+  // PATIENTS fallback) so the discharge undo toast is visible. Once the undo
+  // window closes (pendingDischarge becomes null) AND the patient is no longer
+  // in the live roster, we navigate back to the census board.
+  // Also fires for an immediate navigate-back if the patient is simply absent
+  // on mount (e.g. discharged from a different screen).
+  useEffect(() => {
+    if (patientsLoading) return;
+    const stillInRoster = patients.some(p => p.id === id);
+    const hasOpenWindow = pendingDischarge?.patient.id === id;
+    if (!stillInRoster && !hasOpenWindow) {
+      router.back();
+    }
+  }, [patients, pendingDischarge, id, patientsLoading]);
+
+  // ─── Drive discharge toast from context pendingDischarge ──────────────────
+  useEffect(() => {
+    const isMyDischarge = pendingDischarge?.patient.id === id;
+
+    // Shared helper — start (or restart) the countdown animation + halfway haptic.
+    const startDischargeCountdown = () => {
+      if (dischargeCountdownAnimRef.current) dischargeCountdownAnimRef.current.stop();
+      if (dischargeHalfwayHapticRef.current) {
+        clearTimeout(dischargeHalfwayHapticRef.current);
+        dischargeHalfwayHapticRef.current = null;
+      }
+      if (!pendingDischarge) return;
+      const remaining = Math.max(0, pendingDischarge.expiresAt - Date.now());
+      const fraction = remaining / 4000;
+      dischargeCountdownAnim.setValue(fraction);
+      if (remaining > 0) {
+        dischargeCountdownAnimRef.current = Animated.timing(dischargeCountdownAnim, {
+          toValue: 0,
+          duration: remaining,
+          useNativeDriver: false, // width interpolation cannot use native driver
+        });
+        dischargeCountdownAnimRef.current.start();
+        // Fire a light haptic at the halfway point so nurses feel the urgency
+        // even when the screen is off-center. Only schedule if enough time is
+        // left that the haptic won't fire immediately or after the window closes.
+        if (remaining > 1000) {
+          dischargeHalfwayHapticRef.current = setTimeout(() => {
+            dischargeHalfwayHapticRef.current = null;
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }, remaining / 2);
+        }
+      }
+    };
+
+    if (isMyDischarge && !dischargeToastActiveRef.current) {
+      // Fresh show
+      dischargeToastActiveRef.current = true;
+      setDischargeToastVisible(true);
+      startDischargeCountdown();
+      Animated.spring(dischargeToastAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 200,
+      }).start();
+    } else if (!isMyDischarge && dischargeToastActiveRef.current) {
+      // Hide — undo tapped or timer expired (roster update drives navigation)
+      dischargeToastActiveRef.current = false;
+      if (dischargeCountdownAnimRef.current) {
+        dischargeCountdownAnimRef.current.stop();
+        dischargeCountdownAnimRef.current = null;
+      }
+      if (dischargeHalfwayHapticRef.current) {
+        clearTimeout(dischargeHalfwayHapticRef.current);
+        dischargeHalfwayHapticRef.current = null;
+      }
+      Animated.timing(dischargeToastAnim, {
+        toValue: 100,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => setDischargeToastVisible(false));
+    }
+
+    return () => {
+      if (dischargeHalfwayHapticRef.current) {
+        clearTimeout(dischargeHalfwayHapticRef.current);
+        dischargeHalfwayHapticRef.current = null;
+      }
+    };
+  }, [pendingDischarge, id]);
+
+  const handleUndoDischarge = () => {
+    undoDischarge();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
 
   // ─── Scroll-to-section support ────────────────────────────────────────────
   // All three targets share one ScrollView ref (primary call owns it; secondary
@@ -435,38 +537,6 @@ export default function PatientDetailScreen() {
     openRowRef.current?.close();
     openRowRef.current = null;
   }, []);
-
-  // ─── Undo-discharge toast ──────────────────────────────────────────────────
-  // pendingDischarge lives in PatientContext so it survives navigation.
-  const [dischargeToastVisible, setDischargeToastVisible] = useState(false);
-  const dischargeToastAnim = useRef(new Animated.Value(100)).current;
-  const dischargeToastShownRef = useRef(false);
-
-  useEffect(() => {
-    const active = pendingDischarge !== null;
-    if (active && !dischargeToastShownRef.current) {
-      dischargeToastShownRef.current = true;
-      setDischargeToastVisible(true);
-      Animated.spring(dischargeToastAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 20,
-        stiffness: 200,
-      }).start();
-    } else if (!active && dischargeToastShownRef.current) {
-      dischargeToastShownRef.current = false;
-      Animated.timing(dischargeToastAnim, {
-        toValue: 100,
-        duration: 220,
-        useNativeDriver: true,
-      }).start(() => setDischargeToastVisible(false));
-    }
-  }, [pendingDischarge]);
-
-  const handleUndoDischarge = () => {
-    undoDischarge();
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
 
   // ─── Undo-delete toast ─────────────────────────────────────────────────────
   // pendingDelete lives in NursingNotesContext so it survives navigation.
@@ -1574,21 +1644,6 @@ export default function PatientDetailScreen() {
 
       </ScrollView>
 
-      {/* ─── Undo discharge toast ─── */}
-      {dischargeToastVisible && (
-        <Animated.View
-          style={[
-            s.undoToast,
-            { bottom: Math.max(insets.bottom, 8) + 64, transform: [{ translateY: dischargeToastAnim }] },
-          ]}
-        >
-          <Text style={s.undoToastText}>Patient discharged</Text>
-          <Pressable onPress={handleUndoDischarge} hitSlop={12} style={s.undoBtn}>
-            <Text style={s.undoBtnText}>Undo</Text>
-          </Pressable>
-        </Animated.View>
-      )}
-
       {/* ─── Undo delete toast ─── */}
       {toastVisible && (
         <Animated.View
@@ -1615,6 +1670,40 @@ export default function PatientDetailScreen() {
                 width: countdownAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [0, toastContainerWidth],
+                }),
+              }}
+            />
+          )}
+        </Animated.View>
+      )}
+
+      {/* ─── Discharge undo toast ─── */}
+      {dischargeToastVisible && (
+        <Animated.View
+          onLayout={e => setDischargeToastWidth(e.nativeEvent.layout.width)}
+          style={[
+            s.undoToast,
+            { bottom: Math.max(insets.bottom, 8) + 64, transform: [{ translateY: dischargeToastAnim }] },
+          ]}
+        >
+          <Ionicons name="exit-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={[s.undoToastText, { flex: 1 }]}>Patient discharged</Text>
+          <Pressable onPress={handleUndoDischarge} hitSlop={12} style={s.undoBtn}>
+            <Text style={s.undoBtnText}>Undo</Text>
+          </Pressable>
+          {/* Draining countdown bar */}
+          {dischargeToastWidth > 0 && (
+            <Animated.View
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                height: 3,
+                borderBottomLeftRadius: 12,
+                backgroundColor: 'rgba(229, 62, 62, 0.55)',
+                width: dischargeCountdownAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, dischargeToastWidth],
                 }),
               }}
             />
@@ -1778,7 +1867,6 @@ export default function PatientDetailScreen() {
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                   setDischargeModalVisible(false);
                   startPendingDischarge(patient);
-                  router.back();
                 }}
               >
                 <Text style={[s.modalBtnText, { color: '#fff' }]}>Confirm Discharge</Text>
