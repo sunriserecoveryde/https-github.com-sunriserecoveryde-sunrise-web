@@ -393,18 +393,37 @@ export default function VitalsScreen() {
     };
   }, []);
 
-  // ── Score filter bar rehydration fade-in ────────────────────────────────────
-  // Start invisible so the chip bar doesn't flash as 'All' before AsyncStorage
-  // resolves. Once isRehydrating flips to false, fade in the correct chip.
+  // ── Score filter bar rehydration guard ──────────────────────────────────────
+  // While isRehydrating: show a shimmer skeleton so the bar is never blank.
+  // Once rehydrating flips to false: fade in the real chip bar.
   const filterBarOpacity = useRef(new Animated.Value(0)).current;
+  const shimmerAnim = useRef(new Animated.Value(0.45)).current;
+  const shimmerLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+
   useEffect(() => {
-    if (!isRehydrating) {
+    if (isRehydrating) {
+      // Start pulsing shimmer while we wait for AsyncStorage
+      shimmerLoopRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(shimmerAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+          Animated.timing(shimmerAnim, { toValue: 0.45, duration: 600, useNativeDriver: true }),
+        ])
+      );
+      shimmerLoopRef.current.start();
+    } else {
+      // Stop shimmer and fade in the real chip bar
+      shimmerLoopRef.current?.stop();
+      shimmerLoopRef.current = null;
       Animated.timing(filterBarOpacity, {
         toValue: 1,
         duration: 150,
         useNativeDriver: true,
       }).start();
     }
+    return () => {
+      shimmerLoopRef.current?.stop();
+      shimmerLoopRef.current = null;
+    };
   }, [isRehydrating]);
 
   const openModal = (patient: Patient) => {
@@ -446,53 +465,68 @@ export default function VitalsScreen() {
         </View>
       </View>
 
-      {/* Score filter bar — Guard B (opacity animation): starts invisible so the chip
-          doesn't flash as 'All' before AsyncStorage resolves. Fades in once isRehydrating
-          is false. See WithdrawalFiltersContext.tsx for the full guard registry. */}
-      <Animated.View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border, opacity: filterBarOpacity }]}>
-        {([
-          { key: 'all', label: 'All', count: allPatientsWithScores.length },
-          { key: 'cows', label: 'COWS Only', count: allPatientsWithScores.filter(p => p.cows != null && p.cows > 0).length },
-          { key: 'ciwa', label: 'CIWA Only', count: allPatientsWithScores.filter(p => p.ciwa != null && p.ciwa > 0).length },
-          { key: 'alerts', label: 'Alerts', count: allPatientsWithScores.filter(p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)).length },
-        ] as { key: typeof scoreFilter; label: string; count: number }[]).map(opt => {
-          const active = scoreFilter === opt.key;
-          return (
-            <Pressable
-              key={opt.key}
-              onPress={() => {
-                Haptics.selectionAsync();
-                setScoreFilter(opt.key);
-              }}
+      {/* Score filter bar — Guard B:
+          While rehydrating → shimmer skeleton so the bar is never blank.
+          After rehydration → real chip bar fades in.
+          See WithdrawalFiltersContext.tsx for the full guard registry. */}
+      {isRehydrating ? (
+        <View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          {[72, 96, 82, 72].map((w, i) => (
+            <Animated.View
+              key={i}
               style={[
-                styles.filterChip,
-                active
-                  ? { backgroundColor: colors.navy, borderColor: colors.navy }
-                  : { backgroundColor: colors.background, borderColor: colors.border },
+                styles.filterChipSkeleton,
+                { width: w, backgroundColor: colors.muted, opacity: shimmerAnim },
               ]}
-            >
-              <Text
+            />
+          ))}
+        </View>
+      ) : (
+        <Animated.View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border, opacity: filterBarOpacity }]}>
+          {([
+            { key: 'all', label: 'All', count: allPatientsWithScores.length },
+            { key: 'cows', label: 'COWS Only', count: allPatientsWithScores.filter(p => p.cows != null && p.cows > 0).length },
+            { key: 'ciwa', label: 'CIWA Only', count: allPatientsWithScores.filter(p => p.ciwa != null && p.ciwa > 0).length },
+            { key: 'alerts', label: 'Alerts', count: allPatientsWithScores.filter(p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)).length },
+          ] as { key: typeof scoreFilter; label: string; count: number }[]).map(opt => {
+            const active = scoreFilter === opt.key;
+            return (
+              <Pressable
+                key={opt.key}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setScoreFilter(opt.key);
+                }}
                 style={[
-                  styles.filterChipText,
-                  { color: active ? '#fff' : colors.mutedForeground },
+                  styles.filterChip,
+                  active
+                    ? { backgroundColor: colors.navy, borderColor: colors.navy }
+                    : { backgroundColor: colors.background, borderColor: colors.border },
                 ]}
               >
-                {opt.label}
-              </Text>
-              <View style={[
-                styles.filterChipBadge,
-                active
-                  ? { backgroundColor: 'rgba(255,255,255,0.25)' }
-                  : { backgroundColor: colors.muted },
-              ]}>
-                <Text style={[styles.filterChipBadgeText, { color: active ? '#fff' : colors.mutedForeground }]}>
-                  {active ? patientsWithScores.length : opt.count}
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    { color: active ? '#fff' : colors.mutedForeground },
+                  ]}
+                >
+                  {opt.label}
                 </Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </Animated.View>
+                <View style={[
+                  styles.filterChipBadge,
+                  active
+                    ? { backgroundColor: 'rgba(255,255,255,0.25)' }
+                    : { backgroundColor: colors.muted },
+                ]}>
+                  <Text style={[styles.filterChipBadgeText, { color: active ? '#fff' : colors.mutedForeground }]}>
+                    {active ? patientsWithScores.length : opt.count}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </Animated.View>
+      )}
 
       {/* Filter notice — shown when the pending-discharge patient is hidden by the active filter.
           Guard C (raw !isRehydrating): the condition involves a runtime patient ID so
@@ -698,6 +732,7 @@ const styles = StyleSheet.create({
   filterChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   filterChipBadge: { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1, minWidth: 20, alignItems: 'center' },
   filterChipBadgeText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  filterChipSkeleton: { height: 32, borderRadius: 20 },
   emptyState: {
     alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 28, borderRadius: 12, borderWidth: 1,
