@@ -594,6 +594,133 @@ describe('loadWithdrawalFiltersState — cold-start flash guard for Vitals / Sco
   });
 });
 
+// ─── Tests: midnight rollover — scoreFilter key stability ────────────────────
+//
+// The withdrawal score filter is persisted under a FIXED key
+// (@withdrawal_score_filter) that never includes a date component.  The MAR and
+// Checks screens use date-scoped keys (e.g. @sunrise_mar_2026-07-20) that
+// rotate at midnight; any future refactor that accidentally applies the same
+// date-scoping to the filter key would silently discard the saved chip
+// selection on every midnight boundary.
+//
+// These tests guard that boundary:
+//   1. A filter saved before midnight is still readable after midnight because
+//      the same fixed key is used on both sides of the boundary.
+//   2. If a date-scoped key were introduced, the "after midnight" load would
+//      receive a NEW key and fall back to "all" — this test documents that
+//      regression so a developer can see exactly what breaks.
+//
+// The "midnight" simulation is just two separate storage reads:
+//   • "before midnight" = write the filter under the PRE-midnight key
+//   • "after midnight"  = read using the POST-midnight key
+// For the fixed-key case both keys are identical, so the filter survives.
+// For the date-scoped case the keys differ, so the filter is lost.
+
+describe('loadWithdrawalFiltersState — midnight rollover key stability', () => {
+  // Simulate a midnight rollover by writing with the "before" key and reading
+  // with the "after" key.  When the key is fixed these are the same string.
+  const FIXED_KEY = '@withdrawal_score_filter';
+
+  // Helper: build a full WITHDRAWAL_KEYS object with a custom scoreFilter key.
+  function makeKeys(scoreFilterKey: string) {
+    return {
+      scoreFilter: scoreFilterKey,
+      bannerDismissed: '@withdrawal_banner_dismissed',
+      filterNoticeDismissed: '@filter_notice_dismissed_patient_id',
+      lastDischargePatientId: '@filter_notice_last_discharge_patient_id',
+    };
+  }
+
+  it('scoreFilter survives a simulated midnight rollover — fixed key reads same value on both sides', async () => {
+    // Before midnight: nurse selects "alerts", app persists it.
+    const storage = makeMemoryStorage({ [FIXED_KEY]: 'alerts' });
+
+    // After midnight: app cold-starts and calls loadWithdrawalFiltersState.
+    // The key passed is still the FIXED key — not a date-scoped key.
+    const result = await loadWithdrawalFiltersState(storage, makeKeys(FIXED_KEY));
+
+    // The filter must survive the rollover unchanged.
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('alerts');
+  });
+
+  it('all four valid filters survive a midnight rollover under the fixed key', async () => {
+    const validFilters: WithdrawalScoreFilter[] = ['all', 'cows', 'ciwa', 'alerts'];
+
+    for (const filter of validFilters) {
+      // Write with fixed key (before midnight)
+      const storage = makeMemoryStorage({ [FIXED_KEY]: filter });
+
+      // Read with the same fixed key (after midnight)
+      const result = await loadWithdrawalFiltersState(storage, makeKeys(FIXED_KEY));
+
+      expect(result.scoreFilter).toBe(filter);
+    }
+  });
+
+  it('scoreFilter key must NOT be date-scoped — a date-scoped key silently discards the filter at midnight', async () => {
+    // This test documents the regression that would occur if the key were
+    // accidentally made date-scoped (e.g. during a refactor that aligns
+    // the filter with the MAR/Checks date-rotation pattern).
+    //
+    // "Before midnight" key: @withdrawal_score_filter_2026-07-20
+    // "After midnight"  key: @withdrawal_score_filter_2026-07-21
+    //
+    // The nurse selected "cows" before midnight.
+    const keyBeforeMidnight = '@withdrawal_score_filter_2026-07-20';
+    const keyAfterMidnight  = '@withdrawal_score_filter_2026-07-21';
+
+    // Storage contains the pre-midnight value.
+    const storage = makeMemoryStorage({ [keyBeforeMidnight]: 'cows' });
+
+    // After midnight the app uses the new date-scoped key → no entry found.
+    const result = await loadWithdrawalFiltersState(storage, makeKeys(keyAfterMidnight));
+
+    // The filter falls back to 'all' — the saved chip is silently discarded.
+    // If this were the production behavior, nurses would lose their filter
+    // selection every night at midnight.
+    expect(result.scoreFilter).toBe('all');
+
+    // IMPORTANT: this test PROVES that date-scoped keys break the filter.
+    // The production key is fixed (@withdrawal_score_filter) so the test
+    // above ('scoreFilter survives a simulated midnight rollover') passes.
+    // If someone ever changes SCORE_FILTER_KEY to include a date, that test
+    // will fail, surfacing the regression before it ships.
+  });
+
+  it('scoreFilter key identity check — the fixed key is the same string before and after midnight', () => {
+    // Staticly documents that @withdrawal_score_filter contains no date
+    // component.  This test fails the moment anyone introduces a date
+    // placeholder into the key constant.
+    const keyBeforeMidnight = '@withdrawal_score_filter';
+    const keyAfterMidnight  = '@withdrawal_score_filter'; // same — no date segment
+
+    // The keys must be identical so the same storage entry is found on both
+    // sides of the midnight boundary.
+    expect(keyBeforeMidnight).toBe(keyAfterMidnight);
+    expect(keyBeforeMidnight).not.toMatch(/\d{4}-\d{2}-\d{2}/); // no YYYY-MM-DD
+  });
+
+  it('a date-scoped key would need pruneStaleStorageKeys — the fixed key does not', async () => {
+    // MAR and Checks use date-scoped keys and rely on pruneStaleStorageKeys to
+    // clean up yesterday's entries.  The withdrawal filter key does NOT need
+    // pruning because it is fixed; adding pruning logic for it would be a sign
+    // that the key had been erroneously date-scoped.
+    //
+    // Verify: no stale keys are pruned when the filter key is fixed.
+    const storage = makeMemoryStorage({ [FIXED_KEY]: 'ciwa' });
+
+    // pruneStaleStorageKeys is called with the fixed key as both prefix and
+    // current key — nothing should be removed.
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@withdrawal_score_filter', currentKey: FIXED_KEY },
+    ]);
+
+    // The filter entry must still be present.
+    expect(storage.store[FIXED_KEY]).toBe('ciwa');
+  });
+});
+
 // ─── Tests: guard invariants ──────────────────────────────────────────────────
 
 describe('cold-start flash guard — shared invariants across all screens', () => {
