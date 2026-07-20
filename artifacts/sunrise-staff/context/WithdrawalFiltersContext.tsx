@@ -4,6 +4,8 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 export type WithdrawalScoreFilter = 'all' | 'cows' | 'ciwa' | 'alerts';
 
 const SCORE_FILTER_KEY = '@withdrawal_score_filter';
+const FILTER_NOTICE_DISMISSED_KEY = '@filter_notice_dismissed_patient_id';
+const LAST_DISCHARGE_PATIENT_KEY = '@filter_notice_last_discharge_patient_id';
 
 interface WithdrawalFiltersState {
   scoreFilter: WithdrawalScoreFilter;
@@ -53,13 +55,24 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
     };
   }, []);
 
-  // Rehydrate persisted scoreFilter on mount
+  // Rehydrate persisted values on mount
   useEffect(() => {
-    AsyncStorage.getItem(SCORE_FILTER_KEY).then(stored => {
+    Promise.all([
+      AsyncStorage.getItem(SCORE_FILTER_KEY),
+      AsyncStorage.getItem(FILTER_NOTICE_DISMISSED_KEY),
+      AsyncStorage.getItem(LAST_DISCHARGE_PATIENT_KEY),
+    ]).then(([storedFilter, storedDismissed, storedLastDischarge]) => {
       if (!mountedRef.current) return;
-      if (stored && VALID_SCORE_FILTERS.includes(stored as WithdrawalScoreFilter)) {
-        setState(prev => ({ ...prev, scoreFilter: stored as WithdrawalScoreFilter }));
-      }
+      setState(prev => ({
+        ...prev,
+        ...(storedFilter && VALID_SCORE_FILTERS.includes(storedFilter as WithdrawalScoreFilter)
+          ? { scoreFilter: storedFilter as WithdrawalScoreFilter }
+          : {}),
+        ...(storedDismissed ? { filterNoticeDismissedForPatientId: storedDismissed } : {}),
+        // Rehydrate lastTrackedDischargePatientId so trackDischargePatientId can
+        // correctly detect whether the post-restart discharge is truly new.
+        ...(storedLastDischarge ? { lastTrackedDischargePatientId: storedLastDischarge } : {}),
+      }));
     }).catch(() => {/* ignore read errors */});
   }, []);
 
@@ -74,12 +87,20 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
 
   const dismissFilterNotice = useCallback((patientId: string) => {
     setState(prev => ({ ...prev, filterNoticeDismissedForPatientId: patientId }));
+    AsyncStorage.setItem(FILTER_NOTICE_DISMISSED_KEY, patientId).catch(() => {/* ignore write errors */});
   }, []);
 
   const trackDischargePatientId = useCallback((patientId: string | null) => {
     setState(prev => {
       if (prev.lastTrackedDischargePatientId === patientId) return prev; // no change, no reset
-      // New (or cleared) discharge event — reset dismissal and record new ID
+      // Truly new (or cleared) discharge event — reset dismissal and record new ID.
+      // Both keys are cleared/updated together so storage stays consistent.
+      if (patientId) {
+        AsyncStorage.setItem(LAST_DISCHARGE_PATIENT_KEY, patientId).catch(() => {/* ignore */});
+      } else {
+        AsyncStorage.removeItem(LAST_DISCHARGE_PATIENT_KEY).catch(() => {/* ignore */});
+      }
+      AsyncStorage.removeItem(FILTER_NOTICE_DISMISSED_KEY).catch(() => {/* ignore */});
       return {
         ...prev,
         lastTrackedDischargePatientId: patientId,
@@ -91,6 +112,8 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
   const clearFilters = useCallback(() => {
     setState(DEFAULT_STATE);
     AsyncStorage.removeItem(SCORE_FILTER_KEY).catch(() => {/* ignore remove errors */});
+    AsyncStorage.removeItem(FILTER_NOTICE_DISMISSED_KEY).catch(() => {/* ignore remove errors */});
+    AsyncStorage.removeItem(LAST_DISCHARGE_PATIENT_KEY).catch(() => {/* ignore remove errors */});
   }, []);
 
   return (
