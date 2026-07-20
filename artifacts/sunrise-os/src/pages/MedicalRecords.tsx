@@ -81,8 +81,8 @@ const ROI_REQUESTS: ROIRequest[] = [
     requires42CFR: true,
     denialReason: 'Request included mention of addiction treatment. 42 CFR Part 2 prohibits disclosure of substance abuse records to insurance companies for purposes unrelated to direct treatment. Patient counseled — records redacted to physical injury only (not SUD records). Patient offered opportunity to resubmit with redacted request.',
     auditLog: [
-      { date: '2026-07-12', action: 'ROI received — reviewed by compliance officer', user: 'Dr. James Carter' },
-      { date: '2026-07-13', action: 'DENIED: 42 CFR Part 2 — insurer cannot receive SUD records for non-treatment purposes', user: 'Dr. James Carter' },
+      { date: '2026-07-12', action: 'ROI received — reviewed by compliance officer', user: 'James S. Collins III' },
+      { date: '2026-07-13', action: 'DENIED: 42 CFR Part 2 — insurer cannot receive SUD records for non-treatment purposes', user: 'James S. Collins III' },
       { date: '2026-07-13', action: 'Patient notified; 42 CFR rights explained; redacted version offered', user: 'David Odom, LMFT' },
     ],
   },

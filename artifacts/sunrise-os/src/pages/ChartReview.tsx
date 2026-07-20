@@ -24,13 +24,13 @@ interface Deficiency {
 }
 
 const DEFICIENCIES: Deficiency[] = [
-  { id: 'd1', patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential', counselor: 'Sarah Jenkins, LPC', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 1, detail: 'BIRP note 7/17 — Awaiting co-sign from James Carter, Clinical Director.', priority: 'Critical' },
+  { id: 'd1', patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential', counselor: 'Sarah Jenkins, LPC', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 1, detail: 'BIRP note 7/17 — Awaiting co-sign from James S. Collins III, Clinical Director.', priority: 'Critical' },
   { id: 'd2', patientId: 'p2', patientName: 'Samantha Choi', mrn: 'MRN-74563', program: 'Residential', counselor: 'David Odom, LMFT', type: 'Missing Co-sign', dueDate: '2026-07-16', daysOverdue: 2, detail: 'Psychiatric evaluation 7/15 — awaiting co-sign from Dr. Allen Hughes.', priority: 'Critical' },
   { id: 'd3', patientId: 'p3', patientName: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', counselor: 'Maria Gonzales, LCSW', type: 'Overdue Note', dueDate: '2026-07-16', daysOverdue: 2, detail: 'Daily progress note missing for 7/16. Required within 24 hours per policy.', priority: 'High' },
   { id: 'd4', patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', counselor: 'Maria Gonzales, LCSW', type: 'Incomplete ASAM', dueDate: '2026-07-15', daysOverdue: 3, detail: 'Dimension 4 (Readiness to Change) and Dimension 5 (Relapse Potential) not scored.', priority: 'High' },
   { id: 'd5', patientId: 'p6', patientName: 'Destiny Williams', mrn: 'MRN-55129', program: 'PHP', counselor: 'Sarah Jenkins, LPC', type: 'Missing UA', dueDate: '2026-07-14', daysOverdue: 4, detail: 'Chain of custody form missing for UA collected 7/13. Re-collection scheduled.', priority: 'High' },
   { id: 'd6', patientId: 'p4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', counselor: 'Sarah Jenkins, LPC', type: 'Unsigned Treatment Plan', dueDate: '2026-07-14', daysOverdue: 4, detail: 'Treatment plan updated 7/12 — patient signature still pending.', priority: 'Moderate' },
-  { id: 'd7', patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', counselor: 'David Odom, LMFT', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 1, detail: 'DAP group note 7/17 — awaiting James Carter co-sign.', priority: 'Critical' },
+  { id: 'd7', patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', counselor: 'David Odom, LMFT', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 1, detail: 'DAP group note 7/17 — awaiting James S. Collins III co-sign.', priority: 'Critical' },
   { id: 'd8', patientId: 'p8', patientName: 'Linda Farris', mrn: 'MRN-39018', program: 'IOP', counselor: 'Maria Gonzales, LCSW', type: 'Expired Auth', dueDate: '2026-07-12', daysOverdue: 6, detail: 'Aetna authorization expired 7/12. Continued stay request not yet submitted.', priority: 'Critical' },
 ];
 

@@ -97,7 +97,7 @@ export function ShiftHandoff({ navigate, readOnly }: Props) {
             {[
               { role: 'Charge Nurse', name: 'Jessica Torres, RN' },
               { role: 'Staff Nurse', name: 'Michael Boyd, RN' },
-              { role: 'Clinical Director', name: 'Dr. James Carter' },
+              { role: 'Clinical Director', name: 'James S. Collins III' },
               { role: 'BHT Supervisor', name: 'Kevin Wright' },
             ].map(s => (
               <div key={s.role} className="flex items-center gap-2 text-sm">
@@ -356,7 +356,7 @@ export function ShiftHandoff({ navigate, readOnly }: Props) {
                 { time: '10:15', type: 'Interdisciplinary', from: 'S. Jenkins, LPC', to: 'J. Torres, RN + D. Odom, LMFT', subject: 'Patient S. Choi — treatment team discussion re: safety plan update needed', outcome: 'Safety plan updated. Counselor to file updated safety plan in chart by EOD.', priority: 'High' },
                 { time: '11:00', type: 'Family Call', from: 'J. Torres, RN', to: 'Family of R. Navarro', subject: 'Family requesting medication information — 42 CFR consent NOT on file', outcome: 'Call declined per 42 CFR Part 2. Family directed to sign consent form on next visit.', priority: 'Routine' },
                 { time: '12:30', type: 'Physician Notification', from: 'A. Patel, RN', to: 'Dr. Robert Chen', subject: 'Patient E. Vasquez — pain complaint 7/10, last PRN dose >4h ago', outcome: 'PRN Ibuprofen 400mg authorized. Non-opioid only per treatment plan.', priority: 'Routine' },
-                { time: '13:45', type: 'Critical Escalation', from: 'J. Torres, RN', to: 'Dr. Robert Chen → Dr. James Carter (Clinical Director)', subject: 'Patient B. Kowalski — expressed SI with plan. Safety plan initiated.', outcome: 'Crisis assessment completed by Dr. Chen. Patient placed on 1:1 observation. Safety plan signed. Clinical director notified.', priority: 'Critical' },
+                { time: '13:45', type: 'Critical Escalation', from: 'J. Torres, RN', to: 'Dr. Robert Chen → James S. Collins III (Clinical Director)', subject: 'Patient B. Kowalski — expressed SI with plan. Safety plan initiated.', outcome: 'Crisis assessment completed by Dr. Chen. Patient placed on 1:1 observation. Safety plan signed. Clinical director notified.', priority: 'Critical' },
               ].map((entry, i) => (
                 <div key={i} className={`px-5 py-4 ${entry.priority === 'Critical' ? 'bg-red-50' : entry.priority === 'Urgent' ? 'bg-amber-50' : ''}`}>
                   <div className="flex items-start justify-between gap-4">

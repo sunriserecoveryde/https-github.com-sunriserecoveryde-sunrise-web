@@ -530,7 +530,7 @@ export function AuditCompliance({ navigate: _navigate, readOnly }: Props) {
                     { name: 'Kevin Rivera, BHT', role: 'Behavioral Health Tech', hipaa: false, cpr: true, suicide: true, trauma: false, ethics: false, mat: false },
                     { name: 'Amanda Foster', role: 'Case Manager', hipaa: true, cpr: false, suicide: true, trauma: true, ethics: true, mat: true },
                     { name: 'Sandra Kim, RD', role: 'Dietitian (Contract)', hipaa: true, cpr: false, suicide: false, trauma: false, ethics: true, mat: false },
-                    { name: 'James Carter, PhD', role: 'Clinical Supervisor', hipaa: true, cpr: true, suicide: true, trauma: true, ethics: true, mat: true },
+                    { name: 'James S. Collins III, PhD', role: 'Clinical Supervisor', hipaa: true, cpr: true, suicide: true, trauma: true, ethics: true, mat: true },
                   ].map(r => {
                     const fields = [r.hipaa, r.cpr, r.suicide, r.trauma, r.ethics, r.mat];
                     const completed = fields.filter(Boolean).length;

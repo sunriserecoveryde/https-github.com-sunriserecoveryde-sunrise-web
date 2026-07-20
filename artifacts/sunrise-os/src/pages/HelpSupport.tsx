@@ -215,7 +215,7 @@ export function HelpSupport({ navigate }: Props) {
             <h3 className="font-semibold text-navy">Clinical Support</h3>
             <p className="text-sm text-slate mt-1">Questions about clinical workflows, ASAM scoring, or documentation requirements.</p>
             <div className="mt-4 space-y-2 text-sm">
-              <div><span className="text-slate">Contact:</span> <span className="font-medium text-navy">James Carter, Clinical Director</span></div>
+              <div><span className="text-slate">Contact:</span> <span className="font-medium text-navy">James S. Collins III, Clinical Director</span></div>
               <div><span className="text-slate">Email:</span> <span className="text-orange">jcarter@sunriserecovery.org</span></div>
               <div><span className="text-slate">Ext:</span> <span className="font-medium text-navy">4401</span></div>
             </div>
@@ -235,7 +235,7 @@ export function HelpSupport({ navigate }: Props) {
             <h3 className="font-semibold text-navy">Compliance & HIPAA</h3>
             <p className="text-sm text-slate mt-1">42 CFR Part 2 questions, audit requests, breach reporting, or privacy concerns.</p>
             <div className="mt-4 space-y-2 text-sm">
-              <div><span className="text-slate">Contact:</span> <span className="font-medium text-navy">James Carter (Compliance Officer)</span></div>
+              <div><span className="text-slate">Contact:</span> <span className="font-medium text-navy">James S. Collins III (Compliance Officer)</span></div>
               <div><span className="text-slate">Breach Hotline:</span> <span className="text-orange">(800) 555-0193</span></div>
               <div><span className="text-slate">Available:</span> <span className="font-medium text-navy">24/7 for breach incidents</span></div>
             </div>

@@ -39,7 +39,7 @@ const INCIDENTS: Incident[] = [
     immediateActions: ['BHT de-escalation initiated', 'Primary counselor notified', 'Physician notified', 'Safety plan reviewed and signed', 'Family/contact NOT notified per 42 CFR Part 2'],
     followUps: [
       { date: '2026-07-18', note: 'David Odom met with client. Housing referral submitted. Client mood improved.', by: 'David Odom, LMFT', done: true },
-      { date: '2026-07-19', note: 'Clinical director review required', by: 'James Carter, CD', done: false },
+      { date: '2026-07-19', note: 'Clinical director review required', by: 'James S. Collins III, CD', done: false },
     ],
   },
   {
@@ -76,8 +76,8 @@ const INCIDENTS: Incident[] = [
     immediateActions: ['Delayed dose administered immediately', 'Dr. Stone notified', 'CIWA assessment performed (score: 4)', 'Client monitored q1h x4', 'Pharmacy notified', 'QI report filed'],
     followUps: [
       { date: '2026-07-11', note: 'Dr. Stone reviewed. Client stable. No clinical impact.', by: 'Dr. Emily Stone', done: true },
-      { date: '2026-07-12', note: 'QI root cause analysis completed. Nursing handoff protocol revised.', by: 'James Carter, CD', done: true },
-      { date: '2026-07-17', note: 'Staff education on MAR completion completed. Closed.', by: 'James Carter, CD', done: true },
+      { date: '2026-07-12', note: 'QI root cause analysis completed. Nursing handoff protocol revised.', by: 'James S. Collins III, CD', done: true },
+      { date: '2026-07-17', note: 'Staff education on MAR completion completed. Closed.', by: 'James S. Collins III, CD', done: true },
     ],
   },
   {
@@ -89,7 +89,7 @@ const INCIDENTS: Incident[] = [
     immediateActions: ['Columbia Protocol administered', 'Dr. Hughes psychiatric evaluation same day', 'Safety plan updated and signed by client', '30-minute observation checks initiated', 'Family notification declined by client per right to privacy'],
     followUps: [
       { date: '2026-07-03', note: 'Client denies SI. Mood improved. Medication review by Dr. Hughes.', by: 'Dr. Allen Hughes', done: true },
-      { date: '2026-07-07', note: '30-min checks discontinued per clinical team consensus.', by: 'James Carter, CD', done: true },
+      { date: '2026-07-07', note: '30-min checks discontinued per clinical team consensus.', by: 'James S. Collins III, CD', done: true },
     ],
   },
 ];
@@ -325,7 +325,7 @@ export function IncidentReporting({ navigate, readOnly }: Props) {
             <div>
               <label className="block text-xs font-semibold text-slate uppercase mb-1">Assign To</label>
               <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                {['James Carter (Clinical Director)', 'Dr. Robert Chen', 'Dr. Emily Stone', 'Dr. Allen Hughes', 'Sarah Jenkins, LPC', 'David Odom, LMFT'].map(s => <option key={s}>{s}</option>)}
+                {['James S. Collins III (Clinical Supervisor)', 'Dr. Robert Chen', 'Dr. Emily Stone', 'Dr. Allen Hughes', 'Sarah Jenkins, LPC', 'David Odom, LMFT'].map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
             <div className="flex gap-3">
@@ -497,7 +497,7 @@ export function IncidentReporting({ navigate, readOnly }: Props) {
               {
                 incidentId: 'INC-2026-033',
                 title: 'Patient Elopement — Perimeter Breach (Side Gate)',
-                date: '2026-06-14', severity: 'Critical', assignee: 'Clinical Director', status: 'In Progress',
+                date: '2026-06-14', severity: 'Critical', assignee: 'Clinical Supervisor', status: 'In Progress',
                 rootCauses: [
                   { category: 'Facility / Security', cause: 'Side gate latch found defective — gap between latch and frame allowed manual push-through from inside' },
                   { category: 'Supervision', cause: 'Patient was on 30-minute check protocol but was not observed for 45-minute window during BHT break' },
@@ -591,7 +591,7 @@ export function IncidentReporting({ navigate, readOnly }: Props) {
             <div className="space-y-3 text-xs">
               {[
                 {
-                  project: 'AMA Rate Reduction', owner: 'Clinical Director', dept: 'Clinical', status: 'In Progress', priority: 'High',
+                  project: 'AMA Rate Reduction', owner: 'Clinical Supervisor', dept: 'Clinical', status: 'In Progress', priority: 'High',
                   goal: 'Reduce AMA rate from 14% to ≤8% by Q4 2026', 
                   interventions: 'Enhanced engagement protocols, peer support at Day 3 and Day 7, increased 1:1 counseling frequency',
                   metric: 'AMA rate: currently 11% (↓ from 14% baseline)', pColor: 'bg-red-100 text-red-700'

@@ -238,7 +238,7 @@ export function Settings({ navigate, readOnly }: Props) {
               </thead>
               <tbody>
                 {[
-                  { name: 'James Carter', role: 'Clinical Director', dept: 'Administration', access: 'Admin', active: true },
+                  { name: 'James S. Collins III', role: 'Clinical Supervisor', dept: 'Administration', access: 'Admin', active: true },
                   { name: 'Dr. Robert Chen', role: 'Attending Physician', dept: 'Medical', access: 'Physician', active: true },
                   { name: 'Dr. Emily Stone', role: 'Medical Director', dept: 'Medical', access: 'Physician', active: true },
                   { name: 'Dr. Allen Hughes', role: 'Psychiatrist', dept: 'Medical', access: 'Physician', active: true },

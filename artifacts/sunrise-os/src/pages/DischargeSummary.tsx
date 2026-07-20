@@ -103,7 +103,7 @@ Medications patient is NOT taking at discharge that were discussed:
 • Return to ED or call 911 if: seizures, loss of consciousness, severe chest pain, confusion`,
 
   clinicianSignature: 'Sarah Jenkins, LPC — Primary Counselor — July 24, 2026',
-  cosignature: 'Dr. James Carter, CADC-III — Clinical Director — July 24, 2026',
+  cosignature: 'James S. Collins III, CADC-III — Clinical Director — July 24, 2026',
   physicianSignature: 'Dr. Robert Chen, MD — Medical Director — July 24, 2026',
 };
 

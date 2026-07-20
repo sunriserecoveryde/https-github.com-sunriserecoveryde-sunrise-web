@@ -36,7 +36,7 @@ const QUEUE: CosignItem[] = [
   {
     id: 'cs1', patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential',
     noteDate: '2026-07-17', noteType: 'BIRP', author: 'Sarah Jenkins, LPC', authorRole: 'Primary Counselor',
-    supervisor: 'James Carter, Clinical Director', daysWaiting: 1, priority: 'Urgent',
+    supervisor: 'James S. Collins III, Clinical Director', daysWaiting: 1, priority: 'Urgent',
     format: 'BIRP',
     preview: 'Client verbalized high AMA risk during individual session. Safety planning completed.',
     content: {
@@ -59,7 +59,7 @@ const QUEUE: CosignItem[] = [
   {
     id: 'cs3', patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP',
     noteDate: '2026-07-17', noteType: 'DAP', author: 'David Odom, LMFT', authorRole: 'Primary Counselor',
-    supervisor: 'James Carter, Clinical Director', daysWaiting: 1, priority: 'Routine',
+    supervisor: 'James S. Collins III, Clinical Director', daysWaiting: 1, priority: 'Routine',
     format: 'DAP',
     preview: 'Client engaged in discharge planning. Identified aftercare resources. Family meeting scheduled.',
     content: {

@@ -299,7 +299,7 @@ export function QualityImprovement({ navigate, readOnly }: Props) {
                 <div className="flex flex-col gap-2 shrink-0">
                   <select className="border border-border rounded-lg px-2 py-1.5 text-xs text-slate">
                     <option>Assign to...</option>
-                    <option>Dr. James Carter (Clinical Director)</option>
+                    <option>James S. Collins III (Clinical Supervisor)</option>
                     <option>Sarah Jenkins (Lead Counselor)</option>
                     <option>Jessica Torres (Charge Nurse)</option>
                     <option>QI Committee</option>
@@ -361,7 +361,7 @@ export function QualityImprovement({ navigate, readOnly }: Props) {
               do: 'Protocol drafted. Awaiting clinical director approval.',
               study: '—',
               act: '—',
-              lead: 'James Carter (Clinical Director)',
+              lead: 'James S. Collins III (Clinical Supervisor)',
               started: '2026-07-15',
               statusColor: 'bg-amber-100 text-amber-700',
             },

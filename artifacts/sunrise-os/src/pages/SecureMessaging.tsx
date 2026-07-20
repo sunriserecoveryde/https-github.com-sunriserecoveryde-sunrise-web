@@ -79,7 +79,7 @@ const MESSAGES: Message[] = [
   },
   {
     id: 'M-004', threadId: 'T-004', type: 'Team Alert', urgency: 'Critical',
-    from: 'Dr. James Carter, PhD', fromRole: 'Clinical Director',
+    from: 'James S. Collins III, PhD', fromRole: 'Clinical Director',
     to: 'All Clinical Staff',
     patientId: 'p9',
     subject: '🔴 CRITICAL — Samantha Choi Safety Hold — All Staff Read',
@@ -107,14 +107,14 @@ const MESSAGES: Message[] = [
   {
     id: 'M-007', threadId: 'T-007', type: 'Staff-Staff', urgency: 'Routine',
     from: 'Aisha Thompson, LCSW-A', fromRole: 'Counselor',
-    to: 'Dr. James Carter, PhD', toRole: 'Clinical Director',
+    to: 'James S. Collins III, PhD', toRole: 'Clinical Director',
     subject: 'Supervision request — case consultation needed',
-    body: 'Dr. Carter — I have a complex patient (co-occurring severe PTSD + OUD + domestic violence history) that I\'d like your consultation on before proceeding with treatment planning. She\'s triggered by anything trauma-related in group. Requesting 30 min consultation when you have availability this week.',
+    body: 'Collins — I have a complex patient (co-occurring severe PTSD + OUD + domestic violence history) that I\'d like your consultation on before proceeding with treatment planning. She\'s triggered by anything trauma-related in group. Requesting 30 min consultation when you have availability this week.',
     timestamp: '2026-07-17 3:00 PM', status: 'Read',
     replies: [
       {
         id: 'M-007r', threadId: 'T-007', type: 'Staff-Staff', urgency: 'Routine',
-        from: 'Dr. James Carter, PhD', fromRole: 'Clinical Director',
+        from: 'James S. Collins III, PhD', fromRole: 'Clinical Director',
         to: 'Aisha Thompson, LCSW-A', toRole: 'Counselor',
         subject: 'RE: Supervision request',
         body: 'Of course Aisha. I have Tuesday at 3pm open — add it to the supervision calendar. Bring the biopsychosocial and any prior trauma history docs you have. We\'ll think through this together.',
@@ -391,7 +391,7 @@ export function SecureMessaging({ navigate, readOnly }: Props) {
               <div>
                 <label className="block text-xs font-semibold text-slate mb-1">To *</label>
                 <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                  {['Dr. James Carter — Clinical Director', 'Dr. Robert Chen — Medical Director', 'Dr. Emma Hughes — Psychiatrist', 'Sarah Jenkins — Primary Counselor', 'Maria Gonzalez — Social Worker', 'Jessica Torres — DON', 'All Clinical Staff (Broadcast)'].map(s => <option key={s}>{s}</option>)}
+                  {['James S. Collins III — Clinical Director', 'Dr. Robert Chen — Medical Director', 'Dr. Emma Hughes — Psychiatrist', 'Sarah Jenkins — Primary Counselor', 'Maria Gonzalez — Social Worker', 'Jessica Torres — DON', 'All Clinical Staff (Broadcast)'].map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
               <div>

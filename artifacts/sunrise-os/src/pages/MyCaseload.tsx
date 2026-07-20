@@ -363,7 +363,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
           <div className="grid grid-cols-3 gap-4">
             {[
               { label: 'Total Supervision Hours (YTD)', value: '42 hrs', sub: 'Individual + group', color: 'text-navy' },
-              { label: 'Next Supervision Session', value: 'Jul 21', sub: '2:00 PM with Dr. Carter', color: 'text-amber-600' },
+              { label: 'Next Supervision Session', value: 'Jul 21', sub: '2:00 PM with Collins', color: 'text-amber-600' },
               { label: 'Licensure Goal Progress', value: '67%', sub: '1,240 / 2,000 hrs toward LPC', color: 'text-green-600' },
             ].map(k => (
               <div key={k.label} className="card">
@@ -379,10 +379,10 @@ export function MyCaseload({ navigate, readOnly }: Props) {
               <h3 className="font-semibold text-navy text-sm mb-3">Recent Supervision Sessions</h3>
               <div className="space-y-3">
                 {[
-                  { date: '2026-07-07', type: 'Individual', supervisor: 'Dr. James Carter, CADC-III', duration: '60 min', topics: 'Trauma-informed care with Marcus Webb; countertransference with high-acuity caseload; boundary review', competency: 'Trauma-Informed Practice' },
-                  { date: '2026-06-30', type: 'Group', supervisor: 'Dr. James Carter', duration: '90 min', topics: 'Motivational Interviewing role-play; co-occurring PTSD/SUD documentation practices; ethics case study', competency: 'MI / Documentation' },
-                  { date: '2026-06-23', type: 'Individual', supervisor: 'Dr. James Carter', duration: '60 min', topics: 'Treatment plan goal-writing workshop; ASAM Level of Care criteria for PHP vs. residential', competency: 'Treatment Planning' },
-                  { date: '2026-06-16', type: 'Individual', supervisor: 'Dr. James Carter', duration: '60 min', topics: 'Crisis response review — C-SSRS administration case study; mandatory reporting obligations TN', competency: 'Crisis Intervention' },
+                  { date: '2026-07-07', type: 'Individual', supervisor: 'James S. Collins III, CAC-AD, BAS', duration: '60 min', topics: 'Trauma-informed care with Marcus Webb; countertransference with high-acuity caseload; boundary review', competency: 'Trauma-Informed Practice' },
+                  { date: '2026-06-30', type: 'Group', supervisor: 'James S. Collins III', duration: '90 min', topics: 'Motivational Interviewing role-play; co-occurring PTSD/SUD documentation practices; ethics case study', competency: 'MI / Documentation' },
+                  { date: '2026-06-23', type: 'Individual', supervisor: 'James S. Collins III', duration: '60 min', topics: 'Treatment plan goal-writing workshop; ASAM Level of Care criteria for PHP vs. residential', competency: 'Treatment Planning' },
+                  { date: '2026-06-16', type: 'Individual', supervisor: 'James S. Collins III', duration: '60 min', topics: 'Crisis response review — C-SSRS administration case study; mandatory reporting obligations TN', competency: 'Crisis Intervention' },
                 ].map(s => (
                   <div key={s.date} className="border border-border rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-1.5">
@@ -428,7 +428,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
                 <div className="p-3 bg-navy/5 rounded-lg text-xs text-navy italic leading-relaxed">
                   "Sarah demonstrates strong rapport-building skills and patient-centered documentation. Key growth area this quarter is increasing structured treatment plan goal-writing with SMART criteria. Recommend EMDR Level 1 training before Q4 to expand trauma-competency. Countertransference awareness is developing well — self-care plan review at next session."
                 </div>
-                <div className="text-[10px] text-slate mt-2">— Dr. James Carter, CADC-III · July 7, 2026</div>
+                <div className="text-[10px] text-slate mt-2">— James S. Collins III, CAC-AD, BAS · July 7, 2026</div>
               </div>
             </div>
           </div>

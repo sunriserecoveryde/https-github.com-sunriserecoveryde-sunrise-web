@@ -364,7 +364,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
               {[
                 { title: 'Motivational Interviewing — Advanced Skills Workshop', date: '2026-08-15', instructor: 'Addiction Counselor Institute (ACI)', audience: 'Devon R.', ceu: '6 CEUs', mode: 'Virtual' },
                 { title: 'Mental Health First Aid Recertification (8-hour)', date: '2026-09-01', instructor: 'SAMHSA-sponsored; local trainer', audience: 'Priya M.', ceu: '8 CEUs', mode: 'In-Person' },
-                { title: 'Peer Support Crisis Response — De-escalation Module', date: '2026-09-10', instructor: 'Dr. James Carter, PhD (internal)', audience: 'All PSS staff', ceu: '3 CEUs', mode: 'In-Person' },
+                { title: 'Peer Support Crisis Response — De-escalation Module', date: '2026-09-10', instructor: 'James S. Collins III, PhD (internal)', audience: 'All PSS staff', ceu: '3 CEUs', mode: 'In-Person' },
                 { title: 'Documentation & Progress Notes for Peer Staff', date: '2026-10-01', instructor: 'Compliance Officer (internal)', audience: 'All PSS staff', ceu: '2 CEUs', mode: 'In-Person' },
               ].map(e => (
                 <div key={e.title} className="flex items-center justify-between border border-border rounded-lg px-4 py-3 hover:bg-gray-50">

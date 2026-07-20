@@ -67,33 +67,24 @@ export const STAFF_MEMBERS: StaffMember[] = [
   // Accreditation: CARF / The Joint Commission
   // ─────────────────────────────────────────────────────────────────────────────
 
-  // ── 1. James Carter — Clinical Director (Maryland) ─────────────────────────
+  // ── 1. James S. Collins III — Clinical Supervisor (Maryland) ──────────────────────
   {
     id: 's8',
-    firstName: 'James', lastName: 'Carter',
-    credentials: ['LCPC', 'CAC-AD', 'BAS'],
-    title: 'Clinical Director & Board Approved Supervisor',
+    firstName: 'James', lastName: 'S. Collins III',
+    credentials: ['CAC-AD', 'BAS'],
+    title: 'Clinical Supervisor',
     roleId: 'clinical_supervisor',
     department: 'Clinical',
     facility: 'Sunrise Recovery Center — Rockville, MD',
-    email: 'j.carter@sunriserecovery.org', phone: '(301) 555-0101',
+    email: 'j.collins@sunriserecovery.org', phone: '(301) 555-0101',
     photoInitials: 'JC', avatarBg: 'bg-amber-500',
     npi: '1023456789',
-    licenseNumber: 'LCPC-MD-12847', licenseState: 'MD',
-    licenseType: 'Licensed Clinical Professional Counselor',
-    licenseExpiry: '2026-09-30',
+    licenseNumber: 'MD-CAC-AD-3891', licenseState: 'MD',
+    licenseType: 'Certified Associate Counselor — Alcohol & Drug (CAC-AD)',
+    licenseExpiry: '2027-03-01',
     hireDate: '2019-03-15', lastLogin: '2026-07-19 08:12',
     status: 'active',
     certifications: [
-      {
-        id: 'c1',
-        name: 'Licensed Clinical Professional Counselor (LCPC)',
-        issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)',
-        number: 'LCPC-MD-12847',
-        issueDate: '2012-06-01', expiryDate: '2026-09-30', status: 'active',
-        ceuRequired: 40, ceuCompleted: 38,
-        notes: 'Renews biennially. 40 CEUs required per renewal cycle per MBPCT regulations.',
-      },
       {
         id: 'c2',
         name: 'CAC-AD — Certified Associate Counselor, Alcohol & Drug',
@@ -146,7 +137,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
     licenseNumber: 'LPC-MD-11342', licenseState: 'MD',
     licenseType: 'Licensed Professional Counselor',
     licenseExpiry: '2025-12-31',
-    supervisorId: 's8',   // supervised by James Carter (BAS)
+    supervisorId: 's8',   // supervised by James S. Collins III (BAS)
     hireDate: '2021-06-01', lastLogin: '2026-07-19 07:48',
     status: 'active',
     certifications: [
@@ -166,7 +157,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
         number: 'MD-CAC-AD-2218',
         issueDate: '2021-04-01', expiryDate: '2027-04-01', status: 'active',
         ceuRequired: 40, ceuCompleted: 35,
-        notes: 'Required for SUD services to MD-funded clients. 6,000 supervised practice hours completed. Supervised by James Carter, BAS-MD-441.',
+        notes: 'Required for SUD services to MD-funded clients. 6,000 supervised practice hours completed. Supervised by James S. Collins III, CAC-AD, BAS.',
       },
       {
         id: 'c5',

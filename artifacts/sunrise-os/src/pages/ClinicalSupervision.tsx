@@ -48,7 +48,7 @@ interface SupervisionNote {
 
 const SUPERVISEES: SuperviseeRecord[] = [
   {
-    id: 'SV-001', name: 'Sarah Jenkins', role: 'LPC-A (MD)', supervisor: 'James Carter, LCPC, CAC-AD, BAS',
+    id: 'SV-001', name: 'Sarah Jenkins', role: 'LPC-A (MD)', supervisor: 'James S. Collins III, CAC-AD, BAS',
     hoursRequiredMonthly: 2, hoursCompletedThisMonth: 2, licenseExpiry: '2028-06-30',
     supervisionType: 'Both', nextSession: '2026-07-22', caseload: 8, pendingCosigns: 2,
     competencyScores: { assessment: 4.2, treatmentPlanning: 4.5, documentation: 3.8, therapeuticAlliance: 4.7, ethicsCompliance: 5.0, culturalHumility: 4.1 },
@@ -56,10 +56,10 @@ const SUPERVISEES: SuperviseeRecord[] = [
       {
         id: 'SN-001', date: '2026-07-01', type: 'Individual', duration: 60, status: 'Signed',
         topics: ['Countertransference — trauma patient', 'BIRP note quality', 'AMA risk management'],
-        strengths: 'Excellent rapport with high-acuity patients. PHQ-9 screening consistently done and documented. Strong family engagement skills noted by Dr. Carter in chart review.',
+        strengths: 'Excellent rapport with high-acuity patients. PHQ-9 screening consistently done and documented. Strong family engagement skills noted by Collins in chart review.',
         growthAreas: 'BIRP notes occasionally lack objective data in the B (behavior) field. Review: behavioral observations are NOT interpretations. Practice: write the B before the I.',
         goals: 'By 7/22: submit two BIRP notes for supervisor review with complete behavioral observations. Continue weekly 1:1 with p1 Marcus Webb given AMA risk.',
-        supervisorSignature: 'James Carter, LCPC, BAS, 7/1/2026', superviseeSignature: 'Sarah Jenkins, LPC, CAC-AD, 7/1/2026',
+        supervisorSignature: 'James S. Collins III, CAC-AD, BAS, 7/1/2026', superviseeSignature: 'Sarah Jenkins, LPC, CAC-AD, 7/1/2026',
       },
       {
         id: 'SN-002', date: '2026-07-15', type: 'Individual', duration: 60, status: 'Signed',
@@ -67,7 +67,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Excellent clinical instincts — identified passive SI in Marcus Webb and escalated appropriately. C-SSRS documentation was complete and timely. Safety plan well-written.',
         growthAreas: 'After crisis situations: practice self-care protocols. Vicarious trauma is real. Reviewed organizational EAP resources.',
         goals: 'By 7/22: attend peer consultation group. Read assigned article on clinician vicarious trauma.',
-        supervisorSignature: 'James Carter, LCPC, BAS, 7/15/2026', superviseeSignature: 'Sarah Jenkins, LPC, CAC-AD, 7/15/2026',
+        supervisorSignature: 'James S. Collins III, CAC-AD, BAS, 7/15/2026', superviseeSignature: 'Sarah Jenkins, LPC, CAC-AD, 7/15/2026',
       },
     ],
   },
@@ -88,7 +88,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
     ],
   },
   {
-    id: 'SV-003', name: 'Aisha Thompson', role: 'CSC-AD (MD)', supervisor: 'James Carter, LCPC, CAC-AD, BAS',
+    id: 'SV-003', name: 'Aisha Thompson', role: 'CSC-AD (MD)', supervisor: 'James S. Collins III, CAC-AD, BAS',
     hoursRequiredMonthly: 2, hoursCompletedThisMonth: 1, licenseExpiry: '2029-09-01',
     supervisionType: 'Both', nextSession: '2026-07-20', caseload: 9, pendingCosigns: 1,
     competencyScores: { assessment: 4.6, treatmentPlanning: 4.3, documentation: 4.8, therapeuticAlliance: 4.2, ethicsCompliance: 5.0, culturalHumility: 4.9 },
@@ -99,15 +99,15 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Outstanding biopsychosocial assessments — among the most thorough on the team. Cultural humility practice is exemplary. Patients from underserved communities report high satisfaction.',
         growthAreas: 'Build comfort with confrontational interventions. Natural style is supportive — some patients need therapeutic challenge. Practice motivational confrontation technique.',
         goals: 'By 7/20: role-play confrontational intervention with supervisor. Identify 1 patient case for therapeutic challenge intervention.',
-        supervisorSignature: 'Dr. James Carter, 7/10/2026', superviseeSignature: 'Aisha Thompson, LCSW-A, 7/10/2026',
+        supervisorSignature: 'James S. Collins III, 7/10/2026', superviseeSignature: 'Aisha Thompson, LCSW-A, 7/10/2026',
       },
     ],
   },
 ];
 
 const GROUP_SUPERVISION = [
-  { date: '2026-07-22', time: '2:00 PM', topic: 'Complex Trauma & Addiction — Case Consultation', supervisor: 'Dr. James Carter', attendees: ['Sarah Jenkins', 'Kevin Wright', 'Aisha Thompson', 'Maria Gonzalez'], status: 'Upcoming' },
-  { date: '2026-07-08', time: '2:00 PM', topic: 'Mandatory Reporting in Addiction Treatment (42 CFR Part 2 vs. Tarasoff)', supervisor: 'Dr. James Carter', attendees: ['Sarah Jenkins', 'Kevin Wright', 'Aisha Thompson'], status: 'Completed' },
+  { date: '2026-07-22', time: '2:00 PM', topic: 'Complex Trauma & Addiction — Case Consultation', supervisor: 'James S. Collins III', attendees: ['Sarah Jenkins', 'Kevin Wright', 'Aisha Thompson', 'Maria Gonzalez'], status: 'Upcoming' },
+  { date: '2026-07-08', time: '2:00 PM', topic: 'Mandatory Reporting in Addiction Treatment (42 CFR Part 2 vs. Tarasoff)', supervisor: 'James S. Collins III', attendees: ['Sarah Jenkins', 'Kevin Wright', 'Aisha Thompson'], status: 'Completed' },
   { date: '2026-06-24', time: '2:00 PM', topic: 'Motivational Interviewing Fidelity Review', supervisor: 'Maria Gonzalez', attendees: ['Kevin Wright', 'Aisha Thompson'], status: 'Completed' },
 ];
 
@@ -372,13 +372,13 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
 
       {tab === 'Supervisor Notes' && (
         <div className="space-y-5">
-          <div className="text-sm text-slate">Confidential supervision notes maintained by the Clinical Director. Accessible only to supervisors and the supervisee per licensure board standards.</div>
+          <div className="text-sm text-slate">Confidential supervision notes maintained by the Clinical Supervisor. Accessible only to supervisors and the supervisee per licensure board standards.</div>
 
           {[
             {
               supervisee: 'Sarah Jenkins, LPC',
               credential: 'LPC · CADC-II · 6 yrs exp',
-              supervisor: 'Dr. James Carter, PhD',
+              supervisor: 'James S. Collins III, CAC-AD, BAS',
               date: '2026-07-14',
               type: 'Individual Supervision',
               rating: 5,
@@ -391,7 +391,7 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
             {
               supervisee: 'David Odom, LMFT',
               credential: 'LMFT · CADC-I · 4 yrs exp',
-              supervisor: 'Dr. James Carter, PhD',
+              supervisor: 'James S. Collins III, CAC-AD, BAS',
               date: '2026-07-10',
               type: 'Individual Supervision',
               rating: 4,

@@ -34,10 +34,9 @@ interface Credential {
 
 const STAFF_CREDENTIALS: StaffCredential[] = [
   {
-    id: 'SC-001', staffName: 'Dr. James Carter', role: 'Clinical Director',
+    id: 'SC-001', staffName: 'James S. Collins III', role: 'Clinical Supervisor',
     ceuRequired: 40, ceuCompleted: 38, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-001', name: 'Licensed Clinical Professional Counselor (LCPC)', type: 'License', issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)', issueDate: '2012-06-01', expiryDate: '2026-09-30', status: 'Current', licenseNumber: 'LCPC-MD-12847', renewalUrl: 'https://health.maryland.gov/mbpct', notes: '40 CEUs required per 2-year renewal cycle. MBPCT regulates LPCs, LCPCs, LMFTs.' },
       { id: 'C-002', name: 'CAC-AD — Certified Associate Counselor, Alcohol & Drug', type: 'Certification', issuingBody: 'Maryland Behavioral Health Administration (MD BHA) / ADAA', issueDate: '2015-03-01', expiryDate: '2027-03-01', status: 'Current', licenseNumber: 'MD-CAC-AD-3891', notes: 'Required for SUD services to MD-funded clients under COMAR 10.63.' },
       { id: 'C-003', name: 'Board Approved Supervisor (BAS)', type: 'Certification', issuingBody: 'Maryland Behavioral Health Administration (MD BHA) / ADAA', issueDate: '2018-05-01', expiryDate: '2026-05-01', status: 'Expiring Soon', licenseNumber: 'BAS-MD-441', notes: 'Required to supervise ADT and CSC-AD staff. Must hold CAC-AD or CPC-AD + BAS training. Renewal pending — application submitted 4/15/2026.' },
       { id: 'C-004', name: 'CARF Survey Preparation Training', type: 'Training', issuingBody: 'CARF International', issueDate: '2024-09-01', expiryDate: '2026-09-01', status: 'Current' },
@@ -67,7 +66,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-004', staffName: 'Sarah Jenkins', role: 'Primary Counselor',
     ceuRequired: 30, ceuCompleted: 27, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-013', name: 'Licensed Professional Counselor (LPC)', type: 'License', issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)', issueDate: '2019-07-01', expiryDate: '2025-12-31', status: 'Expiring Soon', licenseNumber: 'LPC-MD-11342', notes: 'Renewal due 12/31/2025. Upgrade to LCPC requires additional 3,000 post-LPC supervised hours under LCPC supervisor (James Carter, LCPC).' },
+      { id: 'C-013', name: 'Licensed Professional Counselor (LPC)', type: 'License', issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)', issueDate: '2019-07-01', expiryDate: '2025-12-31', status: 'Expiring Soon', licenseNumber: 'LPC-MD-11342', notes: 'Renewal due 12/31/2025. Supervised clinical hours under James S. Collins III, CAC-AD, BAS.' },
       { id: 'C-014', name: 'National Certified Counselor', type: 'Certification', issuingBody: 'NBCC', issueDate: '2024-01-20', expiryDate: '2029-01-20', status: 'Current', licenseNumber: 'NCC 201441' },
       { id: 'C-015', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2025-03-01', expiryDate: '2027-03-01', status: 'Current' },
       { id: 'C-016', name: 'ASAM Foundations of Addiction Medicine', type: 'Training', issuingBody: 'ASAM', issueDate: '2025-06-15', expiryDate: '2028-06-15', status: 'Current' },
@@ -411,7 +410,7 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'James Carter', license: 'LCPC + CAC-AD + BAS', num: 'LCPC-MD-12847 / BAS-MD-441', state: 'MD', issued: '2012-06-01', expires: '2026-09-30', ce: '40 hrs/2yr (MBPCT)', status: 'Active' },
+                  { name: 'James S. Collins III', license: 'CAC-AD + BAS', num: 'MD-CAC-AD-3891 / BAS-MD-441', state: 'MD', issued: '2015-03-01', expires: '2027-03-01', ce: '40 hrs/2yr (MD BHA)', status: 'Active' },
                   { name: 'Sarah Jenkins', license: 'LPC + CAC-AD', num: 'LPC-MD-11342 / MD-CAC-AD-2218', state: 'MD', issued: '2019-07-01', expires: '2025-12-31', ce: '40 hrs/2yr (MBPCT)', status: 'Due Q4' },
                   { name: 'David Odom', license: 'LMFT', num: 'LMFT-MD-4421', state: 'MD', issued: '2020-05-01', expires: '2026-04-30', ce: '40 hrs/2yr (MBPCT)', status: 'Active' },
                   { name: 'Maria Gonzalez', license: 'LCSW-C + CAC-AD', num: 'LCSW-C-MD-4432', state: 'MD', issued: '2016-09-01', expires: '2027-09-30', ce: '30 hrs/2yr (MBSWE)', status: 'Active' },

@@ -66,7 +66,7 @@ interface ScheduledTraining {
 }
 
 const SCHEDULED: ScheduledTraining[] = [
-  { id: 'st1', title: 'HIPAA & 42 CFR Part 2 Annual Refresher', date: '2026-07-22', time: '9:00 AM – 11:00 AM', instructor: 'James Carter', location: 'Conference Room A', registeredCount: 8, capacity: 20, category: 'Compliance', ceuHours: 2 },
+  { id: 'st1', title: 'HIPAA & 42 CFR Part 2 Annual Refresher', date: '2026-07-22', time: '9:00 AM – 11:00 AM', instructor: 'James S. Collins III', location: 'Conference Room A', registeredCount: 8, capacity: 20, category: 'Compliance', ceuHours: 2 },
   { id: 'st2', title: 'CPI Crisis De-escalation Recertification', date: '2026-07-29', time: '8:00 AM – 4:00 PM', instructor: 'Kevin Wright (CPI Certified)', location: 'Main Group Room', registeredCount: 6, capacity: 12, category: 'Clinical', ceuHours: 8 },
   { id: 'st3', title: 'Trauma-Informed Care — Level 2', date: '2026-08-05', time: '1:00 PM – 4:00 PM', instructor: 'Dr. Allen Hughes', location: 'Conference Room A', registeredCount: 4, capacity: 15, category: 'Clinical', ceuHours: 3 },
   { id: 'st4', title: 'Motivational Interviewing (MI) Foundations', date: '2026-08-12', time: '9:00 AM – 12:00 PM', instructor: 'Maria Gonzales, LCSW', location: 'Group Room B', registeredCount: 7, capacity: 12, category: 'Clinical', ceuHours: 3 },

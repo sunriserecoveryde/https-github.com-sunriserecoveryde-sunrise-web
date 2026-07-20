@@ -439,7 +439,7 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
                 {[
                   { name: 'Jessica Torres', role: 'DON / RN', shifts: 5, hours: 46, ot: 6, consec: 5, risk: 'High' },
                   { name: 'Michael Boyd', role: 'RN', shifts: 4, hours: 42, ot: 2, consec: 4, risk: 'Med' },
-                  { name: 'Dr. James Carter', role: 'Clinical Director', shifts: 5, hours: 43, ot: 3, consec: 3, risk: 'Med' },
+                  { name: 'James S. Collins III', role: 'Clinical Supervisor', shifts: 5, hours: 43, ot: 3, consec: 3, risk: 'Med' },
                   { name: 'Sarah Jenkins', role: 'LPC', shifts: 5, hours: 40, ot: 0, consec: 5, risk: 'Low' },
                   { name: 'Maria Gonzales', role: 'LCSW', shifts: 5, hours: 40, ot: 0, consec: 3, risk: 'Low' },
                   { name: 'Marcus Thompson', role: 'PSS', shifts: 4, hours: 32, ot: 0, consec: 4, risk: 'Low' },
