@@ -387,6 +387,20 @@ export default function VitalsScreen() {
     };
   }, []);
 
+  // ── Score filter bar rehydration fade-in ────────────────────────────────────
+  // Start invisible so the chip bar doesn't flash as 'All' before AsyncStorage
+  // resolves. Once isRehydrating flips to false, fade in the correct chip.
+  const filterBarOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!isRehydrating) {
+      Animated.timing(filterBarOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isRehydrating]);
+
   const openModal = (patient: Patient) => {
     setSelectedPatient(patient);
     setModalVisible(true);
@@ -426,8 +440,9 @@ export default function VitalsScreen() {
         </View>
       </View>
 
-      {/* Score filter bar */}
-      <View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      {/* Score filter bar — hidden (opacity 0) while AsyncStorage is rehydrating so the
+          chip doesn't briefly flash as 'All' before the persisted selection loads. */}
+      <Animated.View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border, opacity: filterBarOpacity }]}>
         {([
           { key: 'all', label: 'All', count: allPatientsWithScores.length },
           { key: 'cows', label: 'COWS Only', count: allPatientsWithScores.filter(p => p.cows != null && p.cows > 0).length },
@@ -470,7 +485,7 @@ export default function VitalsScreen() {
             </Pressable>
           );
         })}
-      </View>
+      </Animated.View>
 
       {/* Filter notice — shown when the pending-discharge patient is hidden by the active filter.
           Dismissed state is stored in context so it persists across tab navigation.
