@@ -176,7 +176,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'bht',
     label: 'Behavioral Health Technician',
     shortLabel: 'BHT',
-    description: '(MD) ADT registration via MD BHA required before SUD direct care — supervised by Board Approved Supervisor (BAS). (DE) DSAMH registration required; working toward CADC (IC&RC). All BHT supervised.',
+    description: 'BHT. Entry-level direct care under clinical supervision. Monitors patients, co-facilitates groups, logs observations.',
     color: 'bg-gray-500/20', textColor: 'text-gray-300', borderColor: 'border-gray-500/40', dotColor: 'bg-gray-400',
     category: 'Nursing & Direct Care',
     permissions: perms(
