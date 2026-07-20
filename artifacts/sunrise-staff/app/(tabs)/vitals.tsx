@@ -303,11 +303,13 @@ export default function VitalsScreen() {
 
   // ── Alert count animation ────────────────────────────────────────────────────
   const alertScaleAnim = useRef(new Animated.Value(1)).current;
+  const alertScaleAnimRef = useRef<Animated.CompositeAnimation | null>(null);
   const prevAlertCount = useRef(totalAlertCount);
 
   useEffect(() => {
     if (totalAlertCount > prevAlertCount.current) {
-      Animated.sequence([
+      alertScaleAnimRef.current?.stop();
+      alertScaleAnimRef.current = Animated.sequence([
         Animated.spring(alertScaleAnim, {
           toValue: 1.4,
           useNativeDriver: true,
@@ -320,10 +322,21 @@ export default function VitalsScreen() {
           speed: 20,
           bounciness: 6,
         }),
-      ]).start();
+      ]);
+      alertScaleAnimRef.current.start();
     }
     prevAlertCount.current = totalAlertCount;
   }, [totalAlertCount]);
+
+  // Cancel the scale animation if the screen unmounts while it is still running
+  // (e.g. the nurse navigates away mid-spring), preventing stray callbacks on
+  // an unmounted component tree.
+  useEffect(() => {
+    return () => {
+      alertScaleAnimRef.current?.stop();
+      alertScaleAnimRef.current = null;
+    };
+  }, []);
 
   const openModal = (patient: Patient) => {
     setSelectedPatient(patient);

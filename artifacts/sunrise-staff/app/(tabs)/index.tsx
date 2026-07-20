@@ -936,6 +936,25 @@ export default function CensusScreen() {
     }
   }, [pendingDischarge]);
 
+  // Cancel all running timers and animations when the census screen unmounts
+  // (e.g. the app is force-quit or the navigator removes the tab).  Without
+  // this, the shift-ended toast setTimeout and the countdown Animated.timing
+  // can fire callbacks on an unmounted component tree, and any in-progress
+  // spring on dischargeToastAnim / toastAnim will keep ticking in the
+  // background.
+  useEffect(() => {
+    return () => {
+      if (shiftEndedTimer.current) {
+        clearTimeout(shiftEndedTimer.current);
+        shiftEndedTimer.current = null;
+      }
+      countdownAnimRef.current?.stop();
+      countdownAnimRef.current = null;
+      dischargeToastAnim.stopAnimation();
+      toastAnim.stopAnimation();
+    };
+  }, []);
+
   const handleUndoDischarge = () => {
     undoDischarge();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
