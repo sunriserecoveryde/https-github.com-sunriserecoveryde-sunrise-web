@@ -202,6 +202,27 @@ export default function HandoffScreen() {
   const [completed, setCompleted] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
+  // Tracks the current calendar date so the header subtitle stays accurate when
+  // the app is left open overnight.  A setTimeout fires just after midnight and
+  // updates the value, then re-arms itself for the next rollover.
+  const [today, setToday] = useState(() => new Date());
+  const midnightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    function armMidnightTimer() {
+      const now = new Date();
+      const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const msUntilMidnight = nextMidnight.getTime() - now.getTime();
+      midnightTimerRef.current = setTimeout(() => {
+        setToday(new Date());
+        armMidnightTimer(); // re-arm for the following night
+      }, msUntilMidnight);
+    }
+    armMidnightTimer();
+    return () => {
+      if (midnightTimerRef.current != null) clearTimeout(midnightTimerRef.current);
+    };
+  }, []);
+
   // ── Shift selector + content rehydration guard ───────────────────────────
   // While !loaded: shimmer skeleton on the shift selector so it's never blank.
   // Once loaded: fade in the real ShiftSelector (shiftBarOpacity) and the
@@ -353,7 +374,7 @@ export default function HandoffScreen() {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.headerTitle}>Shift Handoff</Text>
-            <Text style={styles.headerSubtitle}>{new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} · {RESIDENTIAL_PATIENTS.length} patients</Text>
+            <Text style={styles.headerSubtitle}>{today.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} · {RESIDENTIAL_PATIENTS.length} patients</Text>
           </View>
           <View style={styles.headerActions}>
             <Pressable
