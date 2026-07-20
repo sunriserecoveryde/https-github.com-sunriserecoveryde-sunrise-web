@@ -1624,23 +1624,44 @@ export default function PatientDetailScreen() {
         </View>
 
         {/* ─── Discharge ─── */}
-        {/* Hide the button while this patient's discharge is pending (undo window
-            is open). Re-entering via deep-link or history during the undo window
-            must not let the nurse trigger a second discharge cycle. */}
-        {pendingDischarge?.patient.id !== patient.id && (
-          <View style={s.section}>
-            <Pressable
-              style={[s.dischargeBtn, { borderColor: colors.critical }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setDischargeModalVisible(true);
-              }}
-            >
-              <Ionicons name="exit-outline" size={18} color={colors.critical} />
-              <Text style={[s.dischargeBtnText, { color: colors.critical }]}>Discharge Patient</Text>
-            </Pressable>
-          </View>
-        )}
+        {/* Disable the button while this patient's discharge undo window is
+            open. Re-entering via deep-link or history must not let the nurse
+            trigger a second discharge cycle. The button stays visible but is
+            visually dimmed and shows "Discharge pending…" so the state is
+            clear. */}
+        {(() => {
+          const dischargePending = pendingDischarge?.patient.id === patient.id;
+          return (
+            <View style={s.section}>
+              <Pressable
+                style={[
+                  s.dischargeBtn,
+                  { borderColor: dischargePending ? colors.mutedForeground : colors.critical },
+                  dischargePending && { opacity: 0.45 },
+                ]}
+                disabled={dischargePending}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setDischargeModalVisible(true);
+                }}
+              >
+                <Ionicons
+                  name="exit-outline"
+                  size={18}
+                  color={dischargePending ? colors.mutedForeground : colors.critical}
+                />
+                <Text
+                  style={[
+                    s.dischargeBtnText,
+                    { color: dischargePending ? colors.mutedForeground : colors.critical },
+                  ]}
+                >
+                  {dischargePending ? 'Discharge pending…' : 'Discharge Patient'}
+                </Text>
+              </Pressable>
+            </View>
+          );
+        })()}
 
       </ScrollView>
 
