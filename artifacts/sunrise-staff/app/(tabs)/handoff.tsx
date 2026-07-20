@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadHandoffState, saveJsonToStorage, pruneStaleStorageKeys, makeHandoffNotesKey, makeHandoffShiftKey, formatDateKey, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
+import { loadHandoffState, saveJsonToStorage, pruneStaleStorageKeys, makeHandoffNotesKey, makeHandoffShiftKey, formatDateKey, isPersistSafe, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { useNursingNotes } from '@/context/NursingNotesContext';
@@ -153,13 +153,6 @@ function HandoffCard({
 // this tab is ever refactored to consume PatientContext, add tests mirroring the
 // pattern in __tests__/crossTabDischargeUndo.test.ts at that time.
 
-// Keys are date-scoped to match the MAR/Checks pattern so each new calendar day
-// starts with a blank note slate.  Computed once at component load from the
-// current date — the midnight-rollover task (Task #293) will make these reactive.
-const _TODAY = new Date();
-const STORAGE_KEY_NOTES = makeHandoffNotesKey(_TODAY);  // e.g. @sunrise_handoff_notes_2026-07-20
-const STORAGE_KEY_SHIFT = makeHandoffShiftKey(_TODAY);  // e.g. @sunrise_handoff_shift_2026-07-20
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Persisted keys and their cold-start flash guards
 // ─────────────────────────────────────────────────────────────────────────────
@@ -223,6 +216,18 @@ export default function HandoffScreen() {
     };
   }, []);
 
+  // Storage keys are derived from `today` so they update automatically after
+  // midnight without requiring an app restart.  The load effect depends on both
+  // keys, so it re-runs whenever the day rolls over.
+  const storageKeyNotes = makeHandoffNotesKey(today);
+  const storageKeyShift = makeHandoffShiftKey(today);
+
+  // Tracks which notes key the current in-memory state was loaded from.
+  // Used by persist effects via isPersistSafe() to prevent writing yesterday's
+  // data into today's bucket during the rollover transition window (mirrors the
+  // MARContext loadedForKey pattern).
+  const loadedForKeyRef = useRef<string | null>(null);
+
   // ── Shift selector + content rehydration guard ───────────────────────────
   // While !loaded: shimmer skeleton on the shift selector so it's never blank.
   // Once loaded: fade in the real ShiftSelector (shiftBarOpacity) and the
@@ -256,38 +261,47 @@ export default function HandoffScreen() {
     };
   }, [loaded]);
 
-  // Load persisted notes + shift on mount via a single Promise.all.
-  // Both keys resolve together before `loaded` is set, so neither the shift
-  // selector nor the handoff notes can flash with stale defaults.
-  // Stale entries from previous calendar days are pruned first (mirrors MARContext).
+  // Load persisted notes + shift whenever the calendar-day storage keys change
+  // (on mount and after each midnight rollover).  Both keys resolve together
+  // before `loaded` is set, so neither the shift selector nor the handoff notes
+  // can flash with stale defaults.  Stale entries from previous calendar days
+  // are pruned after each rollover (mirrors MARContext).
   React.useEffect(() => {
+    // Reset the guard so persist effects cannot fire with yesterday's state
+    // while the fresh load for the new key is in flight.
+    setLoaded(false);
+    loadedForKeyRef.current = null;
+
     const defaultNotes = Object.fromEntries(RESIDENTIAL_PATIENTS.map(p => [p.id, p.handoffNote ?? '']));
     pruneStaleStorageKeys(AsyncStorage, [
-      { prefix: '@sunrise_handoff_notes_', currentKey: STORAGE_KEY_NOTES },
-      { prefix: '@sunrise_handoff_shift_', currentKey: STORAGE_KEY_SHIFT },
+      { prefix: '@sunrise_handoff_notes_', currentKey: storageKeyNotes },
+      { prefix: '@sunrise_handoff_shift_', currentKey: storageKeyShift },
     ]).catch(() => {});
     loadHandoffState(
       AsyncStorage,
-      { notes: STORAGE_KEY_NOTES, shift: STORAGE_KEY_SHIFT },
+      { notes: storageKeyNotes, shift: storageKeyShift },
       { notes: defaultNotes, shift: 'day' },
     ).then(({ notes: savedNotes, shift: savedShift }) => {
       setNotes(savedNotes);
       setShift(savedShift);
+      loadedForKeyRef.current = storageKeyNotes;
       setLoaded(true);
     });
-  }, []);
+  }, [storageKeyNotes, storageKeyShift]);
 
-  // Persist notes when they change (after initial load)
+  // Persist notes when they change (after initial load).
+  // isPersistSafe guards against writing yesterday's in-memory state into today's
+  // bucket during the rollover window before the fresh load completes.
   React.useEffect(() => {
-    if (!loaded) return;
-    saveJsonToStorage(AsyncStorage, STORAGE_KEY_NOTES, notes);
-  }, [notes, loaded]);
+    if (!isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) return;
+    saveJsonToStorage(AsyncStorage, storageKeyNotes, notes);
+  }, [notes, loaded, storageKeyNotes]);
 
   // Persist shift selection
   React.useEffect(() => {
-    if (!loaded) return;
-    AsyncStorage.setItem(STORAGE_KEY_SHIFT, shift).catch(() => {});
-  }, [shift, loaded]);
+    if (!isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) return;
+    AsyncStorage.setItem(storageKeyShift, shift).catch(() => {});
+  }, [shift, loaded, storageKeyShift, storageKeyNotes]);
 
   const sortedPatients = [...RESIDENTIAL_PATIENTS].sort(
     (a, b) => acuitySortOrder(a.acuity) - acuitySortOrder(b.acuity)
