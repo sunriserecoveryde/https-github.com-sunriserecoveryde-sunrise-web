@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 export type WithdrawalScoreFilter = 'all' | 'cows' | 'ciwa' | 'alerts';
 
 const SCORE_FILTER_KEY = '@withdrawal_score_filter';
+const BANNER_DISMISSED_KEY = '@withdrawal_banner_dismissed';
 const FILTER_NOTICE_DISMISSED_KEY = '@filter_notice_dismissed_patient_id';
 const LAST_DISCHARGE_PATIENT_KEY = '@filter_notice_last_discharge_patient_id';
 
@@ -59,15 +60,17 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
   useEffect(() => {
     Promise.all([
       AsyncStorage.getItem(SCORE_FILTER_KEY),
+      AsyncStorage.getItem(BANNER_DISMISSED_KEY),
       AsyncStorage.getItem(FILTER_NOTICE_DISMISSED_KEY),
       AsyncStorage.getItem(LAST_DISCHARGE_PATIENT_KEY),
-    ]).then(([storedFilter, storedDismissed, storedLastDischarge]) => {
+    ]).then(([storedFilter, storedBannerDismissed, storedDismissed, storedLastDischarge]) => {
       if (!mountedRef.current) return;
       setState(prev => ({
         ...prev,
         ...(storedFilter && VALID_SCORE_FILTERS.includes(storedFilter as WithdrawalScoreFilter)
           ? { scoreFilter: storedFilter as WithdrawalScoreFilter }
           : {}),
+        ...(storedBannerDismissed === 'true' ? { bannerDismissed: true } : {}),
         ...(storedDismissed ? { filterNoticeDismissedForPatientId: storedDismissed } : {}),
         // Rehydrate lastTrackedDischargePatientId so trackDischargePatientId can
         // correctly detect whether the post-restart discharge is truly new.
@@ -83,6 +86,7 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
 
   const dismissBanner = useCallback(() => {
     setState(prev => ({ ...prev, bannerDismissed: true }));
+    AsyncStorage.setItem(BANNER_DISMISSED_KEY, 'true').catch(() => {/* ignore write errors */});
   }, []);
 
   const dismissFilterNotice = useCallback((patientId: string) => {
@@ -112,6 +116,7 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
   const clearFilters = useCallback(() => {
     setState(DEFAULT_STATE);
     AsyncStorage.removeItem(SCORE_FILTER_KEY).catch(() => {/* ignore remove errors */});
+    AsyncStorage.removeItem(BANNER_DISMISSED_KEY).catch(() => {/* ignore remove errors */});
     AsyncStorage.removeItem(FILTER_NOTICE_DISMISSED_KEY).catch(() => {/* ignore remove errors */});
     AsyncStorage.removeItem(LAST_DISCHARGE_PATIENT_KEY).catch(() => {/* ignore remove errors */});
   }, []);
