@@ -690,6 +690,10 @@ export default function CensusScreen() {
   const dischargeToastShownRef = useRef(pendingDischarge !== null);
   /** When true the next toast dismissal skips the slide-out animation (e.g. shift-end). */
   const skipDischargeToastExitRef = useRef(false);
+  /** Countdown bar: 1 = full, 0 = empty. JS-driven so width % works. */
+  const dischargeCountdownAnim = useRef(new Animated.Value(pendingDischarge !== null ? 1 : 1)).current;
+  /** Reference to the running countdown so it can be stopped on re-trigger. */
+  const countdownAnimRef = useRef<Animated.CompositeAnimation | null>(null);
   const { clearNotes, getNotesForPatient } = useNursingNotes();
   const { clearAcknowledgments } = useMdAcknowledgment();
   const residentialPatients = patients.filter(p => p.bed != null);
@@ -789,7 +793,21 @@ export default function CensusScreen() {
   // Drive the discharge undo toast from context
   useEffect(() => {
     const active = pendingDischarge !== null;
+
+    /** Start (or restart) the countdown bar. Duration matches the 4-second undo window. */
+    function startCountdown(durationMs: number) {
+      countdownAnimRef.current?.stop();
+      dischargeCountdownAnim.setValue(1);
+      countdownAnimRef.current = Animated.timing(dischargeCountdownAnim, {
+        toValue: 0,
+        duration: durationMs,
+        useNativeDriver: false, // width % requires JS driver
+      });
+      countdownAnimRef.current.start();
+    }
+
     if (active && !dischargeToastShownRef.current) {
+      // First discharge — slide in and start countdown.
       dischargeToastShownRef.current = true;
       setDischargeToastVisible(true);
       Animated.spring(dischargeToastAnim, {
@@ -798,8 +816,23 @@ export default function CensusScreen() {
         damping: 20,
         stiffness: 200,
       }).start();
+      startCountdown(4000);
+    } else if (active && dischargeToastShownRef.current) {
+      // Second discharge while first toast is still open.
+      // Re-animate so the nurse clearly sees a new event, and reset the countdown.
+      dischargeToastAnim.setValue(100);
+      Animated.spring(dischargeToastAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 200,
+      }).start();
+      startCountdown(4000);
     } else if (!active && dischargeToastShownRef.current) {
+      // Dismissed (undo or timer) — slide out and stop countdown.
       dischargeToastShownRef.current = false;
+      countdownAnimRef.current?.stop();
+      countdownAnimRef.current = null;
       if (skipDischargeToastExitRef.current) {
         // Shift ended — hide immediately without animating.
         // stopAnimation() is called first so it cancels any in-progress spring
@@ -1068,14 +1101,34 @@ export default function CensusScreen() {
             { bottom: Math.max(insets.bottom, 8) + 16, transform: [{ translateY: dischargeToastAnim }] },
           ]}
         >
-          <Text style={styles.dischargeUndoToastText}>Patient discharged</Text>
-          <Pressable
-            onPress={handleUndoDischarge}
-            hitSlop={12}
-            style={styles.dischargeUndoBtn}
-          >
-            <Text style={styles.dischargeUndoBtnText}>Undo</Text>
-          </Pressable>
+          <View style={styles.dischargeUndoToastRow}>
+            <Text style={styles.dischargeUndoToastText}>
+              {pendingDischarge
+                ? `${pendingDischarge.patient.firstName} ${pendingDischarge.patient.lastName} discharged`
+                : 'Patient discharged'}
+            </Text>
+            <Pressable
+              onPress={handleUndoDischarge}
+              hitSlop={12}
+              style={styles.dischargeUndoBtn}
+            >
+              <Text style={styles.dischargeUndoBtnText}>Undo</Text>
+            </Pressable>
+          </View>
+          {/* Countdown bar — shrinks from full to empty over the 4-second window */}
+          <View style={styles.dischargeCountdownTrack}>
+            <Animated.View
+              style={[
+                styles.dischargeCountdownBar,
+                {
+                  width: dischargeCountdownAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                  }),
+                },
+              ]}
+            />
+          </View>
         </Animated.View>
       )}
 
@@ -1200,15 +1253,21 @@ const styles = StyleSheet.create({
   dischargeUndoToast: {
     position: 'absolute', left: 16, right: 16,
     backgroundColor: '#1C2B3A', borderRadius: 12,
-    paddingVertical: 13, paddingHorizontal: 18,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: 13, paddingBottom: 0, paddingHorizontal: 18,
+    flexDirection: 'column',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.22, shadowRadius: 12, elevation: 10,
-    zIndex: 999,
+    zIndex: 999, overflow: 'hidden',
   },
-  dischargeUndoToastText: { fontSize: 14, color: '#fff', fontFamily: 'Inter_400Regular' },
+  dischargeUndoToastRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingBottom: 10,
+  },
+  dischargeUndoToastText: { fontSize: 14, color: '#fff', fontFamily: 'Inter_400Regular', flex: 1, marginRight: 8 },
   dischargeUndoBtn: { paddingVertical: 4, paddingHorizontal: 10 },
   dischargeUndoBtnText: { fontSize: 14, fontWeight: '700', color: '#4FC3F7', fontFamily: 'Inter_700Bold' },
+  dischargeCountdownTrack: { height: 3, backgroundColor: 'rgba(255,255,255,0.15)', marginHorizontal: -18 },
+  dischargeCountdownBar: { height: 3, backgroundColor: '#4FC3F7' },
   // Shift-ended toast
   toastContainer: {
     position: 'absolute', bottom: 100, left: 0, right: 0, alignItems: 'center', zIndex: 999,
