@@ -681,7 +681,7 @@ export default function CensusScreen() {
   const dischargeToastShownRef = useRef(false);
 
   // ─── Live census data from context ────────────────────────────────────────
-  const { patients, bedStatusMap, refreshFromApi, pendingDischarge, undoDischarge } = usePatients();
+  const { patients, bedStatusMap, refreshFromApi, pendingDischarge, undoDischarge, clearPendingDischarge } = usePatients();
   const { clearNotes, getNotesForPatient } = useNursingNotes();
   const { clearAcknowledgments } = useMdAcknowledgment();
   const residentialPatients = patients.filter(p => p.bed != null);
@@ -840,6 +840,7 @@ export default function CensusScreen() {
                       onPress: () => {
                         clearNotes();
                         clearAcknowledgments();
+                        clearPendingDischarge();
                         setBannerDismissed(false);
                         resetFilters();
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
