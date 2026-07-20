@@ -688,6 +688,8 @@ export default function CensusScreen() {
   const [dischargeToastVisible, setDischargeToastVisible] = useState(() => pendingDischarge !== null);
   const dischargeToastAnim = useRef(new Animated.Value(pendingDischarge !== null ? 0 : 100)).current;
   const dischargeToastShownRef = useRef(pendingDischarge !== null);
+  /** When true the next toast dismissal skips the slide-out animation (e.g. shift-end). */
+  const skipDischargeToastExitRef = useRef(false);
   const { clearNotes, getNotesForPatient } = useNursingNotes();
   const { clearAcknowledgments } = useMdAcknowledgment();
   const residentialPatients = patients.filter(p => p.bed != null);
@@ -798,11 +800,19 @@ export default function CensusScreen() {
       }).start();
     } else if (!active && dischargeToastShownRef.current) {
       dischargeToastShownRef.current = false;
-      Animated.timing(dischargeToastAnim, {
-        toValue: 100,
-        duration: 220,
-        useNativeDriver: true,
-      }).start(() => setDischargeToastVisible(false));
+      if (skipDischargeToastExitRef.current) {
+        // Shift ended — hide immediately without animating
+        skipDischargeToastExitRef.current = false;
+        dischargeToastAnim.stopAnimation();
+        dischargeToastAnim.setValue(100);
+        setDischargeToastVisible(false);
+      } else {
+        Animated.timing(dischargeToastAnim, {
+          toValue: 100,
+          duration: 220,
+          useNativeDriver: true,
+        }).start(() => setDischargeToastVisible(false));
+      }
     }
   }, [pendingDischarge]);
 
@@ -846,6 +856,8 @@ export default function CensusScreen() {
                       onPress: () => {
                         clearNotes();
                         clearAcknowledgments();
+                        // Signal the toast to hide instantly (no slide-out) before clearing
+                        skipDischargeToastExitRef.current = true;
                         clearPendingDischarge();
                         setBannerDismissed(false);
                         resetFilters();
