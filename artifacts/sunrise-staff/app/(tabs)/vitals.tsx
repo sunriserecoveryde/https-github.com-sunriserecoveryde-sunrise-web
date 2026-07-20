@@ -277,8 +277,19 @@ export default function VitalsScreen() {
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [filterNoticeDismissed, setFilterNoticeDismissed] = useState(false);
   const { bannerDismissed, dismissBanner, scoreFilter, setScoreFilter } = useWithdrawalFilters();
   const { residentialPatients, pendingDischarge } = usePatients();
+
+  // Reset notice dismissal whenever a new discharge event starts (or clears)
+  const prevPendingDischargeId = useRef<string | null>(null);
+  useEffect(() => {
+    const currentId = pendingDischarge?.patient.id ?? null;
+    if (currentId !== prevPendingDischargeId.current) {
+      setFilterNoticeDismissed(false);
+      prevPendingDischargeId.current = currentId;
+    }
+  }, [pendingDischarge]);
 
   // Re-insert the pending-discharge patient so nurses can see they haven't left yet.
   const displayedPatients = React.useMemo(() => {
@@ -310,6 +321,15 @@ export default function VitalsScreen() {
         return allPatientsWithScores;
     }
   })();
+
+  // True when the pending-discharge patient has scores but the current filter hides them
+  const pendingDischargeHiddenByFilter = React.useMemo(() => {
+    if (!pendingDischarge) return false;
+    const pd = pendingDischarge.patient;
+    const inAllScores = allPatientsWithScores.some(p => p.id === pd.id);
+    if (!inAllScores) return false; // already absent from scored list regardless of filter
+    return !patientsWithScores.some(p => p.id === pd.id);
+  }, [pendingDischarge, allPatientsWithScores, patientsWithScores]);
 
   const criticalCount = patientsWithScores.filter(p =>
     (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
@@ -440,6 +460,26 @@ export default function VitalsScreen() {
           );
         })}
       </View>
+
+      {/* Filter notice — shown when the pending-discharge patient is hidden by the active filter */}
+      {pendingDischargeHiddenByFilter && !filterNoticeDismissed && (
+        <View style={[styles.filterNotice, { backgroundColor: colors.moderateBg, borderBottomColor: colors.moderate }]}>
+          <Ionicons name="eye-off-outline" size={16} color={colors.moderate} />
+          <Text style={[styles.filterNoticeText, { color: colors.moderate }]}>
+            1 patient hidden by filter —{' '}
+            <Text
+              style={styles.filterNoticeLink}
+              onPress={() => { Haptics.selectionAsync(); setScoreFilter('all'); }}
+            >
+              tap All
+            </Text>
+            {' '}to see Discharging… status
+          </Text>
+          <Pressable onPress={() => setFilterNoticeDismissed(true)} hitSlop={8}>
+            <Ionicons name="close" size={16} color={colors.moderate} />
+          </Pressable>
+        </View>
+      )}
 
       {/* Alert banner — dismissable; cleared on shift handoff */}
       {criticalCount > 0 && !bannerDismissed && (
@@ -638,4 +678,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dischargingPillText: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  filterNotice: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1,
+  },
+  filterNoticeText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold', flex: 1 },
+  filterNoticeLink: { textDecorationLine: 'underline' },
 });
