@@ -212,6 +212,35 @@ describe('halfway haptic — fires normally when Undo is never called', () => {
 
     expect(haptic).not.toHaveBeenCalled();
   });
+
+  it('skips the halfway haptic when re-mounting with exactly 1000 ms remaining', () => {
+    // Simulates a nurse navigating away and returning when the undo window has
+    // exactly 1000 ms left — the guard (remaining > 1000) must NOT schedule.
+    const haptic = jest.fn();
+
+    const state = startCountdown(1000, haptic);
+
+    expect(state.halfwayHapticHandle).toBeNull();
+
+    jest.runAllTimers();
+
+    expect(haptic).not.toHaveBeenCalled();
+  });
+
+  it('schedules the halfway haptic when re-mounting with 1001 ms remaining', () => {
+    // One millisecond above the threshold — the guard (remaining > 1000) MUST
+    // schedule the haptic timer. This is the boundary check for the re-mount path.
+    const haptic = jest.fn();
+
+    const state = startCountdown(1001, haptic);
+
+    expect(state.halfwayHapticHandle).not.toBeNull();
+
+    // Advance past the halfway point (1001 / 2 ≈ 500.5 ms) — haptic must fire.
+    jest.advanceTimersByTime(501);
+
+    expect(haptic).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('halfway haptic — no phantom haptic after rapid Undo', () => {
