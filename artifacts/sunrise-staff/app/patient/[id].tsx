@@ -408,6 +408,30 @@ export default function PatientDetailScreen() {
   const dischargeToastActiveRef = useRef(false);
   const [dischargeToastWidth, setDischargeToastWidth] = useState(0);
 
+  // ─── Discharge pending hint (shown when disabled button is tapped) ────────
+  const [dischargePendingHintVisible, setDischargePendingHintVisible] = useState(false);
+  const dischargePendingHintAnim = useRef(new Animated.Value(0)).current;
+  const dischargePendingHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showDischargePendingHint = useCallback(() => {
+    if (dischargePendingHintTimerRef.current) {
+      clearTimeout(dischargePendingHintTimerRef.current);
+    }
+    setDischargePendingHintVisible(true);
+    Animated.timing(dischargePendingHintAnim, {
+      toValue: 1,
+      duration: 160,
+      useNativeDriver: true,
+    }).start();
+    dischargePendingHintTimerRef.current = setTimeout(() => {
+      Animated.timing(dischargePendingHintAnim, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => setDischargePendingHintVisible(false));
+    }, 2000);
+  }, [dischargePendingHintAnim]);
+
   // ─── Add Note state ────────────────────────────────────────────────────────
   const {
     getNotesForPatient,
@@ -1639,8 +1663,11 @@ export default function PatientDetailScreen() {
                   { borderColor: dischargePending ? colors.mutedForeground : colors.critical },
                   dischargePending && { opacity: 0.45 },
                 ]}
-                disabled={dischargePending}
                 onPress={() => {
+                  if (dischargePending) {
+                    showDischargePendingHint();
+                    return;
+                  }
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   setDischargeModalVisible(true);
                 }}
@@ -1659,6 +1686,19 @@ export default function PatientDetailScreen() {
                   {dischargePending ? 'Discharge pending…' : 'Discharge Patient'}
                 </Text>
               </Pressable>
+              {dischargePendingHintVisible && (
+                <Animated.View
+                  style={[
+                    s.dischargePendingHint,
+                    { opacity: dischargePendingHintAnim },
+                  ]}
+                >
+                  <Ionicons name="time-outline" size={13} color={colors.mutedForeground} />
+                  <Text style={[s.dischargePendingHintText, { color: colors.mutedForeground }]}>
+                    Undo window is open — wait a moment or tap Undo
+                  </Text>
+                </Animated.View>
+              )}
             </View>
           );
         })()}
@@ -2158,6 +2198,14 @@ const s = StyleSheet.create({
   historyByLine: { fontSize: 10, fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginBottom: 4 },
   historyCurrentBadge: { borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2 },
   historyCurrentBadgeText: { fontSize: 10, fontFamily: 'Inter_700Bold', fontWeight: '700', color: '#fff' },
+  // Discharge pending hint
+  dischargePendingHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    marginTop: 8, paddingHorizontal: 4,
+  },
+  dischargePendingHintText: {
+    fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 16, flex: 1,
+  },
   // Diff legend
   diffLegend: { flexDirection: 'row', gap: 10, marginTop: 6 },
   diffLegendItem: { flexDirection: 'row', alignItems: 'center' },
