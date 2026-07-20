@@ -316,6 +316,134 @@ describe('undo-delete toast — guard: duplicate tap on the same note', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Mirrors the startCountdown helper that lives inside the useEffect in
+// patient/[id].tsx.  Keeping it here as a pure function lets us assert on
+// the order of stop() / setValue() / start() calls without importing React
+// Native Animated at all.
+// ---------------------------------------------------------------------------
+
+interface MockAnimation {
+  stop: jest.Mock;
+  start: jest.Mock;
+}
+
+interface CountdownState {
+  animRef: MockAnimation | null;
+  lastSetValue: number | null;
+}
+
+function makeAnimation(): MockAnimation {
+  return { stop: jest.fn(), start: jest.fn() };
+}
+
+/**
+ * Pure mirror of startCountdown:
+ *   1. Stop any running animation (prevents phantom bar fighting the new one)
+ *   2. Reset the bar fraction to remaining / 4000
+ *   3. Start a new animation
+ *
+ * Returns updated CountdownState.
+ */
+function startCountdown(
+  state: CountdownState,
+  remaining: number,
+  animFactory: () => MockAnimation,
+  setValue: (v: number) => void,
+): CountdownState {
+  if (state.animRef) state.animRef.stop();
+  const fraction = remaining / 4000;
+  setValue(fraction);
+  const anim = animFactory();
+  anim.start();
+  return { animRef: anim, lastSetValue: fraction };
+}
+
+describe('undo-delete toast — countdown animation lifecycle on second deletion', () => {
+  it('stops the first animation before starting the second', () => {
+    const callOrder: string[] = [];
+
+    const animA: MockAnimation = {
+      stop: jest.fn(() => { callOrder.push('stopA'); }),
+      start: jest.fn(() => { callOrder.push('startA'); }),
+    };
+    const animB: MockAnimation = {
+      stop: jest.fn(() => { callOrder.push('stopB'); }),
+      start: jest.fn(() => { callOrder.push('startB'); }),
+    };
+
+    const setValue = jest.fn();
+    let state: CountdownState = { animRef: null, lastSetValue: null };
+
+    // First deletion: start animation A
+    state = startCountdown(state, 4000, () => animA, setValue);
+    // Second deletion: must stop A before starting B
+    state = startCountdown(state, 4000, () => animB, setValue);
+
+    // stop A must come before start B
+    const stopAIdx = callOrder.indexOf('stopA');
+    const startBIdx = callOrder.indexOf('startB');
+    expect(stopAIdx).toBeGreaterThanOrEqual(0);
+    expect(startBIdx).toBeGreaterThanOrEqual(0);
+    expect(stopAIdx).toBeLessThan(startBIdx);
+  });
+
+  it('calls stop() on the first animation exactly once when the second deletion arrives', () => {
+    const animA = makeAnimation();
+    const animB = makeAnimation();
+    const setValue = jest.fn();
+    let state: CountdownState = { animRef: null, lastSetValue: null };
+
+    state = startCountdown(state, 4000, () => animA, setValue);
+    state = startCountdown(state, 4000, () => animB, setValue);
+
+    expect(animA.stop).toHaveBeenCalledTimes(1);
+    // animB is now the running animation — it must not have been stopped
+    expect(animB.stop).not.toHaveBeenCalled();
+  });
+
+  it('resets the bar fraction to remaining/4000 when the second deletion starts', () => {
+    const animA = makeAnimation();
+    const animB = makeAnimation();
+    const setValueMock = jest.fn();
+    let state: CountdownState = { animRef: null, lastSetValue: null };
+
+    // First deletion: full 4-second window → fraction = 1.0
+    state = startCountdown(state, 4000, () => animA, setValueMock);
+    expect(setValueMock).toHaveBeenLastCalledWith(1.0);
+
+    // Second deletion arrives with 2 seconds remaining → fraction = 0.5
+    state = startCountdown(state, 2000, () => animB, setValueMock);
+    expect(setValueMock).toHaveBeenLastCalledWith(0.5);
+    expect(state.lastSetValue).toBeCloseTo(0.5);
+  });
+
+  it('does not stop anything if no animation is running when the first deletion occurs', () => {
+    const animA = makeAnimation();
+    const setValue = jest.fn();
+    const state: CountdownState = { animRef: null, lastSetValue: null };
+
+    // No prior animation — stop should never be called
+    startCountdown(state, 4000, () => animA, setValue);
+
+    expect(animA.stop).not.toHaveBeenCalled();
+    expect(animA.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('tracks the second animation as the active ref after a transition', () => {
+    const animA = makeAnimation();
+    const animB = makeAnimation();
+    const setValue = jest.fn();
+    let state: CountdownState = { animRef: null, lastSetValue: null };
+
+    state = startCountdown(state, 4000, () => animA, setValue);
+    state = startCountdown(state, 3000, () => animB, setValue);
+
+    // The active ref must now be B, not A
+    expect(state.animRef).toBe(animB);
+  });
+});
+
 describe('undo-delete toast — three successive deletions', () => {
   it('each deletion commits the previous and tracks only the latest', () => {
     const removeNote = jest.fn();
