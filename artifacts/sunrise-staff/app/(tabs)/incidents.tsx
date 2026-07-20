@@ -17,6 +17,13 @@ import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { PATIENTS } from '@/data/mockData';
 
+// NOTE: This tab does NOT render a "Discharging…" indicator.
+// It manages its own local `incidents` and `uaLog` state and does not consume
+// PatientContext, so it never reads `pendingDischarge` or `isPendingDischarge`.
+// No discharge-undo test coverage is required here; if this tab is ever
+// refactored to source patients from PatientContext, add tests mirroring the
+// pattern in __tests__/crossTabDischargeUndo.test.ts at that time.
+
 type IncidentType = 'Physical Altercation' | 'Medication Error' | 'Fall' | 'AMA Attempt' | 'Self-Harm Risk' | 'Other';
 type UAResult = 'Negative' | 'Positive' | 'Refused' | 'Invalid';
 

@@ -142,6 +142,13 @@ function HandoffCard({
   );
 }
 
+// NOTE: This tab does NOT render a "Discharging…" indicator.
+// It sources its patient list from the static RESIDENTIAL_PATIENTS array rather
+// than PatientContext, so it never reads `pendingDischarge` or
+// `isPendingDischarge`.  No discharge-undo test coverage is required here; if
+// this tab is ever refactored to consume PatientContext, add tests mirroring the
+// pattern in __tests__/crossTabDischargeUndo.test.ts at that time.
+
 const STORAGE_KEY_NOTES = '@sunrise_handoff_notes_2026-07-19';
 const STORAGE_KEY_SHIFT = '@sunrise_handoff_shift_2026-07-19';
 
