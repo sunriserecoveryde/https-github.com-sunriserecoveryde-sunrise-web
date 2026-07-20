@@ -6,7 +6,7 @@ import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
-type SuperviseeRole = 'LPC-Associate' | 'LCSW-Associate' | 'CADC-I' | 'CADC-II' | 'BHT';
+type SuperviseeRole = 'LPC-A (MD)' | 'CSC-AD (MD)' | 'ADT (DE)' | 'CADC (DE)' | 'BHT';
 type NoteStatus = 'Draft' | 'Signed' | 'Co-signed' | 'Pending Review';
 
 interface SuperviseeRecord {
@@ -48,7 +48,7 @@ interface SupervisionNote {
 
 const SUPERVISEES: SuperviseeRecord[] = [
   {
-    id: 'SV-001', name: 'Sarah Jenkins', role: 'LPC-Associate', supervisor: 'Dr. James Carter, PhD, LPC-MHSP',
+    id: 'SV-001', name: 'Sarah Jenkins', role: 'LPC-A (MD)', supervisor: 'James Carter, LCPC, CAC-AD, BAS',
     hoursRequiredMonthly: 2, hoursCompletedThisMonth: 2, licenseExpiry: '2028-06-30',
     supervisionType: 'Both', nextSession: '2026-07-22', caseload: 8, pendingCosigns: 2,
     competencyScores: { assessment: 4.2, treatmentPlanning: 4.5, documentation: 3.8, therapeuticAlliance: 4.7, ethicsCompliance: 5.0, culturalHumility: 4.1 },
@@ -59,7 +59,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Excellent rapport with high-acuity patients. PHQ-9 screening consistently done and documented. Strong family engagement skills noted by Dr. Carter in chart review.',
         growthAreas: 'BIRP notes occasionally lack objective data in the B (behavior) field. Review: behavioral observations are NOT interpretations. Practice: write the B before the I.',
         goals: 'By 7/22: submit two BIRP notes for supervisor review with complete behavioral observations. Continue weekly 1:1 with p1 Marcus Webb given AMA risk.',
-        supervisorSignature: 'Dr. James Carter, 7/1/2026', superviseeSignature: 'Sarah Jenkins, LPC-A, 7/1/2026',
+        supervisorSignature: 'James Carter, LCPC, BAS, 7/1/2026', superviseeSignature: 'Sarah Jenkins, LPC, CAC-AD, 7/1/2026',
       },
       {
         id: 'SN-002', date: '2026-07-15', type: 'Individual', duration: 60, status: 'Signed',
@@ -67,12 +67,12 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Excellent clinical instincts — identified passive SI in Marcus Webb and escalated appropriately. C-SSRS documentation was complete and timely. Safety plan well-written.',
         growthAreas: 'After crisis situations: practice self-care protocols. Vicarious trauma is real. Reviewed organizational EAP resources.',
         goals: 'By 7/22: attend peer consultation group. Read assigned article on clinician vicarious trauma.',
-        supervisorSignature: 'Dr. James Carter, 7/15/2026', superviseeSignature: 'Sarah Jenkins, LPC-A, 7/15/2026',
+        supervisorSignature: 'James Carter, LCPC, BAS, 7/15/2026', superviseeSignature: 'Sarah Jenkins, LPC, CAC-AD, 7/15/2026',
       },
     ],
   },
   {
-    id: 'SV-002', name: 'Kevin Wright', role: 'CADC-I', supervisor: 'Maria Gonzalez, LCSW, CADC-III',
+    id: 'SV-002', name: 'Michael Boyd', role: 'ADT (DE)', supervisor: 'Kevin Wright, CADC, PRS (DSAMH BAS)',
     hoursRequiredMonthly: 1, hoursCompletedThisMonth: 0, licenseExpiry: '2027-03-15',
     supervisionType: 'Individual', nextSession: '2026-07-23', caseload: 6, pendingCosigns: 5,
     competencyScores: { assessment: 3.5, treatmentPlanning: 3.2, documentation: 3.0, therapeuticAlliance: 4.0, ethicsCompliance: 4.5, culturalHumility: 3.8 },
@@ -83,12 +83,12 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Great group energy — patients respond well to Kevin\'s peer-informed perspective. Authentic and genuine. Strong in early engagement.',
         growthAreas: 'Documentation: 3 notes submitted after 24-hour deadline this week. Reviewed CMS documentation requirements. Also: avoid advice-giving in MI — practice reflective listening.',
         goals: 'By 7/23: all progress notes submitted within 24 hours. Complete online MI module (Level 2). Practice open-ended questions in group.',
-        supervisorSignature: 'Maria Gonzalez, LCSW, 7/8/2026', superviseeSignature: 'Kevin Wright, CADC-I, 7/8/2026',
+        supervisorSignature: 'Kevin Wright, CADC, DSAMH BAS, 7/8/2026', superviseeSignature: 'Michael Boyd, ADT-DSAMH, 7/8/2026',
       },
     ],
   },
   {
-    id: 'SV-003', name: 'Aisha Thompson', role: 'LCSW-Associate', supervisor: 'Dr. James Carter, PhD, LPC-MHSP',
+    id: 'SV-003', name: 'Aisha Thompson', role: 'CSC-AD (MD)', supervisor: 'James Carter, LCPC, CAC-AD, BAS',
     hoursRequiredMonthly: 2, hoursCompletedThisMonth: 1, licenseExpiry: '2029-09-01',
     supervisionType: 'Both', nextSession: '2026-07-20', caseload: 9, pendingCosigns: 1,
     competencyScores: { assessment: 4.6, treatmentPlanning: 4.3, documentation: 4.8, therapeuticAlliance: 4.2, ethicsCompliance: 5.0, culturalHumility: 4.9 },

@@ -37,9 +37,9 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-001', staffName: 'Dr. James Carter', role: 'Clinical Director',
     ceuRequired: 40, ceuCompleted: 38, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-001', name: 'Licensed Professional Counselor — Mental Health Specialist', type: 'License', issuingBody: 'TN Board of Professional Counselors', issueDate: '2010-06-01', expiryDate: '2027-06-30', status: 'Current', licenseNumber: 'LPC-MHSP 3421', renewalUrl: 'https://tn.gov/health/health-program-areas/health-professional-boards/counselors-mft-cpjatsc-board.html' },
-      { id: 'C-002', name: 'Certified Alcohol and Drug Counselor III', type: 'Certification', issuingBody: 'NAADAC / Tennessee Certification Board', issueDate: '2015-03-15', expiryDate: '2027-03-15', status: 'Current', licenseNumber: 'CADC-III 14871' },
-      { id: 'C-003', name: 'Certified Clinical Supervisor', type: 'Certification', issuingBody: 'IC&RC', issueDate: '2018-07-01', expiryDate: '2026-07-01', status: 'Expiring Soon', licenseNumber: 'CCS 8823' },
+      { id: 'C-001', name: 'Licensed Clinical Professional Counselor (LCPC)', type: 'License', issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)', issueDate: '2012-06-01', expiryDate: '2026-09-30', status: 'Current', licenseNumber: 'LCPC-MD-12847', renewalUrl: 'https://health.maryland.gov/mbpct', notes: '40 CEUs required per 2-year renewal cycle. MBPCT regulates LPCs, LCPCs, LMFTs.' },
+      { id: 'C-002', name: 'CAC-AD — Certified Associate Counselor, Alcohol & Drug', type: 'Certification', issuingBody: 'Maryland Behavioral Health Administration (MD BHA) / ADAA', issueDate: '2015-03-01', expiryDate: '2027-03-01', status: 'Current', licenseNumber: 'MD-CAC-AD-3891', notes: 'Required for SUD services to MD-funded clients under COMAR 10.63.' },
+      { id: 'C-003', name: 'Board Approved Supervisor (BAS)', type: 'Certification', issuingBody: 'Maryland Behavioral Health Administration (MD BHA) / ADAA', issueDate: '2018-05-01', expiryDate: '2026-05-01', status: 'Expiring Soon', licenseNumber: 'BAS-MD-441', notes: 'Required to supervise ADT and CSC-AD staff. Must hold CAC-AD or CPC-AD + BAS training. Renewal pending — application submitted 4/15/2026.' },
       { id: 'C-004', name: 'CARF Survey Preparation Training', type: 'Training', issuingBody: 'CARF International', issueDate: '2024-09-01', expiryDate: '2026-09-01', status: 'Current' },
     ],
   },
@@ -47,7 +47,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-002', staffName: 'Dr. Robert Chen', role: 'Medical Director',
     ceuRequired: 60, ceuCompleted: 60, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-005', name: 'Tennessee Medical License', type: 'License', issuingBody: 'TN Board of Medical Examiners', issueDate: '2008-05-01', expiryDate: '2027-05-31', status: 'Current', licenseNumber: 'TN-MD 48821' },
+      { id: 'C-005', name: 'Maryland Medical License', type: 'License', issuingBody: 'Maryland Board of Physicians (MBP)', issueDate: '2010-06-01', expiryDate: '2026-09-30', status: 'Current', licenseNumber: 'MD-22447', notes: 'Renews biennially. 50 CME hrs required. MBP licensure required for all clinical practice in Maryland.' },
       { id: 'C-006', name: 'DEA Registration (Controlled Substances)', type: 'License', issuingBody: 'US Drug Enforcement Administration', issueDate: '2024-01-01', expiryDate: '2027-01-01', status: 'Current', licenseNumber: 'DEA BC1234567' },
       { id: 'C-007', name: 'X-Waiver (Buprenorphine Prescribing)', type: 'Certification', issuingBody: 'SAMHSA / DEA', issueDate: '2019-04-15', expiryDate: '2099-12-31', status: 'Current', licenseNumber: 'X-Waiver BC1234567', notes: 'X-Waiver eliminated by MATE Act (Dec 2022) — waiver number maintained for historical records. No expiry.' },
       { id: 'C-008', name: 'Board Certified in Addiction Medicine', type: 'Certification', issuingBody: 'ABAM / ABPM', issueDate: '2020-10-01', expiryDate: '2030-10-01', status: 'Current', licenseNumber: 'ABAM 9981' },
@@ -57,7 +57,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-003', staffName: 'Dr. Emma Hughes', role: 'Staff Psychiatrist',
     ceuRequired: 50, ceuCompleted: 44, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-009', name: 'Tennessee Medical License', type: 'License', issuingBody: 'TN Board of Medical Examiners', issueDate: '2012-07-01', expiryDate: '2027-07-31', status: 'Current', licenseNumber: 'TN-MD 52203' },
+      { id: 'C-009', name: 'Maryland Medical License', type: 'License', issuingBody: 'Maryland Board of Physicians (MBP)', issueDate: '2015-07-01', expiryDate: '2027-03-31', status: 'Current', licenseNumber: 'MD-18834', notes: 'Renews biennially. 50 CME hrs required.' },
       { id: 'C-010', name: 'DEA Registration', type: 'License', issuingBody: 'US Drug Enforcement Administration', issueDate: '2024-06-01', expiryDate: '2027-06-01', status: 'Current', licenseNumber: 'DEA BH7654321' },
       { id: 'C-011', name: 'Board Certified in Psychiatry', type: 'Certification', issuingBody: 'American Board of Psychiatry & Neurology', issueDate: '2018-05-01', expiryDate: '2028-05-01', status: 'Current', licenseNumber: 'ABPN 44510' },
       { id: 'C-012', name: 'ASAM Certification in Addiction Medicine', type: 'Certification', issuingBody: 'ASAM', issueDate: '2022-01-15', expiryDate: '2026-01-15', status: 'Expired', licenseNumber: 'ASAM 3312', notes: 'Renewal application submitted 3/15/2026 — awaiting ASAM processing.' },
@@ -67,7 +67,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-004', staffName: 'Sarah Jenkins', role: 'Primary Counselor',
     ceuRequired: 30, ceuCompleted: 27, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-013', name: 'Licensed Professional Counselor Associate', type: 'License', issuingBody: 'TN Board of Professional Counselors', issueDate: '2024-01-15', expiryDate: '2026-12-31', status: 'Expiring Soon', licenseNumber: 'LPC-A 8871', notes: 'Under supervision of Dr. Carter. Must accrue 2000 supervised hours for LPC-MHSP upgrade. Current: 1,420 hours.' },
+      { id: 'C-013', name: 'Licensed Professional Counselor (LPC)', type: 'License', issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)', issueDate: '2019-07-01', expiryDate: '2025-12-31', status: 'Expiring Soon', licenseNumber: 'LPC-MD-11342', notes: 'Renewal due 12/31/2025. Upgrade to LCPC requires additional 3,000 post-LPC supervised hours under LCPC supervisor (James Carter, LCPC).' },
       { id: 'C-014', name: 'National Certified Counselor', type: 'Certification', issuingBody: 'NBCC', issueDate: '2024-01-20', expiryDate: '2029-01-20', status: 'Current', licenseNumber: 'NCC 201441' },
       { id: 'C-015', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2025-03-01', expiryDate: '2027-03-01', status: 'Current' },
       { id: 'C-016', name: 'ASAM Foundations of Addiction Medicine', type: 'Training', issuingBody: 'ASAM', issueDate: '2025-06-15', expiryDate: '2028-06-15', status: 'Current' },
@@ -77,8 +77,8 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-005', staffName: 'Maria Gonzalez', role: 'Licensed Social Worker',
     ceuRequired: 30, ceuCompleted: 30, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-017', name: 'Licensed Clinical Social Worker', type: 'License', issuingBody: 'TN Board of Social Work Examiners', issueDate: '2016-09-01', expiryDate: '2027-09-30', status: 'Current', licenseNumber: 'LCSW 4432' },
-      { id: 'C-018', name: 'Certified Advanced Alcohol and Drug Counselor', type: 'Certification', issuingBody: 'Tennessee Certification Board', issueDate: '2018-04-01', expiryDate: '2026-10-01', status: 'Expiring Soon', licenseNumber: 'CAADC 2190' },
+      { id: 'C-017', name: 'Licensed Clinical Social Worker — Clinical (LCSW-C)', type: 'License', issuingBody: 'Maryland Board of Social Work Examiners (MBSWE)', issueDate: '2016-09-01', expiryDate: '2027-09-30', status: 'Current', licenseNumber: 'LCSW-C-MD-4432', notes: 'LCSW-C (Clinical level) qualifies for independent clinical practice and supervision in Maryland.' },
+      { id: 'C-018', name: 'CAC-AD — Certified Associate Counselor, Alcohol & Drug', type: 'Certification', issuingBody: 'Maryland Behavioral Health Administration (MD BHA) / ADAA', issueDate: '2018-04-01', expiryDate: '2026-10-01', status: 'Expiring Soon', licenseNumber: 'MD-CAC-AD-2190', notes: 'Required for SUD services to MD-funded clients. Renewal due 10/1/2026 — submit 40 CEU documentation to MD BHA.' },
       { id: 'C-019', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2024-09-15', expiryDate: '2026-09-15', status: 'Expiring Soon' },
     ],
   },
@@ -86,7 +86,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-006', staffName: 'Jessica Torres', role: 'Director of Nursing',
     ceuRequired: 30, ceuCompleted: 30, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-020', name: 'Registered Nurse License', type: 'License', issuingBody: 'TN Board of Nursing', issueDate: '2009-05-01', expiryDate: '2027-09-30', status: 'Current', licenseNumber: 'RN 342198' },
+      { id: 'C-020', name: 'Registered Nurse (RN) License', type: 'License', issuingBody: 'Maryland Board of Nursing (MBON)', issueDate: '2015-11-01', expiryDate: '2026-10-31', status: 'Current', licenseNumber: 'RN-MD-44129', notes: 'Maryland RN renews every 2 years. 30 CEUs or practice hours attestation required.' },
       { id: 'C-021', name: 'Certified Addictions Registered Nurse', type: 'Certification', issuingBody: 'IntNSA / NNBA', issueDate: '2021-06-01', expiryDate: '2027-06-01', status: 'Current', licenseNumber: 'CARN 8821' },
       { id: 'C-022', name: 'CPR / AED / BLS Instructor', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2025-01-10', expiryDate: '2027-01-10', status: 'Current' },
       { id: 'C-023', name: 'ASAM PCSS MAT Training', type: 'Training', issuingBody: 'ASAM PCSS', issueDate: '2025-07-01', expiryDate: '2028-07-01', status: 'Current' },
@@ -96,7 +96,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-007', staffName: 'Kevin Wright', role: 'Behavioral Health Technician',
     ceuRequired: 12, ceuCompleted: 6, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-024', name: 'Certified Alcohol and Drug Counselor I', type: 'Certification', issuingBody: 'Tennessee Certification Board', issueDate: '2024-11-01', expiryDate: '2026-11-01', status: 'Current', licenseNumber: 'CADC-I 9920' },
+      { id: 'C-024', name: 'CADC — Certified Alcohol and Drug Counselor', type: 'Certification', issuingBody: 'IC&RC — Delaware DSAMH recognized', issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'Expiring Soon', licenseNumber: 'DE-CADC-7831', notes: 'IC&RC CADC recognized by Delaware DSAMH. Renewal pending — 40 CEU hrs required. Working toward CAADC.' },
       { id: 'C-025', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2025-06-01', expiryDate: '2027-06-01', status: 'Current' },
       { id: 'C-026', name: 'Mental Health First Aid', type: 'Training', issuingBody: 'MHFA USA', issueDate: '2025-02-15', expiryDate: '2028-02-15', status: 'Current' },
       { id: 'C-027', name: 'Crisis Prevention Institute (CPI) Nonviolent Crisis Intervention', type: 'Training', issuingBody: 'CPI', issueDate: '2025-08-01', expiryDate: '2026-08-01', status: 'Expiring Soon' },
@@ -411,14 +411,16 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'Sarah Jenkins', license: 'LPC', num: 'TN-LPC-4421', state: 'TN', issued: '2020-05-01', expires: '2026-11-30', ce: '40 hrs/2yr', status: 'Active' },
-                  { name: 'David Odom', license: 'LMFT', num: 'TN-LMFT-1882', state: 'TN', issued: '2019-09-01', expires: '2026-09-01', ce: '24 hrs/2yr', status: 'Due Q3' },
-                  { name: 'Maria Gonzales', license: 'LCSW', num: 'TN-LCSW-7714', state: 'TN', issued: '2021-01-01', expires: '2027-01-01', ce: '30 hrs/2yr', status: 'Active' },
-                  { name: 'Dr. Robert Chen', license: 'MD', num: 'TN-MD-28841', state: 'TN', issued: '2015-06-01', expires: '2027-06-01', ce: 'CME 40 hrs/yr', status: 'Active' },
-                  { name: 'Dr. Allen Hughes', license: 'MD', num: 'TN-MD-31209', state: 'TN', issued: '2018-03-01', expires: '2027-03-01', ce: 'CME 40 hrs/yr', status: 'Active' },
-                  { name: 'Jessica Torres', license: 'RN', num: 'TN-RN-88421', state: 'TN', issued: '2020-08-01', expires: '2026-08-01', ce: '5 hrs/2yr', status: 'Due Q3' },
-                  { name: 'Michael Boyd', license: 'RN', num: 'TN-RN-91104', state: 'TN', issued: '2022-01-01', expires: '2027-01-01', ce: '5 hrs/2yr', status: 'Active' },
-                  { name: 'Dr. James Carter', license: 'PhD / CADC-III', num: 'TN-PHD-1043', state: 'TN', issued: '2017-12-01', expires: '2026-12-01', ce: '40 hrs/2yr', status: 'Active' },
+                  { name: 'James Carter', license: 'LCPC + CAC-AD + BAS', num: 'LCPC-MD-12847 / BAS-MD-441', state: 'MD', issued: '2012-06-01', expires: '2026-09-30', ce: '40 hrs/2yr (MBPCT)', status: 'Active' },
+                  { name: 'Sarah Jenkins', license: 'LPC + CAC-AD', num: 'LPC-MD-11342 / MD-CAC-AD-2218', state: 'MD', issued: '2019-07-01', expires: '2025-12-31', ce: '40 hrs/2yr (MBPCT)', status: 'Due Q4' },
+                  { name: 'David Odom', license: 'LMFT', num: 'LMFT-MD-4421', state: 'MD', issued: '2020-05-01', expires: '2026-04-30', ce: '40 hrs/2yr (MBPCT)', status: 'Active' },
+                  { name: 'Maria Gonzalez', license: 'LCSW-C + CAC-AD', num: 'LCSW-C-MD-4432', state: 'MD', issued: '2016-09-01', expires: '2027-09-30', ce: '30 hrs/2yr (MBSWE)', status: 'Active' },
+                  { name: 'Dr. Robert Chen', license: 'MD', num: 'MD-18834', state: 'MD', issued: '2015-07-01', expires: '2027-03-31', ce: '50 CME hrs/2yr (MBP)', status: 'Active' },
+                  { name: 'Dr. Allen Hughes', license: 'MD + FASAM', num: 'MD-09921', state: 'MD', issued: '2008-06-01', expires: '2028-12-31', ce: '50 CME hrs/2yr (MBP)', status: 'Active' },
+                  { name: 'Jessica Torres', license: 'RN + CARN', num: 'RN-MD-44129', state: 'MD', issued: '2015-11-01', expires: '2026-10-31', ce: '30 hrs/2yr (MBON)', status: 'Active' },
+                  { name: 'Kevin Wright', license: 'CADC + PRS', num: 'DE-CADC-7831 / DSAMH-PRS-1122', state: 'DE', issued: '2021-03-01', expires: '2025-03-01', ce: '40 hrs/2yr (IC&RC)', status: 'Due Q1' },
+                  { name: 'Michael Boyd', license: 'ADT (DSAMH)', num: 'DSAMH-ADT-2023-0447', state: 'DE', issued: '2023-04-15', expires: '2025-04-15', ce: 'Annual renewal (DSAMH)', status: 'Due' },
+                  { name: 'Carlos Rivera', license: 'CADC + CPRS', num: 'DE-CADC-4419 / CPRS-DE-0891', state: 'DE', issued: '2023-05-01', expires: '2027-05-01', ce: '40 hrs/2yr (IC&RC)', status: 'Active' },
                   { name: 'Marcus Thompson (PSS)', license: 'CPRS', num: 'TN-CPRS-5521', state: 'TN', issued: '2023-03-01', expires: '2025-03-01', ce: '20 hrs/2yr', status: 'Renewal Overdue' },
                 ].map(r => (
                   <tr key={r.name} className={`hover:bg-gray-50 ${r.status === 'Renewal Overdue' ? 'bg-red-50/40' : r.status === 'Due Q3' ? 'bg-amber-50/30' : ''}`}>

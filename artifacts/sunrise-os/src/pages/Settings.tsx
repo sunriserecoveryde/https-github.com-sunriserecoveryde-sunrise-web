@@ -36,15 +36,15 @@ export function Settings({ navigate, readOnly }: Props) {
             <div className="grid grid-cols-2 gap-4">
               {[
                 { label: 'Facility Name', value: 'Sunrise Recovery Center', full: true },
-                { label: 'License Number', value: 'TN-BHSL-2019-04821' },
+                { label: 'MD BHA License #', value: 'MD-BHA-SUD-2019-04821' },
                 { label: 'NPI Number', value: '1234567890' },
                 { label: 'Tax ID (EIN)', value: '47-1234567' },
-                { label: 'Primary Phone', value: '(615) 882-4400' },
-                { label: 'Fax', value: '(615) 882-4401' },
-                { label: 'Address Line 1', value: '4201 Medical Center Drive', full: true },
-                { label: 'City', value: 'Nashville' },
-                { label: 'State', value: 'TN' },
-                { label: 'ZIP', value: '37209' },
+                { label: 'Primary Phone', value: '(301) 882-4400' },
+                { label: 'Fax', value: '(301) 882-4401' },
+                { label: 'Address Line 1', value: '1300 Piccard Drive', full: true },
+                { label: 'City', value: 'Rockville' },
+                { label: 'State', value: 'MD' },
+                { label: 'ZIP', value: '20850' },
               ].map(f => (
                 <div key={f.label} className={f.full ? 'col-span-2' : ''}>
                   <label className="block text-xs font-semibold text-slate uppercase tracking-wide mb-1">{f.label}</label>
@@ -357,7 +357,7 @@ export function Settings({ navigate, readOnly }: Props) {
                 { name: 'Lab Interface (Quest / LabCorp)', status: 'Not Configured', description: 'Automatic lab result import and critical value alerts' },
                 { name: 'Pharmacy Interface', status: 'Not Configured', description: 'eRx and medication reconciliation' },
                 { name: 'Insurance Eligibility (Availity)', status: 'Not Configured', description: 'Real-time eligibility verification and authorization' },
-                { name: 'HIE (Tennessee CRISP)', status: 'Not Configured', description: 'Health Information Exchange — ADT notifications and records' },
+                { name: 'CRISP (MD) / DHIN (DE) — State HIE', status: 'Not Configured', description: 'Health Information Exchange — ADT notifications, CCD exchange, care coordination' },
               ].map(int => (
                 <div key={int.name} className="flex items-center justify-between p-3 rounded-lg border border-border">
                   <div>
@@ -429,7 +429,7 @@ export function Settings({ navigate, readOnly }: Props) {
               {
                 category: 'Electronic Health Records & HIE',
                 items: [
-                  { name: 'Tennessee Health Information Network (TN HIN)', status: 'Active', desc: 'Bi-directional ADT and CCD exchange. FHIR R4 compliant.', color: 'bg-green-100 text-green-700' },
+                  { name: 'CRISP — Chesapeake Regional Information System for our Patients (MD)', status: 'Active', desc: 'Maryland state HIE. Bi-directional ADT and CCD exchange. FHIR R4 compliant. Required for MD HealthChoice value-based programs.', color: 'bg-green-100 text-green-700' },
                   { name: 'CommonWell Health Alliance', status: 'Active', desc: 'Patient matching and record retrieval across member HIEs.', color: 'bg-green-100 text-green-700' },
                   { name: 'Carequality Framework', status: 'Pending', desc: 'Pending onboarding. Enables query to non-CommonWell networks.', color: 'bg-amber-100 text-amber-700' },
                 ]
@@ -437,7 +437,7 @@ export function Settings({ navigate, readOnly }: Props) {
               {
                 category: 'Prescription & Controlled Substance',
                 items: [
-                  { name: 'Tennessee CSMD (PDMP)', status: 'Active', desc: 'Real-time PDMP check integrated into MAT and prescriber workflows.', color: 'bg-green-100 text-green-700' },
+                  { name: 'Maryland PDMP (MDH) + Delaware PMP (PMPInterConnect)', status: 'Active', desc: 'Real-time PDMP check for MD and DE prescribers. Mandatory before prescribing CII–CV controlled substances in either state.', color: 'bg-green-100 text-green-700' },
                   { name: 'Surescripts (eRx)', status: 'Active', desc: 'Electronic prescribing for all medications including controlled substances.', color: 'bg-green-100 text-green-700' },
                   { name: 'DEA CSOS (Electronic Orders)', status: 'Active', desc: 'DEA-compliant electronic ordering for Schedule II controlled substances.', color: 'bg-green-100 text-green-700' },
                 ]
@@ -447,7 +447,7 @@ export function Settings({ navigate, readOnly }: Props) {
                 items: [
                   { name: 'Quest Diagnostics (Lab Interface)', status: 'Active', desc: 'Bi-directional order and result exchange via HL7 v2.5.1.', color: 'bg-green-100 text-green-700' },
                   { name: 'LabCorp Connect', status: 'Active', desc: 'Alternate lab routing; UA drug screen preferred lab.', color: 'bg-green-100 text-green-700' },
-                  { name: 'Vanderbilt Labs (Send-out)', status: 'Active', desc: 'Specialty and confirmatory test routing.', color: 'bg-green-100 text-green-700' },
+                  { name: 'Johns Hopkins / University of Maryland Medical System (Send-out)', status: 'Active', desc: 'Specialty and confirmatory test routing for MD facility.', color: 'bg-green-100 text-green-700' },
                 ]
               },
               {
@@ -455,13 +455,13 @@ export function Settings({ navigate, readOnly }: Props) {
                 items: [
                   { name: 'Waystar / ZirMed (Clearinghouse)', status: 'Active', desc: '837/835 EDI claims submission and ERA posting.', color: 'bg-green-100 text-green-700' },
                   { name: 'Availity Real-time Eligibility', status: 'Active', desc: '270/271 real-time eligibility and benefits verification.', color: 'bg-green-100 text-green-700' },
-                  { name: 'TennCare / Medicaid Portal', status: 'Active', desc: 'Direct payer portal submission for TennCare MCOs.', color: 'bg-green-100 text-green-700' },
+                  { name: 'MD HealthChoice (CareFirst, Optum, UHC, Jai Medical) + DE Diamond State Health Plan (Highmark)', status: 'Active', desc: 'Direct payer portal submission for MD HealthChoice MCOs and DE Diamond State Health Plan. Prior auth required for all SUD levels of care.', color: 'bg-green-100 text-green-700' },
                 ]
               },
               {
                 category: 'State Reporting & Compliance',
                 items: [
-                  { name: 'TDMHSAS CBMS (State Reporting)', status: 'Active', desc: 'Automated submission of required SUD treatment data to TN DMHSAS.', color: 'bg-green-100 text-green-700' },
+                  { name: 'MD BHA / BHAIS (State Reporting — Maryland)', status: 'Active', desc: 'Automated submission of SUD treatment data to MD Behavioral Health Administration. Required for all BHA-licensed programs serving publicly-funded clients.', color: 'bg-green-100 text-green-700' },
                   { name: 'SAMHSA TEDS (NOMS Reporting)', status: 'Active', desc: 'Federal treatment episode data set reporting via state gateway.', color: 'bg-green-100 text-green-700' },
                   { name: 'DEA ARCOS (Controlled Sub Reporting)', status: 'Active', desc: 'Automated annual acquisition/distribution reporting.', color: 'bg-green-100 text-green-700' },
                 ]

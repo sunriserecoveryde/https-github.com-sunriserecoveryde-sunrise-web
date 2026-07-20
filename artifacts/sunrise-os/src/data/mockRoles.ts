@@ -52,7 +52,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'clinical_supervisor',
     label: 'Clinical Supervisor',
     shortLabel: 'Clinical Supervisor',
-    description: 'LPC-MHSP, LCSW, CADC III. Oversees clinicians; co-signs notes; runs supervision sessions.',
+    description: 'LCPC or LCSW-C (MD) / CAADC or LADC (DE). Must hold Board Approved Supervisor (BAS) per MD BHA, or DSAMH-approved supervisor status (DE). Co-signs notes; documents required supervision hours.',
     color: 'bg-amber-500/20', textColor: 'text-amber-300', borderColor: 'border-amber-500/40', dotColor: 'bg-amber-400',
     category: 'Clinical',
     permissions: perms(
@@ -67,7 +67,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'certified_clinician',
     label: 'Certified Clinician',
     shortLabel: 'Certified Clinician',
-    description: 'CADC II/III, LPC, LCSW. Primary counselor; owns individual caseload.',
+    description: 'LPC + CAC-AD (MD) / CADC — IC&RC (DE-DSAMH). Primary counselor; owns individual caseload. Publicly-funded clients require current BHA/DSAMH certification.',
     color: 'bg-blue-500/20', textColor: 'text-blue-300', borderColor: 'border-blue-500/40', dotColor: 'bg-blue-400',
     category: 'Clinical',
     permissions: perms(
@@ -86,7 +86,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'mh_therapist',
     label: 'Mental Health Therapist',
     shortLabel: 'MH Therapist',
-    description: 'LPC, LMFT, LCSW. Co-occurring mental health focus; may lack SUD certification.',
+    description: 'LMFT, LCPC, or LCSW-C (MD) / LPCMH or LCSW (DE). Co-occurring MH focus. Licensed by MBPCT (MD) or DE Board of Mental Health & Chemical Dependency Professionals.',
     color: 'bg-purple-500/20', textColor: 'text-purple-300', borderColor: 'border-purple-500/40', dotColor: 'bg-purple-400',
     category: 'Clinical',
     permissions: perms(
@@ -141,7 +141,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'nursing',
     label: 'Nursing',
     shortLabel: 'Nursing',
-    description: 'RN, LPN. Medication administration, vitals, COWS/CIWA, shift handoff, monitoring.',
+    description: 'RN, LPN. Maryland Board of Nursing (MBON) or Delaware Board of Nursing. Medication administration, vitals, COWS/CIWA-Ar, shift handoff, MAT monitoring.',
     color: 'bg-teal-500/20', textColor: 'text-teal-300', borderColor: 'border-teal-500/40', dotColor: 'bg-teal-400',
     category: 'Nursing & Direct Care',
     permissions: perms(
@@ -176,7 +176,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'bht',
     label: 'Behavioral Health Technician',
     shortLabel: 'BHT',
-    description: 'Entry-level direct care. Monitors patients, runs groups under supervision, logs observations.',
+    description: '(MD) ADT registration via MD BHA required before SUD direct care — supervised by Board Approved Supervisor (BAS). (DE) DSAMH registration required; working toward CADC (IC&RC). All BHT supervised.',
     color: 'bg-gray-500/20', textColor: 'text-gray-300', borderColor: 'border-gray-500/40', dotColor: 'bg-gray-400',
     category: 'Nursing & Direct Care',
     permissions: perms(
