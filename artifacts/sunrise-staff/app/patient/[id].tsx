@@ -443,6 +443,10 @@ export default function PatientDetailScreen() {
   const toastAnim = useRef(new Animated.Value(100)).current;
   // Tracks which note id is currently animated in, to detect replace-toast transitions.
   const toastNoteIdRef = useRef<string | null>(null);
+  // Countdown bar: 1.0 = full width, 0.0 = empty. Captured toast width for interpolation.
+  const countdownAnim = useRef(new Animated.Value(1)).current;
+  const countdownAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+  const [toastContainerWidth, setToastContainerWidth] = useState(0);
 
   // ─── Clipboard-fallback modal (shown when browser blocks clipboard write) ──
   const [clipboardFallbackVisible, setClipboardFallbackVisible] = useState(false);
@@ -488,6 +492,26 @@ export default function PatientDetailScreen() {
   useEffect(() => {
     const noteId = pendingDelete?.patientId === id ? pendingDelete.note.id : null;
 
+    // ── Countdown bar helper ────────────────────────────────────────────────
+    // Starts (or restarts) the drain animation from the correct remaining
+    // fraction so the bar is accurate whether this is a fresh show or a
+    // return-from-navigation mount.
+    const startCountdown = () => {
+      if (countdownAnimRef.current) countdownAnimRef.current.stop();
+      if (!pendingDelete) return;
+      const remaining = Math.max(0, pendingDelete.expiresAt - Date.now());
+      const fraction = remaining / 4000;
+      countdownAnim.setValue(fraction);
+      if (remaining > 0) {
+        countdownAnimRef.current = Animated.timing(countdownAnim, {
+          toValue: 0,
+          duration: remaining,
+          useNativeDriver: false, // width interpolation cannot use native driver
+        });
+        countdownAnimRef.current.start();
+      }
+    };
+
     if (noteId !== null && toastNoteIdRef.current === null) {
       // Guard: if the undo window is almost over, skip the toast entirely so it
       // doesn't flash in and immediately slide back out (ghost toast).
@@ -499,6 +523,7 @@ export default function PatientDetailScreen() {
       // Fresh show — toast was not visible
       toastNoteIdRef.current = noteId;
       setToastVisible(true);
+      startCountdown();
       Animated.spring(toastAnim, {
         toValue: 0,
         useNativeDriver: true,
@@ -508,6 +533,7 @@ export default function PatientDetailScreen() {
     } else if (noteId !== null && toastNoteIdRef.current !== noteId) {
       // Replace — a second deletion happened while toast was up; slide out then in
       toastNoteIdRef.current = noteId;
+      startCountdown();
       Animated.timing(toastAnim, {
         toValue: 100,
         duration: 180,
@@ -523,6 +549,10 @@ export default function PatientDetailScreen() {
     } else if (noteId === null && toastNoteIdRef.current !== null) {
       // Hide — timer expired, undo tapped, or navigated to a different patient
       toastNoteIdRef.current = null;
+      if (countdownAnimRef.current) {
+        countdownAnimRef.current.stop();
+        countdownAnimRef.current = null;
+      }
       Animated.timing(toastAnim, {
         toValue: 100,
         duration: 220,
@@ -1485,6 +1515,7 @@ export default function PatientDetailScreen() {
       {/* ─── Undo delete toast ─── */}
       {toastVisible && (
         <Animated.View
+          onLayout={e => setToastContainerWidth(e.nativeEvent.layout.width)}
           style={[
             s.undoToast,
             { bottom: Math.max(insets.bottom, 8) + 16, transform: [{ translateY: toastAnim }] },
@@ -1494,6 +1525,23 @@ export default function PatientDetailScreen() {
           <Pressable onPress={handleUndo} hitSlop={12} style={s.undoBtn}>
             <Text style={s.undoBtnText}>Undo</Text>
           </Pressable>
+          {/* Draining countdown bar — drains left as the undo window closes */}
+          {toastContainerWidth > 0 && (
+            <Animated.View
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                height: 3,
+                borderBottomLeftRadius: 12,
+                backgroundColor: 'rgba(79, 195, 247, 0.55)',
+                width: countdownAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, toastContainerWidth],
+                }),
+              }}
+            />
+          )}
         </Animated.View>
       )}
 
@@ -1908,6 +1956,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.22, shadowRadius: 12, elevation: 10,
+    overflow: 'hidden', // clips the countdown bar to the rounded corners
   },
   undoToastText: { fontSize: 14, color: '#fff', fontFamily: 'Inter_400Regular' },
   undoBtn: { paddingVertical: 4, paddingHorizontal: 10 },
