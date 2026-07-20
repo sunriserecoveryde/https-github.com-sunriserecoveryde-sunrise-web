@@ -303,7 +303,7 @@ export default function HandoffScreen() {
   }
 
   function handleShareAll() {
-    const date = new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    const date = today.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
     const shiftLabel = SHIFTS.find(s => s.id === shift)!;
     const lines: string[] = [];
     lines.push(`SHIFT HANDOFF — ${shiftLabel.label} Shift (${shiftLabel.time})`);
