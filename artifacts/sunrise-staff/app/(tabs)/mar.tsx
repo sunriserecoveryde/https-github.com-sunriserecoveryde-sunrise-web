@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Animated,
   FlatList,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -12,70 +11,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { usePatients } from '@/context/PatientContext';
 import { useDisplayedResidentialPatients } from '@/hooks/useDisplayedResidentialPatients';
 import { MEDICATIONS, Patient, Medication } from '@/data/mockData';
-
-// ── Persistence helpers ────────────────────────────────────────────────────
-
-// Use today's actual calendar date so data auto-expires at midnight —
-// new shift, clean slate. Old day keys are pruned on launch.
-const TODAY_DATE  = new Date().toISOString().slice(0, 10);
-const MAR_KEY     = `@sunrise_mar_${TODAY_DATE}`;
-const CHECKS_KEY  = `@sunrise_checks_${TODAY_DATE}`;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Persisted keys and their cold-start flash guards
-// ─────────────────────────────────────────────────────────────────────────────
-// Every AsyncStorage key managed by this screen is registered here.  Guard
-// styles mirror the pattern in WithdrawalFiltersContext.tsx / vitals.tsx:
-//
-//   A) useRehydratedValue(isRehydrating, value, loadingValue)
-//   B) Opacity animation — start at 0, fade to 1 once loaded.
-//   C) Raw !loaded guard in JSX.
-//
-// ┌────────────────────────────────────────┬──────────────────────────┬───────┐
-// │ AsyncStorage key (date-scoped)         │ Local state              │ Guard │
-// ├────────────────────────────────────────┼──────────────────────────┼───────┤
-// │ @sunrise_mar_<YYYY-MM-DD>              │ adminMap (MARView)       │ B     │
-// │ @sunrise_checks_<YYYY-MM-DD>           │ checks (ChecksView)      │ B     │
-// └────────────────────────────────────────┴──────────────────────────┴───────┘
-//
-// Guard B: each sub-view creates a listOpacity Animated.Value that starts at 0
-// and fades to 1 once its `loaded` flag turns true (matching the pattern used
-// for the score filter bar in vitals.tsx).
-// ─────────────────────────────────────────────────────────────────────────────
-
-const MAR_KEY_PREFIX    = '@sunrise_mar_';
-const CHECKS_KEY_PREFIX = '@sunrise_checks_';
-
-/** Remove AsyncStorage entries from previous days to avoid unbounded growth. */
-async function pruneStaleKeys(): Promise<void> {
-  try {
-    const allKeys = await AsyncStorage.getAllKeys();
-    const stale = allKeys.filter(k => {
-      if (k.startsWith(MAR_KEY_PREFIX))    return k !== MAR_KEY;
-      if (k.startsWith(CHECKS_KEY_PREFIX)) return k !== CHECKS_KEY;
-      return false;
-    });
-    if (stale.length > 0) await AsyncStorage.multiRemove(stale);
-  } catch { /* ignore */ }
-}
-
-async function loadFromStorage<T>(key: string, fallback: T): Promise<T> {
-  try {
-    const raw = await AsyncStorage.getItem(key);
-    if (raw !== null) return JSON.parse(raw) as T;
-  } catch { /* ignore parse errors */ }
-  return fallback;
-}
-
-async function saveToStorage<T>(key: string, value: T): Promise<void> {
-  try { await AsyncStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
-}
+import { useMAR, AdminMap, CheckEntry } from '@/context/MARContext';
 
 // ── MAR (Nursing) ──────────────────────────────────────────────────────────
 
@@ -90,8 +31,6 @@ function medClassColor(cls: Medication['class'], colors: ReturnType<typeof useCo
     case 'PRN': return { bg: colors.moderateBg, text: colors.moderate };
   }
 }
-
-type AdminMap = Record<string, Record<string, boolean>>;
 
 function MedRow({ med, patientId, adminMap, onToggle }: {
   med: Medication;
@@ -215,39 +154,17 @@ function MARView() {
   const colors = useColors();
   const { pendingDischarge } = usePatients();
   const displayedPatients = useDisplayedResidentialPatients();
-  const [adminMap, setAdminMap] = useState<AdminMap>({});
+  const { adminMap, marLoaded, toggleAdmin } = useMAR();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['p1', 'p4', 'p8']));
-  const [loaded, setLoaded] = useState(false);
 
   // Guard B: starts invisible so med checkmarks don't flash as unchecked before
-  // AsyncStorage resolves (@sunrise_mar_<date>). Fades in once loaded.
+  // AsyncStorage resolves (@sunrise_mar_<date>). Fades in once marLoaded.
   const listOpacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (loaded) {
+    if (marLoaded) {
       Animated.timing(listOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
     }
-  }, [loaded]);
-
-  // Load persisted MAR state on mount
-  useEffect(() => {
-    loadFromStorage<AdminMap>(MAR_KEY, {}).then(saved => {
-      setAdminMap(saved);
-      setLoaded(true);
-    });
-  }, []);
-
-  // Persist adminMap whenever it changes (after initial load)
-  useEffect(() => {
-    if (loaded) saveToStorage(MAR_KEY, adminMap);
-  }, [adminMap, loaded]);
-
-  function handleToggle(patientId: string, medId: string, time: string) {
-    const key = `${medId}-${time}`;
-    setAdminMap(prev => ({
-      ...prev,
-      [patientId]: { ...(prev[patientId] ?? {}), [key]: !(prev[patientId]?.[key]) },
-    }));
-  }
+  }, [marLoaded]);
 
   function handleExpand(id: string) {
     setExpandedIds(prev => {
@@ -266,7 +183,7 @@ function MARView() {
         <PatientMARCard
           patient={item}
           adminMap={adminMap}
-          onToggle={handleToggle}
+          onToggle={toggleAdmin}
           expanded={expandedIds.has(item.id)}
           onExpand={() => handleExpand(item.id)}
           isPendingDischarge={pendingDischarge?.patient.id === item.id}
@@ -297,13 +214,7 @@ function MARView() {
 
 // ── Checks (BHT) ───────────────────────────────────────────────────────────
 
-interface CheckEntry {
-  mood: number;
-  cravings: number;
-  oriented: boolean;
-  uaCollected: boolean;
-  completed: boolean;
-}
+const DEFAULT_CHECK: CheckEntry = { mood: 5, cravings: 5, oriented: true, uaCollected: false, completed: false };
 
 function ScaleSelector({ value, onChange, color }: { value: number; onChange: (v: number) => void; color: string }) {
   return (
@@ -421,36 +332,17 @@ function ChecksView() {
   const colors = useColors();
   const { pendingDischarge } = usePatients();
   const displayedPatients = useDisplayedResidentialPatients();
-
-  const defaultCheck: CheckEntry = { mood: 5, cravings: 5, oriented: true, uaCollected: false, completed: false };
-  const defaultChecks = Object.fromEntries(displayedPatients.map(p => [p.id, { ...defaultCheck }]));
-  const [checks, setChecks] = useState<Record<string, CheckEntry>>(defaultChecks);
-  const [loaded, setLoaded] = useState(false);
+  const { checks, checksLoaded, updateCheck } = useMAR();
 
   // Guard B: starts invisible so check completion status doesn't flash as
   // "Needs check-in" before AsyncStorage resolves (@sunrise_checks_<date>).
-  // Fades in once loaded, matching the pattern in vitals.tsx.
+  // Fades in once checksLoaded, matching the pattern in vitals.tsx.
   const listOpacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (loaded) {
+    if (checksLoaded) {
       Animated.timing(listOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
     }
-  }, [loaded]);
-
-  // Load persisted BHT check-in state on mount
-  useEffect(() => {
-    loadFromStorage<Record<string, CheckEntry>>(CHECKS_KEY, defaultChecks).then(saved => {
-      // Merge: ensure any new patients get a default entry
-      const merged = { ...defaultChecks, ...saved };
-      setChecks(merged);
-      setLoaded(true);
-    });
-  }, []);
-
-  // Persist checks whenever they change (after initial load)
-  useEffect(() => {
-    if (loaded) saveToStorage(CHECKS_KEY, checks);
-  }, [checks, loaded]);
+  }, [checksLoaded]);
 
   // Only count completions for patients currently on the active roster
   // (avoids stale entries from discharged patients inflating the count)
@@ -465,8 +357,8 @@ function ChecksView() {
       renderItem={({ item }) => (
         <PatientCheckCard
           patient={item}
-          check={checks[item.id] ?? defaultCheck}
-          onChange={c => setChecks(prev => ({ ...prev, [item.id]: c }))}
+          check={checks[item.id] ?? DEFAULT_CHECK}
+          onChange={c => updateCheck(item.id, c)}
           isPendingDischarge={pendingDischarge?.patient.id === item.id}
         />
       )}
@@ -496,9 +388,6 @@ export default function MARScreen() {
   const insets = useSafeAreaInsets();
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const { role, setRole } = useRole();
-
-  // Prune stale keys from previous days on every screen mount
-  useEffect(() => { pruneStaleKeys(); }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

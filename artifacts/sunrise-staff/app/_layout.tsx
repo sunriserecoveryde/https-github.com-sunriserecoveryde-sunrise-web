@@ -19,6 +19,7 @@ import { MdAcknowledgmentProvider } from '@/context/MdAcknowledgmentContext';
 import { NursingNotesProvider } from '@/context/NursingNotesContext';
 import { WithdrawalFiltersProvider } from '@/context/WithdrawalFiltersContext';
 import { CensusFiltersProvider } from '@/context/CensusFiltersContext';
+import { MARProvider } from '@/context/MARContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -62,7 +63,9 @@ export default function RootLayout() {
                     <NursingNotesProvider>
                       <WithdrawalFiltersProvider>
                         <CensusFiltersProvider>
-                          <RootLayoutNav />
+                          <MARProvider>
+                            <RootLayoutNav />
+                          </MARProvider>
                         </CensusFiltersProvider>
                       </WithdrawalFiltersProvider>
                     </NursingNotesProvider>
