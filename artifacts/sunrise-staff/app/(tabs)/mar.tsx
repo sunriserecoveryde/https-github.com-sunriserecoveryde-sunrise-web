@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { usePatients } from '@/context/PatientContext';
+import { useDisplayedResidentialPatients } from '@/hooks/useDisplayedResidentialPatients';
 import { MEDICATIONS, Patient, Medication } from '@/data/mockData';
 
 // ── Persistence helpers ────────────────────────────────────────────────────
@@ -189,19 +190,11 @@ function PatientMARCard({ patient, adminMap, onToggle, expanded, onExpand, isPen
 
 function MARView() {
   const colors = useColors();
-  const { residentialPatients, pendingDischarge } = usePatients();
+  const { pendingDischarge } = usePatients();
+  const displayedPatients = useDisplayedResidentialPatients();
   const [adminMap, setAdminMap] = useState<AdminMap>({});
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['p1', 'p4', 'p8']));
   const [loaded, setLoaded] = useState(false);
-
-  // Re-insert the pending-discharge patient so nurses can see they haven't left yet.
-  const displayedPatients = React.useMemo(() => {
-    if (!pendingDischarge) return residentialPatients;
-    const pd = pendingDischarge.patient;
-    if (pd.program !== 'Residential') return residentialPatients;
-    if (residentialPatients.some(p => p.id === pd.id)) return residentialPatients;
-    return [pd, ...residentialPatients];
-  }, [residentialPatients, pendingDischarge]);
 
   // Load persisted MAR state on mount
   useEffect(() => {
@@ -392,16 +385,8 @@ function PatientCheckCard({ patient, check, onChange, isPendingDischarge }: {
 
 function ChecksView() {
   const colors = useColors();
-  const { residentialPatients, pendingDischarge } = usePatients();
-
-  // Re-insert the pending-discharge patient so nurses can see they haven't left yet.
-  const displayedPatients = React.useMemo(() => {
-    if (!pendingDischarge) return residentialPatients;
-    const pd = pendingDischarge.patient;
-    if (pd.program !== 'Residential') return residentialPatients;
-    if (residentialPatients.some(p => p.id === pd.id)) return residentialPatients;
-    return [pd, ...residentialPatients];
-  }, [residentialPatients, pendingDischarge]);
+  const { pendingDischarge } = usePatients();
+  const displayedPatients = useDisplayedResidentialPatients();
 
   const defaultCheck: CheckEntry = { mood: 5, cravings: 5, oriented: true, uaCollected: false, completed: false };
   const defaultChecks = Object.fromEntries(displayedPatients.map(p => [p.id, { ...defaultCheck }]));
