@@ -432,6 +432,18 @@ export default function PatientDetailScreen() {
     }, 2000);
   }, [dischargePendingHintAnim]);
 
+  // Cancel the hint auto-dismiss timer if the component unmounts while it is
+  // still counting down (e.g. the undo window expires and navigates back to the
+  // census board). Without this, the setState inside the timeout fires on an
+  // unmounted component and produces a React warning.
+  useEffect(() => {
+    return () => {
+      if (dischargePendingHintTimerRef.current) {
+        clearTimeout(dischargePendingHintTimerRef.current);
+      }
+    };
+  }, []);
+
   // ─── Add Note state ────────────────────────────────────────────────────────
   const {
     getNotesForPatient,
