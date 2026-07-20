@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Animated,
   FlatList,
@@ -191,15 +191,37 @@ export default function HandoffScreen() {
   const [completed, setCompleted] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  // Guard B: starts invisible so the shift selector and handoff notes don't
-  // flash with stale defaults ('Day' shift, static handoffNote strings) before
-  // AsyncStorage resolves. Fades in once both keys are loaded together.
+  // ── Shift selector + content rehydration guard ───────────────────────────
+  // While !loaded: shimmer skeleton on the shift selector so it's never blank.
+  // Once loaded: fade in the real ShiftSelector (shiftBarOpacity) and the
+  // full content body (contentOpacity) together.
   // See persisted key registry above for the full guard table.
   const contentOpacity = useRef(new Animated.Value(0)).current;
-  React.useEffect(() => {
-    if (loaded) {
-      Animated.timing(contentOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+  const shiftBarOpacity = useRef(new Animated.Value(0)).current;
+  const shimmerAnim = useRef(new Animated.Value(0.3)).current;
+  const shimmerLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    if (!loaded) {
+      shimmerLoopRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(shimmerAnim, { toValue: 0.7, duration: 600, useNativeDriver: true }),
+          Animated.timing(shimmerAnim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
+        ])
+      );
+      shimmerLoopRef.current.start();
+    } else {
+      shimmerLoopRef.current?.stop();
+      shimmerLoopRef.current = null;
+      Animated.parallel([
+        Animated.timing(shiftBarOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.timing(contentOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+      ]).start();
     }
+    return () => {
+      shimmerLoopRef.current?.stop();
+      shimmerLoopRef.current = null;
+    };
   }, [loaded]);
 
   // Load persisted notes on mount
@@ -360,11 +382,27 @@ export default function HandoffScreen() {
         </View>
       </View>
 
-      {/* Shift selector + content — Guard B (opacity animation): starts invisible so
-          the shift chip and handoff notes don't flash with stale defaults before
-          AsyncStorage resolves. Fades in once both keys are loaded together. */}
+      {/* Shift selector — Guard B (shimmer skeleton):
+          While rehydrating (!loaded) → pulsing placeholder so the bar is never blank.
+          After rehydration → real Day / Eve / Night selector fades in. */}
+      {!loaded ? (
+        <View style={[styles.shiftRow, { backgroundColor: colors.navyMid }]}>
+          {[70, 70, 80].map((w, i) => (
+            <Animated.View
+              key={i}
+              style={[styles.shiftBtnSkeleton, { flex: 1, opacity: shimmerAnim }]}
+            />
+          ))}
+        </View>
+      ) : (
+        <Animated.View style={{ opacity: shiftBarOpacity }}>
+          <ShiftSelector current={shift} onChange={setShift} />
+        </Animated.View>
+      )}
+
+      {/* Content body — Guard B (opacity animation): starts invisible so handoff
+          notes don't flash with stale defaults before AsyncStorage resolves. */}
       <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
-        <ShiftSelector current={shift} onChange={setShift} />
 
         {completed ? (
           <View style={styles.completedBanner}>
@@ -424,6 +462,7 @@ const styles = StyleSheet.create({
   shiftBtn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 8 },
   shiftBtnLabel: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   shiftBtnTime: { fontSize: 10, marginTop: 2, fontFamily: 'Inter_400Regular' },
+  shiftBtnSkeleton: { height: 52, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.2)', margin: 4 },
   listContent: { padding: 12, gap: 10 },
   card: { borderRadius: 12, borderLeftWidth: 4, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },

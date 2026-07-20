@@ -387,7 +387,40 @@ export default function MARScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
-  const { role, setRole } = useRole();
+  const { role, setRole, isRehydrating } = useRole();
+
+
+  // ── Role toggle rehydration guard ────────────────────────────────────────
+  // While isRehydrating: show a shimmer skeleton so the toggle is never blank.
+  // Once rehydrating flips to false: fade in the real RN / BHT toggle.
+  const roleBarOpacity = useRef(new Animated.Value(0)).current;
+  const shimmerAnim = useRef(new Animated.Value(0.3)).current;
+  const shimmerLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    if (isRehydrating) {
+      shimmerLoopRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(shimmerAnim, { toValue: 0.8, duration: 600, useNativeDriver: true }),
+          Animated.timing(shimmerAnim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
+        ])
+      );
+      shimmerLoopRef.current.start();
+    } else {
+      shimmerLoopRef.current?.stop();
+      shimmerLoopRef.current = null;
+      Animated.timing(roleBarOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    }
+    return () => {
+      shimmerLoopRef.current?.stop();
+      shimmerLoopRef.current = null;
+    };
+  }, [isRehydrating]);
+
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -397,20 +430,35 @@ export default function MARScreen() {
             <Text style={styles.headerTitle}>{role === 'nursing' ? 'Medication MAR' : 'Morning Checks'}</Text>
             <Text style={styles.headerSubtitle}>Oct 26 · 14:00</Text>
           </View>
-          <View style={[styles.roleToggle, { backgroundColor: colors.navyLight }]}>
-            <Pressable
-              style={[styles.roleBtn, role === 'nursing' && { backgroundColor: colors.orange }]}
-              onPress={() => { Haptics.selectionAsync(); setRole('nursing'); }}
-            >
-              <Text style={[styles.roleBtnText, { color: role === 'nursing' ? '#fff' : colors.slateLight }]}>RN</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.roleBtn, role === 'bht' && { backgroundColor: colors.orange }]}
-              onPress={() => { Haptics.selectionAsync(); setRole('bht'); }}
-            >
-              <Text style={[styles.roleBtnText, { color: role === 'bht' ? '#fff' : colors.slateLight }]}>BHT</Text>
-            </Pressable>
-          </View>
+
+          {/* Role toggle — Guard B:
+              While rehydrating → shimmer skeleton so the toggle is never blank.
+              After rehydration → real RN / BHT toggle fades in. */}
+          {isRehydrating ? (
+            <View style={[styles.roleToggle, { backgroundColor: colors.navyLight }]}>
+              {[28, 34].map((w, i) => (
+                <Animated.View
+                  key={i}
+                  style={[styles.roleBtnSkeleton, { width: w, opacity: shimmerAnim }]}
+                />
+              ))}
+            </View>
+          ) : (
+            <Animated.View style={[styles.roleToggle, { backgroundColor: colors.navyLight, opacity: roleBarOpacity }]}>
+              <Pressable
+                style={[styles.roleBtn, role === 'nursing' && { backgroundColor: colors.orange }]}
+                onPress={() => { Haptics.selectionAsync(); setRole('nursing'); }}
+              >
+                <Text style={[styles.roleBtnText, { color: role === 'nursing' ? '#fff' : colors.slateLight }]}>RN</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.roleBtn, role === 'bht' && { backgroundColor: colors.orange }]}
+                onPress={() => { Haptics.selectionAsync(); setRole('bht'); }}
+              >
+                <Text style={[styles.roleBtnText, { color: role === 'bht' ? '#fff' : colors.slateLight }]}>BHT</Text>
+              </Pressable>
+            </Animated.View>
+          )}
         </View>
       </View>
       {role === 'nursing' ? <MARView /> : <ChecksView />}
@@ -427,6 +475,7 @@ const styles = StyleSheet.create({
   roleToggle: { flexDirection: 'row', borderRadius: 8, overflow: 'hidden', padding: 2 },
   roleBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6 },
   roleBtnText: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  roleBtnSkeleton: { height: 26, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.3)', marginHorizontal: 2 },
   listContent: { padding: 12, gap: 8 },
   patientCard: { borderRadius: 12, borderWidth: 1, overflow: 'hidden', marginBottom: 0 },
   patientCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12 },
