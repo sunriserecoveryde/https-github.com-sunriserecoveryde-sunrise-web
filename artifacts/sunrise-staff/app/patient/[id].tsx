@@ -1554,18 +1554,23 @@ export default function PatientDetailScreen() {
         </View>
 
         {/* ─── Discharge ─── */}
-        <View style={s.section}>
-          <Pressable
-            style={[s.dischargeBtn, { borderColor: colors.critical }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setDischargeModalVisible(true);
-            }}
-          >
-            <Ionicons name="exit-outline" size={18} color={colors.critical} />
-            <Text style={[s.dischargeBtnText, { color: colors.critical }]}>Discharge Patient</Text>
-          </Pressable>
-        </View>
+        {/* Hide the button while this patient's discharge is pending (undo window
+            is open). Re-entering via deep-link or history during the undo window
+            must not let the nurse trigger a second discharge cycle. */}
+        {pendingDischarge?.patient.id !== patient.id && (
+          <View style={s.section}>
+            <Pressable
+              style={[s.dischargeBtn, { borderColor: colors.critical }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setDischargeModalVisible(true);
+              }}
+            >
+              <Ionicons name="exit-outline" size={18} color={colors.critical} />
+              <Text style={[s.dischargeBtnText, { color: colors.critical }]}>Discharge Patient</Text>
+            </Pressable>
+          </View>
+        )}
 
       </ScrollView>
 

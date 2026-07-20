@@ -95,6 +95,9 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   // ── Pending-discharge undo window ─────────────────────────────────────────
   const [pendingDischarge, setPendingDischarge] = useState<PendingDischargeRecord | null>(null);
   const pendingDischargeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Mirrors pendingDischarge.patient.id synchronously so startPendingDischarge
+   *  can do a fast early-exit without reading React state. */
+  const pendingDischargeIdRef = useRef<string | null>(null);
 
   // Load persisted patient list on mount.
   // We use a sentinel key to distinguish "never saved" from "saved as empty":
@@ -148,23 +151,32 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(pendingDischargeTimerRef.current);
       pendingDischargeTimerRef.current = null;
     }
+    pendingDischargeIdRef.current = null;
     setPendingDischarge(null);
   }, []);
 
   const startPendingDischarge = useCallback((patient: Patient) => {
-    // Cancel any previously open window
+    // Guard: if this exact patient is already pending discharge, do nothing.
+    // Re-entering the screen via deep-link or history during the undo window
+    // must not trigger a second discharge cycle.
+    if (pendingDischargeIdRef.current === patient.id) return;
+
+    // Cancel any previously open window for a *different* patient
     if (pendingDischargeTimerRef.current) {
       clearTimeout(pendingDischargeTimerRef.current);
       pendingDischargeTimerRef.current = null;
     }
+
     // Optimistically remove the patient and mark as discharged
     dischargedIds.current.add(patient.id);
     AsyncStorage.setItem(DISCHARGED_IDS_KEY, JSON.stringify([...dischargedIds.current])).catch(() => {});
     setPatients(prev => prev.filter(p => p.id !== patient.id));
 
     const expiresAt = Date.now() + 4000;
+    pendingDischargeIdRef.current = patient.id;
     setPendingDischarge({ patient, expiresAt });
     pendingDischargeTimerRef.current = setTimeout(() => {
+      pendingDischargeIdRef.current = null;
       setPendingDischarge(null);
       pendingDischargeTimerRef.current = null;
     }, 4000);
@@ -178,6 +190,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(pendingDischargeTimerRef.current);
         pendingDischargeTimerRef.current = null;
       }
+      pendingDischargeIdRef.current = null;
       // Un-mark as discharged so API refresh can bring them back
       dischargedIds.current.delete(pd.patient.id);
       AsyncStorage.setItem(DISCHARGED_IDS_KEY, JSON.stringify([...dischargedIds.current])).catch(() => {});
