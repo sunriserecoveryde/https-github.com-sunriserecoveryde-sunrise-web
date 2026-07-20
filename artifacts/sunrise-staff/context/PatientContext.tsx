@@ -16,6 +16,9 @@ const PATIENTS_KEY = '@sunrise_patients_v1';
 const PATIENTS_SEEDED_KEY = '@sunrise_patients_seeded_v1';
 /** IDs of patients locally discharged this session — never re-add from API. */
 const DISCHARGED_IDS_KEY = '@sunrise_discharged_ids_v1';
+/** Pending discharge record — written during the undo window so a force-quit
+ *  doesn't silently drop the discharge intent. */
+const PENDING_DISCHARGE_KEY = '@sunrise_pending_discharge_v1';
 
 // ── Bed helpers ────────────────────────────────────────────────────────────────
 
@@ -47,7 +50,7 @@ export function deriveBedStatus(patients: Patient[]): Record<string, BedStatus> 
 // ── Discharge undo ─────────────────────────────────────────────────────────────
 
 /** Pending-discharge intent — kept in context so the undo window survives
- *  brief tab-switches (same pattern as PendingDeleteRecord in NursingNotesContext). */
+ *  brief tab-switches and full app restarts. */
 export interface PendingDischargeRecord {
   patient: Patient;
   /** epoch-ms when the 4-second undo window closes */
@@ -55,13 +58,6 @@ export interface PendingDischargeRecord {
 }
 
 // ── Context definition ─────────────────────────────────────────────────────────
-
-/** Pending-discharge intent — survives navigation within the same app session */
-export interface PendingDischargeRecord {
-  patient: Patient;
-  /** epoch-ms when the 4-second undo window closes */
-  expiresAt: number;
-}
 
 interface PatientContextValue {
   /** All active (non-discharged) patients */
@@ -116,8 +112,8 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   // once the user has ever admitted/discharged, we trust the stored array
   // even if it is empty (fully-discharged census).
   useEffect(() => {
-    AsyncStorage.multiGet([PATIENTS_KEY, PATIENTS_SEEDED_KEY, DISCHARGED_IDS_KEY])
-      .then(([[, raw], [, seeded], [, discharged]]) => {
+    AsyncStorage.multiGet([PATIENTS_KEY, PATIENTS_SEEDED_KEY, DISCHARGED_IDS_KEY, PENDING_DISCHARGE_KEY])
+      .then(([[, raw], [, seeded], [, discharged], [, pendingRaw]]) => {
         if (seeded === 'true' && raw !== null) {
           try {
             const saved = JSON.parse(raw) as Patient[];
@@ -136,6 +132,30 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
             }
           } catch { /* ignore */ }
         }
+
+        // Recover a pending discharge that was written before the app was killed.
+        if (pendingRaw !== null) {
+          // Always remove the stored record — we handle it exactly once here.
+          AsyncStorage.removeItem(PENDING_DISCHARGE_KEY).catch(() => {});
+          try {
+            const saved = JSON.parse(pendingRaw) as PendingDischargeRecord;
+            const remaining = saved.expiresAt - Date.now();
+            if (remaining > 0) {
+              // Window is still open — restore the undo toast.
+              pendingDischargeIdRef.current = saved.patient.id;
+              setPendingDischarge(saved);
+              pendingDischargeTimerRef.current = setTimeout(() => {
+                pendingDischargeIdRef.current = null;
+                setPendingDischarge(null);
+                pendingDischargeTimerRef.current = null;
+              }, remaining);
+            }
+            // If remaining <= 0 the discharge is already committed (patient was
+            // removed from the roster and added to dischargedIds before the kill),
+            // so there is nothing more to do — just drop the stale record.
+          } catch { /* ignore corrupt data */ }
+        }
+
         setLoading(false);
       });
   }, []);
@@ -165,6 +185,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     }
     pendingDischargeIdRef.current = null;
     setPendingDischarge(null);
+    AsyncStorage.removeItem(PENDING_DISCHARGE_KEY).catch(() => {});
   }, []);
 
   const startPendingDischarge = useCallback((patient: Patient) => {
@@ -185,11 +206,14 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
     setPatients(prev => prev.filter(p => p.id !== patient.id));
 
     const expiresAt = Date.now() + DISCHARGE_UNDO_MS;
+    const record: PendingDischargeRecord = { patient, expiresAt };
     pendingDischargeIdRef.current = patient.id;
-    setPendingDischarge({ patient, expiresAt });
+    setPendingDischarge(record);
+    AsyncStorage.setItem(PENDING_DISCHARGE_KEY, JSON.stringify(record)).catch(() => {});
     pendingDischargeTimerRef.current = setTimeout(() => {
       pendingDischargeIdRef.current = null;
       setPendingDischarge(null);
+      AsyncStorage.removeItem(PENDING_DISCHARGE_KEY).catch(() => {});
       pendingDischargeTimerRef.current = null;
     }, DISCHARGE_UNDO_MS);
   }, []);
@@ -219,6 +243,7 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
       // stays in dischargedIds and is unaffected.
       dischargedIds.current.delete(pd.patient.id);
       AsyncStorage.setItem(DISCHARGED_IDS_KEY, JSON.stringify([...dischargedIds.current])).catch(() => {});
+      AsyncStorage.removeItem(PENDING_DISCHARGE_KEY).catch(() => {});
       // Re-add the patient to the roster
       setPatients(prev => {
         // Avoid duplicates in case of rapid double-tap
