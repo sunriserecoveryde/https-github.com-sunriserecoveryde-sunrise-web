@@ -556,6 +556,121 @@ describe('Scores tab — score filter chips and pending-discharge interaction', 
   });
 });
 
+describe('Scores tab — rapid successive discharges (load scenario)', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('only the second pending-discharge patient shows the pill when two discharges fire in quick succession', () => {
+    // Simulates a charge nurse rapidly discharging two patients back-to-back
+    // before either undo window has elapsed.
+    const p1 = makePatient('p1', { cows: 10 });
+    const p2 = makePatient('p2', { cows: 5 });
+    const p3 = makePatient('p3', { ciwa: 8 });
+    let state = makeInitialState([p1, p2, p3]);
+
+    // First discharge — p1 is removed and becomes pendingDischarge
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    // Second rapid discharge — p2 is removed; pendingDischarge switches to p2
+    state = startPendingDischarge(state, p2, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(
+      state.patients,
+      state.pendingDischarge,
+      'all',
+    );
+
+    // p2 is the current pendingDischarge, so its pill must be visible
+    expect(visible.some(p => p.id === 'p2')).toBe(true);
+    expect(isPendingDischarge('p2', state.pendingDischarge)).toBe(true);
+
+    // p1's undo window was superseded — it is gone from the roster entirely
+    expect(visible.some(p => p.id === 'p1')).toBe(false);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(false);
+
+    // p3 (not discharged) is still present without a pill
+    expect(visible.some(p => p.id === 'p3')).toBe(true);
+    expect(isPendingDischarge('p3', state.pendingDischarge)).toBe(false);
+  });
+
+  it('the second pending-discharge patient shows the pill under a score filter when two discharges fire in quick succession', () => {
+    // Same rapid-discharge scenario but with the COWS filter active.
+    const p1 = makePatient('p1', { cows: 10, ciwa: undefined });
+    const p2 = makePatient('p2', { cows: undefined, ciwa: 8 }); // CIWA-only → normally hidden by COWS filter
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+    state = startPendingDischarge(state, p2, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(
+      state.patients,
+      state.pendingDischarge,
+      'cows', // filter that would normally exclude p2 (CIWA-only)
+    );
+
+    // p2 is the current pendingDischarge and is score-eligible (has CIWA),
+    // so the re-insertion bypass must keep it visible under the COWS filter.
+    expect(visible.some(p => p.id === 'p2')).toBe(true);
+    expect(isPendingDischarge('p2', state.pendingDischarge)).toBe(true);
+
+    // p1's window was superseded — must not appear
+    expect(visible.some(p => p.id === 'p1')).toBe(false);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(false);
+  });
+});
+
+describe('Scores tab — score-ineligible pending-discharge patient is never re-inserted', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('a patient with no scores is NOT re-inserted by the filter bypass in computeFilteredPatientsWithScores', () => {
+    // The score-eligibility guard must hold: a patient with neither COWS nor
+    // CIWA scores should never appear in the Scores section, even when they
+    // are the current pendingDischarge.
+    const p1 = makePatient('p1', { cows: undefined, ciwa: undefined }); // score-ineligible
+    const p2 = makePatient('p2', { cows: 7 });
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    // Test across every filter mode — p1 must never appear in any of them
+    for (const filter of ['all', 'cows', 'ciwa', 'alerts'] as const) {
+      const visible = computeFilteredPatientsWithScores(
+        state.patients,
+        state.pendingDischarge,
+        filter,
+      );
+      expect(visible.some(p => p.id === 'p1')).toBe(false);
+    }
+
+    // p2 must remain present under filters it qualifies for
+    const allVisible = computeFilteredPatientsWithScores(
+      state.patients,
+      state.pendingDischarge,
+      'all',
+    );
+    expect(allVisible.some(p => p.id === 'p2')).toBe(true);
+  });
+
+  it('a patient with zero-value scores is treated as score-ineligible and NOT re-inserted', () => {
+    // cows: 0 and ciwa: 0 are falsy — they do not count as active protocols.
+    const p1 = makePatient('p1', { cows: 0, ciwa: 0 });
+    const p2 = makePatient('p2', { cows: 5 });
+    let state = makeInitialState([p1, p2]);
+
+    state = startPendingDischarge(state, p1, Date.now(), setTimeout, jest.fn());
+
+    const visible = computeFilteredPatientsWithScores(
+      state.patients,
+      state.pendingDischarge,
+      'all',
+    );
+
+    // p1 has zero scores → not score-eligible → must not appear
+    expect(visible.some(p => p.id === 'p1')).toBe(false);
+  });
+});
+
 describe('Scores tab — patients without scores are unaffected by discharge/undo', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
