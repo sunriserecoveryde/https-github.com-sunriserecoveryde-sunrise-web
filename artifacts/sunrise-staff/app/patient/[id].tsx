@@ -632,6 +632,27 @@ export default function PatientDetailScreen() {
     };
   }, []);
 
+  // ─── Unmount cleanup for note-delete toast ─────────────────────────────────
+  // Stop the countdown animation and cancel the halfway-haptic timer if the
+  // nurse navigates away while the 4-second undo window is still open.
+  // Without this, countdownAnimRef keeps ticking and halfwayHapticRef can fire
+  // a haptic callback against a completely unmounted component tree.
+  // (The context-level timer that drives setPendingDelete is owned by
+  // NursingNotesProvider and is unaffected by screen unmount — it correctly
+  // finalises the deletion in the background, which is the intended behavior.)
+  useEffect(() => {
+    return () => {
+      if (countdownAnimRef.current) {
+        countdownAnimRef.current.stop();
+        countdownAnimRef.current = null;
+      }
+      if (halfwayHapticRef.current) {
+        clearTimeout(halfwayHapticRef.current);
+        halfwayHapticRef.current = null;
+      }
+    };
+  }, []);
+
   // ─── Drive toast animation from context pendingDelete ─────────────────────
   // pendingDelete lives in context so it persists across navigation.  When the
   // nurse leaves the chart and comes back the effect fires on mount, sees a

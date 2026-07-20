@@ -245,6 +245,19 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
     AsyncStorage.removeItem(NOTES_KEY).catch(() => {});
   }, []);
 
+  // Cancel the pending-delete timer if the provider unmounts (e.g. full app
+  // teardown during testing).  In normal usage the provider lives for the whole
+  // app lifetime, but the cleanup prevents stray setPendingDelete calls in any
+  // environment that does unmount the tree.
+  useEffect(() => {
+    return () => {
+      if (pendingDeleteTimerRef.current) {
+        clearTimeout(pendingDeleteTimerRef.current);
+        pendingDeleteTimerRef.current = null;
+      }
+    };
+  }, []);
+
   // ─── Pending-delete helpers ────────────────────────────────────────────────
 
   const clearPendingDelete = useCallback(() => {
