@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
+  Animated,
   FlatList,
   Platform,
   Pressable,
@@ -152,6 +153,29 @@ function HandoffCard({
 const STORAGE_KEY_NOTES = '@sunrise_handoff_notes_2026-07-19';
 const STORAGE_KEY_SHIFT = '@sunrise_handoff_shift_2026-07-19';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Persisted keys and their cold-start flash guards
+// ─────────────────────────────────────────────────────────────────────────────
+// Guard styles mirror the pattern in WithdrawalFiltersContext.tsx / vitals.tsx:
+//
+//   A) useRehydratedValue(isRehydrating, value, loadingValue)
+//   B) Opacity animation — start at 0, fade to 1 once loaded.
+//   C) Raw !loaded guard in JSX.
+//
+// ┌────────────────────────────────────────────┬─────────────────────┬───────┐
+// │ AsyncStorage key                           │ Local state         │ Guard │
+// ├────────────────────────────────────────────┼─────────────────────┼───────┤
+// │ @sunrise_handoff_notes_<date>              │ notes               │ B     │
+// │ @sunrise_handoff_shift_<date>              │ shift               │ B     │
+// └────────────────────────────────────────────┴─────────────────────┴───────┘
+//
+// Guard B: contentOpacity starts at 0 and fades to 1 once `loaded` is true.
+// Both keys are read together in a single Promise.all on mount, so a single
+// opacity wrapper covers them both — the shift selector and the note list
+// appear together once AsyncStorage resolves, preventing a flash of 'Day'
+// shift or the static default handoff notes.
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function HandoffScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -166,6 +190,17 @@ export default function HandoffScreen() {
   );
   const [completed, setCompleted] = useState(false);
   const [loaded, setLoaded] = useState(false);
+
+  // Guard B: starts invisible so the shift selector and handoff notes don't
+  // flash with stale defaults ('Day' shift, static handoffNote strings) before
+  // AsyncStorage resolves. Fades in once both keys are loaded together.
+  // See persisted key registry above for the full guard table.
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    if (loaded) {
+      Animated.timing(contentOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+    }
+  }, [loaded]);
 
   // Load persisted notes on mount
   React.useEffect(() => {
@@ -325,45 +360,50 @@ export default function HandoffScreen() {
         </View>
       </View>
 
-      <ShiftSelector current={shift} onChange={setShift} />
+      {/* Shift selector + content — Guard B (opacity animation): starts invisible so
+          the shift chip and handoff notes don't flash with stale defaults before
+          AsyncStorage resolves. Fades in once both keys are loaded together. */}
+      <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
+        <ShiftSelector current={shift} onChange={setShift} />
 
-      {completed ? (
-        <View style={styles.completedBanner}>
-          <View style={[styles.completedCard, { backgroundColor: colors.successBg, borderColor: colors.success }]}>
-            <Ionicons name="checkmark-circle" size={48} color={colors.success} />
-            <Text style={[styles.completedTitle, { color: colors.success }]}>Handoff Complete</Text>
-            <Text style={[styles.completedSub, { color: colors.mutedForeground }]}>
-              {shift === 'day' ? 'Eve' : shift === 'eve' ? 'Night' : 'Day'} shift has been notified.
-            </Text>
-            <Pressable
-              style={[styles.undoBtn, { borderColor: colors.success }]}
-              onPress={() => setCompleted(false)}
-            >
-              <Text style={[styles.undoText, { color: colors.success }]}>Undo</Text>
-            </Pressable>
+        {completed ? (
+          <View style={styles.completedBanner}>
+            <View style={[styles.completedCard, { backgroundColor: colors.successBg, borderColor: colors.success }]}>
+              <Ionicons name="checkmark-circle" size={48} color={colors.success} />
+              <Text style={[styles.completedTitle, { color: colors.success }]}>Handoff Complete</Text>
+              <Text style={[styles.completedSub, { color: colors.mutedForeground }]}>
+                {shift === 'day' ? 'Eve' : shift === 'eve' ? 'Night' : 'Day'} shift has been notified.
+              </Text>
+              <Pressable
+                style={[styles.undoBtn, { borderColor: colors.success }]}
+                onPress={() => setCompleted(false)}
+              >
+                <Text style={[styles.undoText, { color: colors.success }]}>Undo</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      ) : (
-        <FlatList
-          data={sortedPatients}
-          keyExtractor={p => p.id}
-          renderItem={({ item }) => (
-            <HandoffCard
-              patient={item}
-              note={notes[item.id] ?? ''}
-              onNoteChange={n => setNotes(prev => ({ ...prev, [item.id]: n }))}
-            />
-          )}
-          contentContainerStyle={[styles.listContent, { paddingBottom: 120 + (Platform.OS === 'web' ? 34 : 0) }]}
-          showsVerticalScrollIndicator={false}
-          ListFooterComponent={
-            <Pressable style={[styles.completeBtn, { backgroundColor: colors.orange }]} onPress={handleComplete}>
-              <Ionicons name="swap-horizontal" size={20} color="#fff" />
-              <Text style={styles.completeBtnText}>Complete Handoff to {shift === 'day' ? 'Eve' : shift === 'eve' ? 'Night' : 'Day'} Shift</Text>
-            </Pressable>
-          }
-        />
-      )}
+        ) : (
+          <FlatList
+            data={sortedPatients}
+            keyExtractor={p => p.id}
+            renderItem={({ item }) => (
+              <HandoffCard
+                patient={item}
+                note={notes[item.id] ?? ''}
+                onNoteChange={n => setNotes(prev => ({ ...prev, [item.id]: n }))}
+              />
+            )}
+            contentContainerStyle={[styles.listContent, { paddingBottom: 120 + (Platform.OS === 'web' ? 34 : 0) }]}
+            showsVerticalScrollIndicator={false}
+            ListFooterComponent={
+              <Pressable style={[styles.completeBtn, { backgroundColor: colors.orange }]} onPress={handleComplete}>
+                <Ionicons name="swap-horizontal" size={20} color="#fff" />
+                <Text style={styles.completeBtnText}>Complete Handoff to {shift === 'day' ? 'Eve' : shift === 'eve' ? 'Night' : 'Day'} Shift</Text>
+              </Pressable>
+            }
+          />
+        )}
+      </Animated.View>
     </View>
   );
 }

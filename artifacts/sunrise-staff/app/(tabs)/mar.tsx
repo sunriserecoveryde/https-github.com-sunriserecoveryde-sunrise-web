@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
+  Animated,
   FlatList,
   Platform,
   Pressable,
@@ -25,6 +26,28 @@ import { MEDICATIONS, Patient, Medication } from '@/data/mockData';
 const TODAY_DATE  = new Date().toISOString().slice(0, 10);
 const MAR_KEY     = `@sunrise_mar_${TODAY_DATE}`;
 const CHECKS_KEY  = `@sunrise_checks_${TODAY_DATE}`;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Persisted keys and their cold-start flash guards
+// ─────────────────────────────────────────────────────────────────────────────
+// Every AsyncStorage key managed by this screen is registered here.  Guard
+// styles mirror the pattern in WithdrawalFiltersContext.tsx / vitals.tsx:
+//
+//   A) useRehydratedValue(isRehydrating, value, loadingValue)
+//   B) Opacity animation — start at 0, fade to 1 once loaded.
+//   C) Raw !loaded guard in JSX.
+//
+// ┌────────────────────────────────────────┬──────────────────────────┬───────┐
+// │ AsyncStorage key (date-scoped)         │ Local state              │ Guard │
+// ├────────────────────────────────────────┼──────────────────────────┼───────┤
+// │ @sunrise_mar_<YYYY-MM-DD>              │ adminMap (MARView)       │ B     │
+// │ @sunrise_checks_<YYYY-MM-DD>           │ checks (ChecksView)      │ B     │
+// └────────────────────────────────────────┴──────────────────────────┴───────┘
+//
+// Guard B: each sub-view creates a listOpacity Animated.Value that starts at 0
+// and fades to 1 once its `loaded` flag turns true (matching the pattern used
+// for the score filter bar in vitals.tsx).
+// ─────────────────────────────────────────────────────────────────────────────
 
 const MAR_KEY_PREFIX    = '@sunrise_mar_';
 const CHECKS_KEY_PREFIX = '@sunrise_checks_';
@@ -196,6 +219,15 @@ function MARView() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['p1', 'p4', 'p8']));
   const [loaded, setLoaded] = useState(false);
 
+  // Guard B: starts invisible so med checkmarks don't flash as unchecked before
+  // AsyncStorage resolves (@sunrise_mar_<date>). Fades in once loaded.
+  const listOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (loaded) {
+      Animated.timing(listOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+    }
+  }, [loaded]);
+
   // Load persisted MAR state on mount
   useEffect(() => {
     loadFromStorage<AdminMap>(MAR_KEY, {}).then(saved => {
@@ -226,6 +258,7 @@ function MARView() {
   }
 
   return (
+    <Animated.View style={{ flex: 1, opacity: listOpacity }}>
     <FlatList
       data={displayedPatients}
       keyExtractor={p => p.id}
@@ -258,6 +291,7 @@ function MARView() {
         </View>
       }
     />
+    </Animated.View>
   );
 }
 
@@ -393,6 +427,16 @@ function ChecksView() {
   const [checks, setChecks] = useState<Record<string, CheckEntry>>(defaultChecks);
   const [loaded, setLoaded] = useState(false);
 
+  // Guard B: starts invisible so check completion status doesn't flash as
+  // "Needs check-in" before AsyncStorage resolves (@sunrise_checks_<date>).
+  // Fades in once loaded, matching the pattern in vitals.tsx.
+  const listOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (loaded) {
+      Animated.timing(listOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+    }
+  }, [loaded]);
+
   // Load persisted BHT check-in state on mount
   useEffect(() => {
     loadFromStorage<Record<string, CheckEntry>>(CHECKS_KEY, defaultChecks).then(saved => {
@@ -414,6 +458,7 @@ function ChecksView() {
   const completedCount = displayedPatients.filter(p => checks[p.id]?.completed).length;
 
   return (
+    <Animated.View style={{ flex: 1, opacity: listOpacity }}>
     <FlatList
       data={displayedPatients}
       keyExtractor={p => p.id}
@@ -440,6 +485,7 @@ function ChecksView() {
         </View>
       }
     />
+    </Animated.View>
   );
 }
 
