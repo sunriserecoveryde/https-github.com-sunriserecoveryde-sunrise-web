@@ -19,6 +19,25 @@ import { useWithdrawalFilters } from '@/context/WithdrawalFiltersContext';
 import { usePatients } from '@/context/PatientContext';
 import { VITALS, Patient, VitalEntry, acuityColor } from '@/data/mockData';
 
+// ── Filter chip options — single source of truth for both the real chip bar
+//    and the shimmer skeleton. Widths are derived here so the skeleton always
+//    matches the live chips, even if labels change in the future.
+//    Formula: label.length * 7 (≈ Inter SemiBold 13px char width) + 62 (chip
+//    paddingHorizontal×2 + gap + badge minWidth + badge paddingHorizontal×2).
+export const SCORE_FILTER_OPTIONS = [
+  { key: 'all',    label: 'All'       },
+  { key: 'cows',   label: 'COWS Only' },
+  { key: 'ciwa',   label: 'CIWA Only' },
+  { key: 'alerts', label: 'Alerts'    },
+] as const;
+
+export type ScoreFilterKey = typeof SCORE_FILTER_OPTIONS[number]['key'];
+
+/** Estimated pixel width of a filter chip skeleton, derived from label length. */
+function skeletonChipWidth(label: string): number {
+  return label.length * 7 + 62;
+}
+
 // ── Mock withdrawal score history for all residential patients ─────────────────
 
 const WITHDRAWAL_HISTORY: Record<string, { time: string; cows?: number; ciwa?: number; by: string }[]> = {
@@ -471,24 +490,28 @@ export default function VitalsScreen() {
           See WithdrawalFiltersContext.tsx for the full guard registry. */}
       {isRehydrating ? (
         <View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-          {[72, 96, 82, 72].map((w, i) => (
+          {SCORE_FILTER_OPTIONS.map(opt => (
             <Animated.View
-              key={i}
+              key={opt.key}
               style={[
                 styles.filterChipSkeleton,
-                { width: w, backgroundColor: colors.muted, opacity: shimmerAnim },
+                { width: skeletonChipWidth(opt.label), backgroundColor: colors.muted, opacity: shimmerAnim },
               ]}
             />
           ))}
         </View>
       ) : (
         <Animated.View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border, opacity: filterBarOpacity }]}>
-          {([
-            { key: 'all', label: 'All', count: allPatientsWithScores.length },
-            { key: 'cows', label: 'COWS Only', count: allPatientsWithScores.filter(p => p.cows != null && p.cows > 0).length },
-            { key: 'ciwa', label: 'CIWA Only', count: allPatientsWithScores.filter(p => p.ciwa != null && p.ciwa > 0).length },
-            { key: 'alerts', label: 'Alerts', count: allPatientsWithScores.filter(p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)).length },
-          ] as { key: typeof scoreFilter; label: string; count: number }[]).map(opt => {
+          {(SCORE_FILTER_OPTIONS.map(opt => ({
+            ...opt,
+            count: opt.key === 'all'
+              ? allPatientsWithScores.length
+              : opt.key === 'cows'
+                ? allPatientsWithScores.filter(p => p.cows != null && p.cows > 0).length
+                : opt.key === 'ciwa'
+                  ? allPatientsWithScores.filter(p => p.ciwa != null && p.ciwa > 0).length
+                  : allPatientsWithScores.filter(p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)).length,
+          })) as { key: typeof scoreFilter; label: string; count: number }[]).map(opt => {
             const active = scoreFilter === opt.key;
             return (
               <Pressable
