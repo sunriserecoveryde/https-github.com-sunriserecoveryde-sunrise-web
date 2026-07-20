@@ -13,6 +13,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loadHandoffState, saveJsonToStorage, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { useNursingNotes } from '@/context/NursingNotesContext';
@@ -20,7 +22,8 @@ import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
 import { useWithdrawalFilters } from '@/context/WithdrawalFiltersContext';
 import { RESIDENTIAL_PATIENTS, Patient, acuityColor, acuitySortOrder } from '@/data/mockData';
 
-type Shift = 'day' | 'eve' | 'night';
+// Shift type is re-exported from @/lib/coldStartLoadHelpers; alias here for local use
+type Shift = ShiftType;
 
 const SHIFTS: { id: Shift; label: string; time: string }[] = [
   { id: 'day', label: 'Day', time: '07:00 – 15:00' },
@@ -224,49 +227,32 @@ export default function HandoffScreen() {
     };
   }, [loaded]);
 
-  // Load persisted notes on mount
+  // Load persisted notes + shift on mount via a single Promise.all.
+  // Both keys resolve together before `loaded` is set, so neither the shift
+  // selector nor the handoff notes can flash with stale defaults.
   React.useEffect(() => {
-    (async () => {
-      try {
-        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-        const [savedNotes, savedShift] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEY_NOTES),
-          AsyncStorage.getItem(STORAGE_KEY_SHIFT),
-        ]);
-        if (savedNotes) {
-          setNotes(prev => ({ ...prev, ...JSON.parse(savedNotes) }));
-        }
-        if (savedShift) {
-          setShift(savedShift as Shift);
-        }
-      } catch (_) {
-        // ignore storage errors
-      } finally {
-        setLoaded(true);
-      }
-    })();
+    const defaultNotes = Object.fromEntries(RESIDENTIAL_PATIENTS.map(p => [p.id, p.handoffNote ?? '']));
+    loadHandoffState(
+      AsyncStorage,
+      { notes: STORAGE_KEY_NOTES, shift: STORAGE_KEY_SHIFT },
+      { notes: defaultNotes, shift: 'day' },
+    ).then(({ notes: savedNotes, shift: savedShift }) => {
+      setNotes(savedNotes);
+      setShift(savedShift);
+      setLoaded(true);
+    });
   }, []);
 
   // Persist notes when they change (after initial load)
   React.useEffect(() => {
     if (!loaded) return;
-    (async () => {
-      try {
-        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-        await AsyncStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(notes));
-      } catch (_) {}
-    })();
+    saveJsonToStorage(AsyncStorage, STORAGE_KEY_NOTES, notes);
   }, [notes, loaded]);
 
   // Persist shift selection
   React.useEffect(() => {
     if (!loaded) return;
-    (async () => {
-      try {
-        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-        await AsyncStorage.setItem(STORAGE_KEY_SHIFT, shift);
-      } catch (_) {}
-    })();
+    AsyncStorage.setItem(STORAGE_KEY_SHIFT, shift).catch(() => {});
   }, [shift, loaded]);
 
   const sortedPatients = [...RESIDENTIAL_PATIENTS].sort(
