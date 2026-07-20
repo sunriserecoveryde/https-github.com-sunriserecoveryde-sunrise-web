@@ -685,17 +685,25 @@ export default function CensusScreen() {
   // Initialise from the live pendingDischarge value so that if the component
   // remounts (tab switch, Android backgrounding, etc.) mid-window the toast
   // re-appears with time still remaining rather than being silently lost.
-  const [dischargeToastVisible, setDischargeToastVisible] = useState(() => pendingDischarge !== null);
-  const dischargeToastAnim = useRef(new Animated.Value(pendingDischarge !== null ? 0 : 100)).current;
-  const dischargeToastShownRef = useRef(pendingDischarge !== null);
+  //
+  // Guard: only treat pendingDischarge as "active" if its window hasn't already
+  // expired.  If the nurse was away long enough for the 4-second timer to fire
+  // while the component was unmounted, expiresAt will be in the past — we must
+  // not open the toast in that case.
+  const pendingIsActive = pendingDischarge !== null && pendingDischarge.expiresAt > Date.now();
+  const [dischargeToastVisible, setDischargeToastVisible] = useState(() => pendingIsActive);
+  const dischargeToastAnim = useRef(new Animated.Value(pendingIsActive ? 0 : 100)).current;
+  const dischargeToastShownRef = useRef(pendingIsActive);
   /** When true the next toast dismissal skips the slide-out animation (e.g. shift-end). */
   const skipDischargeToastExitRef = useRef(false);
   /** Countdown bar: 1 = full, 0 = empty. JS-driven so width % works.
    *  On remount mid-window we seed the correct proportional fill so the bar
-   *  starts at the right position instead of jumping back to full. */
+   *  starts at the right position instead of jumping back to full.
+   *  When the window has already expired we initialise to 1 (matches the
+   *  hidden-toast default) so no 0-width flash occurs. */
   const dischargeCountdownAnim = useRef(new Animated.Value(
-    pendingDischarge !== null
-      ? Math.max(0, Math.min(1, (pendingDischarge.expiresAt - Date.now()) / 4000))
+    pendingIsActive
+      ? Math.max(0, Math.min(1, (pendingDischarge!.expiresAt - Date.now()) / 4000))
       : 1,
   )).current;
   /** Reference to the running countdown so it can be stopped on re-trigger. */
@@ -801,7 +809,11 @@ export default function CensusScreen() {
 
   // Drive the discharge undo toast from context
   useEffect(() => {
-    const active = pendingDischarge !== null;
+    // Compute remaining time first so we can use it in the `active` guard.
+    // An expired pendingDischarge record (expiresAt in the past) must be treated
+    // the same as null — no toast, no bar animation — to prevent a 0ms flash.
+    const remainingMs = pendingDischarge ? Math.max(0, pendingDischarge.expiresAt - Date.now()) : 0;
+    const active = pendingDischarge !== null && remainingMs > 0;
 
     /**
      * Start (or restart) the countdown bar.
@@ -823,7 +835,6 @@ export default function CensusScreen() {
       countdownAnimRef.current.start();
     }
 
-    const remainingMs = pendingDischarge ? Math.max(0, pendingDischarge.expiresAt - Date.now()) : 0;
     const isRemount = isInitialEffectRunRef.current && dischargeToastShownRef.current;
     isInitialEffectRunRef.current = false;
 
@@ -839,10 +850,22 @@ export default function CensusScreen() {
       }).start();
       startCountdown(remainingMs);
     } else if (active && isRemount) {
-      // Remount mid-window (tab switch and return): the toast anim value is already
-      // seeded to 0 (visible) and the countdown value is already seeded to the
-      // correct proportional fill — just resume the animation without any resets.
-      startCountdown(remainingMs, false /* do NOT reset to full */);
+      // Remount mid-window (tab switch and return).
+      if (remainingMs <= 0) {
+        // The undo window expired while the nurse was away.  The context timer
+        // will have already fired (or is about to), so pendingDischarge is null
+        // (or will become null imminently).  Either way we must not show a
+        // zero-width bar or let the toast flash — hide immediately.
+        dischargeToastShownRef.current = false;
+        dischargeToastAnim.stopAnimation();
+        dischargeToastAnim.setValue(100);
+        setDischargeToastVisible(false);
+      } else {
+        // The toast anim value is already seeded to 0 (visible) and the countdown
+        // value is already seeded to the correct proportional fill — just resume
+        // the animation without any resets.
+        startCountdown(remainingMs, false /* do NOT reset to full */);
+      }
     } else if (active && dischargeToastShownRef.current) {
       // New discharge while the previous toast is still open — re-animate and
       // reset the countdown to full for the new 4-second window.
