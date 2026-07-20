@@ -467,7 +467,7 @@ export default function VitalsScreen() {
                   : { backgroundColor: colors.muted },
               ]}>
                 <Text style={[styles.filterChipBadgeText, { color: active ? '#fff' : colors.mutedForeground }]}>
-                  {opt.count}
+                  {active ? patientsWithScores.length : opt.count}
                 </Text>
               </View>
             </Pressable>
