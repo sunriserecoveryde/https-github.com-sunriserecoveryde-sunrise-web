@@ -685,6 +685,7 @@ export default function CensusScreen() {
   const { acuityFilter, setAcuityFilter, noteFilter, setNoteFilter, resetFilters } = useCensusFilters();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [admitVisible, setAdmitVisible] = useState(false);
+  const [pendingNoticeDismissed, setPendingNoticeDismissed] = useState(false);
   const [shiftEndedToast, setShiftEndedToast] = useState(false);
   const shiftEndedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
@@ -795,6 +796,14 @@ export default function CensusScreen() {
     }
   }, [alertCount]);
 
+  // Reset the notice dismiss flag whenever a new pending discharge starts
+  // so the notice re-appears for the new patient.
+  useEffect(() => {
+    if (pendingDischarge) {
+      setPendingNoticeDismissed(false);
+    }
+  }, [pendingDischarge?.patient.id]);
+
   const filteredPatients = acuityFilter === 'Available'
     ? []
     : residentialPatients.filter(p => {
@@ -802,6 +811,18 @@ export default function CensusScreen() {
         const noteMatch = noteFilter == null || getNotesForPatient(p.id).some(n => n.noteType === noteFilter);
         return acuityMatch && noteMatch;
       });
+
+  // True when a pending-discharge patient exists but is hidden by the active filter.
+  // displayedPatients re-inserts them at the top, but nurses still need to know
+  // why a "Discharging…" card appears outside their chosen filter.
+  const pendingHiddenByCensusFilter = React.useMemo(() => {
+    if (!pendingDischarge) return false;
+    const pd = pendingDischarge.patient;
+    if (pd.bed == null) return false; // non-residential — not shown on this tab
+    return !filteredPatients.some(p => p.id === pd.id);
+  }, [filteredPatients, pendingDischarge]);
+
+  const showCensusPendingNotice = pendingHiddenByCensusFilter && !pendingNoticeDismissed;
 
   // Re-insert the pending-discharge patient so nurses can see the bed is not yet free.
   // Always shown at the top of the list regardless of active filters — its transient
@@ -1136,6 +1157,30 @@ export default function CensusScreen() {
         })}
       </ScrollView>
 
+      {/* Hidden-patient notice — shown when the pending-discharge patient is
+          filtered out by the active acuity or note-type chip */}
+      {showCensusPendingNotice && (
+        <View style={[styles.hiddenNotice, { backgroundColor: colors.moderateBg, borderColor: colors.moderate }]}>
+          <Ionicons name="eye-off-outline" size={14} color={colors.moderate} />
+          <Text style={[styles.hiddenNoticeText, { color: colors.moderate }]} numberOfLines={1}>
+            {pendingDischarge!.patient.firstName} {pendingDischarge!.patient.lastName} is hidden by the active filter
+          </Text>
+          <Pressable
+            onPress={() => { Haptics.selectionAsync(); resetFilters(); setPendingNoticeDismissed(true); }}
+            hitSlop={8}
+            style={[styles.hiddenNoticeBtn, { borderColor: colors.moderate }]}
+          >
+            <Text style={[styles.hiddenNoticeBtnText, { color: colors.moderate }]}>Show all</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { Haptics.selectionAsync(); setPendingNoticeDismissed(true); }}
+            hitSlop={8}
+          >
+            <Ionicons name="close" size={14} color={colors.moderate} />
+          </Pressable>
+        </View>
+      )}
+
       {loading ? (
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={colors.navy} />
@@ -1354,6 +1399,17 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
   // Loading
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // Hidden-patient notice (Census tab)
+  hiddenNotice: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderTopWidth: 1, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  hiddenNoticeText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular' },
+  hiddenNoticeBtn: {
+    borderWidth: 1, borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 3,
+  },
+  hiddenNoticeBtnText: { fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   // Discharge undo toast
   dischargeUndoToast: {
     position: 'absolute', left: 16, right: 16,
