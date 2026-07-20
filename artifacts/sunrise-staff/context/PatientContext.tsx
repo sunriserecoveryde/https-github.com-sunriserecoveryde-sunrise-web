@@ -183,6 +183,17 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const undoDischarge = useCallback(() => {
+    // Use the functional-update form so we always read the *latest committed*
+    // pendingDischarge value, not a closure-captured snapshot.
+    //
+    // Why this matters for a rapid second discharge:
+    //   startPendingDischarge(patientB) writes pendingDischargeIdRef synchronously
+    //   and then calls setPendingDischarge({ patient: patientB, ... }).  React
+    //   commits that update before the re-animation useEffect fires, so by the
+    //   time the Undo button is reachable `pd` here is always patientB.
+    //   PatientA's ID remains in dischargedIds (their timer was already cancelled),
+    //   so only patientB is restored — the first discharge cannot be accidentally
+    //   reversed.
     setPendingDischarge(pd => {
       if (!pd) return null;
       // Cancel the timer
@@ -191,7 +202,9 @@ export function PatientProvider({ children }: { children: React.ReactNode }) {
         pendingDischargeTimerRef.current = null;
       }
       pendingDischargeIdRef.current = null;
-      // Un-mark as discharged so API refresh can bring them back
+      // Un-mark as discharged so API refresh can bring them back.
+      // Only this patient's ID is removed; any previously committed discharge
+      // stays in dischargedIds and is unaffected.
       dischargedIds.current.delete(pd.patient.id);
       AsyncStorage.setItem(DISCHARGED_IDS_KEY, JSON.stringify([...dischargedIds.current])).catch(() => {});
       // Re-add the patient to the roster
