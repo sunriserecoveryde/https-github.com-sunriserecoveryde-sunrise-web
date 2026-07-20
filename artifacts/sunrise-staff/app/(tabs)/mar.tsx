@@ -129,12 +129,13 @@ function MedRow({ med, patientId, adminMap, onToggle }: {
   );
 }
 
-function PatientMARCard({ patient, adminMap, onToggle, expanded, onExpand }: {
+function PatientMARCard({ patient, adminMap, onToggle, expanded, onExpand, isPendingDischarge }: {
   patient: Patient;
   adminMap: AdminMap;
   onToggle: (patientId: string, medId: string, time: string) => void;
   expanded: boolean;
   onExpand: () => void;
+  isPendingDischarge?: boolean;
 }) {
   const colors = useColors();
   const meds = MEDICATIONS[patient.id] ?? [];
@@ -145,7 +146,13 @@ function PatientMARCard({ patient, adminMap, onToggle, expanded, onExpand }: {
   const totalDoses = activeMeds.reduce((acc, med) => acc + med.times.filter(t => TODAY_SLOTS.includes(t)).length, 0);
 
   return (
-    <View style={[styles.patientCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={[styles.patientCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: isPendingDischarge ? 0.65 : 1 }]}>
+      {isPendingDischarge && (
+        <View style={[styles.dischargingBanner, { backgroundColor: colors.moderateBg, borderColor: colors.moderate }]}>
+          <Ionicons name="time-outline" size={11} color={colors.moderate} />
+          <Text style={[styles.dischargingBannerText, { color: colors.moderate }]}>Discharging…</Text>
+        </View>
+      )}
       <Pressable style={styles.patientCardHeader} onPress={onExpand}>
         <View style={styles.patientCardLeft}>
           <View style={[styles.bedTag, { backgroundColor: colors.navyMid }]}>
@@ -182,10 +189,19 @@ function PatientMARCard({ patient, adminMap, onToggle, expanded, onExpand }: {
 
 function MARView() {
   const colors = useColors();
-  const { residentialPatients } = usePatients();
+  const { residentialPatients, pendingDischarge } = usePatients();
   const [adminMap, setAdminMap] = useState<AdminMap>({});
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['p1', 'p4', 'p8']));
   const [loaded, setLoaded] = useState(false);
+
+  // Re-insert the pending-discharge patient so nurses can see they haven't left yet.
+  const displayedPatients = React.useMemo(() => {
+    if (!pendingDischarge) return residentialPatients;
+    const pd = pendingDischarge.patient;
+    if (pd.program !== 'Residential') return residentialPatients;
+    if (residentialPatients.some(p => p.id === pd.id)) return residentialPatients;
+    return [pd, ...residentialPatients];
+  }, [residentialPatients, pendingDischarge]);
 
   // Load persisted MAR state on mount
   useEffect(() => {
@@ -218,7 +234,7 @@ function MARView() {
 
   return (
     <FlatList
-      data={residentialPatients}
+      data={displayedPatients}
       keyExtractor={p => p.id}
       renderItem={({ item }) => (
         <PatientMARCard
@@ -227,6 +243,7 @@ function MARView() {
           onToggle={handleToggle}
           expanded={expandedIds.has(item.id)}
           onExpand={() => handleExpand(item.id)}
+          isPendingDischarge={pendingDischarge?.patient.id === item.id}
         />
       )}
       contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}
@@ -277,16 +294,23 @@ function ScaleSelector({ value, onChange, color }: { value: number; onChange: (v
   );
 }
 
-function PatientCheckCard({ patient, check, onChange }: {
+function PatientCheckCard({ patient, check, onChange, isPendingDischarge }: {
   patient: Patient;
   check: CheckEntry;
   onChange: (c: CheckEntry) => void;
+  isPendingDischarge?: boolean;
 }) {
   const colors = useColors();
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <View style={[styles.patientCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={[styles.patientCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: isPendingDischarge ? 0.65 : 1 }]}>
+      {isPendingDischarge && (
+        <View style={[styles.dischargingBanner, { backgroundColor: colors.moderateBg, borderColor: colors.moderate }]}>
+          <Ionicons name="time-outline" size={11} color={colors.moderate} />
+          <Text style={[styles.dischargingBannerText, { color: colors.moderate }]}>Discharging…</Text>
+        </View>
+      )}
       <Pressable style={styles.patientCardHeader} onPress={() => setExpanded(e => !e)}>
         <View style={styles.patientCardLeft}>
           <View style={[styles.bedTag, { backgroundColor: colors.navyMid }]}>
@@ -368,9 +392,19 @@ function PatientCheckCard({ patient, check, onChange }: {
 
 function ChecksView() {
   const colors = useColors();
-  const { residentialPatients } = usePatients();
+  const { residentialPatients, pendingDischarge } = usePatients();
+
+  // Re-insert the pending-discharge patient so nurses can see they haven't left yet.
+  const displayedPatients = React.useMemo(() => {
+    if (!pendingDischarge) return residentialPatients;
+    const pd = pendingDischarge.patient;
+    if (pd.program !== 'Residential') return residentialPatients;
+    if (residentialPatients.some(p => p.id === pd.id)) return residentialPatients;
+    return [pd, ...residentialPatients];
+  }, [residentialPatients, pendingDischarge]);
+
   const defaultCheck: CheckEntry = { mood: 5, cravings: 5, oriented: true, uaCollected: false, completed: false };
-  const defaultChecks = Object.fromEntries(residentialPatients.map(p => [p.id, { ...defaultCheck }]));
+  const defaultChecks = Object.fromEntries(displayedPatients.map(p => [p.id, { ...defaultCheck }]));
   const [checks, setChecks] = useState<Record<string, CheckEntry>>(defaultChecks);
   const [loaded, setLoaded] = useState(false);
 
@@ -391,18 +425,19 @@ function ChecksView() {
 
   // Only count completions for patients currently on the active roster
   // (avoids stale entries from discharged patients inflating the count)
-  const total = residentialPatients.length;
-  const completedCount = residentialPatients.filter(p => checks[p.id]?.completed).length;
+  const total = displayedPatients.length;
+  const completedCount = displayedPatients.filter(p => checks[p.id]?.completed).length;
 
   return (
     <FlatList
-      data={residentialPatients}
+      data={displayedPatients}
       keyExtractor={p => p.id}
       renderItem={({ item }) => (
         <PatientCheckCard
           patient={item}
           check={checks[item.id] ?? defaultCheck}
           onChange={c => setChecks(prev => ({ ...prev, [item.id]: c }))}
+          isPendingDischarge={pendingDischarge?.patient.id === item.id}
         />
       )}
       contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}
@@ -516,4 +551,10 @@ const styles = StyleSheet.create({
   checksProgressText: { fontSize: 14, fontWeight: '600', marginBottom: 8, fontFamily: 'Inter_600SemiBold' },
   progressTrack: { height: 6, borderRadius: 3, width: '100%' },
   progressFill: { height: 6, borderRadius: 3 },
+  dischargingBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderBottomWidth: 1,
+  },
+  dischargingBannerText: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
 });

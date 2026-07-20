@@ -15,7 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useWithdrawalFilters } from '@/context/WithdrawalFiltersContext';
-import { PATIENTS, VITALS, Patient, VitalEntry, acuityColor } from '@/data/mockData';
+import { usePatients } from '@/context/PatientContext';
+import { VITALS, Patient, VitalEntry, acuityColor } from '@/data/mockData';
 
 // ── Mock withdrawal score history for all residential patients ─────────────────
 
@@ -207,10 +208,12 @@ function PatientScoreRow({
   patient,
   onPress,
   colors,
+  isPendingDischarge,
 }: {
   patient: Patient;
   onPress: () => void;
   colors: ReturnType<typeof useColors>;
+  isPendingDischarge?: boolean;
 }) {
   const hasCows = patient.cows != null && patient.cows > 0;
   const hasCiwa = patient.ciwa != null && patient.ciwa > 0;
@@ -223,8 +226,14 @@ function PatientScoreRow({
   return (
     <Pressable
       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
-      style={[styles.patientRow, { backgroundColor: isAlert ? '#FEF2F2' : colors.card, borderColor: isAlert ? colors.critical : colors.border }]}
+      style={[styles.patientRow, { backgroundColor: isAlert ? '#FEF2F2' : colors.card, borderColor: isAlert ? colors.critical : colors.border, opacity: isPendingDischarge ? 0.65 : 1 }]}
     >
+      {isPendingDischarge && (
+        <View style={[styles.dischargingBanner, { backgroundColor: colors.moderateBg, borderColor: colors.moderate }]}>
+          <Ionicons name="time-outline" size={11} color={colors.moderate} />
+          <Text style={[styles.dischargingBannerText, { color: colors.moderate }]}>Discharging…</Text>
+        </View>
+      )}
       <View style={styles.patientRowLeft}>
         {isAlert && (
           <Ionicons name="warning" size={16} color={colors.critical} style={styles.alertIcon} />
@@ -269,12 +278,21 @@ export default function VitalsScreen() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const { bannerDismissed, dismissBanner, scoreFilter, setScoreFilter } = useWithdrawalFilters();
+  const { residentialPatients, pendingDischarge } = usePatients();
 
-  const residentialPatients = PATIENTS.filter(p => p.program === 'Residential');
-  const allPatientsWithScores = residentialPatients.filter(p =>
+  // Re-insert the pending-discharge patient so nurses can see they haven't left yet.
+  const displayedPatients = React.useMemo(() => {
+    if (!pendingDischarge) return residentialPatients;
+    const pd = pendingDischarge.patient;
+    if (pd.program !== 'Residential') return residentialPatients;
+    if (residentialPatients.some(p => p.id === pd.id)) return residentialPatients;
+    return [pd, ...residentialPatients];
+  }, [residentialPatients, pendingDischarge]);
+
+  const allPatientsWithScores = displayedPatients.filter(p =>
     (p.cows != null && p.cows > 0) || (p.ciwa != null && p.ciwa > 0)
   );
-  const patientsWithoutScores = residentialPatients.filter(p =>
+  const patientsWithoutScores = displayedPatients.filter(p =>
     !(p.cows != null && p.cows > 0) && !(p.ciwa != null && p.ciwa > 0)
   );
 
@@ -467,6 +485,7 @@ export default function VitalsScreen() {
               patient={p}
               onPress={() => openModal(p)}
               colors={colors}
+              isPendingDischarge={pendingDischarge?.patient.id === p.id}
             />
           )) : (
             <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -484,22 +503,32 @@ export default function VitalsScreen() {
             <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
               NO ACTIVE PROTOCOL ({patientsWithoutScores.length})
             </Text>
-            {patientsWithoutScores.map(p => (
-              <Pressable
-                key={p.id}
-                onPress={() => openModal(p)}
-                style={[styles.patientRowMinimal, { backgroundColor: colors.card, borderColor: colors.border }]}
-              >
-                <View style={[styles.bedBadge, { backgroundColor: colors.navyMid }]}>
-                  <Text style={styles.bedBadgeText}>{p.bed}</Text>
-                </View>
-                <Text style={[styles.patientName, { color: colors.navy }]}>{p.firstName} {p.lastName}</Text>
-                <View style={[styles.noWdBadge, { backgroundColor: colors.successBg }]}>
-                  <Text style={[styles.noWdText, { color: colors.success }]}>No WD Protocol</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={14} color={colors.mutedForeground} />
-              </Pressable>
-            ))}
+            {patientsWithoutScores.map(p => {
+              const isPending = pendingDischarge?.patient.id === p.id;
+              return (
+                <Pressable
+                  key={p.id}
+                  onPress={() => openModal(p)}
+                  style={[styles.patientRowMinimal, { backgroundColor: colors.card, borderColor: colors.border, opacity: isPending ? 0.65 : 1 }]}
+                >
+                  <View style={[styles.bedBadge, { backgroundColor: colors.navyMid }]}>
+                    <Text style={styles.bedBadgeText}>{p.bed}</Text>
+                  </View>
+                  <Text style={[styles.patientName, { color: colors.navy }]}>{p.firstName} {p.lastName}</Text>
+                  {isPending ? (
+                    <View style={[styles.dischargingPill, { backgroundColor: colors.moderateBg, borderColor: colors.moderate }]}>
+                      <Ionicons name="time-outline" size={11} color={colors.moderate} />
+                      <Text style={[styles.dischargingPillText, { color: colors.moderate }]}>Discharging…</Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.noWdBadge, { backgroundColor: colors.successBg }]}>
+                      <Text style={[styles.noWdText, { color: colors.success }]}>No WD Protocol</Text>
+                    </View>
+                  )}
+                  <Ionicons name="chevron-forward" size={14} color={colors.mutedForeground} />
+                </Pressable>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -596,4 +625,17 @@ const styles = StyleSheet.create({
     paddingVertical: 28, borderRadius: 12, borderWidth: 1,
   },
   emptyStateText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  dischargingBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 6, borderWidth: 1,
+    alignSelf: 'flex-start', marginBottom: 6,
+  },
+  dischargingBannerText: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  dischargingPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginLeft: 'auto', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1,
+  },
+  dischargingPillText: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
 });
