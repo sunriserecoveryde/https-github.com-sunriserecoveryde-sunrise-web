@@ -446,6 +446,7 @@ export default function PatientDetailScreen() {
   // Countdown bar: 1.0 = full width, 0.0 = empty. Captured toast width for interpolation.
   const countdownAnim = useRef(new Animated.Value(1)).current;
   const countdownAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+  const halfwayHapticRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toastContainerWidth, setToastContainerWidth] = useState(0);
 
   // ─── Clipboard-fallback modal (shown when browser blocks clipboard write) ──
@@ -498,6 +499,11 @@ export default function PatientDetailScreen() {
     // return-from-navigation mount.
     const startCountdown = () => {
       if (countdownAnimRef.current) countdownAnimRef.current.stop();
+      // Clear any pending halfway haptic before scheduling a new one
+      if (halfwayHapticRef.current) {
+        clearTimeout(halfwayHapticRef.current);
+        halfwayHapticRef.current = null;
+      }
       if (!pendingDelete) return;
       const remaining = Math.max(0, pendingDelete.expiresAt - Date.now());
       const fraction = remaining / 4000;
@@ -509,6 +515,15 @@ export default function PatientDetailScreen() {
           useNativeDriver: false, // width interpolation cannot use native driver
         });
         countdownAnimRef.current.start();
+        // Fire a light haptic at the halfway point so nurses feel the urgency
+        // even when the screen is off-center. Only schedule if there's enough
+        // time left that the haptic won't fire immediately or after expiry.
+        if (remaining > 1000) {
+          halfwayHapticRef.current = setTimeout(() => {
+            halfwayHapticRef.current = null;
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }, remaining / 2);
+        }
       }
     };
 
@@ -553,12 +568,22 @@ export default function PatientDetailScreen() {
         countdownAnimRef.current.stop();
         countdownAnimRef.current = null;
       }
+      if (halfwayHapticRef.current) {
+        clearTimeout(halfwayHapticRef.current);
+        halfwayHapticRef.current = null;
+      }
       Animated.timing(toastAnim, {
         toValue: 100,
         duration: 220,
         useNativeDriver: true,
       }).start(() => setToastVisible(false));
     }
+    return () => {
+      if (halfwayHapticRef.current) {
+        clearTimeout(halfwayHapticRef.current);
+        halfwayHapticRef.current = null;
+      }
+    };
   }, [pendingDelete, id]);
 
   const handleUndo = () => {
