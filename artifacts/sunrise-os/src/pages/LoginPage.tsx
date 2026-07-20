@@ -105,8 +105,8 @@ export function LoginPage() {
           transition={{ duration: 0.5 }}
           className="flex flex-col items-center mb-10"
         >
-          <div className="flex items-center gap-3 mb-1">
-            <img src={sunriseLogo} alt="Sunrise OS" className="h-10 w-auto object-contain" />
+          <div className="flex flex-col items-center gap-2 mb-1">
+            <img src={sunriseLogo} alt="Sunrise OS" className="h-[60px] w-auto object-contain" />
             <span className="text-3xl font-extrabold text-white tracking-tight">Sunrise OS</span>
           </div>
           <div className="text-slate-300 text-sm">Sunrise Recovery Center</div>
