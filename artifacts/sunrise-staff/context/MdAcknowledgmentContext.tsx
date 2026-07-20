@@ -11,6 +11,30 @@
  *    midnight".
  *  - If the nurse explicitly logs out via the logout/shift-end action the
  *    caller may invoke `clearAcknowledgments()` to wipe storage immediately.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Persisted keys and their cold-start flash guards
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Every AsyncStorage key managed by this context is registered here.  When you
+ * add a new key you MUST add a matching row and choose the guard style that
+ * prevents the UI from flashing incorrect content on cold start.
+ *
+ * Guard styles (see hooks/useRehydratedValue.ts for the canonical pattern):
+ *   A) useRehydratedValue(isRehydrating, value, loadingValue)
+ *      Best for booleans and enums where the loading placeholder is obvious.
+ *   B) Opacity animation — start at 0, fade to 1 once !isRehydrating.
+ *      Best for sections where a sudden content swap is visually jarring.
+ *   C) Raw !isRehydrating guard in JSX — use when gating entire sections.
+ *
+ * ┌──────────────────────────────────────────────┬──────────────────────┬───────┐
+ * │ AsyncStorage key                             │ Context field        │ Guard │
+ * ├──────────────────────────────────────────────┼──────────────────────┼───────┤
+ * │ @sunrise_md_acknowledgments_v1               │ acknowledgments      │ C     │
+ * │                                              │ (via isRehydrating)  │       │
+ * └──────────────────────────────────────────────┴──────────────────────┴───────┘
+ *
+ * See app/patient/[id].tsx for the reference implementation of guard style C.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 import React, {
   createContext,
@@ -51,6 +75,13 @@ interface MdAcknowledgmentContextType {
   clearAcknowledgments: () => void;
   /** True while loading from storage */
   loading: boolean;
+  /**
+   * True while AsyncStorage is being read on mount. UI that depends on persisted
+   * acknowledgment state (e.g. the MD notification badge) should be hidden until
+   * this is false to prevent a flash of the wrong badge on cold start.
+   * Mirrors `loading` — both are false once rehydration is complete.
+   */
+  isRehydrating: boolean;
 }
 
 const MdAcknowledgmentContext = createContext<MdAcknowledgmentContextType>({
@@ -59,6 +90,7 @@ const MdAcknowledgmentContext = createContext<MdAcknowledgmentContextType>({
   isAcknowledged: () => false,
   clearAcknowledgments: () => {},
   loading: false,
+  isRehydrating: false,
 });
 
 export function MdAcknowledgmentProvider({ children }: { children: React.ReactNode }) {
@@ -121,7 +153,7 @@ export function MdAcknowledgmentProvider({ children }: { children: React.ReactNo
   }, []);
 
   return (
-    <MdAcknowledgmentContext.Provider value={{ acknowledgments, acknowledge, isAcknowledged, clearAcknowledgments, loading }}>
+    <MdAcknowledgmentContext.Provider value={{ acknowledgments, acknowledge, isAcknowledged, clearAcknowledgments, loading, isRehydrating: loading }}>
       {children}
     </MdAcknowledgmentContext.Provider>
   );

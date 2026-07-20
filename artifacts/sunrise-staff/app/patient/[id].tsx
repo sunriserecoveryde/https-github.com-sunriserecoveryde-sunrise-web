@@ -462,6 +462,7 @@ export default function PatientDetailScreen() {
     startPendingDelete,
     undoPendingDelete,
     clearPendingDelete,
+    isRehydrating: notesIsRehydrating,
   } = useNursingNotes();
 
   // ─── Auto-navigate back when discharge undo window expires ────────────────
@@ -943,7 +944,7 @@ export default function PatientDetailScreen() {
     );
   }
 
-  const { acknowledgments, acknowledge, isAcknowledged } = useMdAcknowledgment();
+  const { acknowledgments, acknowledge, isAcknowledged, isRehydrating: mdIsRehydrating } = useMdAcknowledgment();
   const mdAck = acknowledgments[patient.id];
 
   const vitals: VitalEntry[] = VITALS[patient.id] ?? [];
@@ -1441,7 +1442,10 @@ export default function PatientDetailScreen() {
         )}
 
         {/* ─── MD Notification ─── */}
-        {isWithdrawalAlert(patient) && (
+        {/* Guard: hide until MdAcknowledgmentContext finishes reading from storage
+            so the badge never briefly shows the wrong acknowledged/unacknowledged
+            state on cold start. */}
+        {!mdIsRehydrating && isWithdrawalAlert(patient) && (
           <View style={s.section}>
             <SectionTitle title="MD NOTIFICATION" colors={colors} />
             {mdAck ? (
@@ -1487,9 +1491,12 @@ export default function PatientDetailScreen() {
         )}
 
         {/* ─── Handoff note ─── */}
+        {/* Guard: hide until NursingNotesContext finishes reading from storage
+            so the section never briefly appears empty on cold start. */}
         <View
-          style={s.section}
+          style={[s.section, notesIsRehydrating && { opacity: 0 }]}
           onLayout={onNotesSectionLayout}
+          pointerEvents={notesIsRehydrating ? 'none' : 'auto'}
         >
           <View style={s.handoffSectionHeader}>
             {/* Title + count badge */}

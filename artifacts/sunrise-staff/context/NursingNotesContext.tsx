@@ -10,6 +10,30 @@
  *    are discarded and storage is cleared — matching "shift end at midnight".
  *  - If the nurse explicitly logs out via the logout/shift-end action the
  *    caller may invoke `clearNotes()` to wipe storage immediately.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Persisted keys and their cold-start flash guards
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Every AsyncStorage key managed by this context is registered here.  When you
+ * add a new key you MUST add a matching row and choose the guard style that
+ * prevents the UI from flashing incorrect content on cold start.
+ *
+ * Guard styles (see hooks/useRehydratedValue.ts for the canonical pattern):
+ *   A) useRehydratedValue(isRehydrating, value, loadingValue)
+ *      Best for booleans and enums where the loading placeholder is obvious.
+ *   B) Opacity animation — start at 0, fade to 1 once !isRehydrating.
+ *      Best for sections where a sudden content swap is visually jarring.
+ *   C) Raw !isRehydrating guard in JSX — use when gating entire sections.
+ *
+ * ┌──────────────────────────────────────────────┬──────────────────────┬───────┐
+ * │ AsyncStorage key                             │ Context field        │ Guard │
+ * ├──────────────────────────────────────────────┼──────────────────────┼───────┤
+ * │ @sunrise_nursing_notes_v1                    │ notesByPatient       │ C     │
+ * │                                              │ (via isRehydrating)  │       │
+ * └──────────────────────────────────────────────┴──────────────────────┴───────┘
+ *
+ * See app/patient/[id].tsx for the reference implementation of guard style C.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 import React, {
   createContext,
@@ -87,6 +111,13 @@ interface NursingNotesContextType {
   /** True while loading from storage */
   loading: boolean;
   /**
+   * True while AsyncStorage is being read on mount. UI that depends on persisted
+   * notes (e.g. the nursing handoff section) should be hidden until this is false
+   * to prevent a flash of empty content on cold start.
+   * Mirrors `loading` — both are false once rehydration is complete.
+   */
+  isRehydrating: boolean;
+  /**
    * Active pending-delete record (survives navigation).  The note has already
    * been removed from the store; call undoPendingDelete() within the window to
    * put it back, or let the timer expire to finalise the deletion.
@@ -111,6 +142,7 @@ const NursingNotesContext = createContext<NursingNotesContextType>({
   restoreNote: () => {},
   clearNotes: () => {},
   loading: false,
+  isRehydrating: false,
   pendingDelete: null,
   startPendingDelete: () => {},
   undoPendingDelete: () => {},
@@ -320,6 +352,7 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
         restoreNote,
         clearNotes,
         loading,
+        isRehydrating: loading,
         pendingDelete,
         startPendingDelete,
         undoPendingDelete,
