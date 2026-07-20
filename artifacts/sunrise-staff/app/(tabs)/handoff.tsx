@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadHandoffState, saveJsonToStorage, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
+import { loadHandoffState, saveJsonToStorage, pruneStaleStorageKeys, makeHandoffNotesKey, makeHandoffShiftKey, formatDateKey, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { useNursingNotes } from '@/context/NursingNotesContext';
@@ -153,8 +153,12 @@ function HandoffCard({
 // this tab is ever refactored to consume PatientContext, add tests mirroring the
 // pattern in __tests__/crossTabDischargeUndo.test.ts at that time.
 
-const STORAGE_KEY_NOTES = '@sunrise_handoff_notes_2026-07-19';
-const STORAGE_KEY_SHIFT = '@sunrise_handoff_shift_2026-07-19';
+// Keys are date-scoped to match the MAR/Checks pattern so each new calendar day
+// starts with a blank note slate.  Computed once at component load from the
+// current date — the midnight-rollover task (Task #293) will make these reactive.
+const _TODAY = new Date();
+const STORAGE_KEY_NOTES = makeHandoffNotesKey(_TODAY);  // e.g. @sunrise_handoff_notes_2026-07-20
+const STORAGE_KEY_SHIFT = makeHandoffShiftKey(_TODAY);  // e.g. @sunrise_handoff_shift_2026-07-20
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Persisted keys and their cold-start flash guards
@@ -165,12 +169,16 @@ const STORAGE_KEY_SHIFT = '@sunrise_handoff_shift_2026-07-19';
 //   B) Opacity animation — start at 0, fade to 1 once loaded.
 //   C) Raw !loaded guard in JSX.
 //
-// ┌────────────────────────────────────────────┬─────────────────────┬───────┐
-// │ AsyncStorage key                           │ Local state         │ Guard │
-// ├────────────────────────────────────────────┼─────────────────────┼───────┤
-// │ @sunrise_handoff_notes_<date>              │ notes               │ B     │
-// │ @sunrise_handoff_shift_<date>              │ shift               │ B     │
-// └────────────────────────────────────────────┴─────────────────────┴───────┘
+// ┌──────────────────────────────────────────────────┬─────────────────────┬───────┐
+// │ AsyncStorage key                                 │ Local state         │ Guard │
+// ├──────────────────────────────────────────────────┼─────────────────────┼───────┤
+// │ @sunrise_handoff_notes_YYYY-MM-DD (date-scoped)  │ notes               │ B     │
+// │ @sunrise_handoff_shift_YYYY-MM-DD (date-scoped)  │ shift               │ B     │
+// └──────────────────────────────────────────────────┴─────────────────────┴───────┘
+//
+// Date-scoping matches the MAR/Checks pattern: each calendar day gets its own
+// storage bucket so a new shift always starts with a blank note slate.
+// Stale keys from previous days are pruned on mount via pruneStaleStorageKeys.
 //
 // Guard B: contentOpacity starts at 0 and fades to 1 once `loaded` is true.
 // Both keys are read together in a single Promise.all on mount, so a single
@@ -230,8 +238,13 @@ export default function HandoffScreen() {
   // Load persisted notes + shift on mount via a single Promise.all.
   // Both keys resolve together before `loaded` is set, so neither the shift
   // selector nor the handoff notes can flash with stale defaults.
+  // Stale entries from previous calendar days are pruned first (mirrors MARContext).
   React.useEffect(() => {
     const defaultNotes = Object.fromEntries(RESIDENTIAL_PATIENTS.map(p => [p.id, p.handoffNote ?? '']));
+    pruneStaleStorageKeys(AsyncStorage, [
+      { prefix: '@sunrise_handoff_notes_', currentKey: STORAGE_KEY_NOTES },
+      { prefix: '@sunrise_handoff_shift_', currentKey: STORAGE_KEY_SHIFT },
+    ]).catch(() => {});
     loadHandoffState(
       AsyncStorage,
       { notes: STORAGE_KEY_NOTES, shift: STORAGE_KEY_SHIFT },

@@ -23,9 +23,12 @@ import {
   isPersistSafe,
   makeMarKey,
   makeChecksKey,
+  makeHandoffNotesKey,
+  makeHandoffShiftKey,
   pruneStaleStorageKeys,
   loadMARState,
   loadChecksState,
+  loadHandoffState,
   saveJsonToStorage,
   type StorageAdapter,
   type AdminMap,
@@ -697,6 +700,193 @@ describe('production key-lifecycle — writes and reads use the same derived key
 });
 
 // ─── Tests: regression documentation ─────────────────────────────────────────
+
+// ─── Tests: makeHandoffNotesKey / makeHandoffShiftKey ────────────────────────
+
+describe('makeHandoffNotesKey / makeHandoffShiftKey — storage key derivation', () => {
+  it('makeHandoffNotesKey returns the correct prefixed key', () => {
+    expect(makeHandoffNotesKey(NEW_DAY)).toBe('@sunrise_handoff_notes_2026-07-20');
+  });
+
+  it('makeHandoffShiftKey returns the correct prefixed key', () => {
+    expect(makeHandoffShiftKey(NEW_DAY)).toBe('@sunrise_handoff_shift_2026-07-20');
+  });
+
+  it('yesterday and today produce different keys', () => {
+    expect(makeHandoffNotesKey(BEFORE_MIDNIGHT)).not.toBe(makeHandoffNotesKey(AFTER_MIDNIGHT));
+    expect(makeHandoffShiftKey(BEFORE_MIDNIGHT)).not.toBe(makeHandoffShiftKey(AFTER_MIDNIGHT));
+  });
+
+  it('the old key (yesterday) does not equal the new key (today) after rollover', () => {
+    expect(makeHandoffNotesKey(BEFORE_MIDNIGHT)).toBe('@sunrise_handoff_notes_2026-07-19');
+    expect(makeHandoffNotesKey(AFTER_MIDNIGHT)).toBe('@sunrise_handoff_notes_2026-07-20');
+    expect(makeHandoffShiftKey(BEFORE_MIDNIGHT)).toBe('@sunrise_handoff_shift_2026-07-19');
+    expect(makeHandoffShiftKey(AFTER_MIDNIGHT)).toBe('@sunrise_handoff_shift_2026-07-20');
+  });
+});
+
+// ─── Tests: midnight rollover — handoff notes ─────────────────────────────────
+
+describe('midnight rollover — pruneStaleStorageKeys removes yesterday\'s handoff entries', () => {
+  it('removes the previous day\'s handoff notes key and keeps today\'s', async () => {
+    const oldNotesKey = makeHandoffNotesKey(BEFORE_MIDNIGHT);
+    const newNotesKey = makeHandoffNotesKey(NEW_DAY);
+
+    const storage = makeMemoryStorage({
+      [oldNotesKey]: JSON.stringify({ p1: 'Yesterday note' }),
+      [newNotesKey]: JSON.stringify({}),
+    });
+
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_notes_', currentKey: newNotesKey },
+    ]);
+
+    expect(storage.store[oldNotesKey]).toBeUndefined();
+    expect(storage.store[newNotesKey]).toBeDefined();
+  });
+
+  it('prunes both handoff keys in a single call (full rollover)', async () => {
+    const oldNotesKey = makeHandoffNotesKey(BEFORE_MIDNIGHT);
+    const newNotesKey = makeHandoffNotesKey(AFTER_MIDNIGHT);
+    const oldShiftKey = makeHandoffShiftKey(BEFORE_MIDNIGHT);
+    const newShiftKey = makeHandoffShiftKey(AFTER_MIDNIGHT);
+
+    const storage = makeMemoryStorage({
+      [oldNotesKey]: JSON.stringify({ p1: 'Old note' }),
+      [newNotesKey]: JSON.stringify({}),
+      [oldShiftKey]: 'eve',
+      [newShiftKey]: 'day',
+      '@unrelated_key': '{}',
+    });
+
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_notes_', currentKey: newNotesKey },
+      { prefix: '@sunrise_handoff_shift_', currentKey: newShiftKey },
+    ]);
+
+    // Stale entries gone
+    expect(storage.store[oldNotesKey]).toBeUndefined();
+    expect(storage.store[oldShiftKey]).toBeUndefined();
+    // Current entries preserved
+    expect(storage.store[newNotesKey]).toBeDefined();
+    expect(storage.store[newShiftKey]).toBeDefined();
+    // Unrelated key untouched
+    expect(storage.store['@unrelated_key']).toBeDefined();
+  });
+});
+
+describe('midnight rollover — loadHandoffState reads from the new calendar-day key', () => {
+  const defaultNotes = { p1: '', p2: '' };
+
+  it('returns empty notes when the new key has no data (fresh start after rollover)', async () => {
+    const newNotesKey = makeHandoffNotesKey(NEW_DAY);
+    const newShiftKey = makeHandoffShiftKey(NEW_DAY);
+
+    // Storage only has yesterday's notes — new keys do not exist yet
+    const storage = makeMemoryStorage({
+      [makeHandoffNotesKey(BEFORE_MIDNIGHT)]: JSON.stringify({ p1: 'Last shift note' }),
+      [makeHandoffShiftKey(BEFORE_MIDNIGHT)]: 'eve',
+    });
+
+    const { notes, shift, loaded } = await loadHandoffState(
+      storage,
+      { notes: newNotesKey, shift: newShiftKey },
+      { notes: defaultNotes, shift: 'day' },
+    );
+
+    expect(loaded).toBe(true);
+    expect(notes).toEqual(defaultNotes);  // no bleed from yesterday
+    expect(shift).toBe('day');            // default shift, not yesterday's 'eve'
+  });
+
+  it('restores notes written to the new key (same-day restart)', async () => {
+    const newNotesKey = makeHandoffNotesKey(NEW_DAY);
+    const newShiftKey = makeHandoffShiftKey(NEW_DAY);
+
+    const todayNotes = { p1: 'Patient stable overnight', p2: '' };
+
+    const storage = makeMemoryStorage({
+      [newNotesKey]: JSON.stringify(todayNotes),
+      [newShiftKey]: 'eve',
+    });
+
+    const { notes, shift, loaded } = await loadHandoffState(
+      storage,
+      { notes: newNotesKey, shift: newShiftKey },
+      { notes: defaultNotes, shift: 'day' },
+    );
+
+    expect(loaded).toBe(true);
+    expect(notes['p1']).toBe('Patient stable overnight');
+    expect(shift).toBe('eve');
+  });
+
+  it('simulates a full rollover: prune then load returns a clean handoff slate', async () => {
+    const oldNotesKey = makeHandoffNotesKey(BEFORE_MIDNIGHT);
+    const newNotesKey = makeHandoffNotesKey(AFTER_MIDNIGHT);
+    const oldShiftKey = makeHandoffShiftKey(BEFORE_MIDNIGHT);
+    const newShiftKey = makeHandoffShiftKey(AFTER_MIDNIGHT);
+
+    const storage = makeMemoryStorage({
+      [oldNotesKey]: JSON.stringify({ p1: 'Night shift note', p2: 'Watch closely' }),
+      [oldShiftKey]: 'night',
+    });
+
+    // Step 1: prune stale keys (as handoff screen does on mount)
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_notes_', currentKey: newNotesKey },
+      { prefix: '@sunrise_handoff_shift_', currentKey: newShiftKey },
+    ]);
+
+    expect(storage.store[oldNotesKey]).toBeUndefined();
+    expect(storage.store[oldShiftKey]).toBeUndefined();
+
+    // Step 2: load from new keys (as loadHandoffState does on mount)
+    const { notes, shift, loaded } = await loadHandoffState(
+      storage,
+      { notes: newNotesKey, shift: newShiftKey },
+      { notes: defaultNotes, shift: 'day' },
+    );
+
+    expect(loaded).toBe(true);
+    expect(notes).toEqual(defaultNotes);  // clean slate — no phantom notes
+    expect(shift).toBe('day');            // default shift for the new day
+  });
+
+  it('live rollover: handoff notes from the previous shift do not bleed into the next day', async () => {
+    const openDateStr   = formatDateKey(BEFORE_MIDNIGHT);
+    const openNotesKey  = `@sunrise_handoff_notes_${openDateStr}`;
+    const openShiftKey  = `@sunrise_handoff_shift_${openDateStr}`;
+
+    const storage = makeMemoryStorage();
+    await saveJsonToStorage(storage, openNotesKey, { p1: 'Watching vitals closely' });
+    await storage.setItem(openShiftKey, 'night');
+
+    // App foregrounds after midnight
+    const { rolled, newDateStr } = checkDateRollover(openDateStr, AFTER_MIDNIGHT);
+    expect(rolled).toBe(true);
+
+    const newNotesKey = `@sunrise_handoff_notes_${newDateStr}`;
+    const newShiftKey = `@sunrise_handoff_shift_${newDateStr}`;
+
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_notes_', currentKey: newNotesKey },
+      { prefix: '@sunrise_handoff_shift_', currentKey: newShiftKey },
+    ]);
+
+    expect(storage.store[openNotesKey]).toBeUndefined();
+
+    const { notes, shift, loaded } = await loadHandoffState(
+      storage,
+      { notes: newNotesKey, shift: newShiftKey },
+      { notes: { p1: '', p2: '' }, shift: 'day' },
+    );
+
+    expect(loaded).toBe(true);
+    expect(notes['p1']).toBe('');   // previous note gone
+    expect(shift).toBe('day');      // default shift for the new day
+  });
+});
 
 describe('midnight rollover — regression: stale TODAY_DATE causes phantom data', () => {
   it('documents the bug: writes to the old key while the app is open past midnight', () => {

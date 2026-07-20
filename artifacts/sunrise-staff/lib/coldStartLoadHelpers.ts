@@ -61,6 +61,22 @@ export function makeChecksKey(date: Date): string {
 }
 
 /**
+ * Return the full handoff-notes storage key for a given date.
+ * e.g. `@sunrise_handoff_notes_2026-07-20`
+ */
+export function makeHandoffNotesKey(date: Date): string {
+  return `@sunrise_handoff_notes_${formatDateKey(date)}`;
+}
+
+/**
+ * Return the full handoff-shift storage key for a given date.
+ * e.g. `@sunrise_handoff_shift_2026-07-20`
+ */
+export function makeHandoffShiftKey(date: Date): string {
+  return `@sunrise_handoff_shift_${formatDateKey(date)}`;
+}
+
+/**
  * Guard function for persist effects in MARContext.
  *
  * Returns `true` only when both conditions hold:
