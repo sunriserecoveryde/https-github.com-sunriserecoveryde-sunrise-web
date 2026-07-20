@@ -801,7 +801,11 @@ export default function CensusScreen() {
     } else if (!active && dischargeToastShownRef.current) {
       dischargeToastShownRef.current = false;
       if (skipDischargeToastExitRef.current) {
-        // Shift ended — hide immediately without animating
+        // Shift ended — hide immediately without animating.
+        // stopAnimation() is called first so it cancels any in-progress spring
+        // entrance (i.e. End Shift tapped while the toast is still sliding up).
+        // setValue(100) then immediately moves the view off-screen regardless
+        // of where the spring had paused, leaving no lingering translateY offset.
         skipDischargeToastExitRef.current = false;
         dischargeToastAnim.stopAnimation();
         dischargeToastAnim.setValue(100);
