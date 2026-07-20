@@ -157,10 +157,9 @@ type ScoreFilter = 'all' | 'cows' | 'ciwa' | 'alerts';
  * `computePatientsWithScores`), which already includes the re-inserted
  * pending-discharge patient.  The filter chip is applied on top.
  *
- * Design decision: a pending-discharge patient whose score does NOT match the
- * active filter will be absent from the rendered list.  This is accepted
- * behaviour (documented in task 250) — the nurse can switch to "All" to see
- * the Discharging… pill.  The tests below make this contract explicit.
+ * After filtering, the pending-discharge patient is re-inserted if the filter
+ * removed them but they are score-eligible — so the Discharging… pill always
+ * appears regardless of which filter chip is active (mirrors vitals.tsx).
  */
 function computeFilteredPatientsWithScores(
   patients: Patient[],
@@ -168,18 +167,31 @@ function computeFilteredPatientsWithScores(
   scoreFilter: ScoreFilter,
 ): Patient[] {
   const allWithScores = computePatientsWithScores(patients, pendingDischarge);
-  switch (scoreFilter) {
-    case 'cows':
-      return allWithScores.filter(p => p.cows != null && p.cows > 0);
-    case 'ciwa':
-      return allWithScores.filter(p => p.ciwa != null && p.ciwa > 0);
-    case 'alerts':
-      return allWithScores.filter(
-        p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15),
-      );
-    default:
-      return allWithScores;
+  const filtered = (() => {
+    switch (scoreFilter) {
+      case 'cows':
+        return allWithScores.filter(p => p.cows != null && p.cows > 0);
+      case 'ciwa':
+        return allWithScores.filter(p => p.ciwa != null && p.ciwa > 0);
+      case 'alerts':
+        return allWithScores.filter(
+          p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15),
+        );
+      default:
+        return allWithScores;
+    }
+  })();
+
+  // Re-insert the pending-discharge patient if the filter removed them but
+  // they are score-eligible, mirroring the fix in vitals.tsx.
+  if (pendingDischarge) {
+    const pd = pendingDischarge.patient;
+    const scoreEligible = allWithScores.some(p => p.id === pd.id);
+    if (scoreEligible && !filtered.some(p => p.id === pd.id)) {
+      return [pd, ...filtered];
+    }
   }
+  return filtered;
 }
 
 /**
@@ -416,9 +428,9 @@ describe('Scores tab — score filter chips and pending-discharge interaction', 
     expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
   });
 
-  it('"COWS Only" filter: pending-discharge patient with CIWA-only score is absent (acceptable — nurse should switch to "All")', () => {
-    // Patient has only CIWA — "COWS Only" filter legitimately excludes them.
-    // This is the scenario described in task 250: acceptable, but documented.
+  it('"COWS Only" filter: pending-discharge patient with CIWA-only score is still shown with the pill', () => {
+    // Patient has only CIWA — the filter would normally exclude them, but the
+    // pending-discharge re-insertion ensures the Discharging… pill always appears.
     const p1 = makePatient('p1', { cows: undefined, ciwa: 9 });
     const p2 = makePatient('p2', { cows: 5 });
     let state = makeInitialState([p1, p2]);
@@ -427,11 +439,8 @@ describe('Scores tab — score filter chips and pending-discharge interaction', 
 
     const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'cows');
 
-    // p1 has no COWS score so "COWS Only" legitimately hides them
-    expect(visible.some(p => p.id === 'p1')).toBe(false);
-    // Switching to "All" would reveal them — verify via the unfiltered helper
-    const all = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'all');
-    expect(all.some(p => p.id === 'p1')).toBe(true);
+    // p1 is re-inserted despite having no COWS score so nurses can act on the pill
+    expect(visible.some(p => p.id === 'p1')).toBe(true);
     expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
   });
 
@@ -451,7 +460,9 @@ describe('Scores tab — score filter chips and pending-discharge interaction', 
     expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
   });
 
-  it('"CIWA Only" filter: pending-discharge patient with COWS-only score is absent (acceptable — nurse should switch to "All")', () => {
+  it('"CIWA Only" filter: pending-discharge patient with COWS-only score is still shown with the pill', () => {
+    // Patient has only COWS — the filter would normally exclude them, but the
+    // pending-discharge re-insertion ensures the Discharging… pill always appears.
     const p1 = makePatient('p1', { cows: 10, ciwa: undefined });
     const p2 = makePatient('p2', { ciwa: 6 });
     let state = makeInitialState([p1, p2]);
@@ -460,10 +471,8 @@ describe('Scores tab — score filter chips and pending-discharge interaction', 
 
     const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'ciwa');
 
-    expect(visible.some(p => p.id === 'p1')).toBe(false);
-    // "All" still shows the Discharging… patient
-    const all = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'all');
-    expect(all.some(p => p.id === 'p1')).toBe(true);
+    // p1 is re-inserted despite having no CIWA score so nurses can act on the pill
+    expect(visible.some(p => p.id === 'p1')).toBe(true);
     expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
   });
 
@@ -495,8 +504,10 @@ describe('Scores tab — score filter chips and pending-discharge interaction', 
     expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
   });
 
-  it('"Alerts" filter: pending-discharge patient with sub-threshold scores is absent (acceptable — nurse should switch to "All")', () => {
-    // p1 has a COWS score of 8 — below the 13 alert threshold
+  it('"Alerts" filter: pending-discharge patient with sub-threshold scores is still shown with the pill', () => {
+    // p1 has a COWS score of 8 — below the 13 alert threshold, so the Alerts
+    // filter would normally hide them, but the pending-discharge re-insertion
+    // ensures the Discharging… pill always appears.
     const p1 = makePatient('p1', { cows: 8, ciwa: undefined });
     const p2 = makePatient('p2', { cows: 14 }); // above threshold → stays visible
     let state = makeInitialState([p1, p2]);
@@ -505,14 +516,11 @@ describe('Scores tab — score filter chips and pending-discharge interaction', 
 
     const visible = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'alerts');
 
-    // p1 is below alert threshold — "Alerts" filter legitimately hides them
-    expect(visible.some(p => p.id === 'p1')).toBe(false);
+    // p1 is re-inserted despite being below the alert threshold so nurses can act on the pill
+    expect(visible.some(p => p.id === 'p1')).toBe(true);
+    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
     // p2 is above threshold so must remain visible
     expect(visible.some(p => p.id === 'p2')).toBe(true);
-    // "All" would still show the Discharging… patient
-    const all = computeFilteredPatientsWithScores(state.patients, state.pendingDischarge, 'all');
-    expect(all.some(p => p.id === 'p1')).toBe(true);
-    expect(isPendingDischarge('p1', state.pendingDischarge)).toBe(true);
   });
 
   // ── Cross-filter consistency ─────────────────────────────────────────────────

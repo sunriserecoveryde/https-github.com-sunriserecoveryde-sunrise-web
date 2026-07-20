@@ -308,18 +308,32 @@ export default function VitalsScreen() {
   );
 
   const patientsWithScores = (() => {
-    switch (scoreFilter) {
-      case 'cows':
-        return allPatientsWithScores.filter(p => p.cows != null && p.cows > 0);
-      case 'ciwa':
-        return allPatientsWithScores.filter(p => p.ciwa != null && p.ciwa > 0);
-      case 'alerts':
-        return allPatientsWithScores.filter(p =>
-          (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
-        );
-      default:
-        return allPatientsWithScores;
+    const filtered = (() => {
+      switch (scoreFilter) {
+        case 'cows':
+          return allPatientsWithScores.filter(p => p.cows != null && p.cows > 0);
+        case 'ciwa':
+          return allPatientsWithScores.filter(p => p.ciwa != null && p.ciwa > 0);
+        case 'alerts':
+          return allPatientsWithScores.filter(p =>
+            (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 15)
+          );
+        default:
+          return allPatientsWithScores;
+      }
+    })();
+
+    // Re-insert the pending-discharge patient if the active filter removed them
+    // but they are score-eligible, so the Discharging… pill always appears
+    // regardless of which filter chip is active.
+    if (pendingDischarge) {
+      const pd = pendingDischarge.patient;
+      const scoreEligible = allPatientsWithScores.some(p => p.id === pd.id);
+      if (scoreEligible && !filtered.some(p => p.id === pd.id)) {
+        return [pd, ...filtered];
+      }
     }
+    return filtered;
   })();
 
   // True when the pending-discharge patient has scores but the current filter hides them
