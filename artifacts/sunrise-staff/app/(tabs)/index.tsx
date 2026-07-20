@@ -675,13 +675,19 @@ export default function CensusScreen() {
   const toastAnim = useRef(new Animated.Value(0)).current;
   const hasFiredHaptic = useRef(false);
 
-  // ─── Discharge undo toast (driven by PatientContext.pendingDischarge) ───────
-  const [dischargeToastVisible, setDischargeToastVisible] = useState(false);
-  const dischargeToastAnim = useRef(new Animated.Value(100)).current;
-  const dischargeToastShownRef = useRef(false);
-
   // ─── Live census data from context ────────────────────────────────────────
+  // Must be declared before the discharge toast refs so we can seed their
+  // initial values from pendingDischarge (handles the case where the nurse
+  // switches tabs and comes back while the undo window is still open).
   const { patients, bedStatusMap, refreshFromApi, pendingDischarge, undoDischarge, clearPendingDischarge } = usePatients();
+
+  // ─── Discharge undo toast (driven by PatientContext.pendingDischarge) ───────
+  // Initialise from the live pendingDischarge value so that if the component
+  // remounts (tab switch, Android backgrounding, etc.) mid-window the toast
+  // re-appears with time still remaining rather than being silently lost.
+  const [dischargeToastVisible, setDischargeToastVisible] = useState(() => pendingDischarge !== null);
+  const dischargeToastAnim = useRef(new Animated.Value(pendingDischarge !== null ? 0 : 100)).current;
+  const dischargeToastShownRef = useRef(pendingDischarge !== null);
   const { clearNotes, getNotesForPatient } = useNursingNotes();
   const { clearAcknowledgments } = useMdAcknowledgment();
   const residentialPatients = patients.filter(p => p.bed != null);
