@@ -277,6 +277,7 @@ function BedCard({
   onNoteTypeChipPress,
   onScorePillPress,
   onVitalsPress,
+  isPendingDischarge,
 }: {
   patient: Patient;
   onPress: () => void;
@@ -286,6 +287,8 @@ function BedCard({
   onScorePillPress?: () => void;
   /** Tapping the vitals hint jumps directly to the Vitals section. */
   onVitalsPress?: () => void;
+  /** True while the 4-second discharge undo window is open for this patient. */
+  isPendingDischarge?: boolean;
 }) {
   const colors = useColors();
   const { getNotesForPatient } = useNursingNotes();
@@ -309,8 +312,14 @@ function BedCard({
   return (
     <Pressable
       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
-      style={[styles.bedCard, { backgroundColor: isAlert ? '#FFF5F5' : colors.card, borderLeftColor: ac.border }]}
+      style={[styles.bedCard, { backgroundColor: isAlert ? '#FFF5F5' : colors.card, borderLeftColor: ac.border, opacity: isPendingDischarge ? 0.65 : 1 }]}
     >
+      {isPendingDischarge && (
+        <View style={[styles.dischargingBanner, { backgroundColor: colors.moderateBg, borderColor: colors.moderate }]}>
+          <Ionicons name="time-outline" size={11} color={colors.moderate} />
+          <Text style={[styles.dischargingBannerText, { color: colors.moderate }]}>Discharging…</Text>
+        </View>
+      )}
       <View style={styles.bedCardTop}>
         <View style={styles.bedCardTopLeft}>
           <View style={[styles.bedBadge, { backgroundColor: colors.navyMid }]}>
@@ -452,11 +461,17 @@ function BedCard({
 
 function AvailableBedCard({ bedId, status }: { bedId: string; status: string }) {
   const colors = useColors();
-  const bgColor = status === 'Available' ? colors.successBg : colors.muted;
-  const textColor = status === 'Available' ? colors.success : colors.mutedForeground;
-  const icon = status === 'Available' ? 'bed-outline' : 'refresh-outline';
+  const isDischarging = status === 'Discharging';
+  const bgColor = isDischarging
+    ? colors.moderateBg
+    : status === 'Available' ? colors.successBg : colors.muted;
+  const textColor = isDischarging
+    ? colors.moderate
+    : status === 'Available' ? colors.success : colors.mutedForeground;
+  const borderColor = isDischarging ? colors.moderate : colors.border;
+  const icon = isDischarging ? 'time-outline' : status === 'Available' ? 'bed-outline' : 'refresh-outline';
   return (
-    <View style={[styles.availableBedCard, { backgroundColor: bgColor, borderColor: colors.border }]}>
+    <View style={[styles.availableBedCard, { backgroundColor: bgColor, borderColor }]}>
       <Ionicons name={icon as any} size={18} color={textColor} />
       <Text style={[styles.availableBedId, { color: textColor }]}>{bedId}</Text>
       <Text style={[styles.availableBedStatus, { color: textColor }]}>{status}</Text>
@@ -719,9 +734,15 @@ export default function CensusScreen() {
   const allBedIds = BEDS.map(b => b.id);
   const occupiedBedIds = new Set(patients.map(p => p.bed).filter(Boolean));
   const occupiedCount = occupiedBedIds.size;
+  const pendingDischargeBedId = pendingDischarge?.patient.bed ?? null;
   const nonOccupiedBeds = allBedIds
     .filter(id => !occupiedBedIds.has(id))
-    .map(id => ({ id, status: bedStatusMap[id] ?? 'Available' }));
+    .map(id => ({
+      id,
+      // Override status to "Discharging" for the pending discharge bed
+      status: id === pendingDischargeBedId ? 'Discharging' : (bedStatusMap[id] ?? 'Available'),
+    }));
+  // Exclude the discharging bed from "Available" so it can't be assigned
   const availableCount = nonOccupiedBeds.filter(b => b.status === 'Available').length;
   const cleaningCount = nonOccupiedBeds.filter(b => b.status === 'Cleaning').length;
   const availableBedIds = nonOccupiedBeds.filter(b => b.status === 'Available').map(b => b.id);
@@ -781,6 +802,19 @@ export default function CensusScreen() {
         const noteMatch = noteFilter == null || getNotesForPatient(p.id).some(n => n.noteType === noteFilter);
         return acuityMatch && noteMatch;
       });
+
+  // Re-insert the pending-discharge patient so nurses can see the bed is not yet free.
+  // Always shown at the top of the list regardless of active filters — its transient
+  // "Discharging…" state is more important than any filter match.
+  const displayedPatients = React.useMemo(() => {
+    if (!pendingDischarge) return filteredPatients;
+    const pd = pendingDischarge.patient;
+    // Only insert if not already present (edge case: undo race)
+    if (filteredPatients.some(p => p.id === pd.id)) return filteredPatients;
+    // Only show residential (bed-assigned) patients on this census screen
+    if (pd.bed == null) return filteredPatients;
+    return [pd, ...filteredPatients];
+  }, [filteredPatients, pendingDischarge]);
 
   const openPatient = (p: Patient) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1089,7 +1123,7 @@ export default function CensusScreen() {
         </View>
       ) : (
         <FlatList
-          data={acuityFilter === 'Available' ? [] : filteredPatients}
+          data={acuityFilter === 'Available' ? [] : displayedPatients}
           keyExtractor={p => p.id}
           renderItem={({ item }) => (
             <BedCard
@@ -1099,6 +1133,7 @@ export default function CensusScreen() {
               onNoteTypeChipPress={(type) => openPatientNotesFiltered(item, type)}
               onScorePillPress={() => openPatientScores(item)}
               onVitalsPress={() => openPatientVitals(item)}
+              isPendingDischarge={pendingDischarge?.patient.id === item.id}
             />
           )}
           contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}
@@ -1272,6 +1307,8 @@ const styles = StyleSheet.create({
   moodBarFill: { height: 6, borderRadius: 3 },
   moodBarLabel: { fontSize: 11, fontFamily: 'Inter_500Medium' },
   tapHint: { fontSize: 10, fontFamily: 'Inter_400Regular', textAlign: 'right', marginTop: 6, opacity: 0.6 },
+  dischargingBanner: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 5, borderWidth: 1, alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, marginBottom: 8 },
+  dischargingBannerText: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   noteBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2, maxWidth: 140 },
   noteBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   noteBadgeSep: { fontSize: 10, color: 'rgba(255,255,255,0.6)', fontFamily: 'Inter_400Regular' },
