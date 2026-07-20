@@ -18,6 +18,12 @@ interface WithdrawalFiltersState {
    * so it survives tab navigation and won't spuriously reset on remount.
    */
   lastTrackedDischargePatientId: string | null;
+  /**
+   * True while AsyncStorage is being read on mount. UI that depends on persisted state
+   * (e.g. the filter notice dismissed flag) should be hidden until this is false to
+   * prevent a flash of incorrect content on cold start.
+   */
+  isRehydrating: boolean;
 }
 
 interface WithdrawalFiltersContextValue extends WithdrawalFiltersState {
@@ -39,6 +45,7 @@ const DEFAULT_STATE: WithdrawalFiltersState = {
   bannerDismissed: false,
   filterNoticeDismissedForPatientId: null,
   lastTrackedDischargePatientId: null,
+  isRehydrating: true,
 };
 
 const VALID_SCORE_FILTERS: WithdrawalScoreFilter[] = ['all', 'cows', 'ciwa', 'alerts'];
@@ -75,8 +82,14 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
         // Rehydrate lastTrackedDischargePatientId so trackDischargePatientId can
         // correctly detect whether the post-restart discharge is truly new.
         ...(storedLastDischarge ? { lastTrackedDischargePatientId: storedLastDischarge } : {}),
+        isRehydrating: false,
       }));
-    }).catch(() => {/* ignore read errors */});
+    }).catch(() => {
+      // Even on read errors, clear the loading flag so UI is not permanently hidden.
+      if (mountedRef.current) {
+        setState(prev => ({ ...prev, isRehydrating: false }));
+      }
+    });
   }, []);
 
   const setScoreFilter = useCallback((filter: WithdrawalScoreFilter) => {
@@ -114,7 +127,9 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
   }, []);
 
   const clearFilters = useCallback(() => {
-    setState(DEFAULT_STATE);
+    // Reset to defaults but keep isRehydrating false — rehydration only happens on mount,
+    // not on runtime resets like shift handoff.
+    setState({ ...DEFAULT_STATE, isRehydrating: false });
     AsyncStorage.removeItem(SCORE_FILTER_KEY).catch(() => {/* ignore remove errors */});
     AsyncStorage.removeItem(BANNER_DISMISSED_KEY).catch(() => {/* ignore remove errors */});
     AsyncStorage.removeItem(FILTER_NOTICE_DISMISSED_KEY).catch(() => {/* ignore remove errors */});

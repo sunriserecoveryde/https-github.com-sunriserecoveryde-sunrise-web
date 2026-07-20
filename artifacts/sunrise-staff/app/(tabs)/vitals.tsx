@@ -277,7 +277,7 @@ export default function VitalsScreen() {
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const { bannerDismissed, dismissBanner, scoreFilter, setScoreFilter, filterNoticeDismissedForPatientId, dismissFilterNotice, trackDischargePatientId } = useWithdrawalFilters();
+  const { bannerDismissed, dismissBanner, scoreFilter, setScoreFilter, filterNoticeDismissedForPatientId, dismissFilterNotice, trackDischargePatientId, isRehydrating } = useWithdrawalFilters();
   const { residentialPatients, pendingDischarge } = usePatients();
 
   // Track the current discharge patient ID in context so it persists across tab navigation.
@@ -473,8 +473,9 @@ export default function VitalsScreen() {
       </View>
 
       {/* Filter notice — shown when the pending-discharge patient is hidden by the active filter.
-          Dismissed state is stored in context so it persists across tab navigation. */}
-      {pendingDischargeHiddenByFilter && filterNoticeDismissedForPatientId !== pendingDischarge?.patient.id && (
+          Dismissed state is stored in context so it persists across tab navigation.
+          Hidden while AsyncStorage is still rehydrating to prevent a flash on cold start. */}
+      {!isRehydrating && pendingDischargeHiddenByFilter && filterNoticeDismissedForPatientId !== pendingDischarge?.patient.id && (
         <View style={[styles.filterNotice, { backgroundColor: colors.moderateBg, borderBottomColor: colors.moderate }]}>
           <Ionicons name="eye-off-outline" size={16} color={colors.moderate} />
           <Text style={[styles.filterNoticeText, { color: colors.moderate }]}>
