@@ -24,6 +24,88 @@ export interface StorageAdapter {
   getAllKeys(): Promise<readonly string[] | string[]>;
 }
 
+// ─── Date-key helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Format a Date as `YYYY-MM-DD` using its UTC components.
+ *
+ * AsyncStorage keys are scoped with this format, e.g. `@sunrise_mar_2026-07-20`.
+ * Using a pure function (rather than capturing `new Date()` at module load) lets
+ * callers — and unit tests — pass any date and verify the correct key is derived.
+ *
+ * Midnight-rollover safety: the key is computed from the date passed in, so a
+ * caller that refreshes the date after midnight will automatically derive the new
+ * calendar day's key.
+ */
+export function formatDateKey(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Return the full MAR storage key for a given date.
+ * e.g. `@sunrise_mar_2026-07-20`
+ */
+export function makeMarKey(date: Date): string {
+  return `@sunrise_mar_${formatDateKey(date)}`;
+}
+
+/**
+ * Return the full Checks storage key for a given date.
+ * e.g. `@sunrise_checks_2026-07-20`
+ */
+export function makeChecksKey(date: Date): string {
+  return `@sunrise_checks_${formatDateKey(date)}`;
+}
+
+/**
+ * Guard function for persist effects in MARContext.
+ *
+ * Returns `true` only when both conditions hold:
+ *   1. The async load for the current key has completed (`loaded === true`).
+ *   2. The in-memory state was loaded from the exact same key that is about to
+ *      be written to (`loadedForKey === currentKey`).
+ *
+ * This prevents a midnight-rollover race where React's effect ordering would
+ * otherwise let the persist effect fire with old in-memory state (marLoaded
+ * is still true from the previous render) paired with the new day's key,
+ * writing yesterday's data into today's storage bucket before the fresh load
+ * for the new key has completed.
+ *
+ * Usage in MARContext:
+ *   const marLoadedKeyRef = useRef<string | null>(null);
+ *   // load effect: marLoadedKeyRef.current = null; ... then on success: marLoadedKeyRef.current = marKey;
+ *   // persist effect: if (isPersistSafe(marLoaded, marLoadedKeyRef.current, marKey)) save();
+ */
+export function isPersistSafe(
+  loaded: boolean,
+  loadedForKey: string | null,
+  currentKey: string,
+): boolean {
+  return loaded && loadedForKey === currentKey;
+}
+
+/**
+ * Compare `prevDateStr` (a YYYY-MM-DD string held in component state) against
+ * `nowDate` to determine whether the calendar day has changed.
+ *
+ * Used by MARContext's AppState 'active' listener to detect a midnight rollover
+ * while the app is open.  Returns `{ rolled: true, newDateStr }` when the day
+ * has advanced, or `{ rolled: false, newDateStr: prevDateStr }` otherwise.
+ *
+ * Pure function — no side effects, no React imports — so it can be exercised
+ * directly in unit tests without a native environment.
+ */
+export function checkDateRollover(
+  prevDateStr: string,
+  nowDate: Date,
+): { rolled: boolean; newDateStr: string } {
+  const newDateStr = formatDateKey(nowDate);
+  return { rolled: newDateStr !== prevDateStr, newDateStr };
+}
+
 // ─── Shared JSON helpers ──────────────────────────────────────────────────────
 
 /**
