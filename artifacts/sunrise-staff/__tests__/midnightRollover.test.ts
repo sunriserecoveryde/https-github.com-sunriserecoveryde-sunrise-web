@@ -29,6 +29,7 @@ import {
   loadMARState,
   loadChecksState,
   loadHandoffState,
+  loadWithdrawalFiltersState,
   saveJsonToStorage,
   type StorageAdapter,
   type AdminMap,
@@ -1452,5 +1453,163 @@ describe('force-quit during rollover window — relaunch with empty storage', ()
     expect(loaded).toBe(true);
     expect(adminMap).toEqual({});
     expect(isPersistSafe(true, loadedForKey, marKey)).toBe(true);
+  });
+});
+
+// ─── Tests: Scores tab — force-quit during first load ────────────────────────
+//
+// Scenario: the app is force-quit before any of the four withdrawal-filter
+// AsyncStorage keys have been written (post-prune, pre-write state, or a
+// genuine first install).  loadWithdrawalFiltersState reads all four keys in a
+// single Promise.all; if none exist it must still resolve with safe defaults
+// rather than hanging or crashing, and the isPersistSafe gate must open as
+// soon as the load settles.
+//
+// Storage keys exercised:
+//   SCORE_FILTER_KEY              (@sunrise_withdrawal_score_filter)
+//   BANNER_DISMISSED_KEY          (@sunrise_withdrawal_banner_dismissed)
+//   FILTER_NOTICE_DISMISSED_KEY   (@sunrise_withdrawal_filter_notice_dismissed)
+//   LAST_DISCHARGE_PATIENT_KEY    (@sunrise_withdrawal_last_discharge_patient)
+
+describe('Scores tab — force-quit during first load (loadWithdrawalFiltersState)', () => {
+  // The four storage keys used by WithdrawalFiltersProvider
+  const SCORE_FILTER_KEY            = '@sunrise_withdrawal_score_filter';
+  const BANNER_DISMISSED_KEY        = '@sunrise_withdrawal_banner_dismissed';
+  const FILTER_NOTICE_DISMISSED_KEY = '@sunrise_withdrawal_filter_notice_dismissed';
+  const LAST_DISCHARGE_PATIENT_KEY  = '@sunrise_withdrawal_last_discharge_patient';
+
+  const KEYS = {
+    scoreFilter:          SCORE_FILTER_KEY,
+    bannerDismissed:      BANNER_DISMISSED_KEY,
+    filterNoticeDismissed: FILTER_NOTICE_DISMISSED_KEY,
+    lastDischargePatientId: LAST_DISCHARGE_PATIENT_KEY,
+  };
+
+  // Simulates post-prune, pre-write state: completely empty storage
+  function makeEmptyStorage() {
+    return makeMemoryStorage({});
+  }
+
+  it('resolves with safe defaults when all four keys are absent (first install / post-prune kill)', async () => {
+    const storage = makeEmptyStorage();
+
+    // Confirm no score-filter keys are present
+    expect(storage.store[SCORE_FILTER_KEY]).toBeUndefined();
+    expect(storage.store[BANNER_DISMISSED_KEY]).toBeUndefined();
+    expect(storage.store[FILTER_NOTICE_DISMISSED_KEY]).toBeUndefined();
+    expect(storage.store[LAST_DISCHARGE_PATIENT_KEY]).toBeUndefined();
+
+    const result = await loadWithdrawalFiltersState(storage, KEYS);
+
+    // Must resolve (not hang, not crash) and return safe defaults
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('all');
+    expect(result.bannerDismissed).toBe(false);
+    expect(result.filterNoticeDismissedForPatientId).toBeNull();
+    expect(result.lastTrackedDischargePatientId).toBeNull();
+  });
+
+  it('restores persisted values when the keys are present (normal relaunch)', async () => {
+    const storage = makeMemoryStorage({
+      [SCORE_FILTER_KEY]:            'cows',
+      [BANNER_DISMISSED_KEY]:        'true',
+      [FILTER_NOTICE_DISMISSED_KEY]: 'patient-42',
+      [LAST_DISCHARGE_PATIENT_KEY]:  'patient-17',
+    });
+
+    const result = await loadWithdrawalFiltersState(storage, KEYS);
+
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('cows');
+    expect(result.bannerDismissed).toBe(true);
+    expect(result.filterNoticeDismissedForPatientId).toBe('patient-42');
+    expect(result.lastTrackedDischargePatientId).toBe('patient-17');
+  });
+
+  it('falls back to "all" when the stored scoreFilter value is not a recognised filter', async () => {
+    const storage = makeMemoryStorage({
+      [SCORE_FILTER_KEY]: 'invalid_filter_value',
+    });
+
+    const result = await loadWithdrawalFiltersState(storage, KEYS);
+
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('all');
+  });
+
+  it('isPersistSafe gate opens after load resolves with missing keys', async () => {
+    const storage = makeEmptyStorage();
+    const scoreFilterKey = SCORE_FILTER_KEY;  // used as the representative gate key
+
+    // Before load: gate closed
+    let loadedForKey: string | null = null;
+    expect(isPersistSafe(false, loadedForKey, scoreFilterKey)).toBe(false);
+    expect(isPersistSafe(true,  loadedForKey, scoreFilterKey)).toBe(false); // stale loaded
+
+    // Load settles (missing keys → safe defaults)
+    const result = await loadWithdrawalFiltersState(storage, KEYS);
+    loadedForKey = scoreFilterKey;  // ref set once the Promise.all resolves
+
+    // Gate is now open — the Scores tab chip bar can become visible
+    expect(result.loaded).toBe(true);
+    expect(isPersistSafe(true, loadedForKey, scoreFilterKey)).toBe(true);
+
+    // Data that would drive the first render is the safe default
+    expect(result.scoreFilter).toBe('all');
+    expect(result.bannerDismissed).toBe(false);
+  });
+
+  it('deferred storage: isPersistSafe blocks during in-flight Promise.all and opens after release', async () => {
+    // Uses the deferred-storage pattern to hold all four getItem calls in-flight.
+    // While the Promise.all is pending, isPersistSafe must return false.
+    // Only after release() resolves all four reads may the gate open.
+    const scoreFilterKey = SCORE_FILTER_KEY;
+
+    const { adapter, release } = makeDeferredStorage(); // no pre-populated data
+
+    let loadedForKey: string | null = null;
+    const loadPromise = loadWithdrawalFiltersState(adapter, KEYS);
+
+    // Yield event loop — Promise.all still pending (deferred storage not released)
+    await Promise.resolve();
+
+    // Gate must be closed while the load is pending
+    expect(isPersistSafe(false, loadedForKey, scoreFilterKey)).toBe(false);
+    expect(isPersistSafe(true,  loadedForKey, scoreFilterKey)).toBe(false); // stale loaded
+
+    // Release the deferred storage → all four getItem calls resolve (returning null)
+    release();
+    const result = await loadPromise;
+    loadedForKey = scoreFilterKey;
+
+    // Load must resolve with safe defaults — no hang, no crash
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('all');
+    expect(result.bannerDismissed).toBe(false);
+    expect(result.filterNoticeDismissedForPatientId).toBeNull();
+    expect(result.lastTrackedDischargePatientId).toBeNull();
+
+    // Gate is now open
+    expect(isPersistSafe(true, loadedForKey, scoreFilterKey)).toBe(true);
+  });
+
+  it('returns safe defaults even when storage throws (error path)', async () => {
+    // Simulates a storage adapter that rejects all reads — e.g. a corrupted
+    // storage layer on a fresh install.  The catch block in
+    // loadWithdrawalFiltersState must swallow the error and return defaults.
+    const faultyStorage: StorageAdapter = {
+      async getItem()      { throw new Error('Storage unavailable'); },
+      async setItem()      { /* no-op */ },
+      async multiRemove()  { /* no-op */ },
+      async getAllKeys()    { return []; },
+    };
+
+    const result = await loadWithdrawalFiltersState(faultyStorage, KEYS);
+
+    expect(result.loaded).toBe(true);
+    expect(result.scoreFilter).toBe('all');
+    expect(result.bannerDismissed).toBe(false);
+    expect(result.filterNoticeDismissedForPatientId).toBeNull();
+    expect(result.lastTrackedDischargePatientId).toBeNull();
   });
 });
