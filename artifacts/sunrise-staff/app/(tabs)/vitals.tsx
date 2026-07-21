@@ -415,7 +415,11 @@ export default function VitalsScreen() {
   // ── Score filter bar rehydration guard ──────────────────────────────────────
   // While isRehydrating: show a shimmer skeleton so the bar is never blank.
   // Once rehydrating flips to false: fade in the real chip bar.
-  const filterBarOpacity = useRef(new Animated.Value(0)).current;
+  // Task #316: if isRehydrating is already false on mount (e.g. tab remount
+  // after context has fully loaded), start at opacity 1 so the chip bar is
+  // visible immediately with no 150 ms blind flash.
+  const loadedOnMountVitals = useRef(!isRehydrating).current;
+  const filterBarOpacity = useRef(new Animated.Value(loadedOnMountVitals ? 1 : 0)).current;
   const shimmerAnim = useRef(new Animated.Value(0.45)).current;
   const shimmerLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -430,14 +434,16 @@ export default function VitalsScreen() {
       );
       shimmerLoopRef.current.start();
     } else {
-      // Stop shimmer and fade in the real chip bar
+      // Stop shimmer and fade in the real chip bar (skip if already at 1 on mount)
       shimmerLoopRef.current?.stop();
       shimmerLoopRef.current = null;
-      Animated.timing(filterBarOpacity, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
+      if (!loadedOnMountVitals) {
+        Animated.timing(filterBarOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }).start();
+      }
     }
     return () => {
       shimmerLoopRef.current?.stop();

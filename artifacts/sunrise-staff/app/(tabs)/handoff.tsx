@@ -305,11 +305,24 @@ export default function HandoffScreen() {
     };
   }, [loaded]);
 
+  // mountedRef prevents stale promise callbacks from calling setState on an
+  // unmounted component after a force-quit + relaunch (Task #313 / #315).
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   // Load persisted notes + shift whenever the calendar-day storage keys change
   // (on mount and after each midnight rollover).  Both keys resolve together
   // before `loaded` is set, so neither the shift selector nor the handoff notes
   // can flash with stale defaults.  Stale entries from previous calendar days
   // are pruned after each rollover (mirrors MARContext).
+  //
+  // Task #315: the .catch() ensures `loaded` always becomes true even if the
+  // .then() callback itself throws unexpectedly, preventing a permanent freeze.
+  // loadHandoffState internally catches storage errors and always resolves, so
+  // the outer .catch() is a belt-and-suspenders guard for the state setters.
   React.useEffect(() => {
     // Reset the guard so persist effects cannot fire with yesterday's state
     // while the fresh load for the new key is in flight.
@@ -326,10 +339,15 @@ export default function HandoffScreen() {
       { notes: storageKeyNotes, shift: storageKeyShift },
       { notes: defaultNotes, shift: 'day' },
     ).then(({ notes: savedNotes, shift: savedShift }) => {
+      if (!mountedRef.current) return;
       setNotes(savedNotes);
       setShift(savedShift);
       loadedForKeyRef.current = storageKeyNotes;
       setLoaded(true);
+    }).catch(() => {
+      // Fallback: even if the .then() callback throws, clear the guard so the
+      // screen doesn't stay permanently invisible (Task #313 / #315).
+      if (mountedRef.current) setLoaded(true);
     });
   }, [storageKeyNotes, storageKeyShift]);
 
@@ -511,7 +529,17 @@ export default function HandoffScreen() {
               <HandoffCard
                 patient={item}
                 note={notes[item.id] ?? ''}
-                onNoteChange={n => setNotes(prev => ({ ...prev, [item.id]: n }))}
+                onNoteChange={n => {
+                  // Task #312: write-through — persist immediately so a force-quit
+                  // between the state update and the async persist effect can't
+                  // drop the nurse's in-progress note.
+                  const next = { ...notesRef.current, [item.id]: n };
+                  notesRef.current = next;
+                  setNotes(next);
+                  if (isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) {
+                    saveJsonToStorage(AsyncStorage, storageKeyNotes, next);
+                  }
+                }}
               />
             )}
             contentContainerStyle={[styles.listContent, { paddingBottom: 120 + (Platform.OS === 'web' ? 34 : 0) }]}
