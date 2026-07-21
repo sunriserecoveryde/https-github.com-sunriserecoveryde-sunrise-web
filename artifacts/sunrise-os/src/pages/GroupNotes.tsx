@@ -83,6 +83,18 @@ const NOTE_STATUS_COLORS: Record<string, string> = {
   None: 'bg-gray-100 text-slate',
 };
 
+// Participation levels — Kipu-inspired: per-patient individual notes within a group note
+type PartLevel = 'Active' | 'Moderate' | 'Passive' | 'Late' | 'Absent' | 'Excused';
+
+const PART_LEVEL_STYLES: Record<PartLevel, string> = {
+  Active:   'bg-green-100 text-green-800 border-green-300',
+  Moderate: 'bg-blue-100 text-blue-800 border-blue-300',
+  Passive:  'bg-amber-100 text-amber-800 border-amber-300',
+  Late:     'bg-orange-100 text-orange-800 border-orange-300',
+  Absent:   'bg-red-100 text-red-800 border-red-300',
+  Excused:  'bg-gray-100 text-slate border-gray-300',
+};
+
 export function GroupNotes({ navigate, readOnly }: Props) {
   const editRoles = getRolesWithEditAccess('GroupNotes');
   const [selectedDate, setSelectedDate] = useState<'2026-07-18' | '2026-07-17'>('2026-07-18');
@@ -90,6 +102,28 @@ export function GroupNotes({ navigate, readOnly }: Props) {
   const [noteText, setNoteText] = useState('');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
   const [view, setView] = useState<'Sessions' | 'Attendance' | 'Group Analytics' | 'Facilitator Stats' | 'Curriculum Map' | 'Documentation Standards'>('Sessions');
+  // Per-patient participation map, keyed by sessionId → patientId → { level, note }
+  const [participationMap, setParticipationMap] = useState<Record<string, Record<string, { level: PartLevel; note: string }>>>({});
+
+  function getSessionPatients(session: GroupSession) {
+    return MOCK_PATIENTS.filter(p =>
+      session.program === 'All Programs' || p.program === session.program
+    );
+  }
+
+  function setParticipation(sessionId: string, patientId: string, field: 'level' | 'note', value: string) {
+    setParticipationMap(prev => ({
+      ...prev,
+      [sessionId]: {
+        ...prev[sessionId],
+        [patientId]: {
+          level: (prev[sessionId]?.[patientId]?.level ?? 'Passive') as PartLevel,
+          note: prev[sessionId]?.[patientId]?.note ?? '',
+          [field]: value,
+        },
+      },
+    }));
+  }
 
   const todaySessions = SESSIONS.filter(s => s.date === selectedDate);
   const todayComplete = todaySessions.filter(s => s.status === 'Completed').length;
@@ -286,16 +320,63 @@ export function GroupNotes({ navigate, readOnly }: Props) {
               )}
 
               {(showNoteEditor || (!selected.note && selected.status === 'Completed')) && (
-                <div className="mt-4">
-                  <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">
+                <div className="mt-4 space-y-3">
+                  <div className="text-xs font-semibold text-slate uppercase tracking-wide">
                     {selected.note ? 'Edit Note' : 'Write Group Note'}
                   </div>
-                  <textarea
-                    value={noteText}
-                    onChange={e => setNoteText(e.target.value)}
-                    placeholder="Document session themes, individual participation, therapeutic interventions, follow-up actions..."
-                    className="w-full border border-border rounded-lg p-3 text-sm min-h-[120px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50"
-                  />
+
+                  {/* ── Per-patient participation grid (Kipu-inspired) ── */}
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-50 border-b border-border flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate uppercase tracking-wider">Patient Participation</span>
+                      <span className="text-[10px] text-slate">Record participation level + individual note per patient</span>
+                    </div>
+                    <div className="divide-y divide-border/60">
+                      {getSessionPatients(selected).slice(0, 12).map(p => {
+                        const part = participationMap[selected.id]?.[p.id];
+                        const level = part?.level ?? 'Moderate';
+                        return (
+                          <div key={p.id} className="flex items-center gap-2 px-3 py-2">
+                            <div className="w-[130px] font-medium text-navy text-xs flex-shrink-0 truncate">
+                              {p.firstName} {p.lastName}
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0">
+                              {(['Active', 'Moderate', 'Passive', 'Late', 'Absent', 'Excused'] as PartLevel[]).map(lv => (
+                                <button
+                                  key={lv}
+                                  disabled={readOnly}
+                                  onClick={() => setParticipation(selected.id, p.id, 'level', lv)}
+                                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded border transition-all ${
+                                    level === lv ? PART_LEVEL_STYLES[lv] : 'bg-white text-slate border-border hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {lv}
+                                </button>
+                              ))}
+                            </div>
+                            <input
+                              disabled={readOnly}
+                              value={part?.note ?? ''}
+                              onChange={e => setParticipation(selected.id, p.id, 'note', e.target.value)}
+                              placeholder="Individual note (optional)…"
+                              className="flex-1 text-xs border border-border rounded px-2 py-1 min-w-0 focus:outline-none focus:ring-1 focus:ring-orange/50 disabled:opacity-60"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Group narrative */}
+                  <div>
+                    <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Group Narrative Note</div>
+                    <textarea
+                      value={noteText}
+                      onChange={e => setNoteText(e.target.value)}
+                      placeholder="Document session themes, overall group dynamics, therapeutic interventions, follow-up actions…"
+                      className="w-full border border-border rounded-lg p-3 text-sm min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50"
+                    />
+                  </div>
                   <div className="flex gap-2 mt-2">
                     <LockedButton locked={readOnly} editRoles={editRoles} className="btn-primary text-sm px-4 py-2">Sign Note</LockedButton>
                     <LockedButton locked={readOnly} editRoles={editRoles} className="btn-outline text-sm px-4 py-2">Save Draft</LockedButton>

@@ -85,6 +85,7 @@ const ALL_SECTIONS: SidebarSection[] = [
       { id: 'RiskDashboard', label: 'Risk Dashboard', icon: AlertTriangle },
       { id: 'RecoveryEngagementScore', label: 'Recovery Engagement Score', icon: TrendingUp },
       { id: 'OutcomeTracking', label: 'Outcome Tracking', icon: BarChart3 },
+      { id: 'MeasurementBasedCare', label: 'Measurement-Based Care', icon: ClipboardCheck },
       { id: 'PopulationAnalytics', label: 'Population Analytics', icon: LineChart },
       { id: 'UADrugTesting', label: 'UA / Drug Testing', icon: Droplets },
       { id: 'IncidentReporting', label: 'Incident Reports', icon: Siren },

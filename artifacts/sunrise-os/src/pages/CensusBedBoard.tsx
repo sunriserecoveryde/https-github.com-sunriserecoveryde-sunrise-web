@@ -107,11 +107,39 @@ function BedCard({ patient, navigate }: { patient: Patient; navigate: (s: Screen
           </div>
         </div>
 
-        {/* LOS */}
-        <div className="text-[10px] text-slate mb-2 flex items-center gap-1">
-          <Clock className="w-3 h-3" /> LOS: <strong className="text-navy">{patient.los}d</strong>
-          {vs && <span className="ml-1.5 text-slate-400">· BP {vs.bp} · HR {vs.hr}</span>}
-        </div>
+        {/* LOS — BestNotes-inspired: flag patients approaching or exceeding expected LOS */}
+        {(() => {
+          // Expected LOS benchmarks per program (ASAM LOC guidelines)
+          const LOS_BENCHMARKS: Record<string, { target: number; max: number }> = {
+            Residential: { target: 21, max: 35 },
+            PHP: { target: 10, max: 21 },
+            IOP: { target: 30, max: 60 }, // IOP measured in calendar days
+          };
+          const bench = LOS_BENCHMARKS[patient.program];
+          const losStatus = bench
+            ? patient.los > bench.max
+              ? 'exceeded'
+              : patient.los >= bench.target
+                ? 'approaching'
+                : 'normal'
+            : 'normal';
+          return (
+            <div className="text-[10px] text-slate mb-2 flex items-center gap-1 flex-wrap">
+              <Clock className="w-3 h-3" />
+              <span>LOS:</span>
+              <strong className={losStatus === 'exceeded' ? 'text-red-700' : losStatus === 'approaching' ? 'text-amber-700' : 'text-navy'}>
+                {patient.los}d
+              </strong>
+              {losStatus === 'exceeded' && (
+                <span className="text-[9px] font-bold bg-red-100 text-red-700 px-1 rounded border border-red-200">LOS ⚠ Exceeded {bench!.max}d</span>
+              )}
+              {losStatus === 'approaching' && (
+                <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1 rounded border border-amber-200">Near target</span>
+              )}
+              {vs && <span className="ml-0.5 text-slate-400">· BP {vs.bp}</span>}
+            </div>
+          );
+        })()}
 
         {/* CIWA/COWS scores */}
         {wd && (

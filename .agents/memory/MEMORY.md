@@ -2,3 +2,4 @@
 - [Sunrise OS auth & permission architecture](sunrise-os-auth.md) — AuthContext + RoleProvider wiring, permissionStore override pattern, login flow
 - [Sunrise Staff mobile](sunrise-staff-mobile.md) — Expo companion app structure, data model, role context, key pitfalls
 - [MD/DE credential compliance](md-de-compliance.md) — Facilities in Rockville MD + Wilmington DE; MD BHA/ADAA and IC&RC/DSAMH credential pathways; all TN refs replaced
+- [Competitive feature adoptions](competitive-features.md) — MBC (Valant), GroupNotes participation (Kipu), LOS alerts (BestNotes), ProgressNotes Templates tab fix

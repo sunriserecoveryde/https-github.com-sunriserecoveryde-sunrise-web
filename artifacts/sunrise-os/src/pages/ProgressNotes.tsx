@@ -450,7 +450,102 @@ export function ProgressNotes({ navigate, readOnly }: { navigate: (s: Screen) =>
         </div>
       </div>
 
-      {/* Co-sign Queue panel */}
+      {/* Templates tab — ICANotes-inspired: structured templates that load into the note form */}
+      {activeTab === 'Templates' && (
+        <div className="card space-y-5">
+          <div>
+            <h2 className="font-bold text-navy text-base mb-1 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-blue-500" /> Note Templates
+            </h2>
+            <p className="text-sm text-slate">Pre-approved clinical documentation templates — select "Use Template" to pre-fill the New Note form with structured prompts.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-5">
+            {[
+              {
+                title: 'Individual — Motivational Interviewing Session (BIRP)',
+                type: 'Individual', format: 'BIRP',
+                content: {
+                  'Behavior': 'Client presented [calm / guarded / agitated / tearful]. Made eye contact [consistently / intermittently / minimally]. Reported [describe current experience briefly].',
+                  'Intervention': 'Used [MI / CBT / Psychoeducation / Trauma-informed] approach. Explored [ambivalence / triggers / coping strategies / support system]. Provided [reflection / affirmation / open-ended questions].',
+                  'Response': 'Client [engaged readily / required prompting / disengaged at times]. Demonstrated [insight / resistance / openness]. Denied SI/HI. Safety plan reviewed: [current / updated / initiated].',
+                  'Plan': 'Continue [frequency] individual sessions. Goals for next session: [goal]. Follow up on [specific topic]. Coordinate with [team member] re: [issue].',
+                }
+              },
+              {
+                title: 'Group — Relapse Prevention (DAP)',
+                type: 'Group', format: 'DAP',
+                content: {
+                  'Data': 'Client attended [group name] group with [N] peers. Arrived [on time / late — N minutes]. Participation [active / minimal / none]. [Brief behavioral description — facial expression, posture, peer interaction].',
+                  'Assessment': 'Client is [engaging / struggling / resistant] with group milieu. [Specific observation about therapeutic progress or barriers]. [Co-occurring factors influencing group behavior if relevant].',
+                  'Plan': '[Continue / modify] group assignment. Short-term goal: [goal]. Discuss [specific topic] in next individual session. Monitor for [specific behavior] in group.',
+                }
+              },
+              {
+                title: 'Nursing — Withdrawal Assessment (DAP)',
+                type: 'Nursing', format: 'DAP',
+                content: {
+                  'Data': 'CIWA-Ar / COWS score: [score] at [time]. VS: BP [__/__], HR [__], RR [__], Temp [__], SpO₂ [__]%. Patient reports [describe symptoms]. Current medications administered: [list PRN or standing meds given].',
+                  'Assessment': 'Withdrawal [improving / stable / worsening] per protocol. Score [above / below] alert threshold of [N]. [Note any emergent symptoms — tremor, diaphoresis, hallucinations].',
+                  'Plan': 'Continue Q[N]H CIWA/COWS monitoring per protocol. Notify MD if score ≥ [threshold]. Next assessment due at [time]. [Additional nursing interventions — IV fluids, comfort measures, safety checks].',
+                }
+              },
+              {
+                title: 'Medical — Physician Progress Note (SOAP)',
+                type: 'Medical', format: 'DAP',
+                content: {
+                  'Data': 'Patient seen at [location]. Subjective: [patient-reported symptoms, complaints, response to treatment]. Objective: VS [__], Labs reviewed: [findings]. Withdrawal score: CIWA [__] / COWS [__]. Exam: [relevant physical findings].',
+                  'Assessment': '[Primary diagnosis] [improving / stable / worsening]. [Secondary diagnoses with status]. [Withdrawal protocol status]. [MAT response — dose, tolerability, COWS/CIWA trend].',
+                  'Plan': '[Medication changes or continuations]. [Lab orders]. [Referrals]. [Level of care assessment — is current LOC appropriate?]. Follow up [timing].',
+                }
+              },
+              {
+                title: 'Psychiatric — Evaluation Follow-up (DAP)',
+                type: 'Psychiatric', format: 'DAP',
+                content: {
+                  'Data': 'MSE: Appearance [appropriate/disheveled], Behavior [cooperative/agitated], Speech [normal/pressured/slowed], Mood [euthymic/dysphoric/anxious], Affect [congruent/labile/flat], Thought process [linear/tangential], SI [none / passive ideation], HI [none]. PHQ-9: [score]. GAD-7: [score].',
+                  'Assessment': 'Co-occurring psychiatric diagnosis: [diagnosis]. Stability: [stable / improving / decompensating]. Substance-induced vs. independent differential. C-SSRS risk: [low / moderate / high].',
+                  'Plan': '[Medication orders — new, dose change, or continuations]. [Safety plan status]. [Refer to group / individual / family therapy]. Follow up [timing].',
+                }
+              },
+              {
+                title: 'Family Therapy Session (BIRP)',
+                type: 'Individual', format: 'BIRP',
+                content: {
+                  'Behavior': 'Patient and [family member relationship] attended family session. Interaction quality: [describe — supportive / conflictual / emotional]. Patient [expressed / avoided / minimized] impact of substance use on family.',
+                  'Intervention': 'Facilitated [communication exercises / psychoeducation on SUD / boundary-setting discussion / family systems work]. Addressed [codependency / enabling / communication patterns].',
+                  'Response': 'Family member(s) [engaged / resistant / tearful / disengaged]. Patient [receptive / defensive / open to family input]. Progress noted: [describe any shift or insight].',
+                  'Plan': 'Recommend [family follow-up frequency]. Refer family to Al-Anon / Nar-Anon resources. [Goals for next family session]. Coordinate with primary counselor.',
+                }
+              },
+            ].map(tmpl => (
+              <div key={tmpl.title} className="border border-border rounded-xl p-4 hover:shadow-sm transition-shadow">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">{tmpl.type}</span>
+                  <span className="text-[10px] font-bold bg-slate-100 text-slate px-1.5 py-0.5 rounded">{tmpl.format}</span>
+                  <h3 className="font-semibold text-navy text-xs ml-1 flex-1">{tmpl.title}</h3>
+                </div>
+                {Object.entries(tmpl.content).map(([field, text]) => (
+                  <div key={field} className="mb-2">
+                    <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-0.5">{field}</div>
+                    <div className="text-[10px] text-navy bg-gray-50 rounded p-2 leading-relaxed italic">{text}</div>
+                  </div>
+                ))}
+                <LockedButton
+                  locked={readOnly}
+                  editRoles={editRoles}
+                  onClick={() => setShowNewForm(true)}
+                  className="mt-3 text-xs px-3 py-1.5 bg-navy text-white rounded hover:bg-navy/90 font-medium"
+                >
+                  Use Template
+                </LockedButton>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Co-sign Queue panel — always visible except on Templates tab */}
+      {activeTab !== 'Templates' && (
       <div className="card">
         <h2 className="font-bold text-navy text-base mb-4 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500" /> Co-sign Queue
@@ -472,88 +567,8 @@ export function ProgressNotes({ navigate, readOnly }: { navigate: (s: Screen) =>
             <div className="text-center py-6 text-slate text-sm">All notes are co-signed ✓</div>
           )}
         </div>
-
-        {activeTab === 'Templates' && (
-          <div className="p-5 space-y-5">
-            <div className="text-sm text-slate">Pre-approved note templates organized by type — use as starting points for BIRP or DAP documentation.</div>
-            <div className="grid grid-cols-2 gap-5">
-              {[
-                {
-                  title: 'Individual — Motivational Interviewing Session (BIRP)',
-                  type: 'Individual', format: 'BIRP',
-                  content: {
-                    'Behavior': 'Client presented [calm / guarded / agitated / tearful]. Made eye contact [consistently / intermittently / minimally]. Reported [describe current experience briefly].',
-                    'Intervention': 'Used [MI / CBT / Psychoeducation / Trauma-informed] approach. Explored [ambivalence / triggers / coping strategies / support system]. Provided [reflection / affirmation / open-ended questions].',
-                    'Response': 'Client [engaged readily / required prompting / disengaged at times]. Demonstrated [insight / resistance / openness]. Denied SI/HI. Safety plan reviewed: [current / updated / initiated].',
-                    'Plan': 'Continue [frequency] individual sessions. Goals for next session: [goal]. Follow up on [specific topic]. Coordinate with [team member] re: [issue].',
-                  }
-                },
-                {
-                  title: 'Group — Relapse Prevention (DAP)',
-                  type: 'Group', format: 'DAP',
-                  content: {
-                    'Data': 'Client attended [group name] group with [N] peers. Arrived [on time / late — N minutes]. Participation [active / minimal / none]. [Brief behavioral description — facial expression, posture, peer interaction].',
-                    'Assessment': 'Client is [engaging / struggling / resistant] with group milieu. [Specific observation about therapeutic progress or barriers]. [Co-occurring factors influencing group behavior if relevant].',
-                    'Plan': '[Continue / modify] group assignment. Short-term goal: [goal]. Discuss [specific topic] in next individual session. Monitor for [specific behavior] in group.',
-                  }
-                },
-                {
-                  title: 'Nursing — Withdrawal Assessment (DAP)',
-                  type: 'Nursing', format: 'DAP',
-                  content: {
-                    'Data': 'CIWA-Ar / COWS score: [score] at [time]. VS: BP [__/__], HR [__], RR [__], Temp [__], SpO₂ [__]%. Patient reports [describe symptoms]. Current medications administered: [list PRN or standing meds given].',
-                    'Assessment': 'Withdrawal [improving / stable / worsening] per protocol. Score [above / below] alert threshold of [N]. [Note any emergent symptoms — tremor, diaphoresis, hallucinations].',
-                    'Plan': 'Continue Q[N]H CIWA/COWS monitoring per protocol. Notify MD if score ≥ [threshold]. Next assessment due at [time]. [Additional nursing interventions — IV fluids, comfort measures, safety checks].',
-                  }
-                },
-                {
-                  title: 'Medical — Physician Progress Note (SOAP)',
-                  type: 'Medical', format: 'DAP',
-                  content: {
-                    'Data': 'Patient seen at [location]. Subjective: [patient-reported symptoms, complaints, response to treatment]. Objective: VS [__], Labs reviewed: [findings]. Withdrawal score: CIWA [__] / COWS [__]. Exam: [relevant physical findings].',
-                    'Assessment': '[Primary diagnosis] [improving / stable / worsening]. [Secondary diagnoses with status]. [Withdrawal protocol status]. [MAT response — dose, tolerability, COWS/CIWA trend].',
-                    'Plan': '[Medication changes or continuations]. [Lab orders]. [Referrals]. [Level of care assessment — is current LOC appropriate?]. Follow up [timing].',
-                  }
-                },
-                {
-                  title: 'Psychiatric — Psychiatric Evaluation Follow-up (DAP)',
-                  type: 'Psychiatric', format: 'DAP',
-                  content: {
-                    'Data': 'Patient seen for psychiatric follow-up. MSE: Appearance [appropriate/disheveled], Behavior [cooperative/agitated], Speech [normal rate/pressured/slowed], Mood [euthymic/dysphoric/anxious/elevated], Affect [congruent/labile/flat], Thought process [linear/tangential/circumstantial], Thought content [no SI/HI / SI: passive ideation / HI: none], Insight [intact/impaired], Judgment [intact/impaired].',
-                    'Assessment': 'Co-occurring psychiatric diagnosis: [diagnosis]. Stability: [stable / improving / decompensating]. Substance-induced vs. independent [note clinical differentiation if applicable]. Safety: [low / moderate / high risk — C-SSRS score].',
-                    'Plan': '[Medication orders — new prescriptions, dose changes, or continuations]. [Safety plan status]. [Refer to group / individual / family therapy]. [Rescreen at next visit: C-SSRS]. Follow up [timing].',
-                  }
-                },
-                {
-                  title: 'Family Therapy Session (BIRP)',
-                  type: 'Individual', format: 'BIRP',
-                  content: {
-                    'Behavior': 'Patient and [family member relationship] attended family session. Interaction quality: [describe — supportive / conflictual / emotional]. Patient [expressed / avoided / minimized] impact of substance use on family.',
-                    'Intervention': 'Facilitated [communication exercises / psychoeducation on SUD / boundary-setting discussion / family systems work]. Addressed [codependency / enabling / enabling behaviors / communication patterns].',
-                    'Response': 'Family member(s) [engaged / resistant / tearful / disengaged]. Patient [receptive / defensive / open to family input]. Progress noted: [describe any shift or insight].',
-                    'Plan': 'Recommend [family follow-up frequency]. Refer family to Al-Anon / Nar-Anon resources. [Discuss goals for next family session]. Coordinate with primary counselor re: family system themes in individual work.',
-                  }
-                },
-              ].map(tmpl => (
-                <div key={tmpl.title} className="border border-border rounded-xl p-4 hover:shadow-sm transition-shadow">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">{tmpl.type}</span>
-                    <span className="text-[10px] font-bold bg-slate-100 text-slate px-1.5 py-0.5 rounded">{tmpl.format}</span>
-                    <h3 className="font-semibold text-navy text-xs ml-1 flex-1">{tmpl.title}</h3>
-                  </div>
-                  {Object.entries(tmpl.content).map(([field, text]) => (
-                    <div key={field} className="mb-2">
-                      <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-0.5">{field}</div>
-                      <div className="text-[10px] text-navy bg-gray-50 rounded p-2 leading-relaxed italic">{text}</div>
-                    </div>
-                  ))}
-                  <LockedButton locked={readOnly} className="mt-3 text-xs px-3 py-1.5 bg-navy text-white rounded hover:bg-navy/90 font-medium">Use Template</LockedButton>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+      )}
     </div>
   );
 }
