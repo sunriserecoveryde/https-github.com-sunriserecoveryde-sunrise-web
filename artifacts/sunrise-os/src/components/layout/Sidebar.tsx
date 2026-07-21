@@ -11,7 +11,7 @@ import {
   ArrowLeftRight, Star, CreditCard, MapPin, BookUser, Download,
   Video, UserCheck, FolderOpen, DollarSign, BookOpen, HandHelping,
   Award, ClipboardCheck, MessageSquare, ListOrdered, Grid3X3,
-  Eye, Sparkles
+  Eye, Sparkles, Brain
 } from 'lucide-react';
 import { Screen } from '../../App';
 import { useRole } from '../../context/RoleContext';
@@ -82,6 +82,7 @@ const ALL_SECTIONS: SidebarSection[] = [
   {
     title: 'RISK & OUTCOMES',
     items: [
+      { id: 'ClinicalIntelligence', label: 'Clinical Intelligence', icon: Brain, badge: 3 },
       { id: 'RiskDashboard', label: 'Risk Dashboard', icon: AlertTriangle },
       { id: 'RecoveryEngagementScore', label: 'Recovery Engagement Score', icon: TrendingUp },
       { id: 'OutcomeTracking', label: 'Outcome Tracking', icon: BarChart3 },

@@ -61,6 +61,7 @@ import { StaffAdmin } from './pages/StaffAdmin';
 import { WithdrawalMonitor } from './pages/WithdrawalMonitor';
 import { AIAssistant } from './pages/AIAssistant';
 import { MeasurementBasedCare } from './pages/MeasurementBasedCare';
+import { ClinicalIntelligence } from './pages/ClinicalIntelligence';
 import { LoginPage } from './pages/LoginPage';
 import { AccessDenied } from './components/common/AccessDenied';
 import { ReadOnlyBanner } from './components/common/ReadOnlyBanner';
@@ -130,7 +131,8 @@ export type Screen =
   | 'StaffAdmin'
   | 'WithdrawalMonitor'
   | 'AIAssistant'
-  | 'DemoPatientDetail';
+  | 'DemoPatientDetail'
+  | 'ClinicalIntelligence';
 
 // ─── Inner app (needs RoleContext) ───────────────────────────────────────────
 
@@ -204,6 +206,7 @@ function AppInner() {
       case 'HelpSupport':             return withAccess('HelpSupport',             <HelpSupport navigate={navigateTo} />);
       case 'UADrugTesting':           return withAccessReadOnlyProp('UADrugTesting',           ro => <UADrugTesting navigate={navigateTo} readOnly={ro} />);
       case 'MeasurementBasedCare':    return withAccessReadOnlyProp('MeasurementBasedCare',    ro => <MeasurementBasedCare navigate={navigateTo} readOnly={ro} />);
+     case 'ClinicalIntelligence':   return withAccessReadOnlyProp('ClinicalIntelligence',   ro => <ClinicalIntelligence navigate={navigateTo} readOnly={ro} />);
       case 'IncidentReporting':       return withAccessReadOnlyProp('IncidentReporting',       ro => <IncidentReporting navigate={navigateTo} readOnly={ro} />);
       case 'StaffScheduling':         return withAccessReadOnlyProp('StaffScheduling',         ro => <StaffScheduling navigate={navigateTo} readOnly={ro} />);
       case 'MATManagement':           return withAccessReadOnlyProp('MATManagement',   ro => <MATManagement navigate={navigateTo} readOnly={ro} />);

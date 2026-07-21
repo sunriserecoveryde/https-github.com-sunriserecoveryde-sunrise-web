@@ -159,7 +159,7 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'HIE',
     state: 'Maryland',
     website: 'https://crisphealth.org',
-    description: 'Maryland's state-designated Health Information Exchange (HIE). Provides ADT notifications, CCD exchange, and care coordination alerts.',
+    description: "Maryland's state-designated Health Information Exchange (HIE). Provides ADT notifications, CCD exchange, and care coordination alerts.",
     relevance: 'Sunrise Rockville is connected to CRISP for bi-directional record exchange and ADT alerts. Required for Maryland Medicaid value-based programs.',
   },
   {
@@ -226,7 +226,7 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'HIE',
     state: 'Delaware',
     website: 'https://www.dhin.org',
-    description: 'Delaware's state-designated Health Information Exchange. Provides ADT notifications and clinical document exchange for Delaware providers.',
+    description: "Delaware's state-designated Health Information Exchange. Provides ADT notifications and clinical document exchange for Delaware providers.",
     relevance: 'Sunrise Wilmington participates in DHIN for care coordination and ADT alerts for Delaware patients.',
   },
   {
@@ -471,7 +471,7 @@ export const DE_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     ceuRequiredPerCycle: 40,
     renewalCycleYears: 2,
     scope: 'Licensed SUD counselor in Delaware. Independent practice. Licensed by Delaware Division of Professional Regulation.',
-    notes: 'Delaware\'s state-licensed SUD counselor credential. Issued by Delaware DPR (Board of Mental Health & Chemical Dependency Professionals).',
+    notes: "Delaware\'s state-licensed SUD counselor credential. Issued by Delaware DPR (Board of Mental Health & Chemical Dependency Professionals).",
     qualifiesFor: ['Independent SUD counseling (DE)', 'Supervision', 'QBHP (DE)'],
   },
   {
@@ -499,7 +499,7 @@ export const DE_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     ceuRequiredPerCycle: 20,
     renewalCycleYears: 2,
     scope: 'Advanced peer support. Can lead peer support groups and mentor PRS staff. Recognized by DSAMH and some payers for reimbursement.',
-    notes: 'Delaware\'s advanced peer credential. CPRS services may be billable to DE Medicaid (Diamond State Health Plan) under certain program types.',
+    notes: "Delaware\'s advanced peer credential. CPRS services may be billable to DE Medicaid (Diamond State Health Plan) under certain program types.",
     qualifiesFor: ['Advanced peer support (DE)', 'Group leadership', 'PRS mentorship'],
   },
   {
@@ -513,7 +513,7 @@ export const DE_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     practiceHoursRequired: 3000,
     ceuRequiredPerCycle: 40,
     renewalCycleYears: 2,
-    scope: 'Licensed mental health counseling in Delaware. Can diagnose mental health conditions. Delaware\'s equivalent of LPC/LCPC in other states.',
+    scope: "Licensed mental health counseling in Delaware. Can diagnose mental health conditions. Delaware\'s equivalent of LPC/LCPC in other states.",
     notes: 'Primary counseling license in Delaware. Board of Mental Health and Chemical Dependency Professionals under Delaware DPR.',
     qualifiesFor: ['Independent MH counseling (DE)', 'Diagnosis (DSM-5)', 'QBHP (DE)'],
   },
