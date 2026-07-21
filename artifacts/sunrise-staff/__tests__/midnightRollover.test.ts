@@ -1296,3 +1296,161 @@ describe('combined MAR + Checks rollover — single checkDateRollover drives bot
     expect(storage.store['@unrelated_app_key']).toBeDefined();
   });
 });
+
+// ─── Tests: force-quit during the rollover window ────────────────────────────
+//
+// Scenario: the midnight rollover sequence has started (pruneStaleStorageKeys
+// ran and removed the previous-day keys) but the nurse force-quit the app
+// before loadMARState / loadChecksState resolved and before any new-day key
+// was written to storage.
+//
+// On relaunch the store contains:
+//   • No current-day key  (the load never completed, so persist never ran)
+//   • No previous-day key (pruned before the kill)
+//
+// The app must:
+//   1. Return { adminMap: {}, loaded: true } for the MAR — clean slate, no crash
+//   2. Return default checks (completed=false for every patient) for Checks
+//   3. Open the isPersistSafe gate as soon as the load resolves, so the first
+//      real toggle/check-in can be persisted normally
+
+describe('force-quit during rollover window — relaunch with empty storage', () => {
+  const defaultChecks: Record<string, CheckEntry> = {
+    p1: { ...DEFAULT_CHECK },
+    p2: { ...DEFAULT_CHECK },
+  };
+
+  // The "killed mid-rollover" storage state: prune already ran (old keys gone),
+  // but the load never finished so no new-day key was ever written.
+  function makeMidRolloverStorage() {
+    // Completely empty — no MAR key and no Checks key for any date.
+    return makeMemoryStorage({});
+  }
+
+  it('loadMARState returns { adminMap: {}, loaded: true } when the new-day key is absent', async () => {
+    const storage  = makeMidRolloverStorage();
+    const marKey   = makeMarKey(AFTER_MIDNIGHT);   // @sunrise_mar_2026-07-20
+
+    // Confirm the key is genuinely missing (simulating post-prune, pre-write state)
+    expect(storage.store[marKey]).toBeUndefined();
+
+    const { adminMap, loaded } = await loadMARState(storage, marKey);
+
+    // Must resolve (no hang, no crash) and return a clean slate
+    expect(loaded).toBe(true);
+    expect(adminMap).toEqual({});
+  });
+
+  it('loadChecksState returns default checks (completed=false) when the new-day key is absent', async () => {
+    const storage    = makeMidRolloverStorage();
+    const checksKey  = makeChecksKey(AFTER_MIDNIGHT);  // @sunrise_checks_2026-07-20
+
+    // Confirm the key is genuinely missing
+    expect(storage.store[checksKey]).toBeUndefined();
+
+    const { checks, loaded } = await loadChecksState(storage, checksKey, defaultChecks);
+
+    // Must resolve and return all-default entries
+    expect(loaded).toBe(true);
+    expect(checks['p1']?.completed).toBe(false);
+    expect(checks['p2']?.completed).toBe(false);
+    // Scalar defaults must also be intact (not carried over from a previous session)
+    expect(checks['p1']?.mood).toBe(5);
+    expect(checks['p1']?.cravings).toBe(5);
+    expect(checks['p1']?.oriented).toBe(true);
+    expect(checks['p1']?.uaCollected).toBe(false);
+  });
+
+  it('isPersistSafe gate opens after the first post-relaunch load, allowing the initial write', async () => {
+    const storage    = makeMidRolloverStorage();
+    const marKey     = makeMarKey(AFTER_MIDNIGHT);
+
+    // On relaunch: loadedForKey starts null (ref cleared before each async read)
+    let loadedForKey: string | null = null;
+
+    // Guard is closed before the load completes
+    expect(isPersistSafe(false, loadedForKey, marKey)).toBe(false);
+    expect(isPersistSafe(true,  loadedForKey, marKey)).toBe(false);  // stale marLoaded
+
+    // Load resolves (missing key → fallback {})
+    const { adminMap, loaded } = await loadMARState(storage, marKey);
+    loadedForKey = marKey;   // ref set once the async read succeeds
+
+    // Guard is now open — the first real toggle can be persisted
+    expect(loaded).toBe(true);
+    expect(isPersistSafe(true, loadedForKey, marKey)).toBe(true);
+
+    // The data that will be persisted is the clean default, not stale data
+    expect(adminMap).toEqual({});
+  });
+
+  it('full mid-rollover recovery: parallel load of both MAR and Checks returns clean slates', async () => {
+    // Mirrors the sequence MARContext runs on a relaunch that follows a
+    // force-quit that happened after pruning but before any new-day write:
+    //   1. prune already ran before the kill — both old keys are gone
+    //   2. On relaunch: load effects fire with an empty store
+    //   3. Both return defaults; guard refs are set; persists become safe
+
+    const storage    = makeMidRolloverStorage();
+    const marKey     = makeMarKey(AFTER_MIDNIGHT);
+    const checksKey  = makeChecksKey(AFTER_MIDNIGHT);
+
+    // Step 1: confirm the store is empty (simulating post-prune, pre-write crash)
+    expect(Object.keys(storage.store)).toHaveLength(0);
+
+    // Step 2: parallel load (as MARContext's independent load effects do)
+    let marLoadedKeyRef:    string | null = null;
+    let checksLoadedKeyRef: string | null = null;
+
+    const [marResult, checksResult] = await Promise.all([
+      loadMARState(storage, marKey),
+      loadChecksState(storage, checksKey, defaultChecks),
+    ]);
+
+    // Step 3: refs set after each load resolves (mirrors useRef updates in context)
+    marLoadedKeyRef    = marKey;
+    checksLoadedKeyRef = checksKey;
+
+    // Both screens show a clean slate — no crash, no hang, no phantom data
+    expect(marResult.loaded).toBe(true);
+    expect(marResult.adminMap).toEqual({});
+
+    expect(checksResult.loaded).toBe(true);
+    expect(checksResult.checks['p1']?.completed).toBe(false);
+    expect(checksResult.checks['p2']?.completed).toBe(false);
+
+    // Step 4: guards are now open for the first post-relaunch persist
+    expect(isPersistSafe(true, marLoadedKeyRef,    marKey)).toBe(true);
+    expect(isPersistSafe(true, checksLoadedKeyRef, checksKey)).toBe(true);
+  });
+
+  it('deferred storage: guard blocks stale persist even on mid-rollover relaunch', async () => {
+    // Even after a force-quit, if the load is somehow deferred (e.g. slow I/O
+    // on relaunch), the isPersistSafe gate must block any concurrent persist
+    // attempt until the load resolves with the (empty) new-day data.
+    const marKey = makeMarKey(AFTER_MIDNIGHT);
+
+    const { adapter, release } = makeDeferredStorage(); // no pre-populated data
+
+    // Load is in-flight; ref is null
+    let loadedForKey: string | null = null;
+    const loadPromise = loadMARState(adapter, marKey);
+
+    // Yield event loop — promise still pending
+    await Promise.resolve();
+
+    // Guard must be closed while the load is pending
+    expect(isPersistSafe(false, loadedForKey, marKey)).toBe(false);
+    expect(isPersistSafe(true,  loadedForKey, marKey)).toBe(false);  // stale marLoaded
+
+    // Release deferred storage → load resolves with fallback {}
+    release();
+    const { adminMap, loaded } = await loadPromise;
+    loadedForKey = marKey;
+
+    // Guard now open; data is a clean slate
+    expect(loaded).toBe(true);
+    expect(adminMap).toEqual({});
+    expect(isPersistSafe(true, loadedForKey, marKey)).toBe(true);
+  });
+});
