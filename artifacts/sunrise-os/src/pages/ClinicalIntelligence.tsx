@@ -100,8 +100,8 @@ const CDS_ALERTS = [
   {
     id: 'a2', severity: 'high', type: 'Safety Plan Required', patient: 'Jordan Hayes', timestamp: 'Today 09:02',
     title: 'PHQ-9 Item 9 positive — no active safety plan on file',
-    detail: 'PHQ-9 item 9 scored 2 ("More than half the days"). A formal Columbia-STS Safety Planning Intervention (SPI) is required per MD BHA protocol and SAMHSA Zero Suicide guidelines. No active safety plan found in chart.',
-    recommendation: 'Primary counselor or LCPC must complete safety plan before end of current shift. Document in chart and co-sign with clinical supervisor.',
+    detail: 'PHQ-9 item 9 scored 2 ("More than half the days"). Per COMAR 10.47.03.08B and the Maryland BHA Zero Suicide Initiative protocol, a Columbia Protocol Safety Planning Intervention (SPI) is required whenever suicidal ideation is endorsed. A formal written safety plan must be completed and co-signed before the client\'s next service encounter. No active safety plan found in chart.',
+    recommendation: 'Primary counselor (CAC-AD or higher) must complete Columbia SPI safety plan before end of current shift. Document in progress note and co-sign with BAS or LCPC/LCSW-C supervisor within 24 hours per COMAR 10.47.03. Notify medical director if imminent risk is assessed.',
     ack: false,
   },
   {
@@ -114,15 +114,15 @@ const CDS_ALERTS = [
   {
     id: 'a4', severity: 'moderate', type: 'ASAM Review Overdue', patient: 'Devon Patel', timestamp: 'Yesterday 11:30',
     title: 'ASAM Level of Care review overdue by 3 days',
-    detail: 'ASAM LOC review was due 2026-07-18 per MD BHA regulations (required every 7 days for Residential, 14 days for PHP/IOP). Chart shows last review completed 2026-07-11. Patient has been in PHP for 24 days with LOS exceeding initial target.',
-    recommendation: 'Schedule ASAM reassessment immediately. Determine if step-down to IOP is clinically appropriate. Document findings and update insurance authorization.',
+    detail: 'ASAM LOC review was due 2026-07-18 per COMAR 10.47.04 and MD BHA Provider Manual (LOC reassessment required every 14 days for PHP/ASAM 2.5 to support continued HealthChoice authorization). Chart shows last reassessment documented 2026-07-11. Patient has been in PHP for 24 days; initial target LOS was 21 days.',
+    recommendation: 'Complete ASAM LOCA reassessment and document in chart immediately. Determine if step-down to IOP (ASAM 2.1) is clinically appropriate per COMAR 10.47.05. Update HealthChoice MCO authorization and notify billing team. Per COMAR 10.47.04, reassessment findings must be reflected in the next treatment plan update.',
     ack: false,
   },
   {
     id: 'a5', severity: 'moderate', type: 'Treatment Plan Overdue', patient: 'Alex Morales', timestamp: 'Today 07:00',
-    title: 'Initial Treatment Plan not completed within 72-hour window',
-    detail: 'Patient admitted 2026-07-19. Per CARF standard CRS 3.L.1.c, the individualized treatment plan must be completed within 72 hours of admission. Current status: Draft only — no primary counselor signature.',
-    recommendation: 'Assigned counselor (T. Jackson, CAC-AD) must complete and sign by 2026-07-22 16:00. Supervisor co-sign required within 24 hours. Risk of CARF finding if unresolved.',
+    title: 'Initial Treatment Plan: preliminary plan overdue; comprehensive plan due by 5-working-day deadline',
+    detail: 'Patient admitted 2026-07-19 to Residential (ASAM 3.5). Per COMAR 10.47.03.08B: (1) a preliminary individualized care plan is required within 24 hours of admission, and (2) a comprehensive individualized treatment plan within 5 working days of admission. Chart shows only a partial draft — no counselor signature and no BAS co-signature. CARF standard 3.L.1.c additionally requires the plan to reflect individualized, measurable goals.',
+    recommendation: 'Assigned counselor T. Jackson (CAC-AD) must complete and sign the comprehensive treatment plan by 2026-07-26 (5 working days from admission). BAS James Collins must co-sign within 24 hours of counselor signature per COMAR 10.47.03.08B(2). A COMAR compliance finding will be recorded if plan is unsigned by the deadline — reportable to MD BHA at next facility audit.',
     ack: false,
   },
   {
@@ -327,7 +327,7 @@ export function ClinicalIntelligence({ navigate, readOnly }: Props) {
           {/* Evidence base footer */}
           <div className="card-sm flex items-center gap-3 text-xs text-slate">
             <Shield className="w-4 h-4 text-blue-400 flex-none" />
-            <span>Alert logic grounded in <strong>SAMHSA TIP-63</strong>, <strong>ASAM Clinical Practice Guidelines</strong>, <strong>CARF CRS 3.L standards</strong>, <strong>MD BHA Provider Manual</strong>, and <strong>Columbia Suicide Severity Rating Scale (C-SSRS)</strong> protocols.</span>
+            <span>Alert logic grounded in <strong>COMAR 10.47.03–10.47.05</strong> (Maryland BHA documentation &amp; staffing requirements), <strong>DSAMH Provider Manual §5</strong> (Delaware), <strong>SAMHSA TIP-63</strong>, <strong>ASAM LOCA Clinical Practice Guidelines</strong>, <strong>CARF CRS 3.L standards</strong>, <strong>MD BHA Provider Manual</strong>, and <strong>Columbia Suicide Severity Rating Scale (C-SSRS) / Columbia SPI</strong>.</span>
           </div>
         </div>
       )}
@@ -355,7 +355,7 @@ export function ClinicalIntelligence({ navigate, readOnly }: Props) {
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl px-5 py-3 flex items-start gap-3">
             <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-none" />
             <div className="text-xs text-blue-900">
-              <strong>SBIRT</strong> (Screening, Brief Intervention, and Referral to Treatment) is a federally recommended, evidence-based approach mandated for Medicaid-funded SUD programs.
+              <strong>SBIRT</strong> (Screening, Brief Intervention, and Referral to Treatment) is federally recommended per SAMHSA TIP-61 and <strong>mandated for Maryland Medicaid-funded SUD programs under COMAR 10.63.09</strong> and for Delaware DSAMH-funded programs per DSAMH Provider Manual §7. All clients must be screened at admission and at clinically indicated intervals.
               Screening tools: <strong>AUDIT-C</strong> (alcohol, 0–12), <strong>DAST-10</strong> (drugs, 0–10), <strong>PC-PTSD-5</strong> (trauma, 0–5), and <strong>PHQ-9</strong> (depression, 0–27).
             </div>
           </div>
@@ -699,9 +699,9 @@ export function ClinicalIntelligence({ navigate, readOnly }: Props) {
             </div>
             <div className="grid grid-cols-3 gap-3 text-[10px] text-slate">
               {[
-                { from:'Residential (3.7)', to:'PHP (2.5)', criteria:'Clinical stabilization achieved · No imminent withdrawal risk · Can manage in structured day program · Stable housing confirmed' },
-                { from:'PHP (2.5)',          to:'IOP (2.1)', criteria:'Abstinent or MAT-stable · Meets 4+ hrs/day group adequacy · Housing/support sufficient · No acute co-occurring crisis' },
-                { from:'IOP (2.1)',          to:'OP / Aftercare', criteria:'Treatment goals substantially met · Recovery capital score ≥60 · Stable housing + employment/school · Active support system' },
+                { from:'Residential (3.7)', to:'PHP (2.5)', criteria:'Clinical stabilization achieved (ASAM Dim. 1–3) · No imminent withdrawal risk · Can safely manage in structured day program · Stable housing confirmed · ASAM LOC reassessment documented per COMAR 10.47.03.08B(3)' },
+                { from:'PHP (2.5)',          to:'IOP (2.1)', criteria:'Abstinent or MAT-stable · PHP goals substantially met · Housing and support network sufficient · No acute co-occurring psychiatric crisis · ASAM reassessment per COMAR 10.47.04 supporting step-down' },
+                { from:'IOP (2.1)',          to:'OP / Aftercare', criteria:'Treatment goals met per individualized plan · Recovery Capital Index ≥60 · Stable housing + employment/school · Active support system · ASAM reassessment per COMAR 10.47.05 / DSAMH Manual §5 supporting step-down · Aftercare referral confirmed' },
               ].map(c => (
                 <div key={c.from} className="bg-gray-50 border border-border rounded-lg p-2.5">
                   <div className="font-bold text-navy flex items-center gap-1 mb-1">

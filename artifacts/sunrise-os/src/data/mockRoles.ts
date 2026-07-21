@@ -52,7 +52,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'clinical_supervisor',
     label: 'Clinical Supervisor',
     shortLabel: 'Clinical Supervisor',
-    description: 'LCPC or LCSW-C (MD) / __DE_CAADC_CAC-AD__. Must hold Board Approved Supervisor (BAS) per MD BHA, or DSAMH-approved supervisor status (DE). Co-signs notes; documents required supervision hours.',
+    description: 'LCPC or LCSW-C (Maryland) / CAADC or LPCMH (Delaware). Must hold Board Approved Supervisor (BAS) designation per COMAR 10.47.01.22E (MD) or DSAMH-recognized supervisor status (DE). Required on-site whenever ADT or CSC-AD staff are providing direct services. Co-signs notes; documents required supervision hours in MD BHA supervision log.',
     color: 'bg-amber-500/20', textColor: 'text-amber-300', borderColor: 'border-amber-500/40', dotColor: 'bg-amber-400',
     category: 'Clinical',
     permissions: perms(
@@ -67,7 +67,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'certified_clinician',
     label: 'Certified Clinician',
     shortLabel: 'Certified Clinician',
-    description: 'LPC + CAC-AD (MD) / CAC-AD — IC&RC (DE-DSAMH). Primary counselor; owns individual caseload. Publicly-funded clients require current BHA/DSAMH certification.',
+    description: 'CAC-AD or CPC-AD (Maryland BHA/ADAA) / CADC or LADC (Delaware IC&RC/DPR). Primary counselor; owns individual caseload. All publicly-funded Maryland clients require current BHA credential per COMAR 10.47.01.22; Delaware clients require current DSAMH-recognized credential per DSAMH Provider Manual §4.',
     color: 'bg-blue-500/20', textColor: 'text-blue-300', borderColor: 'border-blue-500/40', dotColor: 'bg-blue-400',
     category: 'Clinical',
     permissions: perms(

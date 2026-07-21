@@ -4,18 +4,28 @@
  * Regulatory and credentialing reference data for Sunrise Recovery Center's
  * Maryland (Rockville) and Delaware (Wilmington) facilities.
  *
+ * Maryland references: Code of Maryland Regulations (COMAR), Title 10 (Health)
+ *   – COMAR 10.47  : Behavioral Health Administration — SUD program licensing & credentialing
+ *   – COMAR 10.21  : Mental Hygiene Administration — mental health programs
+ *   – COMAR 10.63  : Behavioral Health Programs (comprehensive, cross-LOC)
+ *   – COMAR 10.09.80 : HealthChoice (Medicaid managed care)
+ *
+ * Delaware references: DSAMH Division Standards (Title 16 DSCR), IC&RC credential rules,
+ *   DSAMH Provider Manual, and Delaware Medicaid (DMMA) billing guidelines.
+ *
  * Covers:
- *   - State licensing & SUD credentialing pathways (MD BHA / DE DSAMH)
- *   - Medicaid oversight and payers
- *   - Accrediting bodies (CARF, The Joint Commission)
- *   - Federal oversight (SAMHSA, DEA, CMS)
- *   - Reporting requirements
+ *   – State licensing, SUD credentialing pathways, and practitioner boards
+ *   – Documentation timelines by level of care
+ *   – Staffing ratios by level of care
+ *   – Medicaid payers and managed care organizations
+ *   – Accrediting bodies (CARF, The Joint Commission)
+ *   – Federal oversight (SAMHSA, DEA, CMS, 42 CFR Part 2)
  */
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type ComplianceState = 'Maryland' | 'Delaware' | 'Federal' | 'Multi-State';
-export type CredentialTier = 'Trainee' | 'Supervised' | 'Associate' | 'Professional' | 'Licensed' | 'Supervisor';
+export type CredentialTier  = 'Trainee' | 'Supervised' | 'Associate' | 'Professional' | 'Licensed' | 'Supervisor';
 export type EntityType =
   | 'Licensing Board'
   | 'SUD Credentialing Body'
@@ -34,9 +44,11 @@ export interface RegulatoryBody {
   state: ComplianceState;
   website: string;
   description: string;
-  relevance: string;           // why Sunrise staff or facility interacts with this body
+  relevance: string;
   renewalCycle?: string;
   contactPhone?: string;
+  comarCitation?: string;   // e.g. 'COMAR 10.47.01'
+  dsamhCitation?: string;   // e.g. 'DSAMH Provider Manual §4.2'
 }
 
 export interface CredentialDefinition {
@@ -44,16 +56,45 @@ export interface CredentialDefinition {
   abbreviation: string;
   fullName: string;
   state: ComplianceState;
-  issuingBodyId: string;        // references RegulatoryBody.id
+  issuingBodyId: string;
   tier: CredentialTier;
   prerequisites: string[];
   practiceHoursRequired?: number;
   supervisionHoursRequired?: number;
+  trainingHoursRequired?: number;
   ceuRequiredPerCycle?: number;
   renewalCycleYears?: number;
   scope: string;
   notes: string;
-  qualifiesFor?: string[];      // e.g., ['QBHP', 'Clinical Supervisor']
+  regulatoryCitation?: string;
+  qualifiesFor?: string[];
+}
+
+export interface DocumentationTimeline {
+  id: string;
+  levelOfCare: string;
+  asamLevel: string;
+  state: ComplianceState;
+  regulatoryCitation: string;
+  requirements: {
+    label: string;
+    timeline: string;
+    regulatory?: string;
+    notes?: string;
+  }[];
+}
+
+export interface StaffingRatioRequirement {
+  id: string;
+  levelOfCare: string;
+  asamLevel: string;
+  state: ComplianceState;
+  regulatoryCitation: string;
+  ratios: {
+    role: string;
+    ratio: string;
+    notes?: string;
+  }[];
 }
 
 export interface MedicaidProgram {
@@ -94,7 +135,7 @@ export interface AccreditationStandard {
 
 export const REGULATORY_BODIES: RegulatoryBody[] = [
 
-  // ── Maryland ──────────────────────────────────────────────────────────────
+  // ── Maryland Licensing Boards ──────────────────────────────────────────────
 
   {
     id: 'mbpct',
@@ -103,9 +144,24 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'Licensing Board',
     state: 'Maryland',
     website: 'https://health.maryland.gov/mbpct',
-    description: 'Licenses LPCs, LCPCs, LMFTs, and CAC-ADs in Maryland.',
-    relevance: 'All clinical counselors, therapists, and licensed drug counselors at the Rockville facility must hold active MBPCT licensure.',
-    renewalCycle: 'Biennial (every 2 years), 40 CEUs required',
+    comarCitation: 'COMAR 10.58.01–10.58.16',
+    description: 'Licenses LPCs, LCPCs, and LMFTs in Maryland under Health Occupations Article §17. LPC is the entry-level license requiring master\'s degree and 3,000 post-graduate supervised hours; LCPC (clinical level) requires an additional 3,000 hours and qualifies the holder for independent practice and supervision of pre-licensed clinicians.',
+    relevance: 'All licensed counselors and therapists at the Rockville facility must hold active MBPCT licensure. LCPC or LCSW-C is required for Clinical Director and clinical supervisor roles per COMAR 10.47.01.',
+    renewalCycle: 'Biennial (every 2 years); 40 Category A/B CEUs required per cycle',
+    contactPhone: '(410) 764-4732',
+  },
+  {
+    id: 'mbswe',
+    name: 'Maryland Board of Social Work Examiners',
+    abbreviation: 'MBSWE',
+    type: 'Licensing Board',
+    state: 'Maryland',
+    website: 'https://health.maryland.gov/mbswe',
+    comarCitation: 'COMAR 10.42.01–10.42.09',
+    description: 'Licenses LGSW (graduate level), LCSW (clinical), and LCSW-C (clinical with supervisor designation) in Maryland. LCSW-C is the highest social work license and qualifies for independent clinical practice, supervision, and serves as QBHP in SUD programs.',
+    relevance: 'Social workers providing clinical services at Rockville must hold MBSWE licensure. LCSW-C is accepted as Clinical Supervisor credential in Maryland BHA-licensed SUD programs per COMAR 10.47.01.22.',
+    renewalCycle: 'Biennial; 40 CEUs required (including 3 hrs ethics)',
+    contactPhone: '(410) 764-4788',
   },
   {
     id: 'mbp',
@@ -114,9 +170,11 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'Licensing Board',
     state: 'Maryland',
     website: 'https://mbp.maryland.gov',
-    description: 'Licenses MDs, DOs, CRNPs, and PAs in Maryland.',
-    relevance: 'All prescribers and the medical director at the Rockville facility must hold active MBP licensure.',
-    renewalCycle: 'Biennial, 50 CME hrs required',
+    comarCitation: 'COMAR 10.32.01–10.32.29; Health Occupations Article §14',
+    description: 'Licenses MDs, DOs, CRNPs (including Psychiatric NPs), and Physician Assistants (PA-Cs) in Maryland. DEA registration required separately for controlled substance prescribing. MATE Act (Dec 2022) eliminated X-Waiver requirement for buprenorphine.',
+    relevance: 'All prescribers and the Medical Director at Rockville must hold active MBP licensure. Failure to maintain current MBP license constitutes a Maryland COMAR 10.47 facility compliance violation.',
+    renewalCycle: 'Biennial; 50 Category A CME hours required',
+    contactPhone: '(410) 764-4777',
   },
   {
     id: 'mbon',
@@ -125,9 +183,11 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'Licensing Board',
     state: 'Maryland',
     website: 'https://mbon.maryland.gov',
-    description: 'Licenses RNs, LPNs, CRNPs, and CNAs in Maryland.',
-    relevance: 'All nursing staff at the Rockville facility must hold active MBON licensure.',
-    renewalCycle: 'Biennial, 30 CEU hrs or practice attestation',
+    comarCitation: 'COMAR 10.27.01–10.27.21; Health Occupations Article §8',
+    description: 'Licenses RNs, LPNs, CRNPs, and CNAs in Maryland. RNs with addiction nursing specialty may seek CARN certification (IntNSA). LPNs may administer medications only under RN supervision per COMAR 10.27.09.',
+    relevance: 'All nursing staff at Rockville must hold active MBON licensure. Residential programs under COMAR 10.47.03 require an RN on-site during all hours of operation.',
+    renewalCycle: 'Biennial; 30 continuing education hours or practice attestation',
+    contactPhone: '(410) 585-1900',
   },
   {
     id: 'mdbha',
@@ -136,10 +196,23 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'SUD Credentialing Body',
     state: 'Maryland',
     website: 'https://bha.health.maryland.gov',
-    description: 'Oversees SUD and mental health service delivery in Maryland. Administers ADAA (Alcohol and Drug Abuse Administration) credentialing: ADT, CSC-AD, CAC-AD, CPC-AD, and Board Approved Supervisor (BAS).',
-    relevance: 'All SUD counselors providing services to Maryland publicly-funded clients must hold current MD BHA/ADAA credential. Facility must be licensed by BHA. BAS designation required for supervisors of ADT and CSC-AD staff.',
-    renewalCycle: 'Varies by credential tier (2–3 years)',
+    comarCitation: 'COMAR 10.47.01 (program certification); COMAR 10.47.02–10.47.09 (LOC-specific); COMAR 10.63 (comprehensive BH programs)',
+    description: 'The Maryland Department of Health agency responsible for licensing all SUD and behavioral health treatment facilities and administering the ADAA (Alcohol and Drug Abuse Administration) counselor credentialing program. The ADAA credential ladder — ADT → CSC-AD → CAC-AD → CPC-AD — governs all SUD counselors working with publicly-funded Maryland clients. BHA also administers the Board Approved Supervisor (BAS) designation required for all facilities employing ADT or CSC-AD trainees.',
+    relevance: 'Sunrise Rockville must hold current BHA facility certification under COMAR 10.47.01. All SUD counselors serving publicly-funded Maryland clients must hold an active BHA/ADAA credential. BAS must be identifiable on-site per COMAR 10.47.01.22E. Annual program reports and SMART outcome data submission required.',
+    renewalCycle: 'Facility certification annual; credential tiers 2–3 years',
     contactPhone: '(410) 402-8600',
+  },
+  {
+    id: 'mabpcb',
+    name: 'Maryland Addiction and Behavioral Health Professional Certification Board',
+    abbreviation: 'MABPCB',
+    type: 'SUD Credentialing Body',
+    state: 'Maryland',
+    website: 'https://mabpcb.org',
+    description: 'Maryland nonprofit credentialing board that issues the Certified Peer Recovery Specialist (CPRS-MD) credential. CPRS-MD is the Maryland-recognized peer support credential required for Medicaid reimbursement of peer recovery support services under HealthChoice.',
+    relevance: 'Peer Recovery Specialists at Sunrise Rockville must hold MABPCB CPRS-MD to bill peer services to Maryland Medicaid (HealthChoice). Peer support services are a billable LOC under COMAR 10.09.80.16 when provided by a CPRS-MD holder under clinical supervision.',
+    renewalCycle: 'Annual; 20 CEUs required',
+    contactPhone: '(443) 524-9004',
   },
   {
     id: 'mdmedicaid',
@@ -148,8 +221,9 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'Medicaid Oversight',
     state: 'Maryland',
     website: 'https://mmcp.health.maryland.gov',
-    description: 'Administers Maryland Medicaid (Medical Assistance) through the HealthChoice managed care program. Covers SUD residential, PHP, IOP, and OP levels of care.',
-    relevance: 'Billing, prior authorization, and outcome reporting for all Maryland Medicaid patients. MCO contracts with CareFirst, Optum, UHC, and Jai Medical must be maintained.',
+    comarCitation: 'COMAR 10.09.80 (HealthChoice); COMAR 10.09.16 (Medicaid SUD services)',
+    description: 'Administers Maryland Medicaid (Medical Assistance) through the HealthChoice mandatory managed care program. Covers SUD residential (ASAM 3.1/3.5/3.7), PHP (ASAM 2.5), IOP (ASAM 2.1), and OP (ASAM 1.0), MAT, and peer recovery support services. Behavioral health carve-out administered through Optum Maryland for most HealthChoice MCOs.',
+    relevance: 'Billing, prior authorization, ASAM-based LOC determination, and SMART outcome reporting for all Maryland Medicaid patients. MCO contracts must be maintained. Provider enrollment and NPI credentialing required per MCO.',
     contactPhone: '1-800-492-5231',
   },
   {
@@ -159,8 +233,8 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'HIE',
     state: 'Maryland',
     website: 'https://crisphealth.org',
-    description: "Maryland's state-designated Health Information Exchange (HIE). Provides ADT notifications, CCD exchange, and care coordination alerts.",
-    relevance: 'Sunrise Rockville is connected to CRISP for bi-directional record exchange and ADT alerts. Required for Maryland Medicaid value-based programs.',
+    description: "Maryland's state-designated Health Information Exchange (HIE) under the Maryland Health Information Exchange Act. Provides real-time ADT (Admission, Discharge, Transfer) notifications, CCD (Continuity of Care Document) exchange, PDMP integration, and care coordination alerts to all participating Maryland providers.",
+    relevance: 'Sunrise Rockville participation in CRISP is required for Maryland Medicaid value-based program participation and strongly encouraged for care coordination. CRISP ADT notifications enable same-day follow-up when a patient is admitted to or discharged from an ED or hospital.',
   },
   {
     id: 'mdpdmp',
@@ -169,11 +243,12 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'PDMP',
     state: 'Maryland',
     website: 'https://pdmp.maryland.gov',
-    description: 'Maryland PDMP operated by MDH. Real-time monitoring of CII–CV controlled substance prescriptions. Mandatory check before prescribing opioids or benzodiazepines.',
-    relevance: 'All prescribers at Rockville facility must check MD PDMP prior to prescribing controlled substances. Integrated into Sunrise OS prescriber workflow.',
+    comarCitation: 'COMAR 10.47.08; Health-General Article §21-2A-01 et seq.',
+    description: 'Maryland PDMP operated by the Maryland Department of Health. Provides real-time monitoring of Schedule II–V controlled substance prescriptions dispensed in Maryland. Mandatory query required before prescribing opioids or benzodiazepines and at each subsequent refill per Maryland law (Md. Code Ann., Health-General §21-2A-04.1).',
+    relevance: 'All prescribers at Rockville must query MD PDMP before prescribing opioids, benzodiazepines, or other Schedule II–V substances. PDMP query results must be documented in the patient chart. Integrated via CRISP/PMPInterConnect gateway.',
   },
 
-  // ── Delaware ──────────────────────────────────────────────────────────────
+  // ── Delaware Licensing Boards & Regulatory Bodies ─────────────────────────
 
   {
     id: 'dsamh',
@@ -182,20 +257,23 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'SUD Credentialing Body',
     state: 'Delaware',
     website: 'https://www.dhss.delaware.gov/dsamh',
-    description: 'Primary oversight body for SUD and mental health services in Delaware. Licenses SUD treatment facilities, recognizes IC&RC credentials (CADC, CAADC, LADC), and certifies Peer Recovery Specialists (PRS/CPRS). Administers ADT-equivalent registration for entry-level SUD staff.',
-    relevance: 'All SUD clinical staff at the Wilmington facility must hold DSAMH-recognized credentials. Facility license issued by DSAMH. WITS reporting required for all publicly-funded DE clients.',
+    dsamhCitation: 'Title 16 DSCR §6600–6699 (SUD Treatment Standards); DSAMH Provider Manual',
+    description: 'The Delaware agency under DHSS responsible for licensing all SUD and mental health treatment facilities and setting clinical standards. DSAMH recognizes IC&RC credentials (CADC, CAADC) as the counselor credentialing pathway. Entry-level counselors must register with DSAMH before providing any direct SUD services. DSAMH administers WITS (Web Infrastructure for Treatment Services) for outcome and encounter data. Peer support services are credentialed via PRS and CPRS designations issued directly by DSAMH.',
+    relevance: 'Sunrise Wilmington must hold current DSAMH facility license. All clinical staff must hold DSAMH-recognized credentials. WITS data submission required for all DSAMH-funded client encounters. Failure to maintain DSAMH license bars participation in Delaware Medicaid SUD services.',
     contactPhone: '(302) 255-9399',
   },
   {
     id: 'de_dpr',
-    name: 'Delaware Division of Professional Regulation',
-    abbreviation: 'DE DPR',
+    name: 'Delaware Division of Professional Regulation — Board of Mental Health and Chemical Dependency Professionals',
+    abbreviation: 'DE DPR / BMHCDP',
     type: 'Licensing Board',
     state: 'Delaware',
     website: 'https://dpr.delaware.gov',
-    description: 'Licenses LPCMHs (Licensed Professional Counselors of Mental Health), LCSWs, LMFTs, and CAC-ADs in Delaware through the Board of Mental Health and Chemical Dependency Professionals.',
-    relevance: 'Clinical counselors and therapists at the Wilmington facility must hold active DE DPR licensure. CAC-AD requires CAC-AD + 6,000 supervised hours.',
-    renewalCycle: 'Biennial',
+    dsamhCitation: 'Title 24 Del. C. §3001 et seq. (Board of Mental Health and Chemical Dependency Professionals)',
+    description: 'Licenses LPCMHs (Licensed Professional Counselors of Mental Health) and LCSWs through the Board of Mental Health and Chemical Dependency Professionals. LPCMH is the primary counseling license in Delaware, equivalent to LCPC in Maryland. The board also licenses Alcohol and Drug Counselors (ADC/LADC) and recognizes IC&RC credentials at the state professional level.',
+    relevance: 'All licensed counselors and therapists at Wilmington must hold active DE DPR licensure. LPCMH or LCSW with SUD experience is accepted as Clinical Director credential in DSAMH-licensed programs.',
+    renewalCycle: 'Biennial; 40 CEUs required',
+    contactPhone: '(302) 744-4500',
   },
   {
     id: 'de_bon',
@@ -204,19 +282,20 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'Licensing Board',
     state: 'Delaware',
     website: 'https://dpr.delaware.gov/boards/nursing',
-    description: 'Licenses RNs and LPNs in Delaware.',
-    relevance: 'Any nursing staff at the Wilmington facility must hold active DE Board of Nursing licensure.',
-    renewalCycle: 'Biennial',
+    description: 'Licenses RNs, LPNs, and APRNs in Delaware under Title 24 Del. C. §1901 et seq. LPN medication administration in SUD facilities is permitted under RN delegation and supervision.',
+    relevance: 'All nursing staff at Wilmington must hold active Delaware Board of Nursing licensure.',
+    renewalCycle: 'Biennial; 30 continuing education hours',
   },
   {
     id: 'demedicaid',
-    name: 'Delaware Medicaid — Division of Medicaid & Medical Assistance',
+    name: 'Delaware Medicaid — Division of Medicaid and Medical Assistance',
     abbreviation: 'DMMA',
     type: 'Medicaid Oversight',
     state: 'Delaware',
     website: 'https://www.dhss.delaware.gov/dhss/dmma',
-    description: 'Administers Delaware Medicaid through the Diamond State Health Plan (managed by Highmark). Covers SUD residential, PHP, IOP levels of care for Medicaid-enrolled patients.',
-    relevance: 'Billing, prior authorization, and outcome reporting for all Delaware Medicaid patients. Diamond State Health Plan (Highmark) contracts must be maintained.',
+    dsamhCitation: 'DSAMH Provider Manual; DMMA Billing Guidelines for SUD Services',
+    description: 'Administers Delaware Medicaid through the Diamond State Health Plan (DSHP) mandatory managed care program. SUD services (residential, PHP, IOP, outpatient, MAT, peer support) are covered for Medicaid-enrolled clients. DSAMH WITS reporting is required as a condition of Medicaid reimbursement for DSAMH-funded services.',
+    relevance: 'Billing, prior authorization, and outcome reporting for all Delaware Medicaid patients. Diamond State Health Plan (Highmark) and AmeriHealth Caritas contracts must be maintained. DSAMH facility license required for Medicaid provider enrollment.',
     contactPhone: '(302) 255-9500',
   },
   {
@@ -226,8 +305,8 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'HIE',
     state: 'Delaware',
     website: 'https://www.dhin.org',
-    description: "Delaware's state-designated Health Information Exchange. Provides ADT notifications and clinical document exchange for Delaware providers.",
-    relevance: 'Sunrise Wilmington participates in DHIN for care coordination and ADT alerts for Delaware patients.',
+    description: "Delaware's state-designated Health Information Exchange. Provides ADT notifications, clinical document exchange, and care coordination alerts for Delaware providers. Participation supports care transitions and reduces duplicate testing.",
+    relevance: 'Sunrise Wilmington participates in DHIN for care coordination and ADT alerts for Delaware patients. ADT notifications enable timely follow-up when clients are seen in ED or hospital settings.',
   },
   {
     id: 'depdmp',
@@ -236,8 +315,8 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'PDMP',
     state: 'Delaware',
     website: 'https://dpr.delaware.gov/boards/controlledsubstances',
-    description: 'Delaware PDMP via PMPInterConnect. Mandatory check for prescribers before dispensing CII–CV controlled substances.',
-    relevance: 'All prescribers at Wilmington facility must check DE PMP. Integrated via PMPInterConnect gateway.',
+    description: 'Delaware PMP operated by DE DPR via the PMPInterConnect interstate network. Mandatory query required before prescribing or dispensing Schedule II–V controlled substances (16 Del. Admin. C. §4470). Delaware participates in multi-state PMP data sharing.',
+    relevance: 'All prescribers at Wilmington must query DE PMP before prescribing Schedule II–V substances. Query results documented in patient chart. Accessible via PMPInterConnect gateway.',
   },
 
   // ── Accrediting Bodies ────────────────────────────────────────────────────
@@ -249,8 +328,8 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'Accrediting Body',
     state: 'Multi-State',
     website: 'https://www.carf.org',
-    description: 'International accrediting body for health, human, and behavioral health services. CARF accreditation signals quality, accountability, and continuous improvement.',
-    relevance: 'Sunrise Recovery Center holds CARF accreditation for SUD Residential and Outpatient services. Standards govern staff qualifications, supervision, clinical records, and quality improvement. Both MD and DE facilities must maintain CARF standards.',
+    description: 'International accrediting body for health, human, and behavioral health services. CARF accreditation signals quality, accountability, and continuous improvement. CARF standards require individualized treatment planning, measurable outcomes, qualified staff, and continuous quality improvement — and complement (not replace) state COMAR and DSAMH licensing requirements.',
+    relevance: 'Sunrise Recovery Center holds CARF accreditation for SUD Residential and Outpatient services. Both MD and DE facilities must maintain CARF standards. CARF survey findings are reportable to MD BHA and DSAMH as part of facility license compliance.',
     renewalCycle: '3-year accreditation cycle with annual conformance reports',
   },
   {
@@ -260,9 +339,9 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'Accrediting Body',
     state: 'Multi-State',
     website: 'https://www.jointcommission.org',
-    description: 'Accredits hospitals, behavioral health organizations, and SUD treatment programs. TJC Behavioral Health Care and Human Services (BHCA) accreditation widely accepted by payers.',
-    relevance: 'Qualifies Sunrise for participation in certain payer networks and demonstrates clinical quality. TJC standards cover medication management, clinical leadership, and patient rights.',
-    renewalCycle: 'Triennial survey cycle',
+    description: 'Accredits hospitals, behavioral health organizations, and SUD treatment programs. TJC Behavioral Health Care and Human Services (BHCA) accreditation is accepted by many payers and demonstrates clinical quality. TJC standards address medication management, clinical leadership, patient rights, and environment of care.',
+    relevance: 'TJC accreditation qualifies Sunrise for participation in certain payer networks. TJC NPSG (National Patient Safety Goals) drive medication safety protocols including PDMP integration and naloxone dispensing.',
+    renewalCycle: 'Triennial survey cycle with unannounced surveys possible',
   },
 
   // ── Federal ───────────────────────────────────────────────────────────────
@@ -274,8 +353,8 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'Federal Oversight',
     state: 'Federal',
     website: 'https://www.samhsa.gov',
-    description: 'Federal agency overseeing SUD and mental health treatment. Administers OTP certification, TEDS (Treatment Episode Data Set) reporting, and state block grant oversight.',
-    relevance: 'Sunrise must comply with SAMHSA regulations for any federally-funded programs. TEDS reporting submitted through MD BHA and DSAMH gateways. 42 CFR Part 2 (patient privacy) compliance required.',
+    description: 'Federal agency overseeing SUD and mental health treatment. Administers OTP certification, TEDS (Treatment Episode Data Set) reporting, and state block grant oversight. Key guidance documents include TIP-63 (medications for OUD), TIP-61 (SBIRT), and TIP-57 (trauma-informed care). SAMHSA Zero Suicide initiative informs safety planning requirements.',
+    relevance: 'TEDS data submitted through MD BHA and DSAMH gateways. 42 CFR Part 2 (confidentiality of SUD patient records) compliance required — stricter than HIPAA for SUD records. SAMHSA Evidence-Based Practice (EBP) requirements inform treatment approaches.',
   },
   {
     id: 'dea',
@@ -284,8 +363,8 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'Federal Oversight',
     state: 'Federal',
     website: 'https://www.dea.gov',
-    description: 'Regulates prescribing and dispensing of controlled substances (CII–CV). DEA registration required for all prescribers. ARCOS reporting for CII substances.',
-    relevance: 'All prescribers must maintain active DEA registration. MATE Act (Dec 2022) eliminated X-waiver requirement for buprenorphine. DEA CSOS for electronic Schedule II ordering.',
+    description: 'Regulates prescribing and dispensing of Schedule II–V controlled substances. DEA registration required for all prescribers. MATE Act (December 2022) eliminated the X-Waiver requirement for buprenorphine — all DEA-registered practitioners with Schedule III authority may now prescribe buprenorphine for OUD, but completion of 8-hour MATE training is required for DEA registration renewal.',
+    relevance: 'All prescribers must maintain active DEA registration in the state(s) of practice (MD and DE each require separate state-specific DEA registration). MATE training documentation required at next renewal. ARCOS reporting for CII substance ordering.',
   },
   {
     id: 'cms',
@@ -294,12 +373,14 @@ export const REGULATORY_BODIES: RegulatoryBody[] = [
     type: 'Federal Oversight',
     state: 'Federal',
     website: 'https://www.cms.gov',
-    description: 'Federal agency overseeing Medicare, Medicaid, and CHIP. Sets COPs (Conditions of Participation) and quality reporting requirements.',
-    relevance: 'CMS Conditions of Participation apply to any Medicare/Medicaid-participating SUD providers. Value-based care and quality reporting requirements.',
+    description: 'Federal agency setting Conditions of Participation (CoPs), quality reporting, and Medicare/Medicaid coverage policy. SUD treatment parity (Mental Health Parity and Addiction Equity Act — MHPAEA) compliance is enforced at the CMS level. CMS Interoperability Rule (21st Century Cures Act) drives EHR data exchange requirements.',
+    relevance: 'CoPs apply to any Medicare/Medicaid-participating SUD providers. MHPAEA compliance required for all insurance payers. CMS Prior Authorization rules (effective 2026) affect response timeline requirements from MCOs.',
   },
 ];
 
-// ─── Maryland SUD Credentialing Pathway (MD BHA / ADAA) ──────────────────────
+// ─── Maryland SUD Credentialing Pathway (ADAA / MD BHA) ──────────────────────
+// Regulatory authority: COMAR 10.47.01.22
+// Issuing body: Maryland Behavioral Health Administration (BHA) / Alcohol and Drug Abuse Administration (ADAA)
 
 export const MD_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
   {
@@ -309,14 +390,21 @@ export const MD_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Maryland',
     issuingBodyId: 'mdbha',
     tier: 'Trainee',
-    prerequisites: ['Application to MD BHA/ADAA', 'High school diploma or equivalent', 'Background check'],
+    regulatoryCitation: 'COMAR 10.47.01.22A',
+    prerequisites: [
+      'Application to MD BHA/ADAA',
+      'High school diploma or equivalent (GED accepted)',
+      'Clear criminal background check',
+      'Commitment to pursue CSC-AD within 3 years',
+    ],
     practiceHoursRequired: 0,
+    trainingHoursRequired: 180,
     supervisionHoursRequired: 0,
     ceuRequiredPerCycle: 0,
     renewalCycleYears: 1,
-    scope: 'Entry-level SUD direct care under close supervision of BAS. Must be supervised at all times by BAS or CAC-AD/CPC-AD. Cannot provide independent counseling.',
-    notes: 'Starting point for all MD SUD counselor trainees. Requires registration before any direct SUD service delivery to publicly-funded clients. Must be on the path toward CSC-AD.',
-    qualifiesFor: ['Direct care under supervision'],
+    scope: 'Entry-level direct SUD care exclusively under close supervision of a Board Approved Supervisor (BAS) or higher credential. May co-facilitate groups, conduct check-ins, and perform supportive counseling tasks. Cannot conduct intake assessments, sign progress notes, or provide independent counseling. All client contact must occur under BAS line-of-sight or immediate supervision.',
+    notes: 'COMAR 10.47.01.22A requires 180 hours of structured training before ADT registration is granted. ADT registration is valid for 1 year with annual renewal. Maximum tenure at ADT level: 3 years — the registrant must advance to CSC-AD or forfeit eligibility to work in MD BHA-licensed programs. ADT staff must be listed on the facility\'s BHA-approved organizational chart with their designated BAS supervisor named.',
+    qualifiesFor: ['Direct care under BAS supervision'],
   },
   {
     id: 'md_csc_ad',
@@ -325,14 +413,22 @@ export const MD_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Maryland',
     issuingBodyId: 'mdbha',
     tier: 'Supervised',
-    prerequisites: ['ADT registration', '2,000 supervised practice hours', 'Board Approved Supervisor (BAS) attestation', 'Written examination'],
-    practiceHoursRequired: 2000,
+    regulatoryCitation: 'COMAR 10.47.01.22B',
+    prerequisites: [
+      'ADT registration (or equivalent training in another state)',
+      '4,000 total supervised practice hours (documented)',
+      '270 contact hours of SUD-specific education or training',
+      'Board Approved Supervisor (BAS) attestation of competency',
+      'Written examination administered by MD BHA',
+    ],
+    practiceHoursRequired: 4000,
+    trainingHoursRequired: 270,
     supervisionHoursRequired: 100,
     ceuRequiredPerCycle: 20,
     renewalCycleYears: 2,
-    scope: 'Can provide SUD counseling under supervision of BAS. Cannot sign off on treatment plans or discharge summaries independently.',
-    notes: 'Intermediate credential. Requires active supervision by Board Approved Supervisor (BAS). 100 supervision hours must be documented. Must continue toward CAC-AD within 5 years.',
-    qualifiesFor: ['SUD counseling under supervision'],
+    scope: 'May provide SUD counseling — individual sessions, group co-facilitation, and treatment planning participation — under active BAS supervision. Cannot sign or co-sign treatment plans or discharge summaries independently. Progress notes require BAS counter-signature per COMAR 10.47.01.22B(4).',
+    notes: 'COMAR 10.47.01.22B specifies 4,000 supervised practice hours total (not 2,000) and 270 education hours as prerequisites. The 100 documented supervision hours must include at least 50 individual hours with the BAS. CSC-AD must advance to CAC-AD within 5 years or credential lapses. Renewal requires 20 CEUs per 2-year cycle.',
+    qualifiesFor: ['SUD counseling under BAS supervision', 'Group co-facilitation'],
   },
   {
     id: 'md_cac_ad',
@@ -341,14 +437,21 @@ export const MD_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Maryland',
     issuingBodyId: 'mdbha',
     tier: 'Associate',
-    prerequisites: ['CSC-AD credential', '6,000 total supervised practice hours', 'BAS attestation', 'Written and oral examination'],
+    regulatoryCitation: 'COMAR 10.47.01.22C',
+    prerequisites: [
+      'Active CSC-AD credential',
+      '6,000 total supervised practice hours (cumulative from ADT through CSC-AD)',
+      '300 total documented supervision hours',
+      'BAS attestation of independent readiness',
+      'MD BHA written and oral examination',
+    ],
     practiceHoursRequired: 6000,
     supervisionHoursRequired: 300,
     ceuRequiredPerCycle: 40,
     renewalCycleYears: 2,
-    scope: 'Independent SUD counseling with MD-funded clients. Can sign progress notes and treatment plan updates. Cannot independently sign treatment plans without co-signature from LCPC/LCSW-C until CPC-AD.',
-    notes: 'Primary working credential for SUD counselors in Maryland BHA-licensed programs. Also required credential for Board Approved Supervisor (BAS) designation.',
-    qualifiesFor: ['Independent SUD counseling', 'BAS designation eligibility', 'QBHP (with supervision)'],
+    scope: 'Independent SUD counseling with publicly-funded Maryland clients. May sign progress notes, group notes, and treatment plan updates. May independently conduct ASAM assessments, biopsychosocial evaluations, and discharge planning. Cannot independently serve as BAS (requires separate BAS application) or sign off as clinical supervisor unless also holding BAS designation.',
+    notes: 'The primary working credential for SUD counselors in Maryland BHA-licensed programs. Required credential for BAS designation eligibility per COMAR 10.47.01.22E. Renewal requires 40 CEUs per 2-year cycle, of which at least 6 hours must be in ethics. Lapsed CAC-AD requires reinstatement application to MD BHA.',
+    qualifiesFor: ['Independent SUD counseling', 'BAS designation eligibility', 'QBHP (when also holding LPC/LCPC/LCSW-C)'],
   },
   {
     id: 'md_cpc_ad',
@@ -357,13 +460,19 @@ export const MD_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Maryland',
     issuingBodyId: 'mdbha',
     tier: 'Professional',
-    prerequisites: ['CAC-AD credential', 'Active LPC/LCPC/LCSW/LCSW-C license (Maryland)', 'Continuing education requirements'],
+    regulatoryCitation: 'COMAR 10.47.01.22D',
+    prerequisites: [
+      'Active CAC-AD credential',
+      'Active LPC, LCPC, LCSW, or LCSW-C Maryland license',
+      'Continuing education: 40 CEUs within the prior 2 years',
+      'MD BHA application and attestation',
+    ],
     practiceHoursRequired: 6000,
     ceuRequiredPerCycle: 40,
     renewalCycleYears: 2,
-    scope: 'Highest SUD counseling credential in Maryland. Full independent practice. Can serve as supervisor and sign all clinical documentation.',
-    notes: 'Dual-credential (CPC-AD + LPC/LCPC or LCSW) required for highest-level clinical positions in Maryland BHA-licensed programs.',
-    qualifiesFor: ['Independent clinical practice', 'BAS designation', 'Program Director', 'Clinical Supervisor'],
+    scope: 'Highest-tier SUD counselor credential in Maryland. Full independent SUD practice without supervision. May serve as program clinical director, supervise all credential levels (including BAS functions), and sign all clinical documentation. Dual credential with LCPC or LCSW-C required for highest-level clinical leadership roles.',
+    notes: 'CPC-AD is a dual-credential: the holder must maintain both the CPC-AD and an active Maryland clinical license (LPC/LCPC/LCSW/LCSW-C) continuously. Lapse of either cancels CPC-AD authority. Required for Program Director in BHA-licensed residential programs per COMAR 10.47.03.05.',
+    qualifiesFor: ['Independent clinical practice', 'BAS designation', 'Program Director (residential)', 'Clinical Supervisor (all levels)'],
   },
   {
     id: 'md_bas',
@@ -372,12 +481,40 @@ export const MD_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Maryland',
     issuingBodyId: 'mdbha',
     tier: 'Supervisor',
-    prerequisites: ['Active CAC-AD or CPC-AD', 'BAS-specific training (minimum 30 hours)', 'Demonstrated supervision experience', 'Application to MD BHA'],
+    regulatoryCitation: 'COMAR 10.47.01.22E',
+    prerequisites: [
+      'Active CAC-AD or CPC-AD credential',
+      '30 hours of BAS-specific supervisor training (approved curriculum)',
+      'Minimum 1 year of clinical supervision experience',
+      'MD BHA BAS application and attestation',
+    ],
     ceuRequiredPerCycle: 10,
     renewalCycleYears: 2,
-    scope: 'Authorized to supervise ADT and CSC-AD staff toward CAC-AD. Required for all supervisors of SUD trainees in MD BHA-funded programs. Must be identified on-site and accessible.',
-    notes: 'CRITICAL: Any facility employing ADT or CSC-AD staff MUST have a BAS on staff. BAS must document supervision hours. Without BAS, trainee staff cannot provide SUD services.',
-    qualifiesFor: ['Supervision of ADT staff', 'Supervision of CSC-AD staff', 'Clinical Supervisor designation'],
+    scope: 'Authorized to provide individual and group supervision to ADT and CSC-AD staff toward their CAC-AD credential. COMAR 10.47.01.22E requires the BAS to be identifiable, on-site, and immediately accessible during all hours when ADT or CSC-AD staff are providing services. Must document all supervision hours in the required MD BHA supervision log.',
+    notes: 'CRITICAL COMPLIANCE POINT: Any BHA-licensed facility employing ADT or CSC-AD counselors MUST have a designated BAS on the organizational chart. Without an identified BAS, trainee staff cannot lawfully provide direct SUD services to MD-funded clients (COMAR 10.47.01.22E(2)). BAS supervision logs are subject to BHA audit. BAS designation lapses if underlying CAC-AD/CPC-AD lapses.',
+    qualifiesFor: ['Supervision of ADT staff', 'Supervision of CSC-AD staff', 'Clinical Supervisor designation in BHA-licensed programs'],
+  },
+  {
+    id: 'md_cprs',
+    abbreviation: 'CPRS-MD',
+    fullName: 'Certified Peer Recovery Specialist',
+    state: 'Maryland',
+    issuingBodyId: 'mabpcb',
+    tier: 'Supervised',
+    regulatoryCitation: 'COMAR 10.09.80.16 (HealthChoice peer support billing); MABPCB Standards',
+    prerequisites: [
+      'Lived experience with SUD or mental health recovery (self-attestation)',
+      'Minimum 1 year of stable recovery',
+      'MABPCB application',
+      'Completion of state-approved CPRS training (46 hours minimum)',
+      'Competency examination administered by MABPCB',
+    ],
+    trainingHoursRequired: 46,
+    ceuRequiredPerCycle: 20,
+    renewalCycleYears: 1,
+    scope: 'Provides peer recovery support services within BHA-licensed programs. Shares lived experience to foster hope, motivation, and recovery engagement. May lead peer support groups, conduct recovery check-ins, and assist with care navigation. Cannot provide clinical counseling or psychotherapy. Must work under the supervision of a licensed clinician.',
+    notes: 'CPRS-MD is the Maryland-recognized peer credential for Medicaid billing under HealthChoice (COMAR 10.09.80.16). Peer support services billed under HCPCS code H0038 require CPRS-MD documentation in the provider record. Distinct from the Delaware PRS/CPRS — Maryland MABPCB credential is not automatically recognized in Delaware and vice versa.',
+    qualifiesFor: ['Peer recovery support services (MD)', 'HealthChoice peer support billing (H0038)', 'Group peer support co-facilitation'],
   },
   {
     id: 'md_lpc',
@@ -386,14 +523,20 @@ export const MD_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Maryland',
     issuingBodyId: 'mbpct',
     tier: 'Licensed',
-    prerequisites: ['Master\'s degree in counseling or related field (60 credit hours)', '2 years post-master\'s supervised experience (3,000 hours)', 'NCE or NCMHCE examination', 'MBPCT application'],
+    regulatoryCitation: 'COMAR 10.58.01; Health Occupations Article §17-302',
+    prerequisites: [
+      'Master\'s degree in counseling or related field (minimum 60 graduate credit hours)',
+      '3,000 post-master\'s supervised clinical hours over at least 2 years',
+      'National Counselor Examination (NCE) or NCMHCE',
+      'MBPCT application and background check',
+    ],
     practiceHoursRequired: 3000,
     supervisionHoursRequired: 100,
     ceuRequiredPerCycle: 40,
     renewalCycleYears: 2,
-    scope: 'Licensed counseling practice. Can diagnose mental health conditions. Cannot independently supervise pre-licensed counselors (requires LCPC for supervisory functions).',
-    notes: 'Gateway license; upgrade to LCPC requires additional 3,000 hours and 2 more years under LCPC supervision.',
-    qualifiesFor: ['Independent mental health counseling', 'Diagnosis (DSM-5)', 'QBHP'],
+    scope: 'Licensed independent mental health counseling, diagnosis using DSM-5, individual and group psychotherapy. May provide SUD counseling in conjunction with BHA credential (CAC-AD or higher). Cannot supervise pre-licensed counselors toward LCPC (requires LCPC for supervisory functions).',
+    notes: 'Gateway license; advancement to LCPC requires an additional 3,000 post-LPC supervised hours under LCPC supervision and the NCMHCE examination. LPC + CAC-AD is the minimum combined credential for a primary SUD counselor role in an MD BHA-licensed program.',
+    qualifiesFor: ['Independent mental health counseling', 'DSM-5 diagnosis', 'QBHP (with CAC-AD or higher)'],
   },
   {
     id: 'md_lcpc',
@@ -402,48 +545,113 @@ export const MD_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Maryland',
     issuingBodyId: 'mbpct',
     tier: 'Licensed',
-    prerequisites: ['Active LPC (Maryland)', '3,000 additional post-LPC supervised hours', 'NCMHCE examination', 'MBPCT application'],
+    regulatoryCitation: 'COMAR 10.58.01; Health Occupations Article §17-302(c)',
+    prerequisites: [
+      'Active LPC (Maryland)',
+      '3,000 additional post-LPC supervised clinical hours under LCPC supervision',
+      'NCMHCE examination',
+      'MBPCT application',
+    ],
     practiceHoursRequired: 6000,
     ceuRequiredPerCycle: 40,
     renewalCycleYears: 2,
-    scope: 'Full independent clinical practice. Can supervise LPC-Associates and LPCs toward LCPC licensure. Qualifies as Clinical Director in Maryland BHA-licensed SUD programs.',
-    notes: 'Highest counseling license in Maryland. Required for clinical supervisor role in most Maryland SUD programs.',
-    qualifiesFor: ['Independent clinical practice', 'Clinical Supervision', 'Program Director', 'BAS eligibility'],
+    scope: 'Full independent clinical practice; may diagnose and treat all DSM-5 mental health and SUD conditions. Authorized to supervise LPC-Associates, LPCs, and clinicians working toward LCPC. Qualifies as Clinical Director, Clinical Supervisor, and QBHP in Maryland BHA-licensed SUD programs. When combined with CAC-AD, satisfies highest-level clinical leadership requirements under COMAR 10.47.03.05.',
+    notes: 'Highest licensed counseling credential in Maryland. LCPC + CAC-AD (or CPC-AD) is the standard combined credential for Clinical Director and Clinical Supervisor in BHA-licensed residential programs. LCPC alone (without BHA credential) is insufficient for supervising SUD-specific clinical work with publicly-funded clients.',
+    qualifiesFor: ['Independent clinical practice', 'Clinical Supervision of pre-licensed counselors', 'Program Director', 'QBHP (MD)', 'BAS designation eligibility'],
+  },
+  {
+    id: 'md_lcsw_c',
+    abbreviation: 'LCSW-C',
+    fullName: 'Licensed Clinical Social Worker — Clinical',
+    state: 'Maryland',
+    issuingBodyId: 'mbswe',
+    tier: 'Licensed',
+    regulatoryCitation: 'COMAR 10.42.01; Health Occupations Article §19-301',
+    prerequisites: [
+      'MSW from CSWE-accredited program',
+      '3,000 post-MSW supervised clinical hours (LGSW → LCSW)',
+      'LCSW-C designation requires additional supervisor training',
+      'MBSWE application',
+    ],
+    practiceHoursRequired: 3000,
+    ceuRequiredPerCycle: 40,
+    renewalCycleYears: 2,
+    scope: 'Full independent clinical social work practice. LCSW-C designation authorizes supervision of LGSW and LCSW candidates. Qualifies as QBHP, Clinical Director, and Clinical Supervisor in Maryland BHA-licensed SUD programs when combined with CAC-AD or CPC-AD.',
+    notes: 'LCSW-C + CAC-AD is equivalent to LCPC + CAC-AD for BHA supervisor/director roles. The "-C" suffix denotes the Clinical level with supervision authority in Maryland.',
+    qualifiesFor: ['Independent clinical social work', 'Supervision of LGSW/LCSW', 'Clinical Director (with CAC-AD)', 'QBHP (MD)'],
   },
   {
     id: 'md_lmft',
     abbreviation: 'LMFT',
-    fullName: 'Licensed Marriage & Family Therapist',
+    fullName: 'Licensed Marriage and Family Therapist',
     state: 'Maryland',
     issuingBodyId: 'mbpct',
     tier: 'Licensed',
-    prerequisites: ['Master\'s or doctoral degree in MFT', 'Supervised experience (2 years, 1,000 direct client hours)', 'AMFTRB examination', 'MBPCT application'],
+    regulatoryCitation: 'COMAR 10.58.01; Health Occupations Article §17-302',
+    prerequisites: [
+      "Master's or doctoral degree in MFT from COAMFTE-accredited program",
+      '1,000 direct client hours, including 500 relational/systemic hours',
+      'AMFTRB examination',
+      'MBPCT application',
+    ],
     ceuRequiredPerCycle: 40,
     renewalCycleYears: 2,
-    scope: 'Licensed family and couples therapy. Co-occurring mental health treatment. Not a primary SUD credential — must hold CAC-AD/CSC-AD for SUD counseling in MD-funded programs.',
-    notes: 'Licensed by MBPCT. Can treat co-occurring disorders but should hold MD BHA credential for SUD-specific services.',
-    qualifiesFor: ['Family/couples therapy', 'Co-occurring MH treatment', 'QBHP'],
+    scope: 'Licensed family and couples therapy, systems-based individual therapy, co-occurring MH treatment within SUD programs. Must hold MD BHA credential (CSC-AD or higher) to provide SUD-specific counseling to publicly-funded Maryland clients.',
+    notes: 'LMFT + CAC-AD provides dual competency in both MFT systems therapy and SUD counseling — a strong combination for residential co-occurring disorder programs. Cannot independently supervise toward SUD credentials without BAS designation.',
+    qualifiesFor: ['Family and couples therapy', 'Co-occurring MH treatment', 'QBHP (with CAC-AD)'],
   },
 ];
 
 // ─── Delaware SUD Credentialing Pathway (IC&RC / DSAMH) ──────────────────────
+// Regulatory authority: Title 16 DSCR §6600–6699 (DSAMH); Title 24 Del. C. §3001 (DE DPR/BMHCDP)
+// Delaware recognizes IC&RC (International Certification and Reciprocity Consortium) credentials
 
 export const DE_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
   {
+    id: 'de_dsamh_reg',
+    abbreviation: 'DSAMH-Reg',
+    fullName: 'DSAMH Registered Counselor (Entry Level)',
+    state: 'Delaware',
+    issuingBodyId: 'dsamh',
+    tier: 'Trainee',
+    regulatoryCitation: 'DSAMH Provider Manual §4.1; Title 16 DSCR §6610',
+    prerequisites: [
+      'Application to DSAMH',
+      'High school diploma or equivalent',
+      'Clear background check',
+      'Employment at a DSAMH-licensed facility',
+      'Supervised by CAADC or CAC-AD holder (DSAMH-recognized)',
+    ],
+    ceuRequiredPerCycle: 0,
+    renewalCycleYears: 1,
+    scope: 'Entry-level direct SUD service under continuous supervision of a DSAMH-recognized supervisor. Functionally equivalent to Maryland ADT. Cannot provide independent counseling, sign clinical documents, or conduct formal assessments. All service delivery must occur under supervisor oversight.',
+    notes: 'DSAMH registration is required before any direct SUD service delivery to DSAMH-funded clients. Registrant must actively pursue CAC-AD. DSAMH registration does not transfer to Maryland — staff moving between DE and MD facilities must obtain the appropriate MD BHA credential.',
+    qualifiesFor: ['Direct SUD care under supervision (DE)'],
+  },
+  {
     id: 'de_cadc',
-    abbreviation: 'CAC-AD',
+    abbreviation: 'CADC',
     fullName: 'Certified Alcohol and Drug Counselor',
     state: 'Delaware',
     issuingBodyId: 'dsamh',
     tier: 'Associate',
-    prerequisites: ['IC&RC application', '6,000 supervised practice hours', 'Supervision documentation', 'IC&RC written examination', 'Ethics attestation'],
+    regulatoryCitation: 'DSAMH Provider Manual §4.2; IC&RC CADC Candidate Guide',
+    prerequisites: [
+      'IC&RC application',
+      '6,000 total supervised practice hours (documented in DSAMH system)',
+      '270 hours of SUD-specific education',
+      '300 hours of documented clinical supervision',
+      'IC&RC written examination',
+      'Ethics attestation',
+    ],
     practiceHoursRequired: 6000,
     supervisionHoursRequired: 300,
+    trainingHoursRequired: 270,
     ceuRequiredPerCycle: 40,
     renewalCycleYears: 2,
-    scope: 'Primary working SUD counselor credential in Delaware DSAMH-licensed programs. Can provide independent SUD counseling services to DSAMH-funded clients.',
-    notes: 'Delaware DSAMH recognizes IC&RC CAC-AD as the baseline credential for SUD counselor practice. Entry-level staff must register with DSAMH while accumulating hours toward CAC-AD.',
-    qualifiesFor: ['SUD counseling (DE)', 'QBHP (DE)', 'BAS eligibility (DE)'],
+    scope: 'Primary working SUD counselor credential recognized by Delaware DSAMH. May provide independent SUD counseling, conduct ASAM-based assessments, sign progress notes and treatment plans, and participate in treatment team. Recognized for Medicaid billing under Diamond State Health Plan.',
+    notes: 'Delaware DSAMH recognizes IC&RC CADC as the baseline credential for independent SUD counselor practice. Entry-level staff must register with DSAMH while accumulating hours toward CADC. Note: Delaware uses the IC&RC "CADC" abbreviation; Maryland uses "CAC-AD" for a similar credential through its own ADAA board — they are NOT interchangeable without reciprocity application.',
+    qualifiesFor: ['Independent SUD counseling (DE)', 'QBHP (DE)', 'Medicaid billing (Diamond State)'],
   },
   {
     id: 'de_caadc',
@@ -452,27 +660,43 @@ export const DE_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Delaware',
     issuingBodyId: 'dsamh',
     tier: 'Professional',
-    prerequisites: ['Active CAC-AD', 'Additional 4,000 practice hours (total 10,000)', 'Advanced IC&RC examination', 'Supervision documentation'],
+    regulatoryCitation: 'DSAMH Provider Manual §4.3; IC&RC CAADC Candidate Guide',
+    prerequisites: [
+      'Active CADC credential',
+      '10,000 total practice hours (4,000 additional post-CADC)',
+      '500 total supervision hours',
+      '480 hours of advanced SUD-specific education',
+      'Advanced IC&RC written and oral examination',
+    ],
     practiceHoursRequired: 10000,
+    supervisionHoursRequired: 500,
+    trainingHoursRequired: 480,
     ceuRequiredPerCycle: 60,
     renewalCycleYears: 2,
-    scope: 'Advanced SUD counseling. Can serve as supervisor in DE DSAMH-licensed programs. Elevated clinical documentation authority.',
-    notes: 'IC&RC CAADC recognized by DSAMH as advanced SUD credential. Qualifies for clinical supervisory roles.',
-    qualifiesFor: ['Advanced SUD counseling', 'Clinical Supervision (DE)', 'Program Director eligibility'],
+    scope: 'Advanced SUD counseling. Authorized to supervise DSAMH-registered counselors and CADC candidates in DSAMH-licensed programs. May serve as program Clinical Director. Eligible for DSAMH-recognized supervisor designation.',
+    notes: 'IC&RC CAADC is recognized by Delaware DSAMH as the advanced credential qualifying for clinical supervisory roles. Holders may apply for DSAMH supervisor recognition without separate application if CAADC is current. Required CEUs: 60 per 2-year cycle, including 6 hours ethics.',
+    qualifiesFor: ['Advanced SUD counseling (DE)', 'Clinical Supervision (DE)', 'Program Director eligibility (DE)'],
   },
   {
     id: 'de_ladc',
-    abbreviation: 'CAC-AD',
+    abbreviation: 'LADC',
     fullName: 'Licensed Alcohol and Drug Counselor',
     state: 'Delaware',
     issuingBodyId: 'de_dpr',
     tier: 'Licensed',
-    prerequisites: ['Active CAC-AD (IC&RC)', 'Bachelor\'s or master\'s degree', 'Delaware Board of Mental Health & Chemical Dependency Professionals application', 'State examination'],
+    regulatoryCitation: 'Title 24 Del. C. §3001; DE DPR Board of Mental Health and Chemical Dependency Professionals',
+    prerequisites: [
+      'Active CADC (IC&RC)',
+      "Bachelor's degree (minimum) in behavioral health, psychology, or related field",
+      'Delaware Board of Mental Health & Chemical Dependency Professionals application',
+      'State oral examination',
+      'Background check',
+    ],
     ceuRequiredPerCycle: 40,
     renewalCycleYears: 2,
-    scope: 'Licensed SUD counselor in Delaware. Independent practice. Licensed by Delaware Division of Professional Regulation.',
-    notes: "Delaware\'s state-licensed SUD counselor credential. Issued by Delaware DPR (Board of Mental Health & Chemical Dependency Professionals).",
-    qualifiesFor: ['Independent SUD counseling (DE)', 'Supervision', 'QBHP (DE)'],
+    scope: 'State-licensed SUD counselor in Delaware. Independent practice. Licensed by Delaware DPR through the Board of Mental Health and Chemical Dependency Professionals. Provides a state-issued license number (distinct from IC&RC certification number).',
+    notes: "Delaware's state-licensed SUD counselor credential, issued by DE DPR rather than DSAMH. LADC provides a license under Delaware professional regulation law, while CADC is an IC&RC certification. Many Delaware SUD counselors hold both CADC and LADC. LADC is not a Maryland credential — does not satisfy MD BHA requirements.",
+    qualifiesFor: ['Independent SUD counseling (DE licensed)', 'Supervision', 'QBHP (DE)'],
   },
   {
     id: 'de_prs',
@@ -481,12 +705,20 @@ export const DE_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Delaware',
     issuingBodyId: 'dsamh',
     tier: 'Supervised',
-    prerequisites: ['Lived experience with SUD or mental health recovery', 'DSAMH application', 'PRS training (40 hrs)', 'Supervised practice'],
+    regulatoryCitation: 'DSAMH Provider Manual §4.5; 16 DSCR §6640',
+    prerequisites: [
+      'Lived experience with SUD or mental health recovery (self-attestation)',
+      'DSAMH PRS application',
+      'Completion of 40-hour DSAMH-approved PRS training curriculum',
+      'Background check',
+      'Supervised practice hours under DSAMH-recognized clinician',
+    ],
+    trainingHoursRequired: 40,
     ceuRequiredPerCycle: 20,
     renewalCycleYears: 2,
-    scope: 'Peer support services within DSAMH-licensed programs. Shares lived experience; provides hope, motivation, and navigation support. Cannot provide clinical counseling.',
-    notes: 'Delaware DSAMH-issued. Entry point for people in recovery to enter the behavioral health workforce. Must work under clinical supervision.',
-    qualifiesFor: ['Peer support services (DE)', 'Group co-facilitation'],
+    scope: 'Peer support services within DSAMH-licensed programs. Shares lived recovery experience to provide hope, mentorship, and recovery navigation. May co-facilitate peer support groups. Cannot provide clinical counseling, psychotherapy, or sign clinical documents.',
+    notes: 'Delaware DSAMH-issued. Entry credential for individuals in recovery to enter the behavioral health workforce. Must work under clinical supervision. DSAMH PRS differs from Maryland MABPCB CPRS-MD — Delaware PRS is not automatically recognized in Maryland.',
+    qualifiesFor: ['Peer support services (DE)', 'Group co-facilitation (peer component)'],
   },
   {
     id: 'de_cprs',
@@ -495,12 +727,18 @@ export const DE_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Delaware',
     issuingBodyId: 'dsamh',
     tier: 'Professional',
-    prerequisites: ['Active PRS (Delaware)', 'Additional supervised hours', 'DSAMH CPRS examination', 'CEU completion'],
+    regulatoryCitation: 'DSAMH Provider Manual §4.6; Diamond State Health Plan Billing Guidelines',
+    prerequisites: [
+      'Active DSAMH PRS credential',
+      'Additional supervised peer support hours (minimum 500 total)',
+      'DSAMH CPRS competency examination',
+      'CEU completion',
+    ],
     ceuRequiredPerCycle: 20,
     renewalCycleYears: 2,
-    scope: 'Advanced peer support. Can lead peer support groups and mentor PRS staff. Recognized by DSAMH and some payers for reimbursement.',
-    notes: "Delaware\'s advanced peer credential. CPRS services may be billable to DE Medicaid (Diamond State Health Plan) under certain program types.",
-    qualifiesFor: ['Advanced peer support (DE)', 'Group leadership', 'PRS mentorship'],
+    scope: 'Advanced peer support services. May lead peer support groups, mentor PRS staff, and provide individualized peer recovery coaching. CPRS services are billable to Delaware Medicaid (Diamond State Health Plan) under HCPCS code H0038 when provided in DSAMH-licensed programs.',
+    notes: "Delaware's advanced peer credential. CPRS Medicaid billing requires current DSAMH CPRS credential, a DSAMH-licensed facility, and documentation of supervision by a licensed clinician. Distinct from Maryland MABPCB CPRS-MD credential.",
+    qualifiesFor: ['Advanced peer support (DE)', 'Group peer leadership', 'PRS mentorship', 'Diamond State Medicaid billing (H0038)'],
   },
   {
     id: 'de_lpcmh',
@@ -509,13 +747,164 @@ export const DE_CREDENTIAL_PATHWAY: CredentialDefinition[] = [
     state: 'Delaware',
     issuingBodyId: 'de_dpr',
     tier: 'Licensed',
-    prerequisites: ['Master\'s degree (60 credits)', '3,000 post-master\'s supervised hours', 'NCE or NCMHCE examination', 'Delaware DPR application'],
+    regulatoryCitation: 'Title 24 Del. C. §3001; DE DPR Board of Mental Health and Chemical Dependency Professionals',
+    prerequisites: [
+      "Master's degree in counseling or related field (minimum 60 credits)",
+      '3,000 post-master\'s supervised hours over at least 2 years',
+      'National Counselor Examination (NCE) or NCMHCE',
+      'Delaware DPR application and background check',
+    ],
     practiceHoursRequired: 3000,
     ceuRequiredPerCycle: 40,
     renewalCycleYears: 2,
-    scope: "Licensed mental health counseling in Delaware. Can diagnose mental health conditions. Delaware\'s equivalent of LPC/LCPC in other states.",
-    notes: 'Primary counseling license in Delaware. Board of Mental Health and Chemical Dependency Professionals under Delaware DPR.',
-    qualifiesFor: ['Independent MH counseling (DE)', 'Diagnosis (DSM-5)', 'QBHP (DE)'],
+    scope: "Licensed independent mental health counseling in Delaware. May diagnose mental health conditions using DSM-5. Delaware's primary counseling license, equivalent to LCPC in Maryland. May supervise pre-licensed counselors when approved by DE DPR.",
+    notes: 'LPCMH + CADC is the standard combined credential for a primary SUD counselor in a Delaware DSAMH-licensed program. LPCMH alone (without CADC) is insufficient for SUD-specific services to DSAMH-funded clients under Delaware standards.',
+    qualifiesFor: ['Independent MH counseling (DE)', 'DSM-5 diagnosis', 'QBHP (DE)', 'Supervision (with DE DPR approval)'],
+  },
+];
+
+// ─── Documentation Timelines ─────────────────────────────────────────────────
+// Sources: COMAR 10.47.03 (MD Residential), COMAR 10.47.04 (MD PHP),
+//          COMAR 10.47.05 (MD IOP/OP), DSAMH Provider Manual §5 (DE all LOCs)
+
+export const DOCUMENTATION_TIMELINES: DocumentationTimeline[] = [
+  {
+    id: 'md_residential',
+    levelOfCare: 'Residential',
+    asamLevel: 'ASAM 3.1 / 3.5 / 3.7',
+    state: 'Maryland',
+    regulatoryCitation: 'COMAR 10.47.03.08',
+    requirements: [
+      { label: 'Preliminary individualized care plan',  timeline: 'Within 24 hours of admission',          regulatory: 'COMAR 10.47.03.08B(1)',  notes: 'Must identify immediate presenting needs, risk factors, and initial goals. Signed by admitting counselor.' },
+      { label: 'Comprehensive individualized treatment plan', timeline: 'Within 5 working days of admission', regulatory: 'COMAR 10.47.03.08B(2)', notes: 'Full biopsychosocial assessment, measurable goals, level-of-care justification. Co-signed by Clinical Supervisor (BAS or higher).' },
+      { label: 'Treatment plan review / update',        timeline: 'Every 30 days',                          regulatory: 'COMAR 10.47.03.08B(3)',  notes: 'Documented review of progress toward goals, updated objectives. Must reflect ASAM LOC reassessment.' },
+      { label: 'Progress notes — individual sessions',  timeline: 'Same session day',                       regulatory: 'COMAR 10.47.03.08C',    notes: 'Required for each individual counseling session. SOAP or DAP format. Signed by provider.' },
+      { label: 'Progress notes — group sessions',       timeline: 'Within 24 hours of group',              regulatory: 'COMAR 10.47.03.08C',    notes: 'Group note must identify attendance, topic, and individual participation observation.' },
+      { label: 'ASAM LOC reassessment (clinical)',      timeline: 'Every 7 days',                          regulatory: 'COMAR 10.47.03; MD BHA Provider Manual', notes: 'Required to support continued authorization at residential LOC for HealthChoice MCO. Documents continued medical necessity.' },
+      { label: 'Discharge summary',                     timeline: 'Within 3 working days of discharge',    regulatory: 'COMAR 10.47.03.08D',    notes: 'Must include discharge diagnosis, medications at discharge, aftercare plan, and referrals. Signed by Clinical Supervisor.' },
+      { label: 'UA drug screen documentation',          timeline: 'Within 24 hours of collection',         regulatory: 'COMAR 10.47.03.08C',    notes: 'Results and clinical response documented in chart. Chain of custody for any forensic specimens.' },
+    ],
+  },
+  {
+    id: 'md_php',
+    levelOfCare: 'Partial Hospitalization Program',
+    asamLevel: 'ASAM 2.5',
+    state: 'Maryland',
+    regulatoryCitation: 'COMAR 10.47.04',
+    requirements: [
+      { label: 'Initial assessment',                    timeline: 'First day of service',                  regulatory: 'COMAR 10.47.04.06',     notes: 'ASAM-based biopsychosocial assessment. Must establish LOC appropriateness.' },
+      { label: 'Individualized treatment plan',         timeline: 'Within 5 working days of first service', regulatory: 'COMAR 10.47.04.06B',    notes: 'Must be individualized with measurable goals. Co-signed by qualified clinical supervisor.' },
+      { label: 'Treatment plan review',                 timeline: 'Every 30 days',                         regulatory: 'COMAR 10.47.04.06B',    notes: 'Review of progress; updated goals as needed; ASAM LOC reassessment documented.' },
+      { label: 'Progress notes',                        timeline: 'Each service date',                     regulatory: 'COMAR 10.47.04.06C',    notes: 'Required for each group and individual session on the date of service.' },
+      { label: 'ASAM LOC reassessment',                 timeline: 'Every 14 days',                         regulatory: 'COMAR 10.47.04; MD BHA Provider Manual', notes: 'For HealthChoice MCO continued authorization at PHP level.' },
+      { label: 'Discharge / step-down note',            timeline: 'Within 3 working days of last service', regulatory: 'COMAR 10.47.04.06D',    notes: 'Documents reason for step-down, aftercare referrals, and final status.' },
+    ],
+  },
+  {
+    id: 'md_iop',
+    levelOfCare: 'Intensive Outpatient Program',
+    asamLevel: 'ASAM 2.1',
+    state: 'Maryland',
+    regulatoryCitation: 'COMAR 10.47.05',
+    requirements: [
+      { label: 'Initial assessment',                    timeline: 'Within first service week',             regulatory: 'COMAR 10.47.05.05',     notes: 'ASAM-based assessment establishing LOC appropriateness.' },
+      { label: 'Individualized treatment plan',         timeline: 'Within 14 calendar days of first service', regulatory: 'COMAR 10.47.05.05B', notes: 'Individualized goals. Clinical supervisor co-signature required within 5 days of plan creation.' },
+      { label: 'Treatment plan review',                 timeline: 'Every 60 days',                         regulatory: 'COMAR 10.47.05.05B',    notes: 'Documented review with updated objectives reflecting client progress.' },
+      { label: 'Progress notes',                        timeline: 'Each service date',                     regulatory: 'COMAR 10.47.05.05C',    notes: 'Required for each session on the date of service.' },
+      { label: 'ASAM LOC reassessment',                 timeline: 'Every 30 days',                         regulatory: 'COMAR 10.47.05; MD BHA Provider Manual', notes: 'For continued HealthChoice MCO authorization.' },
+    ],
+  },
+  {
+    id: 'de_residential',
+    levelOfCare: 'Residential',
+    asamLevel: 'ASAM 3.1 / 3.5 / 3.7',
+    state: 'Delaware',
+    regulatoryCitation: 'DSAMH Provider Manual §5.2; Title 16 DSCR §6620',
+    requirements: [
+      { label: 'Initial biopsychosocial assessment',    timeline: 'Within 24 hours of admission',          regulatory: 'DSAMH Provider Manual §5.2.1', notes: 'Conducted by CADC or licensed clinician. Documents presenting problem, history, and initial LOC justification.' },
+      { label: 'Individualized service plan (ISP)',     timeline: 'Within 5 business days of admission',   regulatory: 'DSAMH Provider Manual §5.2.2; 16 DSCR §6620', notes: 'Must be individualized, goal-directed, and co-signed by client and clinical supervisor. Distinct from preliminary assessment.' },
+      { label: 'ISP review / update',                  timeline: 'Every 30 days',                         regulatory: 'DSAMH Provider Manual §5.2.3', notes: 'Formal review with client participation; updates reflect progress and barriers.' },
+      { label: 'Progress notes',                        timeline: 'Within 24 hours of each service event', regulatory: 'DSAMH Provider Manual §5.2.4', notes: 'Each individual and group session requires a note. Must document client presentation, content, and response.' },
+      { label: 'WITS encounter data submission',        timeline: 'Within 48 hours of service',            regulatory: 'DSAMH Provider Manual §9', notes: 'All service encounters must be entered into WITS (Web Infrastructure for Treatment Services) for DSAMH reporting.' },
+      { label: 'Discharge summary',                     timeline: 'Within 5 business days of discharge',   regulatory: 'DSAMH Provider Manual §5.2.5', notes: 'Documents discharge status, plan, referrals, and medications. Client copy provided.' },
+    ],
+  },
+  {
+    id: 'de_iop',
+    levelOfCare: 'IOP / Outpatient',
+    asamLevel: 'ASAM 2.1 / 1.0',
+    state: 'Delaware',
+    regulatoryCitation: 'DSAMH Provider Manual §5.3',
+    requirements: [
+      { label: 'Initial assessment',                    timeline: 'First service date',                    regulatory: 'DSAMH Provider Manual §5.3.1' },
+      { label: 'Individualized service plan',           timeline: 'Within 5 business days of first service', regulatory: 'DSAMH Provider Manual §5.3.2' },
+      { label: 'ISP review',                            timeline: 'Every 60 days',                         regulatory: 'DSAMH Provider Manual §5.3.3' },
+      { label: 'Progress notes',                        timeline: 'Within 24 hours of each contact',       regulatory: 'DSAMH Provider Manual §5.3.4' },
+      { label: 'WITS encounter data',                   timeline: 'Within 48 hours of service',            regulatory: 'DSAMH Provider Manual §9' },
+    ],
+  },
+];
+
+// ─── Staffing Ratios ──────────────────────────────────────────────────────────
+// Maryland: COMAR 10.47.03 (Residential), 10.47.04 (PHP), 10.47.05 (IOP/OP)
+// Delaware: DSAMH Provider Manual §6 (Staffing Standards)
+
+export const STAFFING_RATIOS: StaffingRatioRequirement[] = [
+  {
+    id: 'md_residential_staffing',
+    levelOfCare: 'Residential',
+    asamLevel: 'ASAM 3.1 / 3.5 / 3.7',
+    state: 'Maryland',
+    regulatoryCitation: 'COMAR 10.47.03.05',
+    ratios: [
+      { role: 'Program Director',          ratio: '1 FTE — LCPC/LCSW-C + CPC-AD or equivalent',            notes: 'Must hold both a Maryland clinical license and an MD BHA advanced SUD credential (COMAR 10.47.03.05A).' },
+      { role: 'Primary SUD Counselor',     ratio: '1 FTE per 8 residential clients',                       notes: 'Each counselor may carry max 8 active residential clients. Must hold CAC-AD or higher (COMAR 10.47.03.05B).' },
+      { role: 'Board Approved Supervisor', ratio: 'At least 1 BAS on-site during all operating hours',      notes: 'Required whenever ADT or CSC-AD staff are providing direct services (COMAR 10.47.01.22E).' },
+      { role: 'Medical Director',           ratio: 'Minimum 4 hours per week on-site; on-call 24/7',        notes: 'Physician (MD/DO) required. Must hold MBP license and DEA registration (COMAR 10.47.03.05C).' },
+      { role: 'Registered Nurse (RN)',      ratio: 'On-site during all program hours; on-call overnight',   notes: 'RN must be present during medication administration hours. Overnight: RN on-call minimum; LPN on-site acceptable per COMAR 10.47.03.05D.' },
+      { role: 'Behavioral Health Technician (BHT)', ratio: 'Awake supervision 24/7; at least 1 BHT per 8 clients overnight', notes: 'BHT must hold ADT registration or equivalent training. 24/7 awake supervision required in residential (COMAR 10.47.03.05E).' },
+      { role: 'Case Manager / Aftercare Planner', ratio: '1 FTE per 20 clients recommended',              notes: 'Discharge planning coordination required; not separately ratio-mandated in COMAR but CARF standard.' },
+    ],
+  },
+  {
+    id: 'md_php_staffing',
+    levelOfCare: 'Partial Hospitalization Program',
+    asamLevel: 'ASAM 2.5',
+    state: 'Maryland',
+    regulatoryCitation: 'COMAR 10.47.04.04',
+    ratios: [
+      { role: 'Clinical Director',         ratio: '1 FTE — LCPC/LCSW-C + CAC-AD',                         notes: 'Must oversee clinical operations. On-site during PHP hours.' },
+      { role: 'Primary SUD Counselor',     ratio: '1 FTE per 10 PHP clients',                              notes: 'CAC-AD or higher required for group facilitation. Minimum 3 hours individual counseling per week per client per COMAR 10.47.04.' },
+      { role: 'Medical oversight',          ratio: 'Physician available by phone; on-site ≥ 2 hrs/week',   notes: 'Higher availability required for medically complex PHP (e.g., PHP with MAT management).' },
+      { role: 'Nursing',                   ratio: 'RN available during program hours (on-site or on-call)', notes: 'Required for medication observation and health monitoring. LPN acceptable under RN delegation.' },
+    ],
+  },
+  {
+    id: 'md_iop_staffing',
+    levelOfCare: 'Intensive Outpatient / Outpatient',
+    asamLevel: 'ASAM 2.1 / 1.0',
+    state: 'Maryland',
+    regulatoryCitation: 'COMAR 10.47.05.04',
+    ratios: [
+      { role: 'Clinical Supervisor',       ratio: '1 supervisor per 5 counselors (ADT/CSC-AD)',             notes: 'BAS required if ADT/CSC-AD staff are employed.' },
+      { role: 'Primary SUD Counselor',     ratio: '1 FTE per 15 IOP clients',                              notes: 'CAC-AD or higher for individual counseling with publicly-funded clients.' },
+      { role: 'Medical oversight',          ratio: 'Physician available by referral or on-call',            notes: 'On-site physician not required for non-MAT IOP. Required if MAT is delivered on-site.' },
+    ],
+  },
+  {
+    id: 'de_residential_staffing',
+    levelOfCare: 'Residential',
+    asamLevel: 'ASAM 3.1 / 3.5 / 3.7',
+    state: 'Delaware',
+    regulatoryCitation: 'DSAMH Provider Manual §6.2; Title 16 DSCR §6630',
+    ratios: [
+      { role: 'Program Director',          ratio: '1 FTE — CAADC or LPCMH/LCSW + CADC minimum',            notes: 'DSAMH requires clinical director to hold DSAMH-recognized advanced credential.' },
+      { role: 'Primary SUD Counselor',     ratio: '1 FTE per 8 residential clients',                       notes: 'CADC or higher required. DSAMH-registered entry counselors must be supervised and do not count toward ratio independently.' },
+      { role: 'Supervisor',                ratio: '1 CAADC or DSAMH-recognized supervisor on-site',         notes: 'Required when DSAMH-registered (entry-level) counselors are providing services.' },
+      { role: 'Medical oversight',          ratio: 'Physician on-call 24/7; on-site minimum 4 hrs/week',   notes: 'Delaware medical license (DO/MD) required. DEA registration required for MAT.' },
+      { role: 'Nursing',                   ratio: 'RN on-site during operating hours',                     notes: 'DE BON licensure required. 24/7 awake staff required for residential.' },
+      { role: 'BHT / Direct Care',         ratio: 'Awake supervision 24/7',                               notes: 'DSAMH registration and training required per DSAMH Provider Manual §6.2.' },
+    ],
   },
 ];
 
@@ -527,19 +916,19 @@ export const MEDICAID_PROGRAMS: MedicaidProgram[] = [
     state: 'Maryland',
     programName: 'Maryland Medical Assistance — HealthChoice',
     adminAgency: 'Maryland Department of Health (MDH) — Office of Health Services',
-    deliveryModel: 'Mandatory Managed Care — HealthChoice MCOs',
+    deliveryModel: 'Mandatory Managed Care — HealthChoice MCOs; behavioral health carved out to Optum Maryland for most MCOs',
     mcos: [
       { name: 'CareFirst BlueCross BlueShield', abbreviation: 'CareFirst', phone: '1-800-730-8530', portalUrl: 'https://provider.carefirst.com' },
-      { name: 'Optum Maryland (UHC)', abbreviation: 'Optum MD', phone: '1-800-888-1998', portalUrl: 'https://provider.optum.com', notes: 'Handles HealthChoice behavioral health carve-out for many MCOs' },
+      { name: 'Optum Maryland (UHC)', abbreviation: 'Optum MD', phone: '1-800-888-1998', portalUrl: 'https://provider.optum.com', notes: 'Administers behavioral health carve-out for multiple HealthChoice MCOs under COMAR 10.09.80' },
       { name: 'UnitedHealthcare Community Plan', abbreviation: 'UHC', phone: '1-800-791-9233' },
       { name: 'Jai Medical Systems', abbreviation: 'Jai Medical', phone: '1-888-524-1999', notes: 'Serves Baltimore City and select counties' },
       { name: 'Priority Partners (Johns Hopkins)', abbreviation: 'Priority Partners', phone: '1-800-654-9728' },
       { name: 'Maryland Physicians Care', abbreviation: 'MPC', phone: '1-800-953-8854' },
     ],
-    relevantServices: ['Residential SUD (ASAM 3.1/3.5/3.7)', 'PHP (ASAM 2.5)', 'IOP (ASAM 2.1)', 'OP (ASAM 1.0)', 'MAT', 'Peer Support Services'],
+    relevantServices: ['Residential SUD (ASAM 3.1/3.5/3.7)', 'PHP (ASAM 2.5)', 'IOP (ASAM 2.1)', 'OP (ASAM 1.0)', 'MAT (buprenorphine/naltrexone/methadone)', 'Peer Recovery Support Services (CPRS-MD)'],
     priorAuthRequired: true,
-    billableCredentials: ['LCPC', 'LPC', 'CAC-AD', 'CPC-AD', 'MD', 'LCSW-C', 'LMFT', 'RN'],
-    notes: 'Maryland HealthChoice requires prior authorization for all levels of care. ASAM LOCA criteria mandatory for level-of-care determination. Billing NPI must be enrolled with each MCO. Annual credentialing required.',
+    billableCredentials: ['LCPC', 'LPC (supervised)', 'LCSW-C', 'CAC-AD', 'CPC-AD', 'MD/DO', 'CRNP', 'RN', 'CPRS-MD (peer services, H0038)'],
+    notes: 'Maryland HealthChoice (COMAR 10.09.80) requires prior authorization for all SUD LOCs. ASAM LOCA criteria mandatory for LOC determination and continued authorization. Billing NPI must be enrolled with each MCO. Annual provider credentialing required. SMART outcome data submitted through MD BHA gateway. SBIRT must be offered per COMAR 10.63.09 for Medicaid-funded SUD programs.',
   },
   {
     id: 'de_diamondstate',
@@ -549,12 +938,12 @@ export const MEDICAID_PROGRAMS: MedicaidProgram[] = [
     deliveryModel: 'Mandatory Managed Care — Diamond State Health Plan (DSHP)',
     mcos: [
       { name: 'Highmark Health Options (Diamond State)', abbreviation: 'Highmark DSHP', phone: '1-855-550-1997', portalUrl: 'https://www.highmarkhealthoptions.com', notes: 'Primary MCO for Diamond State Health Plan' },
-      { name: 'AmeriHealth Caritas Delaware', abbreviation: 'AmeriHealth', phone: '1-855-355-3423', notes: 'DSHP Plus (long-term services & supports)' },
+      { name: 'AmeriHealth Caritas Delaware', abbreviation: 'AmeriHealth', phone: '1-855-355-3423', notes: 'DSHP Plus (long-term services and supports)' },
     ],
-    relevantServices: ['Residential SUD', 'PHP', 'IOP', 'OP', 'MAT', 'Peer Support Services (CPRS)'],
+    relevantServices: ['Residential SUD', 'PHP', 'IOP', 'OP', 'MAT', 'Peer Support Services (CPRS — H0038)'],
     priorAuthRequired: true,
-    billableCredentials: ['LPCMH', 'CAC-AD', 'CAC-AD', 'MD', 'LCSW', 'RN', 'CPRS (peer services)'],
-    notes: 'Delaware Medicaid requires DSAMH facility license and provider enrollment with DMMA. DSAMH WITS reporting required for all DSAMH-funded services. CPRS peer services billable under certain program types.',
+    billableCredentials: ['LPCMH', 'LCSW', 'CADC', 'CAADC', 'LADC', 'MD/DO', 'RN', 'CPRS (peer services, H0038)'],
+    notes: 'Delaware Medicaid requires DSAMH facility license and DMMA provider enrollment. DSAMH WITS encounter reporting required for all DSAMH-funded services as condition of reimbursement. CPRS peer services billable under H0038 with current DSAMH CPRS credential and clinical supervision documentation. SBIRT required per DSAMH standards for all enrolled SUD programs.',
   },
 ];
 
@@ -566,29 +955,29 @@ export const ACCREDITATION_STANDARDS: AccreditationStandard[] = [
     body: 'CARF',
     program: 'Substance Use Disorder Treatment',
     abbreviation: 'CARF SUD',
-    description: 'CARF accreditation for SUD residential, PHP, IOP, and OP programs. Covers organizational leadership, clinical records, service delivery, and quality improvement.',
+    description: 'CARF accreditation for SUD residential, PHP, IOP, and OP programs. Standards complement and are interpreted alongside COMAR 10.47 (MD) and DSAMH regulations (DE). CARF accreditation findings must be disclosed to MD BHA and DSAMH as part of facility license compliance.',
     staffingRequirements: [
-      'Medical Director: Physician with addiction medicine training (MD/DO; FASAM or ABAM preferred)',
-      'Clinical Director: Licensed behavioral health professional (LCPC, LCSW-C, LMFT, or equivalent) with SUD experience',
-      'Primary Counselors: Must hold state-recognized SUD credential (CAC-AD in MD; CAC-AD in DE) or be in supervised training (ADT/CSC-AD with BAS on staff)',
-      'Nursing: RN required for detox and medical services; LPN under RN supervision',
-      'BHT: Must meet CARF Qualified Direct Service Provider standards; ADT or equivalent training required',
-      'All staff: Background checks, documented competency verification, annual performance reviews',
+      'Medical Director: Physician with addiction medicine training (MD/DO; FASAM or ABAM preferred); must hold state license and DEA registration',
+      'Clinical Director: Licensed behavioral health professional — in MD: LCPC or LCSW-C + CAC-AD/CPC-AD per COMAR 10.47.03.05; in DE: CAADC or LPCMH + CADC per DSAMH standards',
+      'Primary SUD Counselors: State-recognized SUD credential required — CAC-AD (MD) or CADC (DE) — or supervised trainee (ADT/CSC-AD in MD; DSAMH-Reg in DE) with BAS/supervisor on-site',
+      'Nursing: RN required for detox and residential medical monitoring (COMAR 10.47.03.05D for MD; DSAMH §6.2 for DE)',
+      'BHT: CARF Qualified Direct Service Provider standards; ADT registration (MD) or DSAMH registration (DE) required for direct SUD service delivery',
+      'All staff: Background checks, documented competency verification, and annual performance reviews per CARF 1.L standards',
     ],
     supervisoryRequirements: [
-      'Clinical supervision documented for all pre-licensed and trainee staff (ADT, CSC-AD, LPC-A)',
-      'BAS on staff for all Maryland ADT/CSC-AD supervision',
-      'Supervision frequency: minimum 1 hour per week (individual) or 2 hrs/month (group) per CARF standards',
-      'Supervisory agreements documented in personnel files',
-      'Co-signature requirements per licensure board rules must be reflected in clinical documentation policy',
+      'Clinical supervision documented for all pre-licensed and trainee staff (ADT, CSC-AD, DSAMH-Reg, LPC-A)',
+      'BAS on staff per COMAR 10.47.01.22E (MD) for any ADT/CSC-AD supervision; DSAMH-recognized supervisor per DSAMH Manual §6 (DE)',
+      'Supervision frequency: minimum 1 hour/week individual or 2 hours/month group per CARF standards; MD BHA logs must document actual hours',
+      'Supervisory agreements documented in personnel files and available for BHA/DSAMH audit',
+      'Co-signature requirements per licensure board rules reflected in clinical documentation policy',
     ],
     qualityRequirements: [
-      'Annual quality improvement plan with measurable outcomes',
-      'Standardized outcome measures (AUDIT, DAST, ASI, GAIN) at intake and discharge',
-      'Consumer satisfaction surveys',
-      'Incident reporting and adverse event review',
-      'Annual program evaluation comparing outcomes to benchmarks',
-      'Continuous readiness for CARF survey (triennial)',
+      'Annual quality improvement plan with measurable outcomes aligned with SAMHSA NOMS indicators',
+      'Standardized outcome measures at intake and discharge: AUDIT-C, DAST-10, PHQ-9, ASI or GAIN-SS; SBIRT protocol per COMAR 10.63.09 (MD) and DSAMH Manual §7 (DE)',
+      'Consumer satisfaction surveys at discharge and 30-day follow-up',
+      'Incident reporting system with root cause analysis for adverse events; reportable incidents submitted to MD BHA or DSAMH within required timeframes',
+      'Annual program evaluation comparing outcomes to state and national benchmarks',
+      'Continuous readiness for CARF triennial survey; survey findings reported to MD BHA and DSAMH',
     ],
     surveyFrequency: 'Triennial (every 3 years) with annual conformance reports',
     website: 'https://www.carf.org/standards/behavioral-health/sud',
@@ -598,27 +987,27 @@ export const ACCREDITATION_STANDARDS: AccreditationStandard[] = [
     body: 'The Joint Commission',
     program: 'Behavioral Health Care and Human Services',
     abbreviation: 'TJC BHCA',
-    description: 'TJC accreditation for behavioral health and SUD programs. Rigorous standards for patient rights, medication management, clinical leadership, and environment of care.',
+    description: 'TJC accreditation for behavioral health and SUD programs. Rigorous standards for patient rights, medication management, clinical leadership, and environment of care. TJC NPSG (National Patient Safety Goals) include PDMP integration and naloxone co-prescribing — both required under Maryland and Delaware law.',
     staffingRequirements: [
-      'Medical Director: Physician licensed in state of operation; addiction specialty preferred',
-      'Qualified Behavioral Health Professional (QBHP): Licensed clinician (LCPC, LCSW-C, LMFT, MD) for clinical oversight',
-      'All clinical staff: State-required licenses and credentials verified and on file',
-      'Staffing ratios documented for each level of care',
-      'Training records (CPR, de-escalation, medication administration) current for all staff',
+      'Medical Director: Physician licensed in state of practice; addiction specialty preferred (FASAM, ABAM)',
+      'QBHP (Qualified Behavioral Health Professional): Licensed clinician (LCPC, LCSW-C, LMFT, MD) for clinical oversight; must hold BHA/DSAMH credential for SUD supervision',
+      'All clinical staff: State-required licenses and SUD credentials verified, on file, and monitored for renewal',
+      'Staffing ratios documented and maintained per COMAR 10.47 (MD) or DSAMH standards (DE)',
+      'CPR, de-escalation, and medication administration training current for all applicable staff',
     ],
     supervisoryRequirements: [
-      'Governing body oversight of medical staff credentialing',
-      'Peer review process for clinical staff documentation',
+      'Governing body oversight of medical staff credentialing and privilege delineation',
+      'Peer review process for clinical documentation quality',
       'Medical staff bylaws governing credentialing, privileges, and corrective action',
-      'Performance evaluations at hire, 90 days, and annually',
+      'Performance evaluations: at hire, 90 days, and annually thereafter',
     ],
     qualityRequirements: [
-      'Patient safety plan and incident reporting system',
-      'Medication management policies per TJC NPSG (National Patient Safety Goals)',
-      'Restraint/seclusion policy compliant with TJC standards',
-      'Environment of care safety inspections',
-      'Root cause analysis for sentinel events',
-      'Board-level quality committee review',
+      'Patient safety plan and incident reporting system integrated with MD BHA / DSAMH reportable incident requirements',
+      'Medication management per TJC NPSG 03: accurate medication reconciliation, PDMP query documentation, and naloxone co-prescribing protocol',
+      'Restraint/seclusion policy: must comply with both TJC standards and COMAR 10.21.19 (MD) or DSAMH Policy (DE)',
+      'Environment of care safety inspections quarterly',
+      'Root cause analysis for sentinel events (TJC) with parallel reporting to MD BHA Critical Incident System (MD) or DSAMH Incident Report System (DE)',
+      'Board-level quality committee review with documented minutes',
     ],
     surveyFrequency: 'Triennial with unannounced surveys possible',
     website: 'https://www.jointcommission.org/accreditation-and-certification/health-care-settings/behavioral-health-care',
@@ -645,24 +1034,53 @@ export function getRegulatoryBodiesByState(state: ComplianceState): RegulatoryBo
   return REGULATORY_BODIES.filter(b => b.state === state || b.state === 'Multi-State' || b.state === 'Federal');
 }
 
-/** Minimum credentials required for a given role in a given state */
+export function getDocumentationTimelinesByState(state: ComplianceState): DocumentationTimeline[] {
+  return DOCUMENTATION_TIMELINES.filter(t => t.state === state);
+}
+
+export function getStaffingRatiosByState(state: ComplianceState): StaffingRatioRequirement[] {
+  return STAFFING_RATIOS.filter(r => r.state === state);
+}
+
+// ─── State Role Requirements (minimum credentials by role) ────────────────────
+// Maryland: COMAR 10.47.01.22 (credentials), COMAR 10.47.03.05 (residential staffing)
+// Delaware: DSAMH Provider Manual §4, §6
+
 export const STATE_ROLE_REQUIREMENTS: Record<string, Record<string, string>> = {
   Maryland: {
-    'Clinical Director / Supervisor': 'LCPC or LCSW-C + CAC-AD or CPC-AD + Board Approved Supervisor (BAS)',
-    'Primary SUD Counselor': 'LPC or higher + CAC-AD (or CSC-AD under BAS supervision)',
-    'MH Therapist (SUD program)': 'LMFT, LCPC, or LCSW + CAC-AD recommended for SUD services',
-    'Prescriber': 'MD or DO — Maryland Board of Physicians; DEA registration for controlled substances',
-    'Nurse': 'RN — Maryland Board of Nursing (MBON)',
-    'BHT / Entry Counselor': 'ADT registration (MD BHA) required before direct SUD service; supervised by BAS',
-    'Peer Recovery': 'Not a state-regulated credential in MD; PRSS recommended for reimbursement',
+    'Clinical Director / Program Director':
+      'LCPC or LCSW-C (Maryland MBPCT/MBSWE) + CAC-AD or CPC-AD (MD BHA) + Board Approved Supervisor (BAS) designation — per COMAR 10.47.03.05A',
+    'Primary SUD Counselor':
+      'CAC-AD (MD BHA/ADAA) for independent practice; CSC-AD under BAS supervision acceptable — per COMAR 10.47.01.22C. Must hold LPC or higher if providing dual-diagnosis MH counseling.',
+    'SUD Counselor Trainee':
+      'ADT registration (MD BHA) required before any direct SUD service to publicly-funded clients; BAS designated and on-site — per COMAR 10.47.01.22A',
+    'MH Therapist (SUD program)':
+      'LMFT, LCPC, or LCSW-C (MBPCT or MBSWE) + CAC-AD or CSC-AD recommended for SUD-specific counseling with MD-funded clients — per COMAR 10.47.01',
+    'Prescriber':
+      'MD or DO (Maryland Board of Physicians); DEA registration (CII–CV); MATE Act training for buprenorphine (completed at next renewal)',
+    'Nurse':
+      'RN (Maryland Board of Nursing / MBON) — COMAR 10.27; residential programs require RN on-site during all operating hours per COMAR 10.47.03.05D',
+    'BHT / Entry Direct Care':
+      'ADT registration (MD BHA) required before direct SUD service delivery; must be supervised by BAS — per COMAR 10.47.01.22A(2)',
+    'Peer Recovery Specialist':
+      'CPRS-MD (Maryland Addiction and Behavioral Health Professional Certification Board / MABPCB) — required for Maryland Medicaid (HealthChoice) peer support billing under COMAR 10.09.80.16 (HCPCS H0038)',
   },
   Delaware: {
-    'Clinical Director / Supervisor': 'CAADC or CAC-AD + DSAMH supervisor recognition; or LPCMH/LCSW with SUD experience',
-    'Primary SUD Counselor': 'CAC-AD (IC&RC) — DSAMH recognized; entry-level staff must register with DSAMH',
-    'MH Therapist (SUD program)': 'LPCMH or LCSW — Delaware DPR; CAC-AD recommended for SUD services',
-    'Prescriber': 'MD or DO — Delaware Board of Medical Licensure; DEA registration',
-    'Nurse': 'RN — Delaware Board of Nursing',
-    'BHT / Entry Counselor': 'DSAMH registration required before direct SUD service; working toward CAC-AD',
-    'Peer Recovery': 'PRS (Delaware DSAMH) required; CPRS preferred; CPRS billable to Diamond State Health Plan',
+    'Clinical Director / Program Director':
+      'CAADC (IC&RC) or LPCMH/LCSW + CADC — DSAMH-recognized supervisor; per DSAMH Provider Manual §6.2 and Title 16 DSCR §6630',
+    'Primary SUD Counselor':
+      'CADC (IC&RC) — DSAMH recognized; entry-level staff must register with DSAMH before direct SUD service — per DSAMH Provider Manual §4.2 and 16 DSCR §6610',
+    'SUD Counselor Trainee':
+      'DSAMH registration required before any direct SUD service delivery; supervised by CAADC or CADC holder — per DSAMH Provider Manual §4.1',
+    'MH Therapist (SUD program)':
+      'LPCMH or LCSW — Delaware DPR (Board of Mental Health & Chemical Dependency Professionals); CADC recommended for SUD-specific services',
+    'Prescriber':
+      'MD or DO — Delaware Board of Medical Licensure (Title 24 Del. C. §1700); DEA registration; MATE Act training',
+    'Nurse':
+      'RN (Delaware Board of Nursing); residential programs require RN on-site per DSAMH Provider Manual §6.2',
+    'BHT / Entry Direct Care':
+      'DSAMH registration required before direct SUD service; working under supervision toward CADC — per DSAMH Provider Manual §4.1',
+    'Peer Recovery Specialist':
+      'PRS (Delaware DSAMH) required; CPRS (Delaware DSAMH) for Diamond State Medicaid peer support billing (H0038) — per DSAMH Provider Manual §4.5–4.6',
   },
 };

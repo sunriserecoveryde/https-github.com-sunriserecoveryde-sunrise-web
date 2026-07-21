@@ -1,0 +1,164 @@
+Redesign the Sunrise OS profile-selection and login screen to look like a premium, modern behavioral healthcare software platform.
+
+The current screen feels too empty, generic, and visually flat. Create a professional split-screen desktop layout with a branded marketing panel on the left and a profile-selection login panel on the right.
+
+DESIGN GOALS
+
+The page should communicate:
+
+1. Security
+2. Clinical professionalism
+3. Simplicity
+4. Trust
+5. Modern healthcare technology
+6. Warmth and hope associated with recovery
+
+LEFT BRAND PANEL
+
+Create a dark navy branded panel that includes:
+
+- A high-resolution Sunrise OS logo
+- The headline: “The operating system built for behavioral healthcare.”
+- Three short benefit statements:
+  - Clinical documentation made simpler
+  - Compliance and operations in one place
+  - Better visibility into care, census, and outcomes
+- The footer statement: “Secure. Connected. Built for recovery organizations.”
+
+Use a subtle sunrise-inspired background with a deep navy gradient and a restrained warm orange glow. Avoid stock photography, bright animations, or excessive visual effects.
+
+RIGHT LOGIN PANEL
+
+Create a centered profile-selection card with:
+
+- Maximum width between 460 and 520 pixels
+- 28 to 36 pixels of internal padding
+- Rounded corners between 16 and 22 pixels
+- Subtle shadow
+- Thin translucent border
+- Slightly lighter background than the main page
+- Clear visual separation from the background
+
+Use this heading structure:
+
+Sunrise Recovery Center
+Powered by Sunrise OS
+
+Welcome back
+Choose your profile to continue securely.
+
+PROFILE CARDS
+
+Display each user profile as a large clickable card containing:
+
+- Circular avatar or user initials
+- Full name
+- Role
+- Facility or organization
+- Last-used status when available
+- A chevron or clear continue indicator
+
+Each profile card should:
+
+- Be at least 64 to 72 pixels tall
+- Have clear hover, active, and focus states
+- Be fully keyboard accessible
+- Be easy to select on tablets
+- Use a visible focus outline
+- Have consistent spacing
+- Not rely on color alone to communicate status
+
+Add a clear “Use another account” option below the profiles.
+
+FOOTER LINKS
+
+Include:
+
+- Forgot your password?
+- Contact support
+- Privacy
+- Terms
+
+Add a subtle security message:
+
+“Secure access • Session protected • Authorized users only”
+
+Do not make unverified claims about HIPAA compliance.
+
+COLOR PALETTE
+
+Use:
+
+- Deep background: #071522
+- Primary navy: #0B1F33
+- Sunrise orange: #F28C28
+- Warm gold: #FFB347
+- Blue accent: #2F80ED
+- Main text: #F8FAFC
+- Secondary text: #B8C4D0
+- Card background: rgba(15, 34, 53, 0.88)
+- Border: rgba(255, 255, 255, 0.10)
+
+Use orange primarily for brand accents and blue primarily for interactive actions. Do not overuse either color.
+
+TYPOGRAPHY
+
+Use Inter, Manrope, Plus Jakarta Sans, or IBM Plex Sans.
+
+Recommended sizes:
+
+- Main brand or facility heading: 36 to 44 pixels
+- Greeting: 26 to 32 pixels
+- Instruction text: 16 to 18 pixels
+- Profile name: 17 to 19 pixels
+- Role and supporting text: 14 to 16 pixels
+- Footer and security text: 12 to 14 pixels
+
+Use font weight 700 for main headings, 600 for profile names and buttons, and 400 to 500 for body text. Do not make all text bold.
+
+RESPONSIVE DESIGN
+
+Desktop:
+- Use approximately 42% width for the brand panel
+- Use approximately 58% width for the login area
+
+Tablet:
+- Preserve the two-panel layout when space permits
+- Increase tap targets
+- Keep profile cards easy to select
+
+Mobile:
+- Convert to a single-column layout
+- Place the logo and abbreviated brand message at the top
+- Put the profile card below
+- Make profile buttons full width
+- Remove unnecessary decorative elements
+- Prevent horizontal scrolling
+
+ACCESSIBILITY
+
+Meet WCAG 2.2 AA expectations.
+
+Include:
+
+- Minimum 4.5:1 contrast for normal text
+- Full keyboard navigation
+- Visible focus states
+- Proper semantic HTML
+- Proper heading hierarchy
+- ARIA labels where needed
+- Screen-reader-compatible profile selection
+- Minimum 16-pixel body text
+- Support for 200% browser zoom
+- Reduced-motion support
+- Tap targets of at least 44 by 44 pixels
+
+INTERACTION DETAILS
+
+- Use subtle transitions between 150 and 220 milliseconds
+- Add a slight lift or border highlight when hovering over a profile
+- Do not use large animations
+- Do not make the page feel like a consumer entertainment application
+- Preserve a serious, trustworthy healthcare tone
+
+Create the page as reusable components so the same login structure can be used for multiple Sunrise OS client organizations. The facility name, logo, profile list, greeting, and support links should all be configurable.
