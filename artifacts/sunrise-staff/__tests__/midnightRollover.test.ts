@@ -1166,4 +1166,133 @@ describe('combined MAR + Checks rollover — single checkDateRollover drives bot
     expect(checksResult.checks['p1']?.mood).toBe(5);           // reset to default
     expect(checksResult.checks['p2']?.uaCollected).toBe(false); // reset to default
   });
+
+  // ── Combined MAR + Checks + Handoff rollover ────────────────────────────────
+  //
+  // HandoffScreen shares the same dateStr-driven key derivation as MAR and
+  // Checks.  The two tests below verify that a single checkDateRollover event
+  // produces clean slates for all three subsystems simultaneously, and that
+  // pruneStaleStorageKeys atomically clears all four key prefixes in one call.
+
+  it('single checkDateRollover drives clean slates for MAR, Checks, and Handoff in parallel', async () => {
+    // Simulates MARContext + HandoffScreen reacting to the same dateStr update:
+    //   1. checkDateRollover fires once (AppState 'active' handler)
+    //   2. MAR, Checks, and Handoff load effects all run concurrently
+    //   3. All three return clean / default state (no bleed from the previous day)
+
+    const openDateStr   = formatDateKey(BEFORE_MIDNIGHT);  // '2026-07-19'
+    const oldMarKey     = `@sunrise_mar_${openDateStr}`;
+    const oldChecksKey  = `@sunrise_checks_${openDateStr}`;
+    const oldNotesKey   = `@sunrise_handoff_notes_${openDateStr}`;
+    const oldShiftKey   = `@sunrise_handoff_shift_${openDateStr}`;
+
+    const storage = makeMemoryStorage({
+      [oldMarKey]:    JSON.stringify({ p1: { 'med1-22:00': true }, p2: { 'med2-08:00': true } }),
+      [oldChecksKey]: JSON.stringify({
+        p1: { ...DEFAULT_CHECK, completed: true, mood: 9 },
+        p2: { ...DEFAULT_CHECK, completed: true, mood: 7 },
+      }),
+      [oldNotesKey]: JSON.stringify({ p1: 'Watch BP closely', p2: 'Detox day 2' }),
+      [oldShiftKey]: 'night',
+    });
+
+    // Step 1: single rollover detection (AppState fires 'active' after midnight)
+    const { rolled, newDateStr } = checkDateRollover(openDateStr, AFTER_MIDNIGHT);
+    expect(rolled).toBe(true);
+    expect(newDateStr).toBe('2026-07-20');
+
+    // Step 2: all three screens derive their new keys from the same newDateStr
+    const newMarKey    = `@sunrise_mar_${newDateStr}`;
+    const newChecksKey = `@sunrise_checks_${newDateStr}`;
+    const newNotesKey  = `@sunrise_handoff_notes_${newDateStr}`;
+    const newShiftKey  = `@sunrise_handoff_shift_${newDateStr}`;
+
+    // Step 3: parallel load — mirroring how MARContext + HandoffScreen behave
+    const [marResult, checksResult, handoffResult] = await Promise.all([
+      loadMARState(storage, newMarKey),
+      loadChecksState(storage, newChecksKey, defaultChecks),
+      loadHandoffState(
+        storage,
+        { notes: newNotesKey, shift: newShiftKey },
+        { notes: { p1: '', p2: '' }, shift: 'day' },
+      ),
+    ]);
+
+    // All three must return clean slates — no bleed from the previous day
+    expect(marResult.loaded).toBe(true);
+    expect(marResult.adminMap).toEqual({});  // no phantom MAR checkmarks
+
+    expect(checksResult.loaded).toBe(true);
+    expect(checksResult.checks['p1']?.completed).toBe(false);  // needs check-in today
+    expect(checksResult.checks['p2']?.completed).toBe(false);
+
+    expect(handoffResult.loaded).toBe(true);
+    expect(handoffResult.notes).toEqual({ p1: '', p2: '' });  // no phantom notes
+    expect(handoffResult.shift).toBe('day');                  // default shift
+  });
+
+  it('pruneStaleStorageKeys atomically removes stale keys for all four prefixes in one call', async () => {
+    // Mirrors the full prune step when MAR, Checks, and Handoff all participate
+    // in the same rollover: a single pruneStaleStorageKeys call (one multiRemove)
+    // must clean up all four key namespaces at once.
+
+    const newMarKey    = makeMarKey(AFTER_MIDNIGHT);              // @sunrise_mar_2026-07-20
+    const newChecksKey = makeChecksKey(AFTER_MIDNIGHT);           // @sunrise_checks_2026-07-20
+    const newNotesKey  = makeHandoffNotesKey(AFTER_MIDNIGHT);     // @sunrise_handoff_notes_2026-07-20
+    const newShiftKey  = makeHandoffShiftKey(AFTER_MIDNIGHT);     // @sunrise_handoff_shift_2026-07-20
+
+    const storage = makeMemoryStorage({
+      // Stale MAR keys (multiple previous days)
+      '@sunrise_mar_2026-07-17':             JSON.stringify({ p1: { 'med1-08:00': true } }),
+      '@sunrise_mar_2026-07-19':             JSON.stringify({ p1: { 'med2-22:00': true } }),
+      [newMarKey]:                            '{}',  // current — must survive
+
+      // Stale Checks keys
+      '@sunrise_checks_2026-07-18':          JSON.stringify({ p1: { ...DEFAULT_CHECK, completed: true } }),
+      '@sunrise_checks_2026-07-19':          JSON.stringify({ p1: { ...DEFAULT_CHECK, completed: true } }),
+      [newChecksKey]:                         '{}',  // current — must survive
+
+      // Stale Handoff notes keys
+      '@sunrise_handoff_notes_2026-07-19':   JSON.stringify({ p1: 'Old note' }),
+      [newNotesKey]:                          '{}',  // current — must survive
+
+      // Stale Handoff shift keys
+      '@sunrise_handoff_shift_2026-07-19':   'night',
+      [newShiftKey]:                          'day', // current — must survive
+
+      // Completely unrelated key — must not be touched
+      '@unrelated_app_key':                   '{"version":1}',
+    });
+
+    // Single call — all four prefixes, one atomic multiRemove underneath
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_mar_',            currentKey: newMarKey },
+      { prefix: '@sunrise_checks_',         currentKey: newChecksKey },
+      { prefix: '@sunrise_handoff_notes_',  currentKey: newNotesKey },
+      { prefix: '@sunrise_handoff_shift_',  currentKey: newShiftKey },
+    ]);
+
+    // All stale MAR keys removed
+    expect(storage.store['@sunrise_mar_2026-07-17']).toBeUndefined();
+    expect(storage.store['@sunrise_mar_2026-07-19']).toBeUndefined();
+
+    // All stale Checks keys removed
+    expect(storage.store['@sunrise_checks_2026-07-18']).toBeUndefined();
+    expect(storage.store['@sunrise_checks_2026-07-19']).toBeUndefined();
+
+    // All stale Handoff notes keys removed
+    expect(storage.store['@sunrise_handoff_notes_2026-07-19']).toBeUndefined();
+
+    // All stale Handoff shift keys removed
+    expect(storage.store['@sunrise_handoff_shift_2026-07-19']).toBeUndefined();
+
+    // Current keys for all four prefixes preserved
+    expect(storage.store[newMarKey]).toBeDefined();
+    expect(storage.store[newChecksKey]).toBeDefined();
+    expect(storage.store[newNotesKey]).toBeDefined();
+    expect(storage.store[newShiftKey]).toBeDefined();
+
+    // Unrelated key untouched
+    expect(storage.store['@unrelated_app_key']).toBeDefined();
+  });
 });
