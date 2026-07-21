@@ -50,6 +50,29 @@ function makeMemoryStorage(
   };
 }
 
+/** Build a StorageAdapter whose getItem calls never resolve until release() is called. */
+function makeDeferredStorage(
+  initial: Record<string, string> = {},
+): {
+  adapter: StorageAdapter & { store: Record<string, string> };
+  release: () => void;
+} {
+  const store: Record<string, string> = { ...initial };
+  let resolvePending!: () => void;
+  const pending = new Promise<void>(res => { resolvePending = res; });
+  const adapter = {
+    store,
+    async getItem(key: string) {
+      await pending;
+      return store[key] ?? null;
+    },
+    async setItem(key: string, value: string) { store[key] = value; },
+    async multiRemove(keys: string[]) { for (const k of keys) delete store[k]; },
+    async getAllKeys() { return Object.keys(store); },
+  };
+  return { adapter, release: resolvePending };
+}
+
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 /** 23:59 on 2026-07-19 UTC — one minute before midnight */
@@ -926,5 +949,221 @@ describe('midnight rollover — regression: stale TODAY_DATE causes phantom data
 
     expect(loaded).toBe(true);
     expect(adminMap).toEqual({});  // clean slate — no phantom checkmarks
+  });
+});
+
+// ─── Tests: combined MAR + Checks rollover (MARContext parallel reload) ───────
+//
+// MARContext drives BOTH adminMap and checks from a single shared dateStr.
+// When checkDateRollover detects midnight has passed, dateStr updates once
+// and BOTH reload effects fire in the same render cycle. The tests below
+// verify that a single rollover event produces clean slates for both screens,
+// that pruneStaleStorageKeys removes both key prefixes atomically, and that
+// the deferred-storage pattern blocks ALL persist effects for both subsystems
+// until their respective loads complete.
+
+describe('combined MAR + Checks rollover — single checkDateRollover drives both reloads', () => {
+  const defaultChecks: Record<string, CheckEntry> = {
+    p1: { ...DEFAULT_CHECK },
+    p2: { ...DEFAULT_CHECK },
+  };
+
+  it('checkDateRollover triggers clean slates for both adminMap and checks in one cycle', async () => {
+    // Simulates MARContext's AppState handler: a single checkDateRollover call
+    // updates dateStr, which re-derives both marKey and checksKey.
+    const openDateStr = formatDateKey(BEFORE_MIDNIGHT);  // '2026-07-19'
+
+    const oldMarKey    = `@sunrise_mar_${openDateStr}`;
+    const oldChecksKey = `@sunrise_checks_${openDateStr}`;
+
+    const storage = makeMemoryStorage({
+      [oldMarKey]:    JSON.stringify({ p1: { 'med1-22:00': true } }),
+      [oldChecksKey]: JSON.stringify({
+        p1: { ...DEFAULT_CHECK, completed: true, mood: 9 },
+        p2: { ...DEFAULT_CHECK, completed: true, mood: 7 },
+      }),
+    });
+
+    // AppState fires 'active' → single checkDateRollover call detects rollover
+    const { rolled, newDateStr } = checkDateRollover(openDateStr, AFTER_MIDNIGHT);
+    expect(rolled).toBe(true);
+    expect(newDateStr).toBe('2026-07-20');
+
+    // MARContext derives both new keys from the same newDateStr
+    const newMarKey    = `@sunrise_mar_${newDateStr}`;
+    const newChecksKey = `@sunrise_checks_${newDateStr}`;
+
+    // Both effects run together in the same rollover cycle (as MARContext does)
+    await Promise.all([
+      loadMARState(storage, newMarKey),
+      loadChecksState(storage, newChecksKey, defaultChecks),
+    ]).then(([marResult, checksResult]) => {
+      // MAR clean slate
+      expect(marResult.loaded).toBe(true);
+      expect(marResult.adminMap).toEqual({});
+
+      // Checks clean slate — no yesterday's completed=true values
+      expect(checksResult.loaded).toBe(true);
+      expect(checksResult.checks['p1']?.completed).toBe(false);
+      expect(checksResult.checks['p2']?.completed).toBe(false);
+    });
+  });
+
+  it('pruneStaleStorageKeys removes both @sunrise_mar_ and @sunrise_checks_ stale keys atomically', async () => {
+    // Mirrors MARContext's prune effect which passes BOTH prefixes to a single
+    // pruneStaleStorageKeys call — the removal is atomic (one multiRemove call).
+    const newMarKey    = makeMarKey(AFTER_MIDNIGHT);
+    const newChecksKey = makeChecksKey(AFTER_MIDNIGHT);
+
+    const storage = makeMemoryStorage({
+      // Stale MAR keys (two days' worth)
+      '@sunrise_mar_2026-07-17':    JSON.stringify({ p1: { 'med1-08:00': true } }),
+      '@sunrise_mar_2026-07-19':    JSON.stringify({ p1: { 'med1-22:00': true } }),
+      [newMarKey]:                  '{}',  // current — must survive
+      // Stale Checks keys
+      '@sunrise_checks_2026-07-18': JSON.stringify({ p1: { ...DEFAULT_CHECK, completed: true } }),
+      '@sunrise_checks_2026-07-19': JSON.stringify({ p1: { ...DEFAULT_CHECK, completed: true } }),
+      [newChecksKey]:               '{}',  // current — must survive
+      // Unrelated key — must not be touched
+      '@sunrise_handoff_notes_2026-07-19': '{}',
+    });
+
+    // Single call removes all stale keys for both prefixes
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_mar_',    currentKey: newMarKey },
+      { prefix: '@sunrise_checks_', currentKey: newChecksKey },
+    ]);
+
+    // All stale MAR keys removed
+    expect(storage.store['@sunrise_mar_2026-07-17']).toBeUndefined();
+    expect(storage.store['@sunrise_mar_2026-07-19']).toBeUndefined();
+    // All stale Checks keys removed
+    expect(storage.store['@sunrise_checks_2026-07-18']).toBeUndefined();
+    expect(storage.store['@sunrise_checks_2026-07-19']).toBeUndefined();
+    // Current keys preserved
+    expect(storage.store[newMarKey]).toBeDefined();
+    expect(storage.store[newChecksKey]).toBeDefined();
+    // Unrelated key untouched
+    expect(storage.store['@sunrise_handoff_notes_2026-07-19']).toBeDefined();
+  });
+
+  it('deferred storage: neither MAR nor Checks persist fires before both loads complete', async () => {
+    // Uses the deferred-storage pattern to hold getItem in-flight for both keys.
+    // While pending, isPersistSafe must return false for both subsystems.
+    // Only after release() resolves both loads may persists run.
+    const newMarKey    = makeMarKey(AFTER_MIDNIGHT);
+    const newChecksKey = makeChecksKey(AFTER_MIDNIGHT);
+
+    const { adapter, release } = makeDeferredStorage();
+    // Separate in-memory store for persist assertions — nothing should be written here
+    const persistStore = makeMemoryStorage();
+
+    // Both loads are in-flight simultaneously (mirrors MARContext's parallel effects)
+    const marLoadPromise    = loadMARState(adapter, newMarKey);
+    const checksLoadPromise = loadChecksState(adapter, newChecksKey, defaultChecks);
+
+    // Simulate guard refs: both are null (cleared synchronously before each async read)
+    let marLoadedKeyRef: string | null    = null;
+    let checksLoadedKeyRef: string | null = null;
+
+    // Yield event loop — both promises still pending (deferred storage not released)
+    await Promise.resolve();
+
+    // Persist effects must be blocked for BOTH subsystems during the in-flight window
+    expect(isPersistSafe(false, marLoadedKeyRef,    newMarKey)).toBe(false);
+    expect(isPersistSafe(true,  marLoadedKeyRef,    newMarKey)).toBe(false);  // stale marLoaded
+    expect(isPersistSafe(false, checksLoadedKeyRef, newChecksKey)).toBe(false);
+    expect(isPersistSafe(true,  checksLoadedKeyRef, newChecksKey)).toBe(false); // stale checksLoaded
+
+    // Simulate persist effects firing with stale loaded=true values from last render
+    const staleAdminMap = { p1: { 'med1-22:00': true } };
+    const staleChecks   = { p1: { ...DEFAULT_CHECK, completed: true } };
+
+    if (isPersistSafe(true, marLoadedKeyRef, newMarKey)) {
+      await saveJsonToStorage(persistStore, newMarKey, staleAdminMap);
+    }
+    if (isPersistSafe(true, checksLoadedKeyRef, newChecksKey)) {
+      await saveJsonToStorage(persistStore, newChecksKey, staleChecks);
+    }
+
+    // Nothing written — both persists were blocked
+    expect(persistStore.store[newMarKey]).toBeUndefined();
+    expect(persistStore.store[newChecksKey]).toBeUndefined();
+
+    // Now release the deferred storage — both loads resolve
+    release();
+    const [marResult, checksResult] = await Promise.all([marLoadPromise, checksLoadPromise]);
+
+    // Update guard refs as MARContext does after each load settles
+    marLoadedKeyRef    = newMarKey;
+    checksLoadedKeyRef = newChecksKey;
+
+    // Both loads returned clean slates
+    expect(marResult.loaded).toBe(true);
+    expect(marResult.adminMap).toEqual({});
+    expect(checksResult.loaded).toBe(true);
+    expect(checksResult.checks['p1']?.completed).toBe(false);
+    expect(checksResult.checks['p2']?.completed).toBe(false);
+
+    // Guard is now open for both subsystems
+    expect(isPersistSafe(true, marLoadedKeyRef,    newMarKey)).toBe(true);
+    expect(isPersistSafe(true, checksLoadedKeyRef, newChecksKey)).toBe(true);
+  });
+
+  it('full combined rollover: prune → parallel load → clean slates for both screens', async () => {
+    // The complete rollover sequence MARContext executes when AppState fires
+    // 'active' after midnight:
+    //   1. checkDateRollover detects the day change → dateStr updates
+    //   2. Prune effect removes stale keys for both prefixes
+    //   3. MAR load effect and Checks load effect run in parallel
+    //   4. Both produce clean slates (adminMap={}, checks all completed=false)
+
+    const openDateStr = formatDateKey(BEFORE_MIDNIGHT);
+    const oldMarKey    = `@sunrise_mar_${openDateStr}`;
+    const oldChecksKey = `@sunrise_checks_${openDateStr}`;
+
+    const storage = makeMemoryStorage({
+      [oldMarKey]: JSON.stringify({
+        p1: { 'med1-08:00': true, 'med2-12:00': true },
+        p2: { 'med3-06:00': true },
+      }),
+      [oldChecksKey]: JSON.stringify({
+        p1: { ...DEFAULT_CHECK, completed: true, mood: 8, cravings: 2 },
+        p2: { ...DEFAULT_CHECK, completed: true, mood: 6, uaCollected: true },
+      }),
+    });
+
+    // Step 1: AppState fires 'active' — single rollover detection
+    const { rolled, newDateStr } = checkDateRollover(openDateStr, AFTER_MIDNIGHT);
+    expect(rolled).toBe(true);
+
+    const newMarKey    = `@sunrise_mar_${newDateStr}`;
+    const newChecksKey = `@sunrise_checks_${newDateStr}`;
+
+    // Step 2: prune effect — both prefixes in one call (atomic multiRemove)
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_mar_',    currentKey: newMarKey },
+      { prefix: '@sunrise_checks_', currentKey: newChecksKey },
+    ]);
+
+    // Both stale keys are gone
+    expect(storage.store[oldMarKey]).toBeUndefined();
+    expect(storage.store[oldChecksKey]).toBeUndefined();
+
+    // Step 3: parallel load (mirrors MARContext's independent load effects)
+    const [marResult, checksResult] = await Promise.all([
+      loadMARState(storage, newMarKey),
+      loadChecksState(storage, newChecksKey, defaultChecks),
+    ]);
+
+    // Step 4: both screens show a clean slate for the new day
+    expect(marResult.loaded).toBe(true);
+    expect(marResult.adminMap).toEqual({});             // no phantom MAR checkmarks
+
+    expect(checksResult.loaded).toBe(true);
+    expect(checksResult.checks['p1']?.completed).toBe(false);  // needs check-in today
+    expect(checksResult.checks['p2']?.completed).toBe(false);
+    expect(checksResult.checks['p1']?.mood).toBe(5);           // reset to default
+    expect(checksResult.checks['p2']?.uaCollected).toBe(false); // reset to default
   });
 });
