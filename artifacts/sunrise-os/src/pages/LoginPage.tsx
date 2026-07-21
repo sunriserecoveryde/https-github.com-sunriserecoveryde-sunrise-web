@@ -221,7 +221,7 @@ function ProfileRow({ staff, role, isSelected, isAnyLoading, onSelect, prefersRe
 function BrandPanel({ org }: { org: OrgConfig }) {
   return (
     <aside
-      className="hidden lg:flex flex-col justify-between px-12 py-10 relative overflow-hidden"
+      className="hidden lg:flex flex-col relative overflow-hidden"
       style={{
         background: [
           'radial-gradient(ellipse 90% 55% at 15% 115%, rgba(242,140,40,0.22) 0%, transparent 65%)',
@@ -231,6 +231,7 @@ function BrandPanel({ org }: { org: OrgConfig }) {
         ].join(', '),
         width: '42%',
         minWidth: '320px',
+        padding: '24px',          /* ¼ inch at 96 dpi */
       }}
       aria-label="Sunrise OS brand panel"
     >
@@ -263,22 +264,44 @@ function BrandPanel({ org }: { org: OrgConfig }) {
         aria-hidden
       />
 
-      {/* Top: logo + headline */}
-      <div className="relative z-10">
-        <div className="flex items-center gap-3 mb-10">
-          <img
-            src={sunriseLogo}
-            alt="Sunrise OS logo"
-            className="h-10 w-auto object-contain"
-            style={{ filter: 'brightness(1.1) saturate(1.2)' }}
-          />
-        </div>
+      {/* Logo — 4 × 4 inch (384 × 384 CSS px at 96 dpi)
+          mix-blend-mode on the wrapper so it composites directly against the
+          aside's gradient background (no z-index stacking context in between). */}
+      <div
+        className="shrink-0"
+        style={{
+          width: '384px',
+          height: '384px',
+          maxWidth: '100%',
+          mixBlendMode: 'screen',
+        }}
+      >
+        <img
+          src={sunriseLogo}
+          alt="Sunrise OS logo"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            objectPosition: 'left center',
+            /*
+             * invert(1): white → black, brand hues shift 180°
+             * hue-rotate(180°): shifts hues back — brand colors are restored
+             * The parent div's mix-blend-mode:screen then makes those blacks transparent.
+             */
+            filter: 'invert(1) hue-rotate(180deg) saturate(1.25) brightness(1.1)',
+          }}
+        />
+      </div>
+
+      {/* Remaining content fills the rest of the panel */}
+      <div className="relative z-10 flex flex-col flex-1 min-h-0">
 
         <h1
           className="font-bold leading-tight mb-8"
           style={{
             color: '#F8FAFC',
-            fontSize: 'clamp(26px, 2.4vw, 38px)',
+            fontSize: 'clamp(24px, 2.2vw, 36px)',
             letterSpacing: '-0.02em',
             lineHeight: 1.2,
           }}
@@ -304,27 +327,27 @@ function BrandPanel({ org }: { org: OrgConfig }) {
             </li>
           ))}
         </ul>
-      </div>
 
-      {/* Bottom: brand tagline + version */}
-      <div className="relative z-10">
-        <div
-          className="h-px mb-6"
-          style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.12), transparent)' }}
-          aria-hidden
-        />
-        <p
-          className="text-[14px] font-medium mb-3"
-          style={{ color: '#8A9BAD' }}
-        >
-          {org.brandStatement}
-        </p>
-        <p
-          className="text-[12px]"
-          style={{ color: '#4A5A6B' }}
-        >
-          Sunrise OS {org.version} &nbsp;·&nbsp; Demo Environment
-        </p>
+        {/* Push tagline to bottom */}
+        <div className="mt-auto pt-6">
+          <div
+            className="h-px mb-6"
+            style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.12), transparent)' }}
+            aria-hidden
+          />
+          <p
+            className="text-[14px] font-medium mb-3"
+            style={{ color: '#8A9BAD' }}
+          >
+            {org.brandStatement}
+          </p>
+          <p
+            className="text-[12px]"
+            style={{ color: '#4A5A6B' }}
+          >
+            Sunrise OS {org.version} &nbsp;·&nbsp; Demo Environment
+          </p>
+        </div>
       </div>
     </aside>
   );
