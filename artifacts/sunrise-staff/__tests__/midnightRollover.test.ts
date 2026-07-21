@@ -594,6 +594,60 @@ describe('checkDateRollover — midnight detection for live sessions', () => {
     const { adminMap } = await loadMARState(storage, marKey);
     expect(adminMap['p1']?.['med1-08:00']).toBe(true);
   });
+
+  it('live rollover: Handoff — previous shift notes do not bleed into the next day', async () => {
+    // Mirrors the MAR and Checks live-rollover tests above, but for HandoffScreen.
+    //
+    // Scenario: the app is left open on the Handoff tab at 23:50.  A nurse writes
+    // a handoff note and sets the shift.  The clock passes midnight (AppState fires
+    // 'active', or the setTimeout / 60 s poll fires).  checkDateRollover detects
+    // the rollover, HandoffScreen re-derives its storage keys from the new date,
+    // prunes the stale keys, and reloads from the new (empty) bucket.
+    //
+    // Step 1: app opens just before midnight
+    const openDateStr   = formatDateKey(BEFORE_MIDNIGHT);       // '2026-07-19'
+    const openNotesKey  = `@sunrise_handoff_notes_${openDateStr}`;
+    const openShiftKey  = `@sunrise_handoff_shift_${openDateStr}`;
+
+    const storage = makeMemoryStorage();
+
+    // Step 2: nurse writes a note and selects the night shift at 23:55
+    await saveJsonToStorage(storage, openNotesKey, { p1: 'Watching BP — q2h vitals ordered' });
+    await storage.setItem(openShiftKey, 'night');
+
+    expect(JSON.parse(storage.store[openNotesKey]!)['p1']).toBe('Watching BP — q2h vitals ordered');
+
+    // Step 3: clock passes midnight — AppState fires 'active' (or timer fires)
+    const { rolled, newDateStr } = checkDateRollover(openDateStr, AFTER_MIDNIGHT);
+    expect(rolled).toBe(true);
+    expect(newDateStr).toBe('2026-07-20');
+
+    // Step 4a: HandoffScreen re-derives keys from newDateStr
+    const newNotesKey = `@sunrise_handoff_notes_${newDateStr}`;
+    const newShiftKey = `@sunrise_handoff_shift_${newDateStr}`;
+
+    // Step 4b: prune stale keys (as the load effect does on key change)
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_notes_', currentKey: newNotesKey },
+      { prefix: '@sunrise_handoff_shift_', currentKey: newShiftKey },
+    ]);
+
+    // Yesterday's entries must be gone
+    expect(storage.store[openNotesKey]).toBeUndefined();
+    expect(storage.store[openShiftKey]).toBeUndefined();
+
+    // Step 5: reload from the new key — new day starts with a blank slate
+    const defaultNotes = { p1: '', p2: '' };
+    const { notes, shift, loaded } = await loadHandoffState(
+      storage,
+      { notes: newNotesKey, shift: newShiftKey },
+      { notes: defaultNotes, shift: 'day' },
+    );
+
+    expect(loaded).toBe(true);
+    expect(notes['p1']).toBe('');   // previous note must not appear
+    expect(shift).toBe('day');      // default shift for the new day — not 'night'
+  });
 });
 
 // ─── Tests: production key-lifecycle integration ──────────────────────────────
