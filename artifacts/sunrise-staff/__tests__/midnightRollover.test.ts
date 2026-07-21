@@ -1613,3 +1613,131 @@ describe('Scores tab — force-quit during first load (loadWithdrawalFiltersStat
     expect(result.lastTrackedDischargePatientId).toBeNull();
   });
 });
+
+// ─── Tests: Handoff screen — force-quit during first load ─────────────────────
+//
+// Scenario: the app is force-quit before either of the two handoff storage keys
+// (notes + shift) have been written — either because pruneStaleStorageKeys ran
+// and removed the previous-day keys before the kill, or because this is a
+// genuinely fresh install with no handoff data at all.
+//
+// On relaunch the store contains:
+//   • No handoff notes key for the current day
+//   • No handoff shift key for the current day
+//
+// loadHandoffState reads both keys in a single Promise.all. It must:
+//   1. Resolve with { loaded: true, notes: defaultNotes, shift: 'day' }
+//      — never hang or crash when keys are absent
+//   2. Open the isPersistSafe gate as soon as the load settles, so the
+//      nurse's first edit can be persisted normally
+
+describe('Handoff screen — force-quit during first load (loadHandoffState)', () => {
+  const defaultNotes: Record<string, string> = { p1: '', p2: '' };
+
+  const NOTES_KEY = makeHandoffNotesKey(AFTER_MIDNIGHT);  // @sunrise_handoff_notes_2026-07-20
+  const SHIFT_KEY = makeHandoffShiftKey(AFTER_MIDNIGHT);  // @sunrise_handoff_shift_2026-07-20
+
+  const KEYS = { notes: NOTES_KEY, shift: SHIFT_KEY };
+  const DEFAULTS = { notes: defaultNotes, shift: 'day' as const };
+
+  // Simulates post-prune, pre-write state: completely empty storage.
+  function makeEmptyStorage() {
+    return makeMemoryStorage({});
+  }
+
+  it('resolves with defaultNotes and shift="day" when both keys are absent (first install / post-prune kill)', async () => {
+    const storage = makeEmptyStorage();
+
+    // Confirm both keys are genuinely missing (simulating post-prune, pre-write state)
+    expect(storage.store[NOTES_KEY]).toBeUndefined();
+    expect(storage.store[SHIFT_KEY]).toBeUndefined();
+
+    const { notes, shift, loaded } = await loadHandoffState(storage, KEYS, DEFAULTS);
+
+    // Must resolve (no hang, no crash) and return safe defaults
+    expect(loaded).toBe(true);
+    expect(notes).toEqual(defaultNotes);
+    expect(shift).toBe('day');
+  });
+
+  it('notes entries are all empty strings (not undefined) when the key is absent', async () => {
+    const storage = makeEmptyStorage();
+
+    const { notes, loaded } = await loadHandoffState(storage, KEYS, DEFAULTS);
+
+    expect(loaded).toBe(true);
+    // Each patient slot in defaultNotes must be an empty string, not undefined
+    expect(notes['p1']).toBe('');
+    expect(notes['p2']).toBe('');
+  });
+
+  it('isPersistSafe gate opens after load resolves with missing keys', async () => {
+    const storage = makeEmptyStorage();
+
+    // Before load: gate is closed (loadedForKey null, load not yet started)
+    let loadedForKey: string | null = null;
+    expect(isPersistSafe(false, loadedForKey, NOTES_KEY)).toBe(false);
+    expect(isPersistSafe(true,  loadedForKey, NOTES_KEY)).toBe(false);  // stale loaded
+
+    // Load settles (missing keys → safe defaults)
+    const { notes, shift, loaded } = await loadHandoffState(storage, KEYS, DEFAULTS);
+    loadedForKey = NOTES_KEY;  // ref set once the Promise.all resolves
+
+    // Gate is now open — the Handoff screen can become editable
+    expect(loaded).toBe(true);
+    expect(isPersistSafe(true, loadedForKey, NOTES_KEY)).toBe(true);
+
+    // Data driving the first render is the safe default
+    expect(notes).toEqual(defaultNotes);
+    expect(shift).toBe('day');
+  });
+
+  it('deferred storage: isPersistSafe blocks during in-flight Promise.all and opens after release', async () => {
+    // Uses the deferred-storage pattern to hold both getItem calls in-flight.
+    // While the Promise.all is pending, isPersistSafe must return false.
+    // Only after release() resolves both reads may the gate open.
+
+    const { adapter, release } = makeDeferredStorage();  // no pre-populated data
+
+    let loadedForKey: string | null = null;
+    const loadPromise = loadHandoffState(adapter, KEYS, DEFAULTS);
+
+    // Yield event loop — Promise.all still pending (deferred storage not released)
+    await Promise.resolve();
+
+    // Gate must be closed while the load is pending
+    expect(isPersistSafe(false, loadedForKey, NOTES_KEY)).toBe(false);
+    expect(isPersistSafe(true,  loadedForKey, NOTES_KEY)).toBe(false);  // stale loaded
+
+    // Release the deferred storage → both getItem calls resolve (returning null)
+    release();
+    const { notes, shift, loaded } = await loadPromise;
+    loadedForKey = NOTES_KEY;  // ref set once the load settles
+
+    // Load must resolve with safe defaults — no hang, no crash
+    expect(loaded).toBe(true);
+    expect(notes).toEqual(defaultNotes);
+    expect(shift).toBe('day');
+
+    // Gate is now open — first nurse edit can be persisted
+    expect(isPersistSafe(true, loadedForKey, NOTES_KEY)).toBe(true);
+  });
+
+  it('returns safe defaults even when storage throws (error path)', async () => {
+    // Simulates a storage adapter that rejects all reads — e.g. a corrupted
+    // storage layer on a fresh install.  The catch block in loadHandoffState
+    // must swallow the error and return defaults so the screen is not stuck hidden.
+    const faultyStorage: StorageAdapter = {
+      async getItem()      { throw new Error('Storage unavailable'); },
+      async setItem()      { /* no-op */ },
+      async multiRemove()  { /* no-op */ },
+      async getAllKeys()    { return []; },
+    };
+
+    const { notes, shift, loaded } = await loadHandoffState(faultyStorage, KEYS, DEFAULTS);
+
+    expect(loaded).toBe(true);
+    expect(notes).toEqual(defaultNotes);
+    expect(shift).toBe('day');
+  });
+});
