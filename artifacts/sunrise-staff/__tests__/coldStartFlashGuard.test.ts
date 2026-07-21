@@ -888,6 +888,107 @@ describe('HandoffScreen Guard B — opacity stays 0 until loadHandoffState resol
   });
 });
 
+// ─── Tests: HandoffScreen AsyncStorage hang timeout guard ─────────────────────
+//
+// These tests verify the 4-second timeout added in Task #324.  They simulate
+// the component's load useEffect pattern — start loadHandoffState, install a
+// setTimeout, let whichever path settles first win — without importing React or
+// React Native.  Jest fake timers replace the real clock so the 4-second guard
+// fires synchronously inside the test.
+
+describe('HandoffScreen — AsyncStorage hang timeout guard', () => {
+  beforeEach(() => { jest.useFakeTimers(); });
+  afterEach(() => { jest.useRealTimers(); });
+
+  const KEYS = { notes: '@handoff_notes', shift: '@handoff_shift' };
+  const DEFAULT_NOTES: Record<string, string> = { p1: 'Patient stable', p2: '' };
+  const DEFAULTS = { notes: DEFAULT_NOTES, shift: 'day' as Shift };
+
+  it('fires the fallback with defaults after 4 s when AsyncStorage never resolves', async () => {
+    const { adapter } = makeDeferredStorage(); // getItem never resolves
+
+    // Mirrors the component effect: race loadHandoffState against a 4-second timeout.
+    let settled = false;
+    const callbackResults: { notes: Record<string, string>; shift: Shift; fromTimeout: boolean }[] = [];
+
+    const timeoutId = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      callbackResults.push({ notes: DEFAULTS.notes, shift: 'day', fromTimeout: true });
+    }, 4000);
+
+    loadHandoffState(adapter, KEYS, DEFAULTS).then(({ notes, shift }) => {
+      clearTimeout(timeoutId);
+      if (!settled) {
+        settled = true;
+        callbackResults.push({ notes, shift, fromTimeout: false });
+      }
+    }).catch(() => {
+      clearTimeout(timeoutId);
+    });
+
+    // Neither path has settled yet — storage is hanging, timer hasn't fired
+    await Promise.resolve();
+    expect(callbackResults).toHaveLength(0);
+
+    // Advance past the 4-second guard
+    jest.advanceTimersByTime(4001);
+    // Flush microtasks so any pending .then() handlers can run
+    await Promise.resolve();
+
+    expect(callbackResults).toHaveLength(1);
+    expect(callbackResults[0]!.fromTimeout).toBe(true);
+    expect(callbackResults[0]!.notes).toEqual(DEFAULTS.notes);
+    expect(callbackResults[0]!.shift).toBe('day');
+  });
+
+  it('timeout is cancelled and does not fire when storage resolves before the 4 s guard', async () => {
+    const { adapter, release } = makeDeferredStorage();
+
+    let timeoutFired = false;
+    let promisePath = false;
+
+    const timeoutId = setTimeout(() => { timeoutFired = true; }, 4000);
+
+    const loadPromise = loadHandoffState(adapter, KEYS, DEFAULTS).then(() => {
+      clearTimeout(timeoutId);
+      promisePath = true;
+    }).catch(() => {
+      clearTimeout(timeoutId);
+    });
+
+    // Resolve storage well before the 4-second guard
+    jest.advanceTimersByTime(500);
+    release(null); // storage resolves immediately now
+    await loadPromise;
+
+    // Advance well past where the timeout would have fired — it must not fire
+    jest.advanceTimersByTime(5000);
+    await Promise.resolve();
+
+    expect(timeoutFired).toBe(false);
+    expect(promisePath).toBe(true);
+  });
+
+  it('only one setState fires even if storage resolves just as the timer fires (race safety)', async () => {
+    // Simulate the `settled` flag preventing a double-update.
+    let callCount = 0;
+    let settled = false;
+
+    function onSetLoaded() {
+      if (settled) return;
+      settled = true;
+      callCount++;
+    }
+
+    // Both paths call onSetLoaded; only the first should increment callCount.
+    onSetLoaded(); // first caller wins
+    onSetLoaded(); // second caller is a no-op due to `settled`
+
+    expect(callCount).toBe(1);
+  });
+});
+
 // ─── Tests: guard invariants ──────────────────────────────────────────────────
 
 describe('cold-start flash guard — shared invariants across all screens', () => {

@@ -323,6 +323,11 @@ export default function HandoffScreen() {
   // .then() callback itself throws unexpectedly, preventing a permanent freeze.
   // loadHandoffState internally catches storage errors and always resolves, so
   // the outer .catch() is a belt-and-suspenders guard for the state setters.
+  //
+  // Task #324: a 4-second timeout guard forces `loaded=true` with safe defaults
+  // if AsyncStorage hangs indefinitely (corrupt storage, device full, OS block).
+  // Whichever path settles first — the promise or the timeout — wins; the other
+  // is cancelled immediately so only one state update fires.
   React.useEffect(() => {
     // Reset the guard so persist effects cannot fire with yesterday's state
     // while the fresh load for the new key is in flight.
@@ -330,6 +335,25 @@ export default function HandoffScreen() {
     loadedForKeyRef.current = null;
 
     const defaultNotes = Object.fromEntries(RESIDENTIAL_PATIENTS.map(p => [p.id, p.handoffNote ?? '']));
+
+    // Flag shared between the promise path and the timeout path so only the
+    // first one to settle actually calls setState (prevents a double-update if
+    // storage resolves just as the timer fires).
+    let settled = false;
+
+    // 4-second hang guard: if AsyncStorage doesn't respond in time, unblock the
+    // screen with the static default notes and 'day' shift.  loadedForKeyRef is
+    // intentionally left null so the persist-write effects stay blocked — the
+    // timed-out defaults should never be written back to storage.
+    const timeoutId = setTimeout(() => {
+      if (!mountedRef.current || settled) return;
+      settled = true;
+      setNotes(defaultNotes);
+      setShift('day');
+      // loadedForKeyRef.current stays null — persist effects remain blocked.
+      setLoaded(true);
+    }, 4000);
+
     pruneStaleStorageKeys(AsyncStorage, [
       { prefix: '@sunrise_handoff_notes_', currentKey: storageKeyNotes },
       { prefix: '@sunrise_handoff_shift_', currentKey: storageKeyShift },
@@ -339,7 +363,9 @@ export default function HandoffScreen() {
       { notes: storageKeyNotes, shift: storageKeyShift },
       { notes: defaultNotes, shift: 'day' },
     ).then(({ notes: savedNotes, shift: savedShift }) => {
-      if (!mountedRef.current) return;
+      clearTimeout(timeoutId);
+      if (!mountedRef.current || settled) return;
+      settled = true;
       setNotes(savedNotes);
       setShift(savedShift);
       loadedForKeyRef.current = storageKeyNotes;
@@ -347,8 +373,14 @@ export default function HandoffScreen() {
     }).catch(() => {
       // Fallback: even if the .then() callback throws, clear the guard so the
       // screen doesn't stay permanently invisible (Task #313 / #315).
-      if (mountedRef.current) setLoaded(true);
+      clearTimeout(timeoutId);
+      if (mountedRef.current && !settled) {
+        settled = true;
+        setLoaded(true);
+      }
     });
+
+    return () => { clearTimeout(timeoutId); };
   }, [storageKeyNotes, storageKeyShift]);
 
   // Write-through ref: kept in sync with `notes` state so the write-through
