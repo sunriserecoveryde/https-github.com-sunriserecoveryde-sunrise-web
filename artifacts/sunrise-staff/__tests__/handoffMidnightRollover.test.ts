@@ -511,3 +511,183 @@ describe('handoff rollover — full effect-ordering simulation (mirrors handoff.
     expect(isPersistSafe(loaded, loadedForKey, newNotesKey)).toBe(true);
   });
 });
+
+// ─── Tests: note typed before storage load resolves ───────────────────────────
+//
+// Reproduces the cold-start edge case documented in handoff.tsx's onNoteChange
+// handler: a nurse types in the narrow window between component mount and the
+// AsyncStorage.getItem calls resolving.  The write-through persist is guarded by
+// isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes), which returns
+// false while the load is in-flight — preventing a race where an empty (not-yet-
+// loaded) notes state could be written into the bucket.  After the load resolves
+// the persist effect re-fires and the stored state is durable.
+
+describe('handoff cold-start — note typed before storage load resolves', () => {
+  it('persist is blocked while load is in-flight, then fires after load resolves', async () => {
+    const today = new Date('2026-07-21T08:00:00.000Z');
+    const notesKey = makeHandoffNotesKey(today);
+    const shiftKey = makeHandoffShiftKey(today);
+
+    // Storage has a note from an earlier session (nurse was already here today)
+    const { adapter, release } = makeDeferredStorage({
+      [notesKey]: JSON.stringify({ p1: 'Morning rounds — stable', p2: '' }),
+      [shiftKey]: 'day',
+    });
+
+    // Separate writable store used to simulate what the persist effect writes
+    const writeStore: Record<string, string> = {};
+    let writeCount = 0;
+    async function simulatePersist(key: string, value: Record<string, string>) {
+      await saveJsonToStorage(
+        {
+          async getItem(k) { return writeStore[k] ?? null; },
+          async setItem(k, v) { writeCount++; writeStore[k] = v; },
+          async multiRemove(keys) { for (const k of keys) delete writeStore[k]; },
+          async getAllKeys() { return Object.keys(writeStore); },
+        },
+        key,
+        value,
+      );
+    }
+
+    // ── PHASE 1: load in-flight ──────────────────────────────────────────────
+    // The component has mounted; loadHandoffState is running but hasn't resolved.
+    // Guard state: loaded=false, loadedForKey=null (load effect resets both).
+    let handoffLoaded: boolean = false;
+    let loadedForKey: string | null = null;
+
+    // Launch the deferred load (mirrors the useEffect in handoff.tsx)
+    const loadPromise = loadHandoffState(
+      adapter,
+      { notes: notesKey, shift: shiftKey },
+      { notes: DEFAULT_NOTES, shift: 'day' },
+    );
+
+    let loadSettled = false;
+    loadPromise.then(() => { loadSettled = true; });
+
+    // Yield the microtask queue — load is still pending (deferred adapter)
+    await Promise.resolve();
+    expect(loadSettled).toBe(false);
+
+    // Nurse types a note before the load resolves.
+    // onNoteChange in handoff.tsx: setNotes(next) — local state updated immediately.
+    const nurseDraftNotes: Record<string, string> = { p1: 'Nurse draft — not yet loaded', p2: '' };
+
+    // Persist effect fires (notes state changed) but isPersistSafe blocks it.
+    const persistSafeDuringLoad = isPersistSafe(handoffLoaded, loadedForKey, notesKey);
+    expect(persistSafeDuringLoad).toBe(false);  // ✓ blocked — load still in-flight
+
+    // Even if React still sees the old loaded=true from a previous render (e.g.
+    // tab re-focus without a full remount), the guard blocks with null loadedForKey.
+    const persistSafeStaleLoaded = isPersistSafe(true, loadedForKey, notesKey);
+    expect(persistSafeStaleLoaded).toBe(false);  // ✓ blocked — loadedForKey is null
+
+    // Nothing has been written while the load was pending
+    if (persistSafeDuringLoad) await simulatePersist(notesKey, nurseDraftNotes);
+    expect(writeStore[notesKey]).toBeUndefined();
+    expect(writeCount).toBe(0);
+
+    // ── PHASE 2: load resolves ───────────────────────────────────────────────
+    // Release the deferred storage so loadHandoffState can complete.
+    release();
+    const { notes: savedNotes, shift: savedShift, loaded: freshLoaded } = await loadPromise;
+    expect(loadSettled).toBe(true);
+
+    // Mirrors what the .then() callback in handoff.tsx does:
+    //   setNotes(savedNotes)             → state becomes the persisted value
+    //   loadedForKeyRef.current = key    → guard key is now set
+    //   setLoaded(true)                  → guard is open
+    let currentNotes = savedNotes;   // in-memory notes now reflect storage
+    loadedForKey = notesKey;         // loadedForKeyRef.current = storageKeyNotes
+    handoffLoaded = freshLoaded;
+
+    expect(handoffLoaded).toBe(true);
+    expect(currentNotes['p1']).toBe('Morning rounds — stable');  // restored from storage
+    expect(savedShift).toBe('day');
+
+    // ── PHASE 3: persist effect re-fires after load ──────────────────────────
+    // React re-runs the persist effect because `loaded` changed to true.
+    // isPersistSafe is now open and the current state gets written.
+    const persistSafeAfterLoad = isPersistSafe(handoffLoaded, loadedForKey, notesKey);
+    expect(persistSafeAfterLoad).toBe(true);  // ✓ safe — load complete, keys match
+
+    await simulatePersist(notesKey, currentNotes);
+
+    // The persisted value is the freshly-loaded note from storage (not the draft
+    // that was typed during the load window — that draft was already overwritten
+    // by setNotes(savedNotes) when the load resolved, which is the expected
+    // React state-update behaviour).
+    expect(writeCount).toBe(1);
+    const persisted = JSON.parse(writeStore[notesKey]!);
+    expect(persisted['p1']).toBe('Morning rounds — stable');
+    expect(persisted['p2']).toBe('');
+  });
+
+  it('guard stays closed for all writes when storage is empty and load in-flight', async () => {
+    // Fresh install scenario: no prior data in storage.
+    // Nurse types immediately after app opens (before load resolves).
+    const today = new Date('2026-07-21T08:00:00.000Z');
+    const notesKey = makeHandoffNotesKey(today);
+    const shiftKey = makeHandoffShiftKey(today);
+
+    const { adapter, release } = makeDeferredStorage(); // empty storage
+
+    let handoffLoaded = false;
+    let loadedForKey: string | null = null;
+
+    const loadPromise = loadHandoffState(
+      adapter,
+      { notes: notesKey, shift: shiftKey },
+      { notes: DEFAULT_NOTES, shift: 'day' },
+    );
+
+    await Promise.resolve(); // yield — still pending
+
+    // Guard is closed for both possible loaded states during the window
+    expect(isPersistSafe(false, loadedForKey, notesKey)).toBe(false);
+    expect(isPersistSafe(true,  loadedForKey, notesKey)).toBe(false);
+
+    // Resolve and complete the load
+    release();
+    const { notes, loaded } = await loadPromise;
+    loadedForKey = notesKey;
+    handoffLoaded = loaded;
+
+    expect(handoffLoaded).toBe(true);
+    expect(notes).toEqual(DEFAULT_NOTES); // empty — no prior data
+
+    // Guard now open
+    expect(isPersistSafe(handoffLoaded, loadedForKey, notesKey)).toBe(true);
+  });
+
+  it('any nurse edit made after load resolves is immediately persistable', async () => {
+    // After the load window, writes must NOT be blocked — this is the normal path.
+    const today = new Date('2026-07-21T08:00:00.000Z');
+    const notesKey = makeHandoffNotesKey(today);
+    const shiftKey = makeHandoffShiftKey(today);
+
+    const storage = makeMemoryStorage(); // synchronous — load resolves immediately
+
+    const { notes, shift, loaded } = await loadHandoffState(
+      storage,
+      { notes: notesKey, shift: shiftKey },
+      { notes: DEFAULT_NOTES, shift: 'day' },
+    );
+    const loadedForKey = notesKey; // loadedForKeyRef.current = storageKeyNotes
+
+    expect(loaded).toBe(true);
+
+    // Nurse types after load — guard must be open
+    const editedNotes = { ...notes, p1: 'Post-load edit: patient requesting PRN' };
+
+    expect(isPersistSafe(loaded, loadedForKey, notesKey)).toBe(true);
+
+    // Persist fires immediately — no blocking
+    await saveJsonToStorage(storage, notesKey, editedNotes);
+
+    const saved = JSON.parse(storage.store[notesKey]!);
+    expect(saved['p1']).toBe('Post-load edit: patient requesting PRN');
+    expect(saved['p2']).toBe('');
+  });
+});
