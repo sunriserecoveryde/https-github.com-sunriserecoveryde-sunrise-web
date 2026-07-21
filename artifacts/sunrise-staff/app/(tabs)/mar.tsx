@@ -159,9 +159,13 @@ function MARView() {
 
   // Guard B: starts invisible so med checkmarks don't flash as unchecked before
   // AsyncStorage resolves (@sunrise_mar_<date>). Fades in once marLoaded.
-  const listOpacity = useRef(new Animated.Value(0)).current;
+  // Task #308: if marLoaded is already true on mount (e.g. BHT→RN role switch
+  // remounts MARView while context data is intact), start at opacity 1 directly
+  // so there is no 150 ms blind flash on return.
+  const loadedOnMountMAR = useRef(marLoaded).current;
+  const listOpacity = useRef(new Animated.Value(loadedOnMountMAR ? 1 : 0)).current;
   useEffect(() => {
-    if (marLoaded) {
+    if (marLoaded && !loadedOnMountMAR) {
       Animated.timing(listOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
     }
   }, [marLoaded]);
@@ -337,9 +341,13 @@ function ChecksView() {
   // Guard B: starts invisible so check completion status doesn't flash as
   // "Needs check-in" before AsyncStorage resolves (@sunrise_checks_<date>).
   // Fades in once checksLoaded, matching the pattern in vitals.tsx.
-  const listOpacity = useRef(new Animated.Value(0)).current;
+  // Task #306: if checksLoaded is already true on mount (e.g. RN→BHT role
+  // switch remounts ChecksView while context data is intact), start at opacity
+  // 1 directly so there is no 150 ms blind flash on return.
+  const loadedOnMountChecks = useRef(checksLoaded).current;
+  const listOpacity = useRef(new Animated.Value(loadedOnMountChecks ? 1 : 0)).current;
   useEffect(() => {
-    if (checksLoaded) {
+    if (checksLoaded && !loadedOnMountChecks) {
       Animated.timing(listOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
     }
   }, [checksLoaded]);

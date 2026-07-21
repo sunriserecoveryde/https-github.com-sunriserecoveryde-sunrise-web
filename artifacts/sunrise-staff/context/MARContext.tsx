@@ -132,10 +132,26 @@ export function MARProvider({ children }: { children: React.ReactNode }) {
   const marLoadedKeyRef    = useRef<string | null>(null);
   const checksLoadedKeyRef = useRef<string | null>(null);
 
-  // ── Midnight rollover detection ───────────────────────────────────────────
-  // When the app foregrounds after midnight, checkDateRollover detects the day
-  // change and updates dateStr.  The key-dependent effects below then re-run
-  // automatically, pruning yesterday's entries and loading from the new key.
+  // Snapshot refs kept in sync with state so write-through callbacks can
+  // compute the next value without a stale closure over the last render's state.
+  const adminMapRef = useRef<AdminMap>({});
+  const checksRef   = useRef<Record<string, CheckEntry>>({});
+  useEffect(() => { adminMapRef.current = adminMap; }, [adminMap]);
+  useEffect(() => { checksRef.current   = checks;   }, [checks]);
+
+  // ── Midnight rollover detection — two complementary mechanisms ────────────
+  //
+  // 1. AppState 'active' listener — fires whenever the app foregrounds:
+  //    • User backgrounds then returns (Task #306 guard is in the UI layer)
+  //    • Phone is locked then unlocked while app is in background (Task #307):
+  //      iOS:     active → inactive → background … unlock … background → inactive → active ✓
+  //      Android: active → background              … unlock … background → active            ✓
+  //    Both paths emit 'active' and checkDateRollover handles the day change.
+  //
+  // 2. 60-second polling interval — fires while the app is already active:
+  //    • Screen left on overnight (no foreground transition, listener never fires)
+  //    • Device with always-on display (Task #304)
+  //    Together the two mechanisms ensure dateStr is always current.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
@@ -144,6 +160,15 @@ export function MARProvider({ children }: { children: React.ReactNode }) {
       }
     });
     return () => sub.remove();
+  }, [dateStr]);
+
+  // Task #304 / #307: poll every 60 s for in-foreground midnight rollovers.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const { rolled, newDateStr } = checkDateRollover(dateStr, new Date());
+      if (rolled) setDateStr(newDateStr);
+    }, 60_000);
+    return () => clearInterval(id);
   }, [dateStr]);
 
   // ── Prune stale keys whenever the active date changes ─────────────────────
@@ -195,17 +220,36 @@ export function MARProvider({ children }: { children: React.ReactNode }) {
     }
   }, [checks, checksLoaded, checksKey]);
 
+  // Task #305: write-through — compute the next value directly from the
+  // snapshot ref and persist it immediately, before React's effect cycle.
+  // This closes the force-quit window between setAdminMap() and the async
+  // persist effect: if the app is killed mid-cycle, the write-through call
+  // has already dispatched the setItem and the OS/SQLite WAL preserves it.
   const toggleAdmin = useCallback((patientId: string, medId: string, time: string) => {
-    const key = `${medId}-${time}`;
-    setAdminMap(prev => ({
+    const slotKey = `${medId}-${time}`;
+    const prev    = adminMapRef.current;
+    const newMap: AdminMap = {
       ...prev,
-      [patientId]: { ...(prev[patientId] ?? {}), [key]: !(prev[patientId]?.[key]) },
-    }));
-  }, []);
+      [patientId]: { ...(prev[patientId] ?? {}), [slotKey]: !(prev[patientId]?.[slotKey]) },
+    };
+    adminMapRef.current = newMap;
+    setAdminMap(newMap);
+    // Write-through: persist immediately so a force-quit between state update
+    // and the async persist effect cannot drop the toggle.
+    if (isPersistSafe(marLoaded, marLoadedKeyRef.current, marKey)) {
+      saveToStorage(marKey, newMap);
+    }
+  }, [marLoaded, marKey]);
 
   const updateCheck = useCallback((patientId: string, check: CheckEntry) => {
-    setChecks(prev => ({ ...prev, [patientId]: check }));
-  }, []);
+    const newChecks = { ...checksRef.current, [patientId]: check };
+    checksRef.current = newChecks;
+    setChecks(newChecks);
+    // Write-through: same force-quit guard as toggleAdmin.
+    if (isPersistSafe(checksLoaded, checksLoadedKeyRef.current, checksKey)) {
+      saveToStorage(checksKey, newChecks);
+    }
+  }, [checksLoaded, checksKey]);
 
   return (
     <MARContext.Provider value={{ adminMap, marLoaded, toggleAdmin, checks, checksLoaded, updateCheck }}>

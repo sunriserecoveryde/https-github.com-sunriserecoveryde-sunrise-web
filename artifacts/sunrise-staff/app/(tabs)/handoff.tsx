@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Animated,
+  AppState,
   FlatList,
   Platform,
   Pressable,
@@ -195,10 +196,39 @@ export default function HandoffScreen() {
   const [completed, setCompleted] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  // Tracks the current calendar date so the header subtitle stays accurate when
-  // the app is left open overnight.  A setTimeout fires just after midnight and
-  // updates the value, then re-arms itself for the next rollover.
+  // Tracks the current calendar date so storage keys and the header subtitle
+  // stay accurate when the app is left open overnight.
+  //
+  // Three complementary mechanisms keep `today` current — each covers a
+  // scenario the others miss:
+  //
+  //   1. setTimeout to next midnight — fires for a screen left on and awake.
+  //      Re-arms itself after each rollover so successive nights are covered.
+  //
+  //   2. AppState 'active' listener — fires when the app foregrounds after the
+  //      phone was locked at midnight (Task #310).  The OS pauses JS timers
+  //      while the screen is locked, so the setTimeout alone misses this case.
+  //      iOS:     active→inactive→background … unlock … background→inactive→active ✓
+  //      Android: active→background            … unlock … background→active         ✓
+  //
+  //   3. 60-second polling interval — catches always-on-display devices where
+  //      AppState never transitions and setTimeout has drifted.
+  //
+  // All three paths call the same `checkRollover` helper which compares the
+  // stored dateStr against `new Date()` and calls setToday only when the day
+  // has actually advanced, making repeated calls idempotent.
   const [today, setToday] = useState(() => new Date());
+  const todayKeyRef = useRef(formatDateKey(new Date())); // tracks last-seen date string
+
+  function checkRollover() {
+    const nowKey = formatDateKey(new Date());
+    if (nowKey !== todayKeyRef.current) {
+      todayKeyRef.current = nowKey;
+      setToday(new Date());
+    }
+  }
+
+  // Mechanism 1: setTimeout to next midnight.
   const midnightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     function armMidnightTimer() {
@@ -206,14 +236,28 @@ export default function HandoffScreen() {
       const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
       const msUntilMidnight = nextMidnight.getTime() - now.getTime();
       midnightTimerRef.current = setTimeout(() => {
-        setToday(new Date());
-        armMidnightTimer(); // re-arm for the following night
+        checkRollover();
+        armMidnightTimer();
       }, msUntilMidnight);
     }
     armMidnightTimer();
     return () => {
       if (midnightTimerRef.current != null) clearTimeout(midnightTimerRef.current);
     };
+  }, []);
+
+  // Mechanism 2: AppState 'active' listener (Task #310 — phone locked at midnight).
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') checkRollover();
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Mechanism 3: 60-second polling interval.
+  useEffect(() => {
+    const id = setInterval(checkRollover, 60_000);
+    return () => clearInterval(id);
   }, []);
 
   // Storage keys are derived from `today` so they update automatically after
@@ -288,6 +332,11 @@ export default function HandoffScreen() {
       setLoaded(true);
     });
   }, [storageKeyNotes, storageKeyShift]);
+
+  // Write-through ref: kept in sync with `notes` state so the write-through
+  // handler can compute the next value without a stale closure (Task #311).
+  const notesRef = useRef(notes);
+  useEffect(() => { notesRef.current = notes; }, [notes]);
 
   // Persist notes when they change (after initial load).
   // isPersistSafe guards against writing yesterday's in-memory state into today's
