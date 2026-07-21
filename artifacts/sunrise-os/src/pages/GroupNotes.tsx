@@ -463,7 +463,7 @@ export function GroupNotes({ navigate, readOnly }: Props) {
                   {[
                     { name: 'Sarah Jenkins, LPC', sessions: 14, signed: 13, draft: 1, missing: 0 },
                     { name: 'David Odom, LMFT', sessions: 12, signed: 10, draft: 1, missing: 1 },
-                    { name: 'Marcus Chen, LADC', sessions: 10, signed: 8, draft: 2, missing: 0 },
+                    { name: 'Marcus Chen, CAC-AD', sessions: 10, signed: 8, draft: 2, missing: 0 },
                     { name: 'Priya Nair, MSW', sessions: 6, signed: 4, draft: 1, missing: 1 },
                   ].map(f => {
                     const pct = Math.round((f.signed / f.sessions) * 100);
@@ -541,12 +541,12 @@ export function GroupNotes({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'T. Jackson, CADC', sessions: 18, avg: 8.4, notes: '100%', onTime: '94%', sat: 4.7, spec: 'CBT / Relapse Prev.' },
+                  { name: 'T. Jackson, CAC-AD', sessions: 18, avg: 8.4, notes: '100%', onTime: '94%', sat: 4.7, spec: 'CBT / Relapse Prev.' },
                   { name: 'A. Brooks, LPC', sessions: 14, avg: 7.1, notes: '86%', onTime: '89%', sat: 4.4, spec: 'Trauma / DBT' },
                   { name: 'M. Rivera, MS', sessions: 16, avg: 7.9, notes: '94%', onTime: '97%', sat: 4.6, spec: 'Psychoeducation' },
-                  { name: 'D. Williams, CADC', sessions: 12, avg: 6.8, notes: '75%', onTime: '83%', sat: 4.1, spec: '12-Step / Spirituality' },
+                  { name: 'D. Williams, CAC-AD', sessions: 12, avg: 6.8, notes: '75%', onTime: '83%', sat: 4.1, spec: '12-Step / Spirituality' },
                   { name: 'P. Chen, LMFT', sessions: 10, avg: 6.2, notes: '100%', onTime: '100%', sat: 4.8, spec: 'Family Systems' },
-                  { name: 'K. Nguyen, CADC-II', sessions: 8, avg: 5.9, notes: '88%', onTime: '88%', sat: 4.3, spec: 'Anger Mgmt / Life Skills' },
+                  { name: 'K. Nguyen, CAADC', sessions: 8, avg: 5.9, notes: '88%', onTime: '88%', sat: 4.3, spec: 'Anger Mgmt / Life Skills' },
                 ].map(f => (
                   <tr key={f.name} className="hover:bg-gray-50">
                     <td className="px-3 py-2.5 font-medium text-navy">{f.name}</td>

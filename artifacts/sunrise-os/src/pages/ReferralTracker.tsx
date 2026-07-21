@@ -17,12 +17,12 @@ import {
 const PIPELINE = [
   { id: 'pl1', name: 'Thomas Reilly',   source: 'Vanderbilt ER',        program: 'Residential', insurance: 'Aetna',      status: 'Pending Admit',      daysInPipeline: 2, coordinator: 'Amanda Lewis', diagnosis: 'Alcohol Use Disorder' },
   { id: 'pl2', name: 'Nicole Harrison', source: 'Cumberland Heights',    program: 'PHP',         insurance: 'BlueCross',  status: 'VOB / Assessment',   daysInPipeline: 3, coordinator: 'Amanda Lewis', diagnosis: 'Opioid Use Disorder' },
-  { id: 'pl3', name: 'Andre Simmons',   source: 'Drug Court',            program: 'Residential', insurance: 'TennCare',   status: 'Referral Received',  daysInPipeline: 1, coordinator: 'Amanda Lewis', diagnosis: 'Methamphetamine Use' },
+  { id: 'pl3', name: 'Andre Simmons',   source: 'Drug Court',            program: 'Residential', insurance: 'Maryland Medicaid',   status: 'Referral Received',  daysInPipeline: 1, coordinator: 'Amanda Lewis', diagnosis: 'Methamphetamine Use' },
   { id: 'pl4', name: 'Brenda Castillo', source: 'Self-Referral',         program: 'IOP',         insurance: 'Cigna',      status: 'Referral Received',  daysInPipeline: 1, coordinator: 'Amanda Lewis', diagnosis: 'Alcohol + Anxiety' },
   { id: 'pl5', name: 'Marcus Odom',     source: 'Private Therapist',     program: 'Residential', insurance: 'United',     status: 'Active in Tx',       daysInPipeline: 4, coordinator: 'Amanda Lewis', diagnosis: 'Polysubstance' },
   { id: 'pl6', name: 'Yolanda Pierce',  source: 'TriStar Health ER',     program: 'PHP',         insurance: 'BCBS',       status: 'VOB / Assessment',   daysInPipeline: 2, coordinator: 'Amanda Lewis', diagnosis: 'Opioid Use Disorder' },
   { id: 'pl7', name: 'Derek Moss',      source: 'Vanderbilt ER',         program: 'Residential', insurance: 'Aetna',      status: 'Pending Admit',      daysInPipeline: 2, coordinator: 'Amanda Lewis', diagnosis: 'Alcohol Use Disorder' },
-  { id: 'pl8', name: 'Cynthia Grant',   source: 'Monroe Carell Jr.',     program: 'IOP',         insurance: 'TennCare',   status: 'Referral Received',  daysInPipeline: 0, coordinator: 'Amanda Lewis', diagnosis: 'Benzodiazepine Use' },
+  { id: 'pl8', name: 'Cynthia Grant',   source: 'Monroe Carell Jr.',     program: 'IOP',         insurance: 'Maryland Medicaid',   status: 'Referral Received',  daysInPipeline: 0, coordinator: 'Amanda Lewis', diagnosis: 'Benzodiazepine Use' },
   { id: 'pl9', name: 'Aaron King',      source: 'Drug Court',            program: 'Residential', insurance: 'Self-Pay',   status: 'Active in Tx',       daysInPipeline: 6, coordinator: 'Amanda Lewis', diagnosis: 'Methamphetamine Use' },
   { id: 'pl10', name: 'Fiona Beckett',  source: 'NovaCare Behavioral',   program: 'PHP',         insurance: 'Cigna',      status: 'VOB / Assessment',   daysInPipeline: 1, coordinator: 'Amanda Lewis', diagnosis: 'Alcohol Use Disorder' },
 ];
@@ -78,7 +78,7 @@ function KanbanCard({ item }: { item: typeof PIPELINE[0] }) {
   const insColors: Record<string, string> = {
     'Aetna': 'bg-blue-100 text-blue-700',
     'BlueCross': 'bg-indigo-100 text-indigo-700',
-    'TennCare': 'bg-teal-100 text-teal-700',
+    'Maryland Medicaid': 'bg-teal-100 text-teal-700',
     'Cigna': 'bg-orange-100 text-orange-700',
     'United': 'bg-green-100 text-green-700',
     'BCBS': 'bg-purple-100 text-purple-700',
@@ -268,7 +268,7 @@ export function ReferralTracker({ navigate, readOnly }: { navigate: (s: Screen) 
                       <td className="p-4 pl-6">
                         <div className="font-bold text-navy">{r.source}</div>
                         <div className="text-[10px] text-slate flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3" /> Nashville, TN
+                          <MapPin className="w-3 h-3" /> Rockville, MD
                         </div>
                       </td>
                       <td className="p-4 text-slate">{r.contact}</td>
@@ -424,7 +424,7 @@ export function ReferralTracker({ navigate, readOnly }: { navigate: (s: Screen) 
                 <tbody className="divide-y divide-border">
                   {[
                     { source: 'Vanderbilt Medical', admits: 18, los: '27d', comp: '78%', s30: '69%', s90: '64%', tier: 'Platinum' },
-                    { source: 'Nashville General ER', admits: 12, los: '22d', comp: '67%', s30: '58%', s90: '53%', tier: 'Gold' },
+                    { source: 'Rockville General ER', admits: 12, los: '22d', comp: '67%', s30: '58%', s90: '53%', tier: 'Gold' },
                     { source: 'Davidson Drug Court', admits: 9, los: '28d', comp: '89%', s30: '78%', s90: '71%', tier: 'Platinum' },
                     { source: 'St. Thomas West ER', admits: 8, los: '19d', comp: '63%', s30: '54%', s90: '48%', tier: 'Silver' },
                     { source: 'Aetna Case Mgmt', admits: 5, los: '21d', comp: '74%', s30: '63%', s90: '57%', tier: 'Gold' },

@@ -488,10 +488,10 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
                 <div className="space-y-2 text-xs">
                   {[
                     { group: 'CBT / Trauma Groups', quals: 'LMFT, LPC, LCSW, or licensed psychologist. Must have CBT/trauma-specific training documentation.' },
-                    { group: 'Process Groups', quals: 'LADC, CADC-II, or licensed clinician. Minimum 2 years group facilitation experience.' },
-                    { group: 'Medication Education', quals: 'RN, MD, NP, or PA. LADC co-facilitation recommended.' },
-                    { group: 'Psychoeducation / Life Skills', quals: 'LADC-I, CADC, or supervised intern with co-facilitator approval.' },
-                    { group: 'Mindfulness / Yoga', quals: 'Certified instructor (MBRP, 200hr Yoga, or equivalent) plus LADC oversight.' },
+                    { group: 'Process Groups', quals: 'CAC-AD, CAADC, or licensed clinician. Minimum 2 years group facilitation experience.' },
+                    { group: 'Medication Education', quals: 'RN, MD, NP, or PA. CAC-AD co-facilitation recommended.' },
+                    { group: 'Psychoeducation / Life Skills', quals: 'CSC-AD, CAC-AD, or supervised intern with co-facilitator approval.' },
+                    { group: 'Mindfulness / Yoga', quals: 'Certified instructor (MBRP, 200hr Yoga, or equivalent) plus CAC-AD oversight.' },
                   ].map(q => (
                     <div key={q.group} className="border border-border rounded p-2">
                       <div className="font-semibold text-navy mb-0.5">{q.group}</div>
@@ -579,7 +579,7 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
             <h3 className="font-semibold text-navy text-sm mb-3">Attendance by Group Type (Last 30 Days)</h3>
             <div className="space-y-2.5 text-xs">
               {[
-                { type: 'Psychoeducation', pct: 94, sessions: 22, color: 'bg-blue-500' },
+                { type: 'Psychoeducation', pct: 94, sessions: 10, color: 'bg-blue-500' },
                 { type: 'CBT / Skills', pct: 88, sessions: 24, color: 'bg-purple-500' },
                 { type: 'Relapse Prevention', pct: 86, sessions: 18, color: 'bg-teal-500' },
                 { type: 'Process Group', pct: 81, sessions: 12, color: 'bg-orange-400' },
@@ -610,7 +610,7 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
             {[
               { label: 'Avg Groups / Clinician / Week', value: 6.2, color: 'text-navy', sub: 'Target: ≤8' },
               { label: 'Highest Load', value: 9, color: 'text-amber-600', sub: 'S. Jenkins, LPC — monitor' },
-              { label: 'Lowest Load', value: 4, color: 'text-green-600', sub: 'T. Osei, CADC — capacity' },
+              { label: 'Lowest Load', value: 4, color: 'text-green-600', sub: 'T. Osei, CAC-AD — capacity' },
               { label: 'Facilitators at or Over Target', value: 2, color: 'text-red-600', sub: 'Need redistribution review' },
             ].map(k => (
               <div key={k.label} className="card">
@@ -635,8 +635,8 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
                   { name: 'S. Jenkins', cred: 'LPC', groups: 9, att: 7.2, cases: 14, hrs: 38, status: 'At Limit' },
                   { name: 'D. Odom', cred: 'LMFT', groups: 7, att: 6.8, cases: 12, hrs: 34, status: 'Normal' },
                   { name: 'M. Gonzales', cred: 'LCSW', groups: 8, att: 7.0, cases: 13, hrs: 36, status: 'High' },
-                  { name: 'T. Osei', cred: 'CADC', groups: 4, att: 8.1, cases: 8, hrs: 24, status: 'Under' },
-                  { name: 'R. Patel', cred: 'CADC-II', groups: 5, att: 7.5, cases: 9, hrs: 28, status: 'Normal' },
+                  { name: 'T. Osei', cred: 'CAC-AD', groups: 4, att: 8.1, cases: 8, hrs: 24, status: 'Under' },
+                  { name: 'R. Patel', cred: 'CAADC', groups: 5, att: 7.5, cases: 9, hrs: 28, status: 'Normal' },
                   { name: 'L. Washington', cred: 'LCAS', groups: 9, att: 6.4, cases: 15, hrs: 40, status: 'At Limit' },
                 ].map(r => (
                   <tr key={r.name} className="hover:bg-gray-50">

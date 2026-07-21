@@ -483,8 +483,8 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
                 {[
                   { name: 'A. Brooks, LPC', role: 'Primary Therapist', mon: '8a–4p', tue: '8a–4p', wed: '10a–6p', thu: '8a–4p', fri: '8a–12p', cap: 18, curr: 16, open: 2 },
                   { name: 'R. Torres, LPC-MHSP', role: 'Primary Therapist', mon: '9a–5p', tue: '9a–5p', wed: 'OFF', thu: '9a–5p', fri: '9a–5p', cap: 18, curr: 15, open: 3 },
-                  { name: 'T. Jackson, CADC', role: 'Counselor', mon: '7a–3p', tue: '7a–3p', wed: '7a–3p', thu: '7a–3p', fri: '7a–3p', cap: 14, curr: 13, open: 1 },
-                  { name: 'M. Rivera, CADC-II', role: 'Counselor', mon: '12p–8p', tue: '12p–8p', wed: '12p–8p', thu: '12p–8p', fri: 'OFF', cap: 12, curr: 11, open: 1 },
+                  { name: 'T. Jackson, CAC-AD', role: 'Counselor', mon: '7a–3p', tue: '7a–3p', wed: '7a–3p', thu: '7a–3p', fri: '7a–3p', cap: 14, curr: 13, open: 1 },
+                  { name: 'M. Rivera, CAADC', role: 'Counselor', mon: '12p–8p', tue: '12p–8p', wed: '12p–8p', thu: '12p–8p', fri: 'OFF', cap: 12, curr: 11, open: 1 },
                   { name: 'L. Nguyen, MSW', role: 'Case Manager', mon: '8a–4p', tue: '8a–4p', wed: '8a–4p', thu: '8a–4p', fri: '8a–4p', cap: 22, curr: 19, open: 3 },
                   { name: 'Dr. M. Chen', role: 'Medical Director', mon: 'AM rounds', tue: 'AM rounds', wed: 'AM rounds', thu: 'AM rounds', fri: 'AM rounds', cap: 24, curr: 24, open: 0 },
                   { name: 'K. Santos, RN', role: 'Charge Nurse', mon: '7a–7p', tue: '7a–7p', wed: 'OFF', thu: '7a–7p', fri: '7a–7p', cap: 44, curr: 36, open: 8 },
@@ -528,7 +528,7 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
               <h3 className="font-semibold text-navy text-sm mb-3">No-Show Rate by Appointment Type</h3>
               <div className="space-y-2 text-xs">
                 {[
-                  { type: 'Family Session', rate: 22, color: 'bg-red-500' },
+                  { type: 'Family Session', rate: 10, color: 'bg-red-500' },
                   { type: 'Individual Therapy', rate: 9, color: 'bg-amber-500' },
                   { type: 'Medical / MD Appt', rate: 7, color: 'bg-amber-400' },
                   { type: 'Group Therapy', rate: 5, color: 'bg-blue-400' },

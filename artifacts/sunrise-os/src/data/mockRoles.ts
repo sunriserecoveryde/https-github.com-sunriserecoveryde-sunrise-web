@@ -52,7 +52,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'clinical_supervisor',
     label: 'Clinical Supervisor',
     shortLabel: 'Clinical Supervisor',
-    description: 'LCPC or LCSW-C (MD) / CAADC or LADC (DE). Must hold Board Approved Supervisor (BAS) per MD BHA, or DSAMH-approved supervisor status (DE). Co-signs notes; documents required supervision hours.',
+    description: 'LCPC or LCSW-C (MD) / __DE_CAADC_CAC-AD__. Must hold Board Approved Supervisor (BAS) per MD BHA, or DSAMH-approved supervisor status (DE). Co-signs notes; documents required supervision hours.',
     color: 'bg-amber-500/20', textColor: 'text-amber-300', borderColor: 'border-amber-500/40', dotColor: 'bg-amber-400',
     category: 'Clinical',
     permissions: perms(
@@ -67,7 +67,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'certified_clinician',
     label: 'Certified Clinician',
     shortLabel: 'Certified Clinician',
-    description: 'LPC + CAC-AD (MD) / CADC — IC&RC (DE-DSAMH). Primary counselor; owns individual caseload. Publicly-funded clients require current BHA/DSAMH certification.',
+    description: 'LPC + CAC-AD (MD) / CAC-AD — IC&RC (DE-DSAMH). Primary counselor; owns individual caseload. Publicly-funded clients require current BHA/DSAMH certification.',
     color: 'bg-blue-500/20', textColor: 'text-blue-300', borderColor: 'border-blue-500/40', dotColor: 'bg-blue-400',
     category: 'Clinical',
     permissions: perms(

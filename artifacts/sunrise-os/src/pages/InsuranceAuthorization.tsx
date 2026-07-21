@@ -78,7 +78,7 @@ const AUTHS: Authorization[] = [
     asamJustification: 'ASAM D5:3 (continued relapse risk), D4:2 (motivational fluctuation) — PHP warranted as step-up level following relapse.',
   },
   {
-    id: 'AUTH-006', patientId: 'p9', payor: 'Medicaid (TennCare)', memberId: 'TNC-33018',
+    id: 'AUTH-006', patientId: 'p9', payor: 'Medicaid (Maryland Medicaid)', memberId: 'TNC-33018',
     authNumber: 'RC2026-0712', levelOfCare: 'Residential', approvedUnits: 14, usedUnits: 8,
     unitType: 'days', startDate: '2026-07-11', endDate: '2026-07-25', status: 'Approved',
     caseManager: 'Greg Simmons', caseManagerPhone: '(615) 555-9000',
@@ -123,7 +123,7 @@ const AUTHS: Authorization[] = [
     asamJustification: 'ASAM D3:2, D5:2 — IOP level appropriate.',
   },
   {
-    id: 'AUTH-011', patientId: 'p17', payor: 'Medicaid (TennCare)', memberId: 'TNC-27331',
+    id: 'AUTH-011', patientId: 'p17', payor: 'Medicaid (Maryland Medicaid)', memberId: 'TNC-27331',
     authNumber: 'RC2026-0718', levelOfCare: 'Residential', approvedUnits: 14, usedUnits: 7,
     unitType: 'days', startDate: '2026-07-12', endDate: '2026-07-26', status: 'Approved',
     caseManager: 'Greg Simmons', caseManagerPhone: '(615) 555-9000',
@@ -357,7 +357,7 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
             <div className="space-y-2.5">
               {[
                 { payor: 'BlueCross BlueShield', count: 3, color: '#3B9ED4' },
-                { payor: 'Medicaid (TennCare)', count: 2, color: '#E8761A' },
+                { payor: 'Medicaid (Maryland Medicaid)', count: 2, color: '#E8761A' },
                 { payor: 'Cigna', count: 2, color: '#2ECC71' },
                 { payor: 'Aetna', count: 1, color: '#9B59B6' },
                 { payor: 'United Healthcare', count: 1, color: '#F39C12' },
@@ -558,9 +558,9 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
                   filed: '07/17', due: '07/31', status: 'Strong Position', sColor: 'border-green-200 bg-green-50'
                 },
                 {
-                  patient: 'Patricia Holloway', payer: 'BCBS TN', denied: 'Residential day 20+', level: '2nd Level',
+                  patient: 'Patricia Holloway', payer: 'CareFirst BCBS', denied: 'Residential day 20+', level: '2nd Level',
                   reason: 'Payer position: patient no longer meets ASAM Residential criteria. Clinical team disagrees.',
-                  action: 'External IRO review requested 07/18. IRO decision binding under TN law.',
+                  action: 'External IRO review requested 07/18. IRO decision binding under Maryland law.',
                   filed: '07/10', due: '07/24', status: 'IRO Requested', sColor: 'border-purple-200 bg-purple-50'
                 },
               ].map(a => (
@@ -603,13 +603,13 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { payer: 'BlueCross BlueShield TN', auth: '800-555-0111', appeals: '800-555-0112', fax: '800-555-0113', portal: 'provider.bcbst.com', notes: 'Auth required for all residential; PHP/IOP req initial auth + UR every 7d' },
+                  { payer: 'CareFirst BlueCross BlueShield', auth: '800-555-0111', appeals: '800-555-0112', fax: '800-555-0113', portal: 'provider.bcbst.com', notes: 'Auth required for all residential; PHP/IOP req initial auth + UR every 7d' },
                   { payer: 'Aetna', auth: '800-555-0221', appeals: '800-555-0222', fax: '800-555-0223', portal: 'provider.aetna.com', notes: 'Use Naviguard for UR; residential: 72h prior auth window' },
                   { payer: 'Cigna Behavioral Health', auth: '800-555-0331', appeals: '800-555-0332', fax: '800-555-0333', portal: 'cignaforhcp.cigna.com', notes: 'ASAM LOC justification required; peer-to-peer available M–F 9–5 CT' },
                   { payer: 'UnitedHealthcare/Optum', auth: '800-555-0441', appeals: '800-555-0442', fax: '800-555-0443', portal: 'uhcprovider.com', notes: 'Level-of-care auth via Optum portal; residential UR every 5 days' },
                   { payer: 'Humana', auth: '800-555-0551', appeals: '800-555-0552', fax: '800-555-0553', portal: 'humanaone.com', notes: 'MAT does not require prior auth; residential requires ASAM criteria documentation' },
-                  { payer: 'TennCare / Amerigroup', auth: '800-555-0661', appeals: '800-555-0662', fax: '800-555-0663', portal: 'amerigrouptn.com', notes: 'Medicaid — residential requires prior auth; IOP: 12 sessions then UR' },
-                  { payer: 'TennCare / BlueCare', auth: '800-555-0771', appeals: '800-555-0772', fax: '800-555-0773', portal: 'bluecaretennessee.com', notes: 'Same ASAM criteria as commercial; peer-to-peer within 48h of denial' },
+                  { payer: 'Maryland Medicaid / Amerigroup', auth: '800-555-0661', appeals: '800-555-0662', fax: '800-555-0663', portal: 'amerigrouptn.com', notes: 'Medicaid — residential requires prior auth; IOP: 12 sessions then UR' },
+                  { payer: 'Maryland Medicaid / BlueCare', auth: '800-555-0771', appeals: '800-555-0772', fax: '800-555-0773', portal: 'bluecaretennessee.com', notes: 'Same ASAM criteria as commercial; peer-to-peer within 48h of denial' },
                   { payer: 'Medicare (TrailBlazer)', auth: '800-555-0881', appeals: '800-555-0882', fax: '800-555-0883', portal: 'cgsmedicare.com', notes: 'No prior auth for detox; PHP/IOP: CERT documentation standards apply' },
                 ].map(r => (
                   <tr key={r.payer} className="hover:bg-gray-50">

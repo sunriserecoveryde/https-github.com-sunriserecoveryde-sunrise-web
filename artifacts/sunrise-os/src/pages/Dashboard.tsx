@@ -479,7 +479,7 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
               <h3 className="font-bold text-navy text-sm mb-4">Certifications Expiring (60 days)</h3>
               <div className="space-y-2">
                 {[
-                  { name: 'Sarah Jenkins, LPC', cert: 'CADC III', days: 22, urgent: true },
+                  { name: 'Sarah Jenkins, LPC', cert: 'CAC-AD III', days: 22, urgent: true },
                   { name: 'Kevin Wright', cert: 'CPR/AED', days: 38, urgent: false },
                   { name: 'Jessica Torres, RN', cert: 'BLS', days: 55, urgent: false },
                 ].map(c => (
@@ -571,7 +571,7 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
               <h3 className="font-bold text-navy text-sm mb-3">Upcoming Renewals</h3>
               <div className="space-y-2">
                 {[
-                  { name: 'Sarah Jenkins', cert: 'CADC III', days: 22, urgent: true },
+                  { name: 'Sarah Jenkins', cert: 'CAC-AD III', days: 22, urgent: true },
                   { name: 'Kevin Wright', cert: 'CPR/AED', days: 38, urgent: false },
                   { name: 'Jessica Torres', cert: 'BLS', days: 55, urgent: false },
                 ].map(c => (

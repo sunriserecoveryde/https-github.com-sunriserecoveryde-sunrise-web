@@ -495,7 +495,7 @@ MOCK_PATIENTS.push(
   },
   {
     id: 'p11', mrn: 'MRN-65890', firstName: 'Carlos', lastName: 'Rivera',
-    dob: '1996-11-05', age: 29, gender: 'M', insurance: 'TennCare',
+    dob: '1996-11-05', age: 29, gender: 'M', insurance: 'Maryland Medicaid',
     program: 'Residential', primaryDiagnosis: 'Severe Opioid Use Disorder (Fentanyl)',
     coOccurring: ['Hepatitis C', 'PTSD'],
     asam: { d1: 3, d2: 2, d3: 3, d4: 2, d5: 3, d6: 3 },

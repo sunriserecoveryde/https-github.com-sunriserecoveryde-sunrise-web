@@ -34,19 +34,19 @@ const CONTACTS: BDContact[] = [
   { id: 'bd1', name: 'Dr. Michelle Park', organization: 'Vanderbilt University Medical Center', type: 'Hospital / ER', relationship: 'Strong', lastContact: '2026-07-10', nextFollowUp: '2026-07-25', referralsLTD: 34, referrals30d: 4, admissions30d: 3, owner: 'James S. Collins III', notes: 'Primary ER liaison. Monthly lunch meetings. Accepts our clinical brochures at triage desk. Strong referral relationship.' },
   { id: 'bd2', name: 'Judge Harold Wallace', organization: 'Davidson County Drug Court', type: 'Drug Court', relationship: 'Strong', lastContact: '2026-07-08', nextFollowUp: '2026-07-30', referralsLTD: 22, referrals30d: 2, admissions30d: 2, owner: 'James S. Collins III', notes: 'Court-mandated referrals. Requires Level 3.7 placement documentation. Biweekly status reports required.' },
   { id: 'bd3', name: 'Dr. Lisa Nguyen', organization: 'Northside Family Practice', type: 'Primary Care', relationship: 'Developing', lastContact: '2026-07-01', nextFollowUp: '2026-07-20', referralsLTD: 8, referrals30d: 1, admissions30d: 1, owner: 'James S. Collins III', notes: 'SBIRT-trained. Very interested in warm handoff protocols. Scheduled CE presentation 7/22.' },
-  { id: 'bd4', name: 'Mark Sullivan', organization: 'HCA Nashville Corporate EAP', type: 'Corporate EAP', relationship: 'Strong', lastContact: '2026-06-28', nextFollowUp: '2026-07-21', referralsLTD: 15, referrals30d: 2, admissions30d: 1, owner: 'James S. Collins III', notes: 'Manages EAP for 3,200 hospital employees. Preferred provider status. Quarterly account review next month.' },
+  { id: 'bd4', name: 'Mark Sullivan', organization: 'Johns Hopkins Health System EAP', type: 'Corporate EAP', relationship: 'Strong', lastContact: '2026-06-28', nextFollowUp: '2026-07-21', referralsLTD: 15, referrals30d: 2, admissions30d: 1, owner: 'James S. Collins III', notes: 'Manages EAP for 3,200 hospital employees. Preferred provider status. Quarterly account review next month.' },
   { id: 'bd5', name: 'Pastor James Reynolds', organization: 'Grace Community Church', type: 'Faith Community', relationship: 'Developing', lastContact: '2026-06-20', nextFollowUp: '2026-07-23', referralsLTD: 5, referrals30d: 0, admissions30d: 0, owner: 'James S. Collins III', notes: 'Hosts AA/NA meetings. Congregation of 800. Recovery ministry leader is a Sunrise alumnus — strong advocate.' },
   { id: 'bd6', name: 'Dr. Anthony Reed', organization: 'Midtown Psychiatry', type: 'Private Practice', relationship: 'Developing', lastContact: '2026-07-05', nextFollowUp: '2026-07-22', referralsLTD: 9, referrals30d: 1, admissions30d: 1, owner: 'James S. Collins III', notes: 'Psychiatrist with large dual-diagnosis caseload. Sends overflow residential cases. Building trust.' },
   { id: 'bd7', name: 'Amanda Torres', organization: 'Serenity Sober Living', type: 'Sober Living', relationship: 'Strong', lastContact: '2026-07-12', nextFollowUp: '2026-07-26', referralsLTD: 12, referrals30d: 3, admissions30d: 2, owner: 'James S. Collins III', notes: 'Bidirectional relationship — we refer to their sober living, they send back to us for PHP/IOP. 12 beds reserved for Sunrise graduates.' },
-  { id: 'bd8', name: 'Kevin Morris', organization: 'Nashville Detox Center', type: 'Detox', relationship: 'Cold', lastContact: '2026-05-15', nextFollowUp: '2026-07-19', referralsLTD: 3, referrals30d: 0, admissions30d: 0, owner: 'James S. Collins III', notes: 'Used to be a strong referral source. New medical director. Relationship needs re-warming. Bringing lunch 7/19.' },
+  { id: 'bd8', name: 'Kevin Morris', organization: 'Rockville Detox Center', type: 'Detox', relationship: 'Cold', lastContact: '2026-05-15', nextFollowUp: '2026-07-19', referralsLTD: 3, referrals30d: 0, admissions30d: 0, owner: 'James S. Collins III', notes: 'Used to be a strong referral source. New medical director. Relationship needs re-warming. Bringing lunch 7/19.' },
 ];
 
 const ACTIVITIES: OutreachActivity[] = [
   { id: 'oa1', date: '2026-07-17', type: 'CE Presentation', contact: 'Dr. Lisa Nguyen + Staff', organization: 'Northside Family Practice', outcome: '8 providers attended. Presented SBIRT and warm handoff protocol. 3 requested our referral packet. Follow-up with office manager.', followUpDate: '2026-07-22' },
   { id: 'oa2', date: '2026-07-15', type: 'Site Visit', contact: 'Vanderbilt ER Team', organization: 'Vanderbilt University Medical Center', outcome: 'Quarterly relationship visit. Updated resource packets. Met new social work supervisor. Invited to present at grand rounds in September.', followUpDate: '2026-07-25' },
-  { id: 'oa3', date: '2026-07-10', type: 'Lunch & Learn', contact: 'Mark Sullivan + EAP Staff', organization: 'HCA Nashville Corporate EAP', outcome: 'Reviewed our clinical outcomes data. They were impressed by 6-month sobriety rates. Preferred provider contract renewal on track.' },
+  { id: 'oa3', date: '2026-07-10', type: 'Lunch & Learn', contact: 'Mark Sullivan + EAP Staff', organization: 'Johns Hopkins Health System EAP', outcome: 'Reviewed our clinical outcomes data. They were impressed by 6-month sobriety rates. Preferred provider contract renewal on track.' },
   { id: 'oa4', date: '2026-07-08', type: 'Phone Call', contact: 'Judge Harold Wallace', organization: 'Davidson County Drug Court', outcome: 'Discussed case coordination protocol. Judge agreed to refer Andre Simmons next week. Agreed to biweekly status report format.', followUpDate: '2026-07-30' },
-  { id: 'oa5', date: '2026-07-02', type: 'Conference', contact: 'Multiple', organization: 'Tennessee Association of Addiction Professionals', outcome: 'Presented at TAAP annual conference. Distributed 200 brochures. Connected with 4 new potential referral sources. 2 promising leads for follow-up.' },
+  { id: 'oa5', date: '2026-07-02', type: 'Conference', contact: 'Multiple', organization: 'Maryland Association of Addiction Professionals', outcome: 'Presented at MAAP annual conference. Distributed 200 brochures. Connected with 4 new potential referral sources. 2 promising leads for follow-up.' },
 ];
 
 const RELATIONSHIP_COLORS: Record<string, string> = {
@@ -251,7 +251,7 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
                 ))}
               </div>
               <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                <strong>BD Insight:</strong> Census dipped to 18 in July vs 20 in June. Two cold relationships (Nashville Detox) need re-engagement. Consider targeted outreach to ER and drug court contacts this week.
+                <strong>BD Insight:</strong> Census dipped to 18 in July vs 20 in June. Two cold relationships (Rockville Detox) need re-engagement. Consider targeted outreach to ER and drug court contacts this week.
               </div>
             </div>
             <div className="card">
@@ -315,7 +315,7 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
               <p className="text-xs text-slate mb-4">Where referrals drop off in the intake pipeline</p>
               <div className="space-y-3">
                 {[
-                  { stage: 'Inquiries Received',      n: 22, color: 'bg-navy',       note: '100% of pipeline' },
+                  { stage: 'Inquiries Received',      n: 10, color: 'bg-navy',       note: '100% of pipeline' },
                   { stage: 'Pre-Screen Completed',    n: 18, color: 'bg-blue-500',   note: '82% of inquiries' },
                   { stage: 'Insurance Verified',      n: 16, color: 'bg-blue-400',   note: '89% of pre-screened' },
                   { stage: 'Bed Assigned',            n: 13, color: 'bg-green-500',  note: '81% of verified' },
@@ -371,10 +371,10 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
               <div className="mt-4 pt-3 border-t border-border">
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">Upcoming BD Events</div>
                 {[
-                  { date: '7/20', event: 'Lunch w/ Nashville Detox — Kevin Morris', type: 'Re-engagement' },
+                  { date: '7/20', event: 'Lunch w/ Rockville Detox — Kevin Morris', type: 'Re-engagement' },
                   { date: '7/22', event: 'CE Presentation at Northside Family Practice', type: 'Education' },
                   { date: '7/25', event: 'Quarterly call — Vanderbilt ER', type: 'Relationship' },
-                  { date: '8/05', event: 'TAAP Networking Breakfast', type: 'Conference' },
+                  { date: '8/05', event: 'MAAP Networking Breakfast', type: 'Conference' },
                 ].map(e => (
                   <div key={e.date} className="flex items-start gap-3 py-1.5 border-b border-border last:border-0">
                     <span className="text-[10px] font-bold text-navy bg-gray-100 rounded px-1.5 py-0.5 shrink-0">{e.date}</span>
@@ -452,7 +452,7 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
               <div className="space-y-3 text-xs">
                 {[
                   { label: 'Responded within 1 hour', n: 89, pct: 63, color: 'bg-green-500' },
-                  { label: 'Responded within 4 hours', n: 31, pct: 22, color: 'bg-amber-400' },
+                  { label: 'Responded within 4 hours', n: 31, pct: 10, color: 'bg-amber-400' },
                   { label: 'Responded within 24 hours', n: 16, pct: 11, color: 'bg-orange-500' },
                   { label: 'Response >24 hours', n: 6, pct: 4, color: 'bg-red-500' },
                 ].map(r => (
@@ -503,7 +503,7 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
 
       {activeTab === 'Market Map' && (
         <div className="space-y-5">
-          <div className="text-sm text-slate">Nashville-metro competitive landscape and referral ecosystem — active referral partners, market share indicators, and growth opportunity areas.</div>
+          <div className="text-sm text-slate">DC-metro competitive landscape and referral ecosystem — active referral partners, market share indicators, and growth opportunity areas.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: 'Active Referral Partners', value: 34, color: 'text-navy', sub: 'Within 50-mile radius' },
@@ -551,9 +551,9 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
                 <div className="space-y-2 text-xs">
                   {[
                     { org: 'Vanderbilt Univ. Medical Center — PACU', type: 'Hospital', potential: 'High', reason: 'High OUD/AUD post-op volume; no SUD referral pathway to Sunrise yet' },
-                    { org: 'Tennessee Oncology', type: 'Specialty', potential: 'High', reason: 'Opioid-dependent cancer patient pipeline; no current SUD partner' },
-                    { org: 'Nashville Electric Service EAP', type: 'EAP', potential: 'Medium', reason: '2,400+ employees; current EAP partner lacks residential capacity' },
-                    { org: 'General Sessions Court — Nashville', type: 'Drug Court', potential: 'Medium', reason: 'DUI / drug diversion track; Sunrise not yet on approved provider list' },
+                    { org: 'Maryland Oncology Hematology', type: 'Specialty', potential: 'High', reason: 'Opioid-dependent cancer patient pipeline; no current SUD partner' },
+                    { org: 'PEPCO EAP', type: 'EAP', potential: 'Medium', reason: '2,400+ employees; current EAP partner lacks residential capacity' },
+                    { org: 'Montgomery County Circuit Court Drug Diversion', type: 'Drug Court', potential: 'Medium', reason: 'DUI / drug diversion track; Sunrise not yet on approved provider list' },
                     { org: 'St. Thomas Health — ED Bridge Program', type: 'Hospital', potential: 'High', reason: 'SBIRT program active; looking for residential SUD step-down partner' },
                   ].map(o => (
                     <div key={o.org} className="border border-border rounded p-2.5">

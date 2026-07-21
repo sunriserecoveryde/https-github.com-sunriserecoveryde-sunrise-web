@@ -107,7 +107,7 @@ const MOCK_SURVEYS = [
 
 const UPCOMING_AUDITS = [
   { event: 'CARF 3-Year Re-Accreditation',       date: '2026-09-15', days: 58, status: 'On Track' },
-  { event: 'TennCare Provider Audit',             date: '2026-08-05', days: 17, status: 'Preparation' },
+  { event: 'Maryland BHA Provider Audit',             date: '2026-08-05', days: 17, status: 'Preparation' },
   { event: 'DEA Medication Inspection',           date: '2026-10-01', days: 74, status: 'Scheduled' },
   { event: 'Joint Commission Mock Survey',        date: '2026-08-20', days: 32, status: 'On Track' },
   { event: 'Fire Marshal Inspection',             date: '2026-09-30', days: 73, status: 'Scheduled' },
@@ -160,7 +160,7 @@ export function AuditCompliance({ navigate: _navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy flex items-center gap-2">
             <ShieldCheck className="w-6 h-6 text-sunrise-blue" /> Audit Readiness
           </h1>
-          <p className="text-slate text-sm mt-0.5">CARF accreditation · Joint Commission · TennCare compliance · Active findings tracker</p>
+          <p className="text-slate text-sm mt-0.5">CARF accreditation · Joint Commission · Maryland Medicaid compliance · Active findings tracker</p>
         </div>
         <div className="flex items-center gap-2">
           <button className="btn-outline text-xs flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> Export Report</button>
@@ -592,7 +592,7 @@ export function AuditCompliance({ navigate: _navigate, readOnly }: Props) {
               { label: 'Items Due (Next 90 Days)', value: 6, color: 'text-amber-600', sub: 'Renewals, filings & reports' },
               { label: 'Items Overdue', value: 0, color: 'text-green-600', sub: 'No overdue items' },
               { label: 'Licenses Expiring (12 mo)', value: 3, color: 'text-navy', sub: 'Facility + DEA + state SUD license' },
-              { label: 'Next TDMHSAS Site Visit', value: 'Oct 2026', color: 'text-blue-600', sub: 'Annual monitoring visit' },
+              { label: 'Next MD BHA Site Visit', value: 'Oct 2026', color: 'text-blue-600', sub: 'Annual monitoring visit' },
             ].map(k => (
               <div key={k.label} className="card">
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
@@ -605,12 +605,12 @@ export function AuditCompliance({ navigate: _navigate, readOnly }: Props) {
             <h3 className="font-semibold text-navy text-sm mb-3">Regulatory Calendar — FY2026–2027</h3>
             <div className="space-y-2 text-xs">
               {[
-                { due: '2026-07-31', item: 'TDMHSAS CBMS Q2 Data Submission', category: 'State Reporting', owner: 'QI Coordinator', status: 'Due Soon', color: 'bg-amber-100 text-amber-700' },
+                { due: '2026-07-31', item: 'MD BHA CBMS Q2 Data Submission', category: 'State Reporting', owner: 'QI Coordinator', status: 'Due Soon', color: 'bg-amber-100 text-amber-700' },
                 { due: '2026-08-01', item: 'SAMHSA SAPT Block Grant Renewal Application', category: 'Federal Funding', owner: 'CEO / CFO', status: 'In Progress', color: 'bg-blue-100 text-blue-700' },
                 { due: '2026-08-15', item: 'DEA Registration Renewal (Schedule II–V)', category: 'DEA Compliance', owner: 'Medical Director', status: 'Not Started', color: 'bg-red-100 text-red-700' },
-                { due: '2026-09-01', item: 'TN SUD Facility License Renewal', category: 'State Licensure', owner: 'COO', status: 'In Progress', color: 'bg-blue-100 text-blue-700' },
+                { due: '2026-09-01', item: 'MD SUD Facility License Renewal', category: 'State Licensure', owner: 'COO', status: 'In Progress', color: 'bg-blue-100 text-blue-700' },
                 { due: '2026-09-30', item: 'HIPAA Security Risk Assessment (Annual)', category: 'HIPAA', owner: 'IT / Compliance', status: 'Scheduled', color: 'bg-purple-100 text-purple-700' },
-                { due: '2026-10-15', item: 'TDMHSAS Annual Monitoring Visit — Prep Complete', category: 'State Survey', owner: 'QI / Clinical Director', status: 'In Progress', color: 'bg-blue-100 text-blue-700' },
+                { due: '2026-10-15', item: 'MD BHA Annual Monitoring Visit — Prep Complete', category: 'State Survey', owner: 'QI / Clinical Director', status: 'In Progress', color: 'bg-blue-100 text-blue-700' },
                 { due: '2026-10-31', item: 'SAMHSA TEDS Annual Data Submission (FY2026)', category: 'Federal Reporting', owner: 'QI Coordinator', status: 'Not Started', color: 'bg-red-100 text-red-700' },
                 { due: '2026-12-31', item: 'Medicare CoP Annual Self-Assessment', category: 'Medicare', owner: 'COO / Medical Director', status: 'Not Started', color: 'bg-gray-100 text-slate' },
                 { due: '2027-01-15', item: 'CARF Annual Report Submission', category: 'Accreditation', owner: 'QI Coordinator', status: 'Not Started', color: 'bg-gray-100 text-slate' },

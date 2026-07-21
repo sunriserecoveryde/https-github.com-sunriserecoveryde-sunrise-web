@@ -393,7 +393,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
   // ─────────────────────────────────────────────────────────────────────────────
   // DELAWARE — Sunrise Recovery Center, Wilmington, DE
   // Licensing: Delaware Division of Professional Regulation / DSAMH
-  // SUD Credentialing: IC&RC (via DSAMH) — CADC, CAADC, LADC
+  // SUD Credentialing: IC&RC (via DSAMH) — CAC-AD, CAADC, CAC-AD
   // Medicaid: Delaware Medicaid — Diamond State Health Plan (Highmark)
   // State oversight: DSAMH (Division of Substance Abuse and Mental Health)
   // ─────────────────────────────────────────────────────────────────────────────
@@ -409,7 +409,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
     facility: 'Sunrise Recovery Center — Wilmington, DE',
     email: 'm.boyd@sunriserecovery.org', phone: '(302) 555-0107',
     photoInitials: 'MB', avatarBg: 'bg-gray-500',
-    supervisorId: 's10',   // supervised by Kevin Wright (CADC / DE-BAS)
+    supervisorId: 's10',   // supervised by Kevin Wright (CAC-AD / DE-BAS)
     hireDate: '2023-04-01', lastLogin: '2026-07-18 22:45',
     status: 'active',
     certifications: [
@@ -419,7 +419,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
         issuingBody: 'Delaware Division of Substance Abuse and Mental Health (DSAMH)',
         number: 'DSAMH-ADT-2023-0447',
         issueDate: '2023-04-15', expiryDate: '2025-04-15', status: 'pending-renewal',
-        notes: 'DSAMH requires all SUD direct-care staff to hold ADT registration while accumulating hours toward CADC (IC&RC). Working under supervision of Kevin Wright (CADC, BAS-DE). Must accrue 6,000 hours for CADC eligibility.',
+        notes: 'DSAMH requires all SUD direct-care staff to hold ADT registration while accumulating hours toward CAC-AD (IC&RC). Working under supervision of Kevin Wright (CAC-AD, BAS-DE). Must accrue 6,000 hours for CAC-AD eligibility.',
       },
       {
         id: 'c20',
@@ -439,11 +439,11 @@ export const STAFF_MEMBERS: StaffMember[] = [
     permissionOverrides: {},
   },
 
-  // ── 8. Kevin Wright — BHT Supervisor / CADC (Delaware) ─────────────────────
+  // ── 8. Kevin Wright — BHT Supervisor / CAC-AD (Delaware) ─────────────────────
   {
     id: 's10',
     firstName: 'Kevin', lastName: 'Wright',
-    credentials: ['CADC', 'PRS'],
+    credentials: ['CAC-AD', 'PRS'],
     title: 'BHT Supervisor',
     roleId: 'bht_supervisor',
     department: 'Operations',
@@ -455,12 +455,12 @@ export const STAFF_MEMBERS: StaffMember[] = [
     certifications: [
       {
         id: 'c22',
-        name: 'CADC — Certified Alcohol and Drug Counselor',
+        name: 'CAC-AD — Certified Alcohol and Drug Counselor',
         issuingBody: 'IC&RC (International Certification & Reciprocity Consortium) — DSAMH recognized',
-        number: 'DE-CADC-7831',
+        number: 'DE-CAC-AD-7831',
         issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'pending-renewal',
         ceuRequired: 40, ceuCompleted: 39,
-        notes: 'Delaware DSAMH recognizes IC&RC CADC as required credential for SUD counselors. Working toward CAADC (advanced). Renewal application submitted 2/10/2025.',
+        notes: 'Delaware DSAMH recognizes IC&RC CAC-AD as required credential for SUD counselors. Working toward CAADC (advanced). Renewal application submitted 2/10/2025.',
       },
       {
         id: 'c22b',
@@ -532,7 +532,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
   {
     id: 's14',
     firstName: 'Carlos', lastName: 'Rivera',
-    credentials: ['CADC', 'CPRS'],
+    credentials: ['CAC-AD', 'CPRS'],
     title: 'Aftercare Coordinator',
     roleId: 'aftercare_staff',
     department: 'Aftercare',
@@ -544,12 +544,12 @@ export const STAFF_MEMBERS: StaffMember[] = [
     certifications: [
       {
         id: 'c34',
-        name: 'CADC — Certified Alcohol and Drug Counselor',
+        name: 'CAC-AD — Certified Alcohol and Drug Counselor',
         issuingBody: 'IC&RC — Delaware DSAMH recognized',
-        number: 'DE-CADC-4419',
+        number: 'DE-CAC-AD-4419',
         issueDate: '2023-05-01', expiryDate: '2027-05-01', status: 'active',
         ceuRequired: 40, ceuCompleted: 14,
-        notes: 'IC&RC CADC credential approved by Delaware DSAMH for SUD counselor roles in DSAMH-funded programs.',
+        notes: 'IC&RC CAC-AD credential approved by Delaware DSAMH for SUD counselor roles in DSAMH-funded programs.',
       },
       {
         id: 'c35',
@@ -644,7 +644,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
   {
     id: 's16',
     firstName: 'Jordan', lastName: 'Pierce',
-    credentials: ['CADC'],
+    credentials: ['CAC-AD'],
     title: 'Community Outreach Director',
     roleId: 'business_development',
     department: 'Business Development',
@@ -656,12 +656,12 @@ export const STAFF_MEMBERS: StaffMember[] = [
     certifications: [
       {
         id: 'c38',
-        name: 'CADC — Certified Alcohol and Drug Counselor',
+        name: 'CAC-AD — Certified Alcohol and Drug Counselor',
         issuingBody: 'IC&RC — Recognized in Maryland and Delaware',
-        number: 'IC-CADC-44910',
+        number: 'IC-CAC-AD-44910',
         issueDate: '2021-06-01', expiryDate: '2027-06-01', status: 'active',
         ceuRequired: 40, ceuCompleted: 22,
-        notes: 'IC&RC CADC credential valid in MD (via ADAA recognition) and DE (via DSAMH recognition).',
+        notes: 'IC&RC CAC-AD credential valid in MD (via ADAA recognition) and DE (via DSAMH recognition).',
       },
       {
         id: 'c39',

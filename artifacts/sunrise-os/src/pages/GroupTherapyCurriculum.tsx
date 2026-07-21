@@ -35,7 +35,7 @@ const CURRICULA: Curriculum[] = [
     sessionCount: 12, sessionLength: 60, modality: 'Both',
     primaryDomains: ['Functional analysis', 'Coping with craving', 'Thought challenging', 'Relapse prevention', 'Emotion regulation'],
     description: 'CBT-SUD is one of the most extensively researched and validated approaches to addiction treatment. It targets the learning processes underlying addictive behavior. Patients learn to identify high-risk situations, develop coping strategies, and restructure distorted thinking patterns related to substance use.',
-    status: 'Active', facilitatorRequired: 'LPC, LCSW, CADC-II or higher (with CBT competency training)',
+    status: 'Active', facilitatorRequired: 'LPC, LCSW-C, CAADC or higher (with CBT competency training)',
     materialsCost: 180, activeGroups: 2, completedCycles: 14,
   },
   {
@@ -75,7 +75,7 @@ const CURRICULA: Curriculum[] = [
     sessionCount: 36, sessionLength: 60, modality: 'Both',
     primaryDomains: ['Stimulant use education', 'Early recovery skills', 'Relapse prevention', '12-Step facilitation', 'Family education'],
     description: 'The Matrix Model is a 16-week structured outpatient program originally developed for stimulant use disorders. Combines individual therapy, group therapy, family education, 12-step facilitation, and urine testing in an integrated framework. SAMHSA NREPP listed.',
-    status: 'Active', facilitatorRequired: 'CADC-II or licensed clinician with Matrix training',
+    status: 'Active', facilitatorRequired: 'CAADC or licensed clinician with Matrix training',
     materialsCost: 220, activeGroups: 1, completedCycles: 5,
   },
   {
@@ -85,7 +85,7 @@ const CURRICULA: Curriculum[] = [
     sessionCount: 12, sessionLength: 60, modality: 'Both',
     primaryDomains: ['Acceptance of powerlessness', 'Surrender', 'Active AA/NA participation', 'Steps 1–3', 'Sponsor relationship'],
     description: 'TSF is a manual-guided approach to facilitate active engagement in 12-step programs. Project MATCH research demonstrated equivalency to CBT and MET for AUD. TSF patients show higher rates of long-term abstinence, particularly when combined with active AA attendance.',
-    status: 'Active', facilitatorRequired: 'CADC-I or higher; clinical supervisor or MD for combined cases',
+    status: 'Active', facilitatorRequired: 'CAC-AD or higher; clinical supervisor or MD for combined cases',
     materialsCost: 80, activeGroups: 3, completedCycles: 18,
   },
   {
@@ -132,7 +132,7 @@ const WEEKLY_SCHEDULE = [
   { day: 'Wednesday', time: '2:00 PM', curriculum: 'Matrix Model', facilitator: 'Maria Gonzalez, LSW', room: 'Hope Room', enrolled: 5 },
   { day: 'Thursday', time: '10:00 AM', curriculum: 'CBT-SUD (Group 2)', facilitator: 'David Odom, LMFT', room: 'Serenity Room', enrolled: 7 },
   { day: 'Thursday', time: '3:00 PM', curriculum: 'ACT-A (Pilot)', facilitator: 'Aisha Thompson, LCSW-A', room: 'Hope Room', enrolled: 6 },
-  { day: 'Friday', time: '11:00 AM', curriculum: 'TSF (Group B)', facilitator: 'Kevin Wright, CADC-I', room: 'Sunrise Room', enrolled: 9 },
+  { day: 'Friday', time: '11:00 AM', curriculum: 'TSF (Group B)', facilitator: '__DE_CAC-AD_WRIGHT_I__', room: 'Sunrise Room', enrolled: 9 },
 ];
 
 export function GroupTherapyCurriculum({ navigate: _navigate, readOnly }: Props) {
@@ -417,7 +417,7 @@ export function GroupTherapyCurriculum({ navigate: _navigate, readOnly }: Props)
                     { body: 'SAMHSA TIP 47 — Group Therapy', align: 'CBT, MI, Psychoeducation, 12-Step', status: 'Compliant' },
                     { body: 'CARF Standard — Group Services', align: 'Documented evidence base required per §6.A.9', status: 'Compliant' },
                     { body: 'ASAM Criteria — LOC Group Tx Hours', align: 'Residential ≥5h/day, PHP ≥3h, IOP ≥3x/week', status: 'Compliant' },
-                    { body: 'TN DMHSAS Licensure Standards', align: 'Core groups: Psychoeducation + Relapse Prevention', status: 'Compliant' },
+                    { body: 'MD BHA Licensure Standards', align: 'Core groups: Psychoeducation + Relapse Prevention', status: 'Compliant' },
                   ].map(r => (
                     <div key={r.body} className="border border-border rounded p-2.5">
                       <div className="flex items-center justify-between mb-0.5">

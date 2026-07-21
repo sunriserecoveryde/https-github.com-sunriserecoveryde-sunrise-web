@@ -350,7 +350,7 @@ const Outcomes: React.FC = () => {
             {[
               { title: 'Safety Events', items: ['0 medication errors causing harm (12 months)', '1 fall with minor injury — root cause completed', '0 patient elopements', '2 restraint/seclusion events — both reviewed'] },
               { title: 'Documentation Quality', items: ['94% of notes co-signed within 24h', '88% discharge summaries filed ≤5 days', '3 chart deficiencies pending — CosignQueue', '100% ASAM assessments documented'] },
-              { title: 'Regulatory Compliance', items: ['CARF Accreditation — current (exp 2027)', '42 CFR Part 2 audit — passed March 2026', 'TN BHSO licensure — current', 'SAMHSA OTP certification — N/A (OBOT only)'] },
+              { title: 'Regulatory Compliance', items: ['CARF Accreditation — current (exp 2027)', '42 CFR Part 2 audit — passed March 2026', 'MD BHA licensure — current', 'SAMHSA OTP certification — N/A (OBOT only)'] },
             ].map(s => (
               <div key={s.title} className="card">
                 <h3 className="font-semibold text-navy text-sm mb-3">{s.title}</h3>
@@ -413,7 +413,7 @@ const Outcomes: React.FC = () => {
                   {[
                     { body: 'CARF International', status: '3-Year Accreditation', year: '2024–2027', color: 'bg-green-100 text-green-700' },
                     { body: 'SAMHSA OTP Certification', status: 'Active', year: 'Renewed 2025', color: 'bg-green-100 text-green-700' },
-                    { body: 'TN Dept. of Mental Health', status: 'Licensed', year: 'Annual', color: 'bg-blue-100 text-blue-700' },
+                    { body: 'MD Dept. of Behavioral Health', status: 'Licensed', year: 'Annual', color: 'bg-blue-100 text-blue-700' },
                     { body: 'Joint Commission', status: 'Pending Application', year: '2027 target', color: 'bg-amber-100 text-amber-700' },
                   ].map(a => (
                     <div key={a.body} className="flex items-center justify-between border border-border rounded p-2">
@@ -445,7 +445,7 @@ const Outcomes: React.FC = () => {
                   { name: 'SAMHSA Block Grant Annual Report', last: 'Jul 1, 2026', metrics: 'Retention, completion, abstinence at 6mo', format: 'Excel + PDF' },
                   { name: 'CARF Accreditation Outcomes Summary', last: 'Apr 15, 2026', metrics: 'LOC completion, AMA rate, 30-day readmit', format: 'PDF' },
                   { name: 'Board of Directors Quarterly Dashboard', last: 'Jun 30, 2026', metrics: 'Census, revenue, NPS, outcome highlights', format: 'PDF Slides' },
-                  { name: 'Tennessee TDAMHSAS Monthly Data Submission', last: 'Jul 10, 2026', metrics: 'Admissions, discharges, demographics, SUD type', format: 'CSV upload' },
+                  { name: 'Maryland TDAMHSAS Monthly Data Submission', last: 'Jul 10, 2026', metrics: 'Admissions, discharges, demographics, SUD type', format: 'CSV upload' },
                   { name: 'Grant Funder — Opioid Response Program', last: 'Jun 15, 2026', metrics: 'OUD admissions, MAT starts, naloxone given', format: 'Word + Excel' },
                   { name: 'Payer Performance Report (Quarterly)', last: 'Jun 30, 2026', metrics: 'Auth approvals, denials, AR aging, write-offs', format: 'Excel' },
                 ].map(r => (

@@ -522,9 +522,9 @@ export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) =
                     {[
                       { name: 'Sarah Jenkins, LPC', plans: 5, onTime: 5, overdue: 0 },
                       { name: 'David Odom, LMFT', plans: 4, onTime: 3, overdue: 1 },
-                      { name: 'Marcus Chen, LADC', plans: 4, onTime: 2, overdue: 2 },
+                      { name: 'Marcus Chen, CAC-AD', plans: 4, onTime: 2, overdue: 2 },
                       { name: 'Priya Nair, MSW', plans: 3, onTime: 3, overdue: 0 },
-                      { name: 'Kevin Walsh, LADC', plans: 2, onTime: 1, overdue: 1 },
+                      { name: 'Kevin Walsh, CAC-AD', plans: 2, onTime: 1, overdue: 1 },
                     ].map(r => (
                       <tr key={r.name} className="hover:bg-gray-50">
                         <td className="py-2 font-medium text-navy">{r.name}</td>

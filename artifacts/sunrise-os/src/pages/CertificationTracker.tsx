@@ -95,7 +95,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-007', staffName: 'Kevin Wright', role: 'Behavioral Health Technician',
     ceuRequired: 12, ceuCompleted: 6, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-024', name: 'CADC — Certified Alcohol and Drug Counselor', type: 'Certification', issuingBody: 'IC&RC — Delaware DSAMH recognized', issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'Expiring Soon', licenseNumber: 'DE-CADC-7831', notes: 'IC&RC CADC recognized by Delaware DSAMH. Renewal pending — 40 CEU hrs required. Working toward CAADC.' },
+      { id: 'C-024', name: 'CAC-AD — Certified Alcohol and Drug Counselor', type: 'Certification', issuingBody: 'IC&RC — Delaware DSAMH recognized', issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'Expiring Soon', licenseNumber: 'DE-CAC-AD-7831', notes: 'IC&RC CAC-AD recognized by Delaware DSAMH. Renewal pending — 40 CEU hrs required. Working toward CAADC.' },
       { id: 'C-025', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2025-06-01', expiryDate: '2027-06-01', status: 'Current' },
       { id: 'C-026', name: 'Mental Health First Aid', type: 'Training', issuingBody: 'MHFA USA', issueDate: '2025-02-15', expiryDate: '2028-02-15', status: 'Current' },
       { id: 'C-027', name: 'Crisis Prevention Institute (CPI) Nonviolent Crisis Intervention', type: 'Training', issuingBody: 'CPI', issueDate: '2025-08-01', expiryDate: '2026-08-01', status: 'Expiring Soon' },
@@ -417,10 +417,10 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
                   { name: 'Dr. Robert Chen', license: 'MD', num: 'MD-18834', state: 'MD', issued: '2015-07-01', expires: '2027-03-31', ce: '50 CME hrs/2yr (MBP)', status: 'Active' },
                   { name: 'Dr. Allen Hughes', license: 'MD + FASAM', num: 'MD-09921', state: 'MD', issued: '2008-06-01', expires: '2028-12-31', ce: '50 CME hrs/2yr (MBP)', status: 'Active' },
                   { name: 'Jessica Torres', license: 'RN + CARN', num: 'RN-MD-44129', state: 'MD', issued: '2015-11-01', expires: '2026-10-31', ce: '30 hrs/2yr (MBON)', status: 'Active' },
-                  { name: 'Kevin Wright', license: 'CADC + PRS', num: 'DE-CADC-7831 / DSAMH-PRS-1122', state: 'DE', issued: '2021-03-01', expires: '2025-03-01', ce: '40 hrs/2yr (IC&RC)', status: 'Due Q1' },
+                  { name: 'Kevin Wright', license: 'CAC-AD + PRS', num: 'DE-CAC-AD-7831 / DSAMH-PRS-1122', state: 'DE', issued: '2021-03-01', expires: '2025-03-01', ce: '40 hrs/2yr (IC&RC)', status: 'Due Q1' },
                   { name: 'Michael Boyd', license: 'ADT (DSAMH)', num: 'DSAMH-ADT-2023-0447', state: 'DE', issued: '2023-04-15', expires: '2025-04-15', ce: 'Annual renewal (DSAMH)', status: 'Due' },
-                  { name: 'Carlos Rivera', license: 'CADC + CPRS', num: 'DE-CADC-4419 / CPRS-DE-0891', state: 'DE', issued: '2023-05-01', expires: '2027-05-01', ce: '40 hrs/2yr (IC&RC)', status: 'Active' },
-                  { name: 'Marcus Thompson (PSS)', license: 'CPRS', num: 'TN-CPRS-5521', state: 'TN', issued: '2023-03-01', expires: '2025-03-01', ce: '20 hrs/2yr', status: 'Renewal Overdue' },
+                  { name: 'Carlos Rivera', license: 'CAC-AD + CPRS', num: 'DE-CAC-AD-4419 / CPRS-DE-0891', state: 'DE', issued: '2023-05-01', expires: '2027-05-01', ce: '40 hrs/2yr (IC&RC)', status: 'Active' },
+                  { name: 'Marcus Thompson (PSS)', license: 'CPRS', num: 'MD-CPRS-5521', state: 'MD', issued: '2023-03-01', expires: '2025-03-01', ce: '20 hrs/2yr', status: 'Renewal Overdue' },
                 ].map(r => (
                   <tr key={r.name} className={`hover:bg-gray-50 ${r.status === 'Renewal Overdue' ? 'bg-red-50/40' : r.status === 'Due Q3' ? 'bg-amber-50/30' : ''}`}>
                     <td className="px-4 py-2.5 font-medium text-navy">{r.name}</td>
@@ -489,7 +489,7 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
             <div className="space-y-4 text-xs">
               {[
                 {
-                  name: 'A. Brooks, LPC', cert: 'TN LPC License', expiry: '2026-09-30', board: 'MHSAB', needed: 20, done: 12, remaining: 8,
+                  name: 'A. Brooks, LPC', cert: 'MD LPC License', expiry: '2026-09-30', board: 'MHSAB', needed: 20, done: 12, remaining: 8,
                   plan: [
                     { source: 'AAMFT Online CE — Ethics (3 CEU)', date: 'Jul 2026', cost: '$49', approved: true },
                     { source: 'NAADAC Trauma-Informed Care Workshop (5 CEU)', date: 'Aug 2026', cost: '$89', approved: true },
@@ -497,7 +497,7 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
                   ]
                 },
                 {
-                  name: 'K. Santos, RN', cert: 'TN RN License', expiry: '2026-09-30', board: 'TN BON', needed: 30, done: 14, remaining: 16,
+                  name: 'K. Santos, RN', cert: 'MD RN License', expiry: '2026-09-30', board: 'MD Board of Nursing', needed: 30, done: 14, remaining: 16,
                   plan: [
                     { source: 'ANA MedSurg Nursing Review (6 CEU)', date: 'Jul 2026', cost: '$79', approved: true },
                     { source: 'CE4Nurses Psychiatric/Mental Health Module (5 CEU)', date: 'Aug 2026', cost: '$45', approved: true },
@@ -505,7 +505,7 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
                   ]
                 },
                 {
-                  name: 'T. Jackson, CADC', cert: 'CADC Certification', expiry: '2026-11-15', board: 'NAADAC', needed: 40, done: 27, remaining: 13,
+                  name: 'T. Jackson, CAC-AD', cert: 'CAC-AD Certification', expiry: '2026-11-15', board: 'NAADAC', needed: 40, done: 27, remaining: 13,
                   plan: [
                     { source: 'NAADAC Annual Conference Sessions (8 CEU)', date: 'Oct 2026', cost: '$249', approved: true },
                     { source: 'ATTC Motivational Interviewing Training (5 CEU)', date: 'Sep 2026', cost: '$75', approved: true },

@@ -382,7 +382,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
                   { date: '2026-07-07', type: 'Individual', supervisor: 'James S. Collins III, CAC-AD, BAS', duration: '60 min', topics: 'Trauma-informed care with Marcus Webb; countertransference with high-acuity caseload; boundary review', competency: 'Trauma-Informed Practice' },
                   { date: '2026-06-30', type: 'Group', supervisor: 'James S. Collins III', duration: '90 min', topics: 'Motivational Interviewing role-play; co-occurring PTSD/SUD documentation practices; ethics case study', competency: 'MI / Documentation' },
                   { date: '2026-06-23', type: 'Individual', supervisor: 'James S. Collins III', duration: '60 min', topics: 'Treatment plan goal-writing workshop; ASAM Level of Care criteria for PHP vs. residential', competency: 'Treatment Planning' },
-                  { date: '2026-06-16', type: 'Individual', supervisor: 'James S. Collins III', duration: '60 min', topics: 'Crisis response review — C-SSRS administration case study; mandatory reporting obligations TN', competency: 'Crisis Intervention' },
+                  { date: '2026-06-16', type: 'Individual', supervisor: 'James S. Collins III', duration: '60 min', topics: 'Crisis response review — C-SSRS administration case study; mandatory reporting obligations MD', competency: 'Crisis Intervention' },
                 ].map(s => (
                   <div key={s.date} className="border border-border rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-1.5">
@@ -443,7 +443,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
               { label: 'Active Goals', value: 5, color: 'text-navy', sub: 'Current review period' },
               { label: 'On Track', value: 4, color: 'text-green-600', sub: '80% of active goals' },
               { label: 'CEU Hours Completed', value: 18, color: 'text-blue-600', sub: 'Of 40 required by Nov 2026' },
-              { label: 'Supervision Hours (YTD)', value: 24, color: 'text-teal-600', sub: 'Toward CADC-II requirement' },
+              { label: 'Supervision Hours (YTD)', value: 24, color: 'text-teal-600', sub: 'Toward CAADC requirement' },
             ].map(k => (
               <div key={k.label} className="card">
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
@@ -458,7 +458,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
             <div className="space-y-3 text-xs">
               {[
                 {
-                  goal: 'Earn CADC-II Certification', type: 'Credentialing', owner: 'Self', due: '2026-11-15',
+                  goal: 'Earn CAADC Certification', type: 'Credentialing', owner: 'Self', due: '2026-11-15',
                   progress: 45, milestones: ['Complete 40 CEU hours (18/40)', 'Log 100 supervision hours (24/100)', 'Pass written exam', 'Submit ethics documentation'],
                   status: 'In Progress', sColor: 'bg-blue-100 text-blue-700'
                 },

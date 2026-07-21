@@ -426,10 +426,10 @@ export function PeerSupport({ navigate, readOnly }: Props) {
 
       {tab === 'CPRS Standards' && (
         <div className="space-y-5">
-          <div className="text-sm text-slate">Certified Peer Recovery Specialist (CPRS) scope of practice, ethics standards, and Tennessee certification requirements.</div>
+          <div className="text-sm text-slate">Certified Peer Recovery Specialist (CPRS) scope of practice, ethics standards, and Maryland certification requirements.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: 'CPRS Certification Body', value: 'TDAMHSAS', color: 'text-navy', sub: 'Tennessee state certification' },
+              { label: 'CPRS Certification Body', value: 'TDAMHSAS', color: 'text-navy', sub: 'Maryland state certification' },
               { label: 'CE Required (2yr renewal)', value: '40 hrs', color: 'text-blue-600', sub: '12h ethics required' },
               { label: 'Supervised Hours (initial)', value: '500 hrs', color: 'text-teal-600', sub: 'Under qualified supervisor' },
               { label: 'Recovery Requirement', value: '2 years', color: 'text-green-600', sub: 'Self-identified lived experience' },
@@ -468,7 +468,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
               </div>
             </div>
             <div className="card">
-              <h3 className="font-semibold text-navy text-sm mb-3">CPRS Ethics Standards — Tennessee TDAMHSAS</h3>
+              <h3 className="font-semibold text-navy text-sm mb-3">CPRS Ethics Standards — Maryland TDAMHSAS</h3>
               <div className="space-y-2 text-xs">
                 {[
                   { principle: 'Dignity and Respect', detail: 'Honor the rights, dignity, and self-determination of all individuals. Treat peers without judgment regarding their substance use, mental health, or personal choices.' },

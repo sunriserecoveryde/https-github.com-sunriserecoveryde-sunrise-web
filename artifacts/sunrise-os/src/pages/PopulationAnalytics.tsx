@@ -235,7 +235,7 @@ export function PopulationAnalytics({ navigate }: Props) {
                 <div className="text-xs font-semibold text-slate uppercase mt-2">Insurance Type</div>
                 {[
                   { label: 'Commercial / Private', n: 12, pct: 60, color: 'bg-blue-500' },
-                  { label: 'Medicaid (TennCare)', n: 4, pct: 20, color: 'bg-teal-400' },
+                  { label: 'Medicaid (Maryland Medicaid)', n: 4, pct: 20, color: 'bg-teal-400' },
                   { label: 'Self-Pay / Uninsured', n: 3, pct: 15, color: 'bg-amber-400' },
                   { label: 'Medicare', n: 1, pct: 5, color: 'bg-purple-400' },
                 ].map(r => (
@@ -327,7 +327,7 @@ export function PopulationAnalytics({ navigate }: Props) {
                 { metric: 'Patients with interpreter services needed', value: '2 (10%)', benchmark: 'State avg: 8%', flag: false },
                 { metric: 'Patients reporting transportation barrier', value: '5 (25%)', benchmark: 'State avg: 19%', flag: true },
                 { metric: 'Uninsured / Self-pay patients', value: '3 (15%)', benchmark: 'Target: ≤15%', flag: false },
-                { metric: 'Patients from rural zip codes', value: '4 (20%)', benchmark: 'TN rural avg: 35%', flag: false },
+                { metric: 'Patients from rural zip codes', value: '4 (20%)', benchmark: 'MD rural avg: 35%', flag: false },
                 { metric: 'Patients with veteran status', value: '3 (15%)', benchmark: 'VA coverage: active', flag: false },
                 { metric: 'Patients with DOJ / drug court mandate', value: '3 (15%)', benchmark: 'CARF equity flag: documented', flag: false },
                 { metric: 'Patients declined for capacity (waitlisted)', value: '9 active waitlist', benchmark: 'Reviewed for equity weekly', flag: false },
@@ -725,7 +725,7 @@ export function PopulationAnalytics({ navigate }: Props) {
           <div className="text-sm text-slate">Payer mix analysis for the current census and trailing 12 months — revenue composition, authorization approval rates, and payer-specific LOS benchmarks.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: 'Medicaid (TennCare)', pct: '38%', color: 'text-blue-600', sub: 'Largest single payer' },
+              { label: 'Medicaid (Maryland Medicaid)', pct: '38%', color: 'text-blue-600', sub: 'Largest single payer' },
               { label: 'Commercial Insurance', pct: '32%', color: 'text-teal-600', sub: 'PPO + HMO combined' },
               { label: 'Medicare / Dual', pct: '12%', color: 'text-purple-600', sub: 'Growing segment' },
               { label: 'Self-Pay / Sliding Scale', pct: '18%', color: 'text-amber-600', sub: 'Scholarship + cash pay' },
@@ -753,8 +753,8 @@ export function PopulationAnalytics({ navigate }: Props) {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {[
-                    { payer: 'TennCare (BlueCare)', approval: '91%', los: '18d', deny: '9%', days: 28, ok: true },
-                    { payer: 'BlueCross BlueShield TN', approval: '87%', los: '21d', deny: '13%', days: 22, ok: true },
+                    { payer: 'Maryland Medicaid (CareFirst)', approval: '91%', los: '18d', deny: '9%', days: 28, ok: true },
+                    { payer: 'CareFirst BlueCross BlueShield', approval: '87%', los: '21d', deny: '13%', days: 22, ok: true },
                     { payer: 'Cigna Behavioral', approval: '82%', los: '16d', deny: '18%', days: 35, ok: false },
                     { payer: 'Aetna Behavioral', approval: '85%', los: '19d', deny: '15%', days: 30, ok: true },
                     { payer: 'UnitedHealth / Optum', approval: '78%', los: '14d', deny: '22%', days: 38, ok: false },
@@ -862,10 +862,10 @@ export function PopulationAnalytics({ navigate }: Props) {
           <div className="text-sm text-slate">Patient geographic origin, county-level demand mapping, and referral corridor analysis — informs marketing, business development, and resource allocation.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: 'Tennessee Counties (Served)', value: 22, color: 'text-navy', sub: 'Of 95 counties statewide' },
+              { label: 'Maryland Counties (Served)', value: 10, color: 'text-navy', sub: 'Of 24 counties/Baltimore City statewide' },
               { label: 'Out-of-State Patients (YTD)', value: 14, color: 'text-blue-600', sub: 'AL, KY, GA primary sources' },
               { label: 'Avg Distance Traveled', value: '64 mi', color: 'text-teal-600', sub: 'From patient zip to Sunrise' },
-              { label: 'Nashville Metro (≤30mi)', value: '58%', color: 'text-green-600', sub: 'Of all admissions YTD' },
+              { label: 'DC Metro (≤30mi)', value: '58%', color: 'text-green-600', sub: 'Of all admissions YTD' },
             ].map(k => (
               <div key={k.label} className="card">
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
@@ -878,14 +878,14 @@ export function PopulationAnalytics({ navigate }: Props) {
             <h3 className="font-semibold text-navy text-sm mb-3">Admissions by County / Region — YTD 2026</h3>
             <div className="space-y-2 text-xs">
               {[
-                { region: 'Davidson County (Nashville)', admits: 68, pct: 38, type: 'Metro', color: 'bg-blue-500' },
-                { region: 'Rutherford County (Murfreesboro)', admits: 24, pct: 13, type: 'Metro', color: 'bg-blue-400' },
-                { region: 'Williamson County (Franklin)', admits: 21, pct: 12, type: 'Metro', color: 'bg-blue-300' },
-                { region: 'Wilson County (Lebanon)', admits: 14, pct: 8, type: 'Middle TN', color: 'bg-teal-500' },
-                { region: 'Sumner County (Gallatin)', admits: 11, pct: 6, type: 'Middle TN', color: 'bg-teal-400' },
-                { region: 'Montgomery County (Clarksville)', admits: 9, pct: 5, type: 'Middle TN', color: 'bg-teal-300' },
-                { region: 'Other TN Counties', admits: 18, pct: 10, type: 'Statewide', color: 'bg-purple-400' },
-                { region: 'Out of State (AL/KY/GA)', admits: 14, pct: 8, type: 'OOS', color: 'bg-orange-400' },
+                { region: 'Montgomery County (Rockville)', admits: 68, pct: 38, type: 'Metro', color: 'bg-blue-500' },
+                { region: 'Frederick County (Frederick)', admits: 24, pct: 13, type: 'Metro', color: 'bg-blue-400' },
+                { region: 'Anne Arundel County (Annapolis)', admits: 21, pct: 12, type: 'Metro', color: 'bg-blue-300' },
+                { region: "Prince George's County (Bowie)", admits: 14, pct: 8, type: 'Central MD', color: 'bg-teal-500' },
+                { region: 'Howard County (Columbia)', admits: 11, pct: 6, type: 'Central MD', color: 'bg-teal-400' },
+                { region: 'Baltimore County (Towson)', admits: 9, pct: 5, type: 'Central MD', color: 'bg-teal-300' },
+                { region: 'Other MD Counties', admits: 18, pct: 10, type: 'Statewide', color: 'bg-purple-400' },
+                { region: 'Out of State (DC/VA/PA)', admits: 14, pct: 8, type: 'OOS', color: 'bg-orange-400' },
               ].map(r => (
                 <div key={r.region}>
                   <div className="flex justify-between mb-0.5">

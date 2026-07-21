@@ -511,7 +511,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: 'Commercial Insurance', value: '38%', color: 'text-blue-600', sub: '9 patients — highest reimbursement' },
-              { label: 'Medicaid / TennCare', value: '29%', color: 'text-green-600', sub: '7 patients' },
+              { label: 'Medicaid / Maryland Medicaid', value: '29%', color: 'text-green-600', sub: '7 patients' },
               { label: 'Self-Pay / Sliding Fee', value: '21%', color: 'text-amber-600', sub: '5 patients' },
               { label: 'Medicare', value: '12%', color: 'text-navy', sub: '3 patients' },
             ].map(k => (
@@ -534,11 +534,11 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { payer: 'Blue Cross Blue Shield TN', type: 'Commercial PPO', pts: 4, auth: 'Active', rate: '$850', days: '8d', notes: 'Concurrent review every 5 days' },
+                  { payer: 'CareFirst BlueCross BlueShield', type: 'Commercial PPO', pts: 4, auth: 'Active', rate: '$850', days: '8d', notes: 'Concurrent review every 5 days' },
                   { payer: 'Aetna', type: 'Commercial HMO', pts: 3, auth: 'Active', rate: '$780', days: '5d', notes: 'Peer-to-peer may be needed at day 14' },
                   { payer: 'United Healthcare', type: 'Commercial PPO', pts: 2, auth: 'Active', rate: '$820', days: '11d', notes: 'Auto-approve for first 7 days' },
-                  { payer: 'TennCare (Amerigroup)', type: 'Medicaid Managed', pts: 4, auth: 'Active', rate: '$420', days: '12d', notes: 'Prior auth approved; 30-day limit' },
-                  { payer: 'TennCare (BlueCare)', type: 'Medicaid Managed', pts: 3, auth: 'Active', rate: '$390', days: '9d', notes: '' },
+                  { payer: 'Maryland Medicaid (Amerigroup)', type: 'Medicaid Managed', pts: 4, auth: 'Active', rate: '$420', days: '12d', notes: 'Prior auth approved; 30-day limit' },
+                  { payer: 'Maryland Medicaid (CareFirst)', type: 'Medicaid Managed', pts: 3, auth: 'Active', rate: '$390', days: '9d', notes: '' },
                   { payer: 'Medicare Part A', type: 'Medicare', pts: 3, auth: 'Active', rate: '$680', days: '18d', notes: 'Benefit period tracking active' },
                   { payer: 'Self-Pay', type: 'Private Pay', pts: 3, auth: '—', rate: '$450', days: '—', notes: 'Financial counseling engaged; payment plan in place' },
                   { payer: 'Sliding Fee Scale', type: 'Grant-funded', pts: 2, auth: '—', rate: '$0–$150', days: '—', notes: 'SAMHSA block grant funds' },

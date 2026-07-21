@@ -474,11 +474,11 @@ export function BedManagement({ navigate, readOnly }: Props) {
               <h3 className="font-semibold text-navy text-sm mb-3">Maintenance & Facilities Vendors</h3>
               <div className="space-y-2 text-xs">
                 {[
-                  { vendor: 'ProCare HVAC Services', category: 'HVAC', contact: 'Mike R. — 615-555-0401', contract: 'Annual service contract — Q1/Q3 PM visits', sla: '4h emergency response', status: 'Active' },
-                  { vendor: 'Bright Light Electrical', category: 'Electrical', contact: 'T. Nguyen — 615-555-0402', contract: 'On-call as needed; 30-day net billing', sla: '2h emergency; 48h standard', status: 'Active' },
-                  { vendor: 'FlowRight Plumbing', category: 'Plumbing', contact: 'D. Carter — 615-555-0403', contract: 'On-call as needed', sla: '2h emergency; 24h standard', status: 'Active' },
-                  { vendor: 'SecureLock Systems', category: 'Security / Access Control', contact: 'A. Kim — 615-555-0404', contract: 'Monthly monitoring + annual hardware review', sla: '1h for access failure; 24h for other', status: 'Active' },
-                  { vendor: 'MedEquip Southeast', category: 'Medical Equipment', contact: 'L. Morris — 615-555-0405', contract: 'Preventive maintenance semiannually; repair on-call', sla: '4h critical; 72h standard', status: 'Active' },
+                  { vendor: 'ProCare HVAC Services', category: 'HVAC', contact: 'Mike R. — 301-555-0401', contract: 'Annual service contract — Q1/Q3 PM visits', sla: '4h emergency response', status: 'Active' },
+                  { vendor: 'Bright Light Electrical', category: 'Electrical', contact: 'T. Nguyen — 301-555-0402', contract: 'On-call as needed; 30-day net billing', sla: '2h emergency; 48h standard', status: 'Active' },
+                  { vendor: 'FlowRight Plumbing', category: 'Plumbing', contact: 'D. Carter — 301-555-0403', contract: 'On-call as needed', sla: '2h emergency; 24h standard', status: 'Active' },
+                  { vendor: 'SecureLock Systems', category: 'Security / Access Control', contact: 'A. Kim — 301-555-0404', contract: 'Monthly monitoring + annual hardware review', sla: '1h for access failure; 24h for other', status: 'Active' },
+                  { vendor: 'MedEquip Southeast', category: 'Medical Equipment', contact: 'L. Morris — 301-555-0405', contract: 'Preventive maintenance semiannually; repair on-call', sla: '4h critical; 72h standard', status: 'Active' },
                 ].map(r => (
                   <div key={r.vendor} className="border border-border rounded-xl p-3">
                     <div className="flex justify-between items-start">
@@ -499,10 +499,10 @@ export function BedManagement({ navigate, readOnly }: Props) {
               <h3 className="font-semibold text-navy text-sm mb-3">Housekeeping & Laundry Vendors</h3>
               <div className="space-y-2 text-xs">
                 {[
-                  { vendor: 'CleanCare Commercial Services', category: 'Housekeeping', contact: 'S. Okafor — 615-555-0410', contract: 'Mon–Sat daily service; Sunday on-call', sla: '2h for biohazard; daily standard', status: 'Active' },
-                  { vendor: 'Linx Linen & Laundry', category: 'Linen Supply', contact: 'P. Thompson — 615-555-0411', contract: 'Twice-weekly delivery; soiled linen pickup', sla: '24h emergency linen delivery', status: 'Active' },
-                  { vendor: 'BioShield Remediation', category: 'Biohazard / Remediation', contact: 'T. Carver — 615-555-0412', contract: 'On-call; per-incident billing', sla: '1h response for active biohazard', status: 'Active' },
-                  { vendor: 'Greenway Pest Control', category: 'Pest Control', contact: 'K. Williams — 615-555-0413', contract: 'Monthly preventive service', sla: '48h for active infestation', status: 'Active' },
+                  { vendor: 'CleanCare Commercial Services', category: 'Housekeeping', contact: 'S. Okafor — 301-555-0410', contract: 'Mon–Sat daily service; Sunday on-call', sla: '2h for biohazard; daily standard', status: 'Active' },
+                  { vendor: 'Linx Linen & Laundry', category: 'Linen Supply', contact: 'P. Thompson — 301-555-0411', contract: 'Twice-weekly delivery; soiled linen pickup', sla: '24h emergency linen delivery', status: 'Active' },
+                  { vendor: 'BioShield Remediation', category: 'Biohazard / Remediation', contact: 'T. Carver — 301-555-0412', contract: 'On-call; per-incident billing', sla: '1h response for active biohazard', status: 'Active' },
+                  { vendor: 'Greenway Pest Control', category: 'Pest Control', contact: 'K. Williams — 301-555-0413', contract: 'Monthly preventive service', sla: '48h for active infestation', status: 'Active' },
                 ].map(r => (
                   <div key={r.vendor} className="border border-border rounded-xl p-3">
                     <div className="flex justify-between items-start">

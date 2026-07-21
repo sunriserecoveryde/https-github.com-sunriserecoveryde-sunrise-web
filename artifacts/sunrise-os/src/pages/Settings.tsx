@@ -87,7 +87,7 @@ export function Settings({ navigate, readOnly }: Props) {
               {[
                 { label: 'CARF Accreditation', value: 'Active — Expires 2027-03-15', status: 'ok' },
                 { label: 'Joint Commission', value: 'Not Accredited', status: 'na' },
-                { label: 'State License (TDMHSAS)', value: 'Active — Renewal 2026-12-31', status: 'ok' },
+                { label: 'State License (MD BHA)', value: 'Active — Renewal 2026-12-31', status: 'ok' },
                 { label: 'DEA Registration', value: 'Active — Expires 2027-06-30', status: 'ok' },
               ].map(a => (
                 <div key={a.label} className="flex items-start gap-2">

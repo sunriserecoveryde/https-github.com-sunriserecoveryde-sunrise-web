@@ -35,35 +35,35 @@ const SESSIONS: TelehealthSession[] = [
     status: 'Completed', platform: 'Doxy.me',
     joinUrl: 'https://doxy.me/davidodom', techCheckDone: true, insuranceAuth: true, consentOnFile: true,
     sessionNotes: 'Patient connected on time. Discussed court date anxiety and relapse triggers. Reviewed safety plan. Assigned Step 3 worksheet.',
-    billingCode: '90837-GT', location: 'Home (Nashville, TN)',
+    billingCode: '90837-GT', location: 'Home (Rockville, MD)',
   },
   {
     id: 'TH-002', patientId: 'p12', date: '2026-07-19', time: '10:30 AM', duration: 50,
     modality: 'Medication Management', provider: 'Dr. Emma Hughes, MD',
     status: 'In Progress', platform: 'Zoom for Healthcare',
     joinUrl: 'https://zoom.us/j/sunrise-hughes', techCheckDone: true, insuranceAuth: true, consentOnFile: true,
-    billingCode: '99213-GT', location: 'Home (Brentwood, TN)',
+    billingCode: '99213-GT', location: 'Home (Brentwood, MD)',
   },
   {
     id: 'TH-003', patientId: 'p7', date: '2026-07-19', time: '1:00 PM', duration: 50,
     modality: 'Individual Therapy', provider: 'Sarah Jenkins, LPC',
     status: 'Scheduled', platform: 'Doxy.me',
     joinUrl: 'https://doxy.me/sarahjenkins', techCheckDone: true, insuranceAuth: true, consentOnFile: true,
-    billingCode: '90837-GT', location: 'Home (Franklin, TN)',
+    billingCode: '90837-GT', location: 'Home (Franklin, MD)',
   },
   {
     id: 'TH-004', patientId: 'p3', date: '2026-07-19', time: '2:30 PM', duration: 50,
     modality: 'Psychiatric Evaluation', provider: 'Dr. Emma Hughes, MD',
     status: 'Scheduled', platform: 'Zoom for Healthcare',
     joinUrl: 'https://zoom.us/j/sunrise-hughes', techCheckDone: false, insuranceAuth: true, consentOnFile: true,
-    billingCode: '90792-GT', location: 'Home (Nashville, TN)',
+    billingCode: '90792-GT', location: 'Home (Rockville, MD)',
   },
   {
     id: 'TH-005', patientId: 'p15', date: '2026-07-19', time: '4:00 PM', duration: 30,
     modality: 'Case Management', provider: 'Maria Gonzalez, LSW',
     status: 'Scheduled', platform: 'Doxy.me',
     joinUrl: 'https://doxy.me/mariagonzalez', techCheckDone: true, insuranceAuth: false, consentOnFile: true,
-    billingCode: 'T1017-GT', location: 'Sober Living (Nashville, TN)',
+    billingCode: 'T1017-GT', location: 'Sober Living (Rockville, MD)',
   },
   {
     id: 'TH-006', patientId: 'p20', date: '2026-07-18', time: '11:00 AM', duration: 50,
@@ -79,7 +79,7 @@ const SESSIONS: TelehealthSession[] = [
     status: 'Completed', platform: 'Zoom for Healthcare',
     joinUrl: 'https://zoom.us/j/sunrise-jenkins', techCheckDone: true, insuranceAuth: true, consentOnFile: true,
     sessionNotes: 'Patient and wife attended. Discussed communication patterns, enabling behaviors, and family recovery plan. Wife to attend Al-Anon. Next family session in 2 weeks.',
-    billingCode: '90847-GT', location: 'Home (Nashville, TN)',
+    billingCode: '90847-GT', location: 'Home (Rockville, MD)',
   },
   {
     id: 'TH-008', patientId: 'p16', date: '2026-07-17', time: '10:00 AM', duration: 50,
@@ -87,7 +87,7 @@ const SESSIONS: TelehealthSession[] = [
     status: 'Tech Failure', platform: 'Doxy.me',
     techCheckDone: false, insuranceAuth: true, consentOnFile: true,
     sessionNotes: 'Patient connected but audio failed both sides. Session conducted by phone (modifier applied). Audio issue linked to patient\'s outdated device — tech support email sent.',
-    billingCode: '90837-PH', location: 'Home (Clarksville, TN)',
+    billingCode: '90837-PH', location: 'Home (Clarksville, MD)',
   },
 ];
 
@@ -299,7 +299,7 @@ export function TelehealthConsults({ navigate, readOnly }: Props) {
               ))}
               <div>
                 <label className="block text-xs font-semibold text-slate mb-1">Patient location today (required by CMS — must document state)</label>
-                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Home — 123 Main St, Nashville, TN 37201" />
+                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Home — 123 Main St, Rockville, MD 37201" />
               </div>
             </div>
             <LockedButton locked={readOnly} className="btn-primary text-sm px-5 py-2">Save Tech Check</LockedButton>
@@ -329,7 +329,7 @@ export function TelehealthConsults({ navigate, readOnly }: Props) {
               { label: 'Primary Platform', value: 'Doxy.me (HIPAA Business Associate Agreement on file)' },
               { label: 'Secondary Platform', value: 'Zoom for Healthcare (HIPAA BAA on file)' },
               { label: 'BAA Status', value: 'Current — renews 2027-01-01' },
-              { label: 'State Licensure Coverage', value: 'Tennessee, Kentucky, Alabama, Georgia' },
+              { label: 'State Licensure Coverage', value: 'Maryland, Kentucky, Alabama, Georgia' },
               { label: 'Medicare Telehealth Authorization', value: 'Active — Rural Health Waiver (PL 117-328)' },
             ].map(s => (
               <div key={s.label} className="flex justify-between py-2 border-b border-border last:border-0">

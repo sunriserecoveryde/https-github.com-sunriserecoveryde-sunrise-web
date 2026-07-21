@@ -32,7 +32,7 @@ interface ROIRequest {
 const ROI_REQUESTS: ROIRequest[] = [
   {
     id: 'ROI-001', patientId: 'p1', type: 'Outgoing',
-    recipientOrSender: 'Dr. Michael Torres, MD — Veterans Affairs Medical Center Nashville',
+    recipientOrSender: 'Dr. Michael Torres, MD — Veterans Affairs Medical Center Rockville',
     recipientType: 'Primary Care Physician',
     recordTypes: ['Progress Notes', 'Treatment Plan', 'Substance Abuse Records (42 CFR)'],
     purposeOfDisclosure: 'Coordination of care — VA primary care and mental health services',
@@ -41,12 +41,12 @@ const ROI_REQUESTS: ROIRequest[] = [
     auditLog: [
       { date: '2026-07-01', action: 'ROI signed by patient in office', user: 'Sarah Jenkins, LPC' },
       { date: '2026-07-02', action: 'Records prepared — 42 CFR Notice to Accompany included', user: 'Medical Records (Admin)' },
-      { date: '2026-07-02', action: 'Records transmitted via secure fax to VA (615-687-XXXX)', user: 'Medical Records (Admin)' },
+      { date: '2026-07-02', action: 'Records transmitted via secure fax to VA (301-687-XXXX)', user: 'Medical Records (Admin)' },
     ],
   },
   {
     id: 'ROI-002', patientId: 'p4', type: 'Outgoing',
-    recipientOrSender: 'Tennessee Bar Association Lawyers Assistance Program (LAP)',
+    recipientOrSender: 'Maryland Bar Association Lawyers Assistance Program (LAP)',
     recipientType: 'Court/Legal',
     recordTypes: ['Progress Notes', 'Discharge Summary', 'Treatment Plan'],
     purposeOfDisclosure: 'Legal reinstatement — Bar Association monitoring program',
@@ -55,7 +55,7 @@ const ROI_REQUESTS: ROIRequest[] = [
     auditLog: [
       { date: '2026-07-10', action: 'ROI signed by patient — specific to LAP report format', user: 'David Odom, LMFT' },
       { date: '2026-07-11', action: 'LAP compliance report generated; records attached', user: 'Medical Records (Admin)' },
-      { date: '2026-07-11', action: 'Sent via certified mail + secure fax to LAP (615-XXX-XXXX)', user: 'Medical Records (Admin)' },
+      { date: '2026-07-11', action: 'Sent via certified mail + secure fax to LAP (301-XXX-XXXX)', user: 'Medical Records (Admin)' },
     ],
   },
   {
@@ -67,13 +67,13 @@ const ROI_REQUESTS: ROIRequest[] = [
     requestDate: '2026-07-15', expiryDate: '2027-01-15', status: 'Pending',
     requires42CFR: false,
     auditLog: [
-      { date: '2026-07-15', action: 'ROI signed; faxed to Vanderbilt Records (615-322-XXXX)', user: 'Jessica Torres, RN' },
+      { date: '2026-07-15', action: 'ROI signed; faxed to Vanderbilt Records (301-322-XXXX)', user: 'Jessica Torres, RN' },
       { date: '2026-07-16', action: 'Fax delivery confirmed; records anticipated within 5 business days', user: 'Medical Records (Admin)' },
     ],
   },
   {
     id: 'ROI-004', patientId: 'p5', type: 'Outgoing',
-    recipientOrSender: 'State Farm Insurance — Claim #TN-2021-88341',
+    recipientOrSender: 'State Farm Insurance — Claim #MD-2021-88341',
     recipientType: 'Insurance/Payer',
     recordTypes: ['Medical Records', 'Lab Results'],
     purposeOfDisclosure: 'Insurance claim processing — automobile accident physical injury (NOT substance use records)',
@@ -95,7 +95,7 @@ const ROI_REQUESTS: ROIRequest[] = [
     requestDate: '2026-07-14', expiryDate: '2027-01-14', status: 'Fulfilled',
     requires42CFR: false, receivedDate: '2026-07-16',
     auditLog: [
-      { date: '2026-07-14', action: 'Consent signed; faxed to Dr. Kim office (615-XXX-XXXX)', user: 'Jessica Torres, RN' },
+      { date: '2026-07-14', action: 'Consent signed; faxed to Dr. Kim office (301-XXX-XXXX)', user: 'Jessica Torres, RN' },
       { date: '2026-07-16', action: 'Records received — 8 pages; uploaded to patient chart', user: 'Medical Records (Admin)' },
     ],
   },
@@ -460,7 +460,7 @@ export function MedicalRecords({ navigate, readOnly }: Props) {
                 {[
                   { perm: 'Treatment, Payment, and Operations (TPO)', detail: 'Sharing PHI with providers involved in patient care, payers for billing, and internal operations (QI, training, audits).' },
                   { perm: 'Imminent Danger to Self or Others', detail: 'Disclosure to law enforcement or emergency services when a patient poses a credible, imminent threat. Document the basis.' },
-                  { perm: 'Mandatory Reporting — Child Abuse/Neglect', detail: 'TN mandatory reporters (all clinical staff) must report suspected child abuse/neglect to DCS regardless of confidentiality.' },
+                  { perm: 'Mandatory Reporting — Child Abuse/Neglect', detail: 'Maryland mandatory reporters (all clinical staff) must report suspected child abuse/neglect to DCS regardless of confidentiality.' },
                   { perm: 'Public Health Activities', detail: 'Disclosures to public health agencies for disease surveillance, vital statistics (birth/death), and reportable communicable diseases.' },
                   { perm: 'Coroner / Medical Examiner', detail: 'PHI may be disclosed to coroners for death investigation without patient authorization.' },
                   { perm: 'Law Enforcement (limited)', detail: 'Limited info to locate missing persons, identify suspects (by description), or respond to court order. Note: 42 CFR Part 2 restrictions apply to SUD records.' },

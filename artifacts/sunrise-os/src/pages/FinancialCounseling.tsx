@@ -7,7 +7,7 @@ import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
-type FundingSource = 'Commercial Insurance' | 'Medicare' | 'Medicaid (TennCare)' | 'Self-Pay' | 'Sliding Fee Scale' | 'Charity Care' | 'State Grant (BHSF)' | 'COBRA';
+type FundingSource = 'Commercial Insurance' | 'Medicare' | 'Medicaid (Maryland Medicaid)' | 'Self-Pay' | 'Sliding Fee Scale' | 'Charity Care' | 'State Grant (BHSF)' | 'COBRA';
 type PaymentPlanStatus = 'Active' | 'Completed' | 'Delinquent' | 'Pending';
 type FinancialScreeningStatus = 'Screened' | 'Pending' | 'Ineligible';
 
@@ -51,11 +51,11 @@ const FINANCIAL_DATA: PatientFinancial[] = [
     counselorNotes: 'Legal expense insurance covers full SUD treatment per attorney benefits. Re-verify next auth period.',
   },
   {
-    patientId: 'p9', fundingSource: 'Medicaid (TennCare)', weeklyRate: 900,
+    patientId: 'p9', fundingSource: 'Medicaid (Maryland Medicaid)', weeklyRate: 900,
     totalBalance: 150, insuranceCoverage: 97, patientResponsibility: 150,
     deductibleMet: true, deductibleRemaining: 0, slidingFeeApplied: false,
     charityCarePending: false, financialScreening: 'Screened',
-    counselorNotes: 'TennCare MCO: BlueCare Tennessee. Prior auth approved through 7/31. Re-auth scheduled.',
+    counselorNotes: 'Maryland Medicaid MCO: CareFirst BlueChoice. Prior auth approved through 7/31. Re-auth scheduled.',
   },
   {
     patientId: 'p5', fundingSource: 'Self-Pay', weeklyRate: 1200,
@@ -373,7 +373,7 @@ export function FinancialCounseling({ navigate, readOnly }: Props) {
                         { payer: 'UnitedHealthcare', req: 'Yes — Detox + Res.', notes: 'PHP/IOP: notify-only within 48h; use Optum portal' },
                         { payer: 'Cigna', req: 'Yes — all levels', notes: 'Evernorth/Cigna BH; fax auth to 800-735-1032' },
                         { payer: 'Aetna', req: 'Yes — Detox + Res.', notes: 'PHP: retro auth within 24h acceptable; IOP notify-only' },
-                        { payer: 'TennCare (Medicaid)', req: 'Yes — Detox only', notes: 'Residential: CoC authorization via DHS; IOP/PHP: no auth' },
+                        { payer: 'Maryland Medicaid (Medicaid)', req: 'Yes — Detox only', notes: 'Residential: CoC authorization via DHS; IOP/PHP: no auth' },
                         { payer: 'Medicare', req: 'No (medically necessary)', notes: 'Document medical necessity; Res. covered only if SNF-level need' },
                         { payer: 'Humana', req: 'Yes — all levels', notes: 'Use AvMed portal; auth turnaround 2 business days' },
                       ].map(r => (
@@ -395,7 +395,7 @@ export function FinancialCounseling({ navigate, readOnly }: Props) {
                 <div className="space-y-2 text-xs">
                   {[
                     { reason: 'Not Medically Necessary', response: 'Submit ASAM assessment, CIWA/COWS scores, prior treatment history, and letter of medical necessity from MD. Cite MHPAEA parity if outpatient criteria would not trigger denial for comparable medical condition.' },
-                    { reason: 'Experimental / Investigational', response: 'MAT (buprenorphine/methadone/naltrexone) denials on this basis are MHPAEA violations. Cite SAMHSA/ASAM evidence base and file parity complaint with TN DOC if not resolved.' },
+                    { reason: 'Experimental / Investigational', response: 'MAT (buprenorphine/methadone/naltrexone) denials on this basis are MHPAEA violations. Cite SAMHSA/ASAM evidence base and file parity complaint with MD Insurance Administration if not resolved.' },
                     { reason: 'Concurrent Review Denied', response: 'Request peer-to-peer review with payer MD within 72h. Have prescriber document continued medical necessity. If denied after P2P, file expedited appeal — typically 72h turnaround.' },
                     { reason: 'Out-of-Network', response: 'Confirm if facility is in-network first. If out-of-network, request in-network exception based on geographic access or continuity of care. Document No Surprises Act compliance.' },
                   ].map(d => (
@@ -438,7 +438,7 @@ export function FinancialCounseling({ navigate, readOnly }: Props) {
             <div className="space-y-3 text-xs">
               {[
                 {
-                  name: 'SAMHSA SAPT Block Grant — TN Allocation', funder: 'SAMHSA / TDMHSAS', amount: '$187,000', period: 'FY2026 (Oct 2025 – Sep 2026)',
+                  name: 'SAMHSA SAPT Block Grant — MD Allocation', funder: 'SAMHSA / MD BHA', amount: '$187,000', period: 'FY2026 (Oct 2025 – Sep 2026)',
                   purpose: 'Sliding-scale services for uninsured and underinsured individuals. Covers residential, PHP, and IOP LOCs.',
                   patientsServed: 18, renewal: '2026-08-01', status: 'Active', sColor: 'bg-green-100 text-green-700'
                 },
@@ -448,12 +448,12 @@ export function FinancialCounseling({ navigate, readOnly }: Props) {
                   patientsServed: 7, renewal: '2027-04-01', status: 'Active', sColor: 'bg-green-100 text-green-700'
                 },
                 {
-                  name: 'Tennessee REDLINE Opioid Response Funding', funder: 'TN Dept. of Finance', amount: '$68,000', period: 'FY2026',
+                  name: 'Maryland REDLINE Opioid Response Funding', funder: 'MD Dept. of Health', amount: '$68,000', period: 'FY2026',
                   purpose: 'OUD rapid access slots — buprenorphine induction, MAT linkage, and peer recovery support for OUD-priority admissions.',
                   patientsServed: 6, renewal: '2026-09-01', status: 'Renewal Due', sColor: 'bg-amber-100 text-amber-700'
                 },
                 {
-                  name: 'United Way of Metro Nashville — Recovery Fund', funder: 'United Way', amount: '$32,000', period: 'Jan 2026 – Dec 2026',
+                  name: 'United Way of the National Capital Area — Recovery Fund', funder: 'United Way', amount: '$32,000', period: 'Jan 2026 – Dec 2026',
                   purpose: 'Emergency financial assistance for patients — transportation, housing deposits, and essential needs post-discharge.',
                   patientsServed: 0, renewal: '2026-10-15', status: 'Renewal Due', sColor: 'bg-amber-100 text-amber-700'
                 },

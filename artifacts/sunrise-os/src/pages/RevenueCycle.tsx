@@ -35,7 +35,7 @@ const AUTHS: AuthRecord[] = [
   { patientId: 'p2', patientName: 'Samantha Choi', mrn: 'MRN-74563', program: 'Residential', insurance: 'Aetna', authNumber: 'AET-2026-19034', authorizedDays: 14, usedDays: 13, authStart: '2026-07-05', authEnd: '2026-07-19', status: 'Expiring Soon', dailyRate: 920, urContact: 'Linda Vance' },
   { patientId: 'p3', patientName: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', insurance: 'United', authNumber: 'UHC-2026-88201', authorizedDays: 28, usedDays: 28, authStart: '2026-06-20', authEnd: '2026-07-17', status: 'Expired', dailyRate: 780, urContact: 'Linda Vance' },
   { patientId: 'p4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', insurance: 'Humana', authNumber: 'HUM-2026-33012', authorizedDays: 35, usedDays: 35, authStart: '2026-06-13', authEnd: '2026-07-17', status: 'Expired', dailyRate: 810, urContact: 'Linda Vance' },
-  { patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', insurance: 'TennCare', authNumber: 'TCR-2026-55810', authorizedDays: 45, usedDays: 42, authStart: '2026-06-06', authEnd: '2026-07-20', status: 'Expiring Soon', dailyRate: 620, urContact: 'Linda Vance' },
+  { patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', insurance: 'Maryland Medicaid', authNumber: 'TCR-2026-55810', authorizedDays: 45, usedDays: 42, authStart: '2026-06-06', authEnd: '2026-07-20', status: 'Expiring Soon', dailyRate: 620, urContact: 'Linda Vance' },
   { patientId: 'p6', patientName: 'Destiny Williams', mrn: 'MRN-55129', program: 'PHP', insurance: 'Cigna', authNumber: 'CGN-2026-77441', authorizedDays: 20, usedDays: 11, authStart: '2026-07-07', authEnd: '2026-07-26', status: 'Active', dailyRate: 480, urContact: 'Linda Vance' },
   { patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', insurance: 'BlueCross', authNumber: 'BCB-2026-50291', authorizedDays: 21, usedDays: 21, authStart: '2026-06-27', authEnd: '2026-07-17', status: 'Expired', dailyRate: 490, urContact: 'Linda Vance' },
   { patientId: 'p8', patientName: 'Linda Farris', mrn: 'MRN-39018', program: 'IOP', insurance: 'Aetna', authNumber: 'Pending Review', authorizedDays: 0, usedDays: 14, authStart: '2026-07-04', authEnd: '—', status: 'Pending', dailyRate: 310, urContact: 'Linda Vance' },
@@ -46,7 +46,7 @@ const CLAIMS: Claim[] = [
   { id: 'cl2', patientName: 'Samantha Choi', mrn: 'MRN-74563', insurance: 'Aetna', serviceDate: '2026-07-05', submittedDate: '2026-07-07', amount: 12880, status: 'Paid' },
   { id: 'cl3', patientName: 'James Thornton', mrn: 'MRN-62841', insurance: 'United', serviceDate: '2026-07-01', submittedDate: '2026-07-03', amount: 15600, status: 'In Review' },
   { id: 'cl4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', insurance: 'Humana', serviceDate: '2026-06-20', submittedDate: '2026-06-22', amount: 22680, status: 'Denied', denialReason: 'Level of care not medically necessary per Humana clinical criteria. Residential denied — PHP approved.' },
-  { id: 'cl5', patientName: 'Robert Navarro', mrn: 'MRN-44782', insurance: 'TennCare', serviceDate: '2026-07-01', submittedDate: '2026-07-03', amount: 8680, status: 'Paid' },
+  { id: 'cl5', patientName: 'Robert Navarro', mrn: 'MRN-44782', insurance: 'Maryland Medicaid', serviceDate: '2026-07-01', submittedDate: '2026-07-03', amount: 8680, status: 'Paid' },
   { id: 'cl6', patientName: 'Destiny Williams', mrn: 'MRN-55129', insurance: 'Cigna', serviceDate: '2026-07-07', submittedDate: '2026-07-09', amount: 5280, status: 'Submitted' },
   { id: 'cl7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', insurance: 'BlueCross', serviceDate: '2026-06-27', submittedDate: '2026-06-29', amount: 10290, status: 'Appealing', denialReason: 'Missing clinical documentation — ASAM assessment not included.' },
   { id: 'cl8', patientName: 'Linda Farris', mrn: 'MRN-39018', insurance: 'Aetna', serviceDate: '2026-07-04', submittedDate: '—', amount: 4340, status: 'Submitted' },
@@ -66,9 +66,9 @@ const MONTHLY_REVENUE = [
 
 const PAYER_MIX = [
   { name: 'BlueCross',  value: 34, color: '#1e5fa8' },
-  { name: 'Aetna',      value: 22, color: '#0ea5e9' },
+  { name: 'Aetna',      value: 10, color: '#0ea5e9' },
   { name: 'United',     value: 18, color: '#6366f1' },
-  { name: 'TennCare',   value: 12, color: '#14b8a6' },
+  { name: 'Maryland Medicaid',   value: 12, color: '#14b8a6' },
   { name: 'Humana',     value: 8,  color: '#f59e0b' },
   { name: 'Cigna',      value: 4,  color: '#f97316' },
   { name: 'Self-Pay',   value: 2,  color: '#94a3b8' },
@@ -537,7 +537,7 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                 { payer: 'United Healthcare', patients: 3, pct: 15, avgRate: 780, totalBilled: 67080, collected: 54235, color: 'bg-orange-400' },
                 { payer: 'Humana', patients: 2, pct: 10, avgRate: 810, totalBilled: 46260, collected: 39321, color: 'bg-green-500' },
                 { payer: 'Cigna', patients: 2, pct: 10, avgRate: 790, totalBilled: 43120, collected: 37584, color: 'bg-purple-500' },
-                { payer: 'TennCare (Medicaid)', patients: 2, pct: 10, avgRate: 620, totalBilled: 27840, collected: 24504, color: 'bg-teal-500' },
+                { payer: 'Maryland Medicaid (Medicaid)', patients: 2, pct: 10, avgRate: 620, totalBilled: 27840, collected: 24504, color: 'bg-teal-500' },
                 { payer: 'Self-Pay', patients: 1, pct: 5, avgRate: 0, totalBilled: 18500, collected: 5550, color: 'bg-amber-400' },
               ].map(p => (
                 <div key={p.payer} className="bg-white border border-border rounded-xl p-4 shadow-sm">
@@ -570,7 +570,7 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                     { payer: 'Aetna', contractRate: 88, realized: 88, note: 'In-network — minor write-offs on missed concurrent review' },
                     { payer: 'United Healthcare', contractRate: 81, realized: 81, note: '1 denial in review — rate may drop to 73% if not overturned' },
                     { payer: 'Humana', contractRate: 85, realized: 85, note: 'Auth expired on p4 — pursuing appeal; retroactive auth possible' },
-                    { payer: 'TennCare', contractRate: 88, realized: 88, note: 'Medicaid — fixed rate contract; prior auth required every 7 days' },
+                    { payer: 'Maryland Medicaid', contractRate: 88, realized: 88, note: 'Medicaid — fixed rate contract; prior auth required every 7 days' },
                     { payer: 'Self-Pay', contractRate: 100, realized: 30, note: 'Collected 30% — financial assistance applied; payment plan active' },
                   ].map(r => (
                     <div key={r.payer} className="text-xs">
@@ -599,8 +599,8 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                     <div className="text-green-800">No single payer exceeds 35% of revenue. Top-3 payers (BCBS, Aetna, United) represent 55% combined — within acceptable diversification range.</div>
                   </div>
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="font-bold text-blue-700 mb-1">ℹ Medicaid / TennCare Target</div>
-                    <div className="text-blue-800">Current Medicaid census at 10%. State CARF grant requires maintaining ≥15% Medicaid/underinsured access. Consider waitlist priority review for TennCare patients.</div>
+                    <div className="font-bold text-blue-700 mb-1">ℹ Medicaid / Maryland Medicaid Target</div>
+                    <div className="text-blue-800">Current Medicaid census at 10%. State CARF grant requires maintaining ≥15% Medicaid/underinsured access. Consider waitlist priority review for Maryland Medicaid patients.</div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     {[
@@ -654,7 +654,7 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                   <tbody className="divide-y divide-border">
                     {[
                       { payer: 'Commercial', d30: '$68K', d60: '$24K', d90: '$11K', d120: '$4K', d120p: '$2K', total: '$109K' },
-                      { payer: 'TennCare / Medicaid', d30: '$44K', d60: '$18K', d90: '$8K', d120: '$3K', d120p: '$1K', total: '$74K' },
+                      { payer: 'Maryland Medicaid / Medicaid', d30: '$44K', d60: '$18K', d90: '$8K', d120: '$3K', d120p: '$1K', total: '$74K' },
                       { payer: 'Medicare', d30: '$22K', d60: '$9K', d90: '$4K', d120: '$1K', d120p: '$0', total: '$36K' },
                       { payer: 'Self-Pay', d30: '$12K', d60: '$14K', d90: '$8K', d120: '$5K', d120p: '$2K', total: '$41K' },
                       { payer: 'Other / Unknown', d30: '$12K', d60: '$8K', d90: '$4K', d120: '$0', d120p: '$0', total: '$24K' },

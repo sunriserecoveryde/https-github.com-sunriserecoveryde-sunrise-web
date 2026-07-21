@@ -603,7 +603,7 @@ export function UADrugTesting({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { lab: 'LabCorp (Nashville hub)', type: 'Reference Lab — Confirmations', panels: 'GC-MS 12-panel, EtG/EtS, Bup level, fentanyl analogs', tat: '24–36h', contact: '800-555-0144', exp: 'Dec 2027' },
+                  { lab: 'LabCorp (Rockville hub)', type: 'Reference Lab — Confirmations', panels: 'GC-MS 12-panel, EtG/EtS, Bup level, fentanyl analogs', tat: '24–36h', contact: '800-555-0144', exp: 'Dec 2027' },
                   { lab: 'Quest Diagnostics (backup)', type: 'Reference Lab — Backup', panels: 'Full confirmatory menu', tat: '24–48h', contact: '800-555-0244', exp: 'Mar 2027' },
                   { lab: 'Abbott (Alere) — POCT', type: 'Point-of-Care Testing', panels: 'iCup 12-panel, fentanyl strip', tat: '5 min (POC)', contact: '800-555-0344', exp: 'Jun 2026' },
                   { lab: 'National Toxicology (urine EtG)', type: 'Send-out Specialty', panels: 'EtG/EtS (80-hour alcohol marker)', tat: '48–72h', contact: '800-555-0444', exp: 'Sep 2027' },

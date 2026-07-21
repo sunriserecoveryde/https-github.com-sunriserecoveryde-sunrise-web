@@ -342,7 +342,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
               <div className="space-y-3">
                 {[
                   { label: 'IOP Step-Down', count: 4, pct: 44, color: 'bg-green-500' },
-                  { label: 'PHP Step-Down', count: 2, pct: 22, color: 'bg-blue-500' },
+                  { label: 'PHP Step-Down', count: 2, pct: 10, color: 'bg-blue-500' },
                   { label: 'Outpatient Continuing Care', count: 1, pct: 11, color: 'bg-teal-500' },
                   { label: 'AMA / Against Medical Advice', count: 1, pct: 11, color: 'bg-red-500' },
                   { label: 'Transfer (Higher Level of Care)', count: 1, pct: 11, color: 'bg-purple-500' },
@@ -705,7 +705,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                   { name: 'M. Carver', dob: '09/14/1988', sud: 'OUD', loc: 'Residential', source: 'ER — Vanderbilt', auth: 'Approved', eta: '2:30 PM', bed: 'Rm 12A', notes: 'Suboxone candidate; needs MAT eval on arrival' },
                   { name: 'T. Nguyen', dob: '03/22/1975', sud: 'AUD', loc: 'Detox', source: 'Self / Family', auth: 'Pending', eta: '4:00 PM', bed: '—', notes: 'CIWA risk — awaiting Blue Cross auth' },
                   { name: 'S. Okafor', dob: '07/01/1993', sud: 'Meth + AUD', loc: 'Residential', source: 'Probation', auth: 'Approved', eta: '3:15 PM', bed: 'Rm 7B', notes: 'Drug court Track B; compliance letter required on admit' },
-                  { name: 'R. Delgado', dob: '11/30/1981', sud: 'OUD', loc: 'PHP', source: 'Step-down — Franklin TN', auth: 'Approved', eta: '5:00 PM', bed: 'PHP Unit', notes: 'Transferring from residential; Suboxone 16mg continued' },
+                  { name: 'R. Delgado', dob: '11/30/1981', sud: 'OUD', loc: 'PHP', source: 'Step-down — Bethesda MD', auth: 'Approved', eta: '5:00 PM', bed: 'PHP Unit', notes: 'Transferring from residential; Suboxone 16mg continued' },
                   { name: 'L. Morris', dob: '04/17/2000', sud: 'Stimulant', loc: 'Residential', source: 'Physician referral', auth: 'Pending', eta: 'TBD', bed: '—', notes: 'Aetna auth call placed at 11:20 AM; awaiting callback' },
                 ].map(r => (
                   <tr key={r.name} className="hover:bg-gray-50">

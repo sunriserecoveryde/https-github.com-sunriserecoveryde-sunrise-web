@@ -37,7 +37,7 @@ const WAITLIST: WaitlistEntry[] = [
     referralSource: 'Vanderbilt Psychiatric Emergency — direct referral', primaryDx: 'Opioid Use Disorder, Severe / PTSD',
     requestedLOC: 'Residential', priority: 'P1 — Urgent',
     addedDate: '2026-07-17', daysWaiting: 2, status: 'Active',
-    insuranceVerified: true, payer: 'BlueCross BlueShield of TN (auth pending)',
+    insuranceVerified: true, payer: 'CareFirst BlueCross BlueShield (auth pending)',
     lastContactDate: '2026-07-18', lastContactOutcome: 'Spoke with patient — motivated, in withdrawal, staying with sister. Wants bed ASAP.',
     notes: 'Referred by Dr. Linda Strauss at Vanderbilt Psych ED. Fentanyl OUD, last use 7/16. CIWA score estimated at 14 at ED. Insurance auth submitted — expecting decision in 24 hours. P1 — offer next available residential bed.',
     assignedTo: 'Sarah Jenkins, LPC', preferredAdmitDate: '2026-07-20',
@@ -65,24 +65,24 @@ const WAITLIST: WaitlistEntry[] = [
   },
   {
     id: 'WL-004', name: 'James Worthington III', dob: '1965-02-08', phone: '(615) 555-3310',
-    referralSource: 'Tennessee Bar Association LAP referral',
+    referralSource: 'Maryland Bar Association LAP referral',
     primaryDx: 'Alcohol Use Disorder, Severe',
     requestedLOC: 'Residential', priority: 'P1 — Urgent',
     addedDate: '2026-07-16', daysWaiting: 3, status: 'Active',
     insuranceVerified: false, payer: 'Aetna (verification in progress)',
     lastContactDate: '2026-07-18', lastContactOutcome: 'Spoke with attorney — patient in court proceedings. Needs admission before 7/22 hearing.',
-    notes: 'Attorney client — BAC of 0.31 at arrest. Court ordered treatment as diversion condition. Must admit before 7/22 hearing or faces incarceration. LAP case manager: Marcus Hall (615-555-2002). Insurance verification urgent.',
+    notes: 'Attorney client — BAC of 0.31 at arrest. Court ordered treatment as diversion condition. Must admit before 7/22 hearing or faces incarceration. LAP case manager: Marcus Hall (301-555-2002). Insurance verification urgent.',
     assignedTo: 'Sarah Jenkins, LPC',
   },
   {
     id: 'WL-005', name: 'Destiny Williams', dob: '1998-06-14', phone: '(615) 555-8821',
-    referralSource: 'Recovery coach outreach — Nashville Room in the Inn',
+    referralSource: 'Recovery coach outreach — Rockville Interfaith Recovery House',
     primaryDx: 'Opioid Use Disorder, Severe / Homelessness',
     requestedLOC: 'Residential', priority: 'P1 — Urgent',
     addedDate: '2026-07-15', daysWaiting: 4, status: 'Active',
-    insuranceVerified: true, payer: 'TennCare / BlueCare (authorized)',
-    lastContactDate: '2026-07-18', lastContactOutcome: 'Spoke via Nashville Room in the Inn staff — patient eager for help. Transportation needed.',
-    notes: 'TennCare auth approved — 21 days residential covered. Transportation barrier: no car, currently sheltered. Will arrange transport on admission day. 26-year-old with 4-year fentanyl history. High priority given housing instability and OD risk.',
+    insuranceVerified: true, payer: 'Maryland Medicaid / BlueCare (authorized)',
+    lastContactDate: '2026-07-18', lastContactOutcome: 'Spoke via Rockville Interfaith Recovery House staff — patient eager for help. Transportation needed.',
+    notes: 'Maryland Medicaid auth approved — 21 days residential covered. Transportation barrier: no car, currently sheltered. Will arrange transport on admission day. 26-year-old with 4-year fentanyl history. High priority given housing instability and OD risk.',
     assignedTo: 'Maria Gonzalez, LSW', preferredAdmitDate: '2026-07-21',
   },
   {
@@ -345,7 +345,7 @@ export function WaitlistManager({ navigate: _navigate, readOnly }: Props) {
                 { stage: 'Inquiry / Contact', n: 47, color: 'bg-navy' },
                 { stage: 'Clinical Assessment Scheduled', n: 34, color: 'bg-blue-500' },
                 { stage: 'Assessment Completed', n: 27, color: 'bg-teal-500' },
-                { stage: 'Insurance Authorized', n: 22, color: 'bg-green-500' },
+                { stage: 'Insurance Authorized', n: 10, color: 'bg-green-500' },
                 { stage: 'Admitted', n: 19, color: 'bg-green-600' },
               ].map((s, i, arr) => (
                 <div key={s.stage} className="flex items-center gap-3 mb-2">
@@ -570,7 +570,7 @@ export function WaitlistManager({ navigate: _navigate, readOnly }: Props) {
             {[
               { label: 'Waitlist Patients (Total)', value: 28, color: 'text-navy', sub: 'Across all LOCs' },
               { label: 'Commercially Insured', value: '46%', color: 'text-green-600', sub: '13 patients' },
-              { label: 'Medicaid / TennCare', value: '32%', color: 'text-blue-600', sub: '9 patients' },
+              { label: 'Medicaid / Maryland Medicaid', value: '32%', color: 'text-blue-600', sub: '9 patients' },
               { label: 'Self-Pay / Uninsured', value: '22%', color: 'text-amber-600', sub: '6 patients — may need SFS' },
             ].map(k => (
               <div key={k.label} className="card">
@@ -585,7 +585,7 @@ export function WaitlistManager({ navigate: _navigate, readOnly }: Props) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-gray-50 text-slate">
-                  {['LOC', 'Waitlist (n)', 'Commercial', 'TennCare', 'Medicare', 'Self-Pay', 'Est. Rev/Admit'].map(h => (
+                  {['LOC', 'Waitlist (n)', 'Commercial', 'Maryland Medicaid', 'Medicare', 'Self-Pay', 'Est. Rev/Admit'].map(h => (
                     <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>

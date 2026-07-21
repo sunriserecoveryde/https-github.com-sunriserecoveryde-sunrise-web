@@ -726,11 +726,11 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { payer: 'Blue Cross Blue Shield TN', req: 14, appr: 12, den: 1, pend: 1, pct: '86%', days: '10d', p2p: 'Yes (1)' },
+                  { payer: 'CareFirst BlueCross BlueShield', req: 14, appr: 12, den: 1, pend: 1, pct: '86%', days: '10d', p2p: 'Yes (1)' },
                   { payer: 'Aetna', req: 10, appr: 8, den: 2, pend: 0, pct: '80%', days: '8d', p2p: 'Yes (2)' },
                   { payer: 'United Healthcare', req: 9, appr: 9, den: 0, pend: 0, pct: '100%', days: '11d', p2p: 'No' },
-                  { payer: 'TennCare (Amerigroup)', req: 11, appr: 10, den: 1, pend: 0, pct: '91%', days: '9d', p2p: 'Yes (1)' },
-                  { payer: 'TennCare (BlueCare)', req: 8, appr: 6, den: 1, pend: 1, pct: '75%', days: '7d', p2p: 'Yes (1)' },
+                  { payer: 'Maryland Medicaid (Amerigroup)', req: 11, appr: 10, den: 1, pend: 0, pct: '91%', days: '9d', p2p: 'Yes (1)' },
+                  { payer: 'Maryland Medicaid (CareFirst)', req: 8, appr: 6, den: 1, pend: 1, pct: '75%', days: '7d', p2p: 'Yes (1)' },
                   { payer: 'Medicare Part A', req: 4, appr: 2, den: 2, pend: 0, pct: '50%', days: '6d', p2p: 'Yes (3)' },
                 ].map(r => (
                   <tr key={r.payer} className="hover:bg-gray-50">

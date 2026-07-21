@@ -641,7 +641,7 @@ export function OutcomeTracking({ navigate: _navigate }: Props) {
                 ))}
               </div>
               <div className="mt-3 p-2.5 bg-green-50 border border-green-200 rounded-lg text-[10px] text-green-800">
-                <strong>Total Yr-1 Social Cost Offset (est.):</strong> $31,200 per completed treatment episode — source: SAMHSA Economic Burden of Substance Use Disorders, 2024 update, adjusted for TN cost-of-living index.
+                <strong>Total Yr-1 Social Cost Offset (est.):</strong> $31,200 per completed treatment episode — source: SAMHSA Economic Burden of Substance Use Disorders, 2024 update, adjusted for MD cost-of-living index.
               </div>
             </div>
           </div>

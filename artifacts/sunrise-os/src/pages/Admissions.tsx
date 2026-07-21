@@ -30,7 +30,7 @@ const PENDING: PendingAdmission[] = [
   { id: 'pa_demo', name: 'Jonny Quest', age: 36, gender: 'M', phone: '(301) 555-8821', referralSource: 'Self-Referral', primaryDx: 'Alcohol Use Disorder (Moderate)', program: 'IOP', insurance: 'CareFirst BlueCross BlueShield', insuranceStatus: 'Verified', status: 'Insurance Verify', coordinator: 'Amanda Lewis', createdDate: '2026-07-18', notes: 'Auth #CFBC-7741-IOP confirmed through 10/20/2026. ASAM pre-screen indicates IOP (2.1) level of care. CIWA-Ar: 2 — no medical detox required. First IOP session slot to be confirmed pending formal admission. All checklist items complete and editable below.', asamPre: { d1: 1, d2: 0, d6: 1 } },
   { id: 'pa1', name: 'Thomas Reilly', age: 44, gender: 'M', phone: '(615) 882-4471', referralSource: 'Vanderbilt ER', primaryDx: 'Severe Alcohol Use Disorder', program: 'Residential', insurance: 'Aetna', insuranceStatus: 'Verified', status: 'Bed Assigned', coordinator: 'Amanda Lewis', createdDate: '2026-07-17', notes: 'CIWA 14 on intake screen. Medically supervised detox required. Bed 3C confirmed.', asamPre: { d1: 3, d2: 3, d6: 3 } },
   { id: 'pa2', name: 'Nicole Harrison', age: 32, gender: 'F', phone: '(629) 551-0034', referralSource: 'Cumberland Heights', primaryDx: 'Opioid Use Disorder (Moderate)', program: 'PHP', insurance: 'BlueCross', insuranceStatus: 'Verified', status: 'Insurance Verify', coordinator: 'Amanda Lewis', createdDate: '2026-07-16', notes: 'Step-down from residential at Cumberland. Currently on Suboxone 16mg/day.', asamPre: { d1: 2, d2: 1, d6: 2 } },
-  { id: 'pa3', name: 'Andre Simmons', age: 29, gender: 'M', phone: '(901) 774-3820', referralSource: 'Drug Court — Judge Wallace', primaryDx: 'Methamphetamine Use Disorder', program: 'Residential', insurance: 'TennCare', insuranceStatus: 'Pending', status: 'Pre-Screen', coordinator: 'Amanda Lewis', createdDate: '2026-07-18', notes: 'Court-mandated. Must confirm Level 3.7 clinical necessity for TennCare. Pre-screen scheduled 10 AM.', asamPre: { d1: 3, d2: 2, d6: 3 } },
+  { id: 'pa3', name: 'Andre Simmons', age: 29, gender: 'M', phone: '(901) 774-3820', referralSource: 'Drug Court — Judge Wallace', primaryDx: 'Methamphetamine Use Disorder', program: 'Residential', insurance: 'Maryland Medicaid', insuranceStatus: 'Pending', status: 'Pre-Screen', coordinator: 'Amanda Lewis', createdDate: '2026-07-18', notes: 'Court-mandated. Must confirm Level 3.7 clinical necessity for Maryland Medicaid. Pre-screen scheduled 10 AM.', asamPre: { d1: 3, d2: 2, d6: 3 } },
   { id: 'pa4', name: 'Brenda Castillo', age: 57, gender: 'F', phone: '(731) 920-5513', referralSource: 'Self-Referral', primaryDx: 'Alcohol Use Disorder, Co-occurring Anxiety', program: 'IOP', insurance: 'Cigna', insuranceStatus: 'Verified', status: 'Inquiry', coordinator: 'Amanda Lewis', createdDate: '2026-07-18', notes: 'Initial call this morning. Requested IOP due to work schedule. Insurance pre-auth in process.', asamPre: undefined },
   { id: 'pa5', name: 'Marcus Odom', age: 38, gender: 'M', phone: '(615) 430-7741', referralSource: 'Private Therapist — Dr. Ann Reid', primaryDx: 'Polysubstance Use (Alcohol + Benzodiazepine)', program: 'Residential', insurance: 'United', insuranceStatus: 'Verified', status: 'Admitted', coordinator: 'Amanda Lewis', createdDate: '2026-07-15', notes: 'Admitted 7/16. In detox protocol — Librium taper day 2. Clinically stable.', asamPre: { d1: 3, d2: 3, d6: 3 } },
 ];
@@ -97,8 +97,8 @@ const REFERRAL_SOURCE_DATA = [
 
 const INSURANCE_MIX = [
   { name: 'BlueCross', value: 28, color: '#3b82f6' },
-  { name: 'Aetna', value: 22, color: '#22c55e' },
-  { name: 'TennCare', value: 18, color: '#a855f7' },
+  { name: 'Aetna', value: 10, color: '#22c55e' },
+  { name: 'Maryland Medicaid', value: 18, color: '#a855f7' },
   { name: 'United', value: 15, color: '#f59e0b' },
   { name: 'Cigna', value: 10, color: '#ec4899' },
   { name: 'Self-Pay', value: 7, color: '#64748b' },
@@ -451,9 +451,9 @@ export function Admissions({ navigate, readOnly }: Props) {
               <tbody className="divide-y divide-border">
                 {[
                   { name: 'Raymond Cole', ins: 'Aetna Behavioral', loc: 'Residential', spec: 'K. Santos', sub: '07/18', status: 'Verified', sColor: 'bg-green-100 text-green-700', financial: '$2,500 ded / $6,000 OOP' },
-                  { name: 'Brittney Walsh', ins: 'BCBS TN', loc: 'PHP', spec: 'K. Santos', sub: '07/18', status: 'Pending', sColor: 'bg-amber-100 text-amber-700', financial: 'TBD' },
+                  { name: 'Brittney Walsh', ins: 'CareFirst BCBS', loc: 'PHP', spec: 'K. Santos', sub: '07/18', status: 'Pending', sColor: 'bg-amber-100 text-amber-700', financial: 'TBD' },
                   { name: 'Jerome Simmons', ins: 'Cigna', loc: 'Residential', spec: 'L. Park', sub: '07/17', status: 'Auth Req.', sColor: 'bg-blue-100 text-blue-700', financial: '$1,000 ded met / $8,150 OOP' },
-                  { name: 'Alicia Perkins', ins: 'TennCare (BlueCare)', loc: 'Residential', spec: 'K. Santos', sub: '07/16', status: 'Verified', sColor: 'bg-green-100 text-green-700', financial: '$0 ded — Medicaid' },
+                  { name: 'Alicia Perkins', ins: 'Maryland Medicaid (CareFirst)', loc: 'Residential', spec: 'K. Santos', sub: '07/16', status: 'Verified', sColor: 'bg-green-100 text-green-700', financial: '$0 ded — Medicaid' },
                   { name: 'David Garza', ins: 'UHC / Optum', loc: 'IOP', spec: 'L. Park', sub: '07/15', status: 'Denied', sColor: 'bg-red-100 text-red-700', financial: 'Appeal in progress' },
                   { name: 'Sophia Lambert', ins: 'Self-Pay', loc: 'Residential', spec: 'Admin', sub: '07/18', status: 'Scholarship', sColor: 'bg-purple-100 text-purple-700', financial: '75% scholarship applied' },
                 ].map(r => (

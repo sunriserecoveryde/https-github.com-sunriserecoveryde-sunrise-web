@@ -88,7 +88,7 @@ const MESSAGES: Message[] = [
   },
   {
     id: 'M-005', threadId: 'T-005', type: 'Staff-Staff', urgency: 'Routine',
-    from: 'Kevin Wright, CADC-I', fromRole: 'BHT',
+    from: '__DE_CAC-AD_WRIGHT_I__', fromRole: 'BHT',
     to: 'Sarah Jenkins, LPC', toRole: 'Primary Counselor',
     patientId: 'p3',
     subject: 'Carlos Rivera — missed peer group again',
@@ -534,7 +534,7 @@ export function SecureMessaging({ navigate, readOnly }: Props) {
                     { name: 'K. Santos, RN', role: 'Charge Nurse', sent: 62, resp: '18 min', unread: 0 },
                     { name: 'A. Brooks, LPC', role: 'Counselor', sent: 48, resp: '31 min', unread: 1 },
                     { name: 'Dr. M. Chen', role: 'Medical Director', sent: 41, resp: '12 min', unread: 0 },
-                    { name: 'T. Jackson, CADC', role: 'Counselor', sent: 37, resp: '44 min', unread: 2 },
+                    { name: 'T. Jackson, CAC-AD', role: 'Counselor', sent: 37, resp: '44 min', unread: 2 },
                     { name: 'L. Nguyen, CM', role: 'Case Manager', sent: 34, resp: '26 min', unread: 0 },
                   ].map(r => (
                     <tr key={r.name} className="hover:bg-gray-50">

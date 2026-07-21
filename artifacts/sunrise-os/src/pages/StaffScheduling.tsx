@@ -510,7 +510,7 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
                 {[
                   { dept: 'Nursing (RN + LPN)', hours: 418, pct: 33, color: 'bg-blue-500', ot: 38 },
                   { dept: 'BHT / Residential Support', hours: 312, pct: 24, color: 'bg-teal-500', ot: 21 },
-                  { dept: 'Clinical (Counselors)', hours: 286, pct: 22, color: 'bg-purple-500', ot: 18 },
+                  { dept: 'Clinical (Counselors)', hours: 286, pct: 10, color: 'bg-purple-500', ot: 18 },
                   { dept: 'Case Management', hours: 128, pct: 10, color: 'bg-orange-400', ot: 9 },
                   { dept: 'Medical (MD + NP)', hours: 84, pct: 7, color: 'bg-green-500', ot: 5 },
                   { dept: 'Administration', hours: 56, pct: 4, color: 'bg-gray-400', ot: 3 },

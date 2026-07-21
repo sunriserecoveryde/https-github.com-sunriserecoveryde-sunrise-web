@@ -647,7 +647,7 @@ export function CommandCenter({ navigate, readOnly }: Props) {
                   { p: 'P1', type: 'AMA Request', loc: 'Rm 9A — T. Barnes', gen: '12:05 PM', assign: 'S. Jenkins, LPC', status: 'Active', action: 'Counselor contact; AMA form if needed' },
                   { p: 'P2', type: 'Missed Medication (3 doses)', loc: 'Rm 6C — K. Walsh', gen: '10:30 AM', assign: 'J. Torres, RN', status: 'In Progress', action: 'Nursing assessment; document reason' },
                   { p: 'P2', type: 'Positive UA (Fentanyl)', loc: 'Rm 11D — R. Patel', gen: '09:15 AM', assign: 'D. Odom, LMFT', status: 'In Progress', action: 'Counselor session; update treatment plan' },
-                  { p: 'P3', type: 'Group No-Show (2 sessions)', loc: 'Rm 3A — A. Monroe', gen: '08:00 AM', assign: 'T. Osei, CADC', status: 'Pending', action: 'Check-in and document reason' },
+                  { p: 'P3', type: 'Group No-Show (2 sessions)', loc: 'Rm 3A — A. Monroe', gen: '08:00 AM', assign: 'T. Osei, CAC-AD', status: 'Pending', action: 'Check-in and document reason' },
                   { p: 'P3', type: 'Auth Expiring in 48h', loc: 'Rm 7B — L. Carter', gen: '07:00 AM', assign: 'Billing — B. Hughes', status: 'Pending', action: 'Submit concurrent review to BCBS' },
                   { p: 'P3', type: 'Pending Co-sign >24h', loc: 'Progress Note — 3 docs', gen: '06:00 AM', assign: 'Supervisor — D. Reyes', status: 'Pending', action: 'Review and co-sign in ChartReview' },
                 ].map(r => (

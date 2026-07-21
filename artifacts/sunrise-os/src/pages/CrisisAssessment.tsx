@@ -36,7 +36,7 @@ const CSSRS_RECORDS: CSSRSRecord[] = [
     riskLevel: 'Moderate',
     safetyPlanCompleted: true,
     meansRestrictionCounseled: true,
-    clinicianNotified: 'James S. Collins III, CADC-III (Clinical Director) — notified 7/18 at 2:30 PM',
+    clinicianNotified: 'James S. Collins III, CAADC (Clinical Director) — notified 7/18 at 2:30 PM',
     interventions: [
       'Safety plan reviewed and updated',
       'AMA monitoring increased to Q30min checks',
@@ -47,8 +47,8 @@ const CSSRS_RECORDS: CSSRSRecord[] = [
     safetyPlanItems: [
       'Warning signs: feeling hopeless, irritable, isolating',
       'Internal coping: breathing exercises (4-7-8 technique), journaling',
-      'Social distraction: call wife Emily (615-555-9211), sponsor David H.',
-      'Professional support: Sunrise Recovery on-call (615-555-0100), Collins (pager 4401)',
+      'Social distraction: call wife Emily (301-555-9211), sponsor David H.',
+      'Professional support: Sunrise Recovery on-call (301-555-0100), Collins (pager 4401)',
       'Crisis resources: 988 Suicide & Crisis Lifeline, Vanderbilt ED',
       'Means restriction: firearms secured with brother-in-law',
     ],
@@ -574,8 +574,8 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
                   { name: 'Veterans Crisis Line', number: '988, Press 1', note: 'Also text 838255' },
                   { name: 'Trans Lifeline', number: '877-565-8860', note: 'Peer support for trans people' },
                   { name: 'SAMHSA National Helpline', number: '800-662-4357', note: 'SUD treatment referral, 24/7' },
-                  { name: 'Tennessee Crisis Line', number: '855-274-7471', note: 'TN state crisis line' },
-                  { name: 'Metro Nashville Crisis', number: '615-244-7444', note: 'Local mobile crisis team' },
+                  { name: 'Maryland Crisis Hotline', number: '800-422-0009', note: 'MD state crisis line' },
+                  { name: 'Montgomery County Crisis Center', number: '301-738-2255', note: 'Montgomery County mobile crisis team' },
                 ].map(h => (
                   <div key={h.name} className="p-2 border border-border rounded-lg">
                     <div className="text-xs font-semibold text-navy">{h.name}</div>
@@ -629,7 +629,7 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
                 ))}
               </div>
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-                <strong>Mandatory Reporting:</strong> Tennessee law requires reporting imminent danger to self or others (TCA § 33-6-401). Document all crisis responses in the patient's chart within 2 hours.
+                <strong>Mandatory Reporting:</strong> Maryland law requires reporting imminent danger to self or others (Md. Code Ann., Health-Gen. § 10-618). Document all crisis responses in the patient's chart within 2 hours.
               </div>
             </div>
           </div>
@@ -668,12 +668,12 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {[
-                    { name: 'T. Jackson, CADC', cpi: true, qpr: true, mandt: false, exp: '2027-02', ok: true },
+                    { name: 'T. Jackson, CAC-AD', cpi: true, qpr: true, mandt: false, exp: '2027-02', ok: true },
                     { name: 'A. Brooks, LPC', cpi: true, qpr: true, mandt: true, exp: '2026-09', ok: false },
                     { name: 'M. Rivera, MS', cpi: true, qpr: true, mandt: false, exp: '2026-10', ok: false },
                     { name: 'J. Torres, RN', cpi: true, qpr: true, mandt: true, exp: '2027-01', ok: true },
                     { name: 'K. Santos, RN', cpi: true, qpr: false, mandt: false, exp: '2026-09', ok: false },
-                    { name: 'D. Williams, CADC', cpi: false, qpr: true, mandt: false, exp: 'Not certified', ok: false },
+                    { name: 'D. Williams, CAC-AD', cpi: false, qpr: true, mandt: false, exp: 'Not certified', ok: false },
                   ].map(s => (
                     <tr key={s.name} className={`hover:bg-gray-50 ${!s.ok ? 'bg-amber-50/50' : ''}`}>
                       <td className="py-2 font-medium text-navy">{s.name}</td>
@@ -781,7 +781,7 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
           </div>
 
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900">
-            <strong>Documentation Requirement:</strong> All crisis assessments must include risk stratification (Low / Moderate / High / Imminent), rationale for level, protective factors documented, safety planning status, and attending physician/supervisor co-signature within 24h per CARF and TN state licensure standards.
+            <strong>Documentation Requirement:</strong> All crisis assessments must include risk stratification (Low / Moderate / High / Imminent), rationale for level, protective factors documented, safety planning status, and attending physician/supervisor co-signature within 24h per CARF and MD state licensure standards.
           </div>
         </div>
       )}

@@ -541,7 +541,7 @@ export function MATManagement({ navigate, readOnly }: Props) {
       )}
       {tab === 'PDMP Alerts' && (
         <div className="space-y-5">
-          <div className="text-sm text-slate">Tennessee CSMD (Controlled Substance Monitoring Database) alerts for current MAT patients — flags for concurrent prescribers, high morphine milligram equivalents, and behavioral concerns.</div>
+          <div className="text-sm text-slate">Maryland CSMD (Controlled Substance Monitoring Database) alerts for current MAT patients — flags for concurrent prescribers, high morphine milligram equivalents, and behavioral concerns.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: 'Patients Checked (30d)', value: 18, color: 'text-navy', sub: '100% of active MAT patients' },
@@ -563,7 +563,7 @@ export function MATManagement({ navigate, readOnly }: Props) {
               {[
                 {
                   patient: 'Marcus Webb', mrn: 'MRN-83921', alert: 'Concurrent Prescriber',
-                  detail: 'Buprenorphine prescribed by Dr. R. Evans (Nashville Health, 07/02) AND Dr. A. Okafor at Sunrise (07/05). Potential double prescribing — patient did not disclose.',
+                  detail: 'Buprenorphine prescribed by Dr. R. Evans (Rockville Health, 07/02) AND Dr. A. Okafor at Sunrise (07/05). Potential double prescribing — patient did not disclose.',
                   action: 'Clinical team notified. Care coordination with Dr. Evans initiated. Patient counseled — concurrent prescriptions must cease by 07/25.',
                   severity: 'High', sColor: 'border-red-300 bg-red-50'
                 },

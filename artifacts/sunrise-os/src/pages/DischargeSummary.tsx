@@ -88,10 +88,10 @@ Medications patient is NOT taking at discharge that were discussed:
 • Naltrexone — patient declined; acamprosate chosen
 • Disulfiram — patient declined due to occupational travel concerns`,
 
-  followUpPlan: `1. Outpatient individual therapy: Amanda Curtis, LCSW — weekly x 3 months (appt 7/26, 615-555-1234)
+  followUpPlan: `1. Outpatient individual therapy: Amanda Curtis, LCSW — weekly x 3 months (appt 7/26, 301-555-1234)
 2. Psychiatry follow-up: Dr. Marcus Stone — 8/3/2026 (Lexapro monitoring)
 3. Primary care: Dr. Martinez — 7/31 (med reconciliation, liver function recheck)
-4. AA commitment: Brentwood Sunday 10AM home group (sponsor: David H., 615-555-7890)
+4. AA commitment: Brentwood Sunday 10AM home group (sponsor: David H., 301-555-7890)
 5. Court: Pretrial diversion report due 7/30 — Bar Association compliance program enrollment complete
 6. IOP: Patient was recommended IOP as step-down but declined — will monitor closely with therapist`,
 
@@ -99,11 +99,11 @@ Medications patient is NOT taking at discharge that were discussed:
 • Narcan kit NOT provided (no opioid use history) — family educated on alcohol-related overdose risk
 • Patient instructed to call 988 (Suicide & Crisis Lifeline) or go to nearest ED if SI returns
 • Patient to call Sunrise Alumni Line if struggling: (615) 555-0100 x HELP
-• Emergency contacts: wife Emily (615-555-9211), sponsor David H. (615-555-7890), Dr. Chen on-call (pager 4421)
+• Emergency contacts: wife Emily (301-555-9211), sponsor David H. (301-555-7890), Dr. Chen on-call (pager 4421)
 • Return to ED or call 911 if: seizures, loss of consciousness, severe chest pain, confusion`,
 
   clinicianSignature: 'Sarah Jenkins, LPC — Primary Counselor — July 24, 2026',
-  cosignature: 'James S. Collins III, CADC-III — Clinical Director — July 24, 2026',
+  cosignature: 'James S. Collins III, CAADC — Clinical Director — July 24, 2026',
   physicianSignature: 'Dr. Robert Chen, MD — Medical Director — July 24, 2026',
 };
 
@@ -308,7 +308,7 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
           {/* Letterhead */}
           <div className="text-center border-b border-gray-200 pb-6">
             <div className="text-2xl font-bold text-navy">Sunrise Recovery Center</div>
-            <div className="text-gray-500 text-sm mt-1">123 Sunrise Way, Nashville, TN 37201 · (615) 555-0100</div>
+            <div className="text-gray-500 text-sm mt-1">123 Sunrise Way, Rockville, MD 37201 · (615) 555-0100</div>
             <div className="text-lg font-bold mt-4 tracking-widest uppercase text-gray-700">Discharge Summary</div>
             <div className="text-xs text-gray-500 mt-1">CONFIDENTIAL — 42 CFR Part 2 Protected Information</div>
           </div>
@@ -415,7 +415,7 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
                   { type: 'Outpatient Counseling', provider: 'Recovery Road Counseling Center', date: '2026-07-26', status: 'Confirmed', contact: '(615) 555-0198' },
                   { type: 'Buprenorphine Prescriber', provider: 'Dr. Anita Shah, MD (OBOT Clinic)', date: '2026-07-23', status: 'Confirmed', contact: '(615) 555-0241' },
                   { type: 'Primary Care', provider: 'Vanderbilt Medical Group — Dr. Parrish', date: '2026-08-05', status: 'Pending — awaiting callback', contact: '(615) 555-0112' },
-                  { type: 'Psychiatry', provider: 'TN Behavioral Health Associates', date: '2026-08-12', status: 'Pending — referral sent', contact: '(615) 555-0339' },
+                  { type: 'Psychiatry', provider: 'MD Behavioral Health Associates', date: '2026-08-12', status: 'Pending — referral sent', contact: '(301) 555-0339' },
                   { type: 'Peer Support / AA Sponsor', provider: 'Local AA — Group 114, Monday 7 PM', date: 'Ongoing', status: 'Committed', contact: 'Via patient' },
                 ].map(f => (
                   <div key={f.type} className="border border-border rounded-lg p-3 text-xs">
@@ -440,7 +440,7 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
                   {[
                     { to: 'Recovery Road Counseling Center', method: 'Phone', date: '2026-07-18', staff: 'Sarah Jenkins, LPC', notes: 'Spoke with intake coordinator; patient\'s biopsychosocial summary faxed with consent.' },
                     { to: 'Dr. Anita Shah (OBOT)', method: 'Fax + Phone', date: '2026-07-18', staff: 'Dr. Robert Chen, MD', notes: 'MAT summary faxed; buprenorphine dose confirmed; labs forwarded with 42 CFR Part 2 consent.' },
-                    { to: 'TN Behavioral Health Associates', method: 'Fax', date: '2026-07-18', staff: 'Maria Torres, LMFT', notes: 'Referral letter sent; psychiatric eval summary included; patient to call and confirm appt.' },
+                    { to: 'MD Behavioral Health Associates', method: 'Fax', date: '2026-07-18', staff: 'Maria Torres, LMFT', notes: 'Referral letter sent; psychiatric eval summary included; patient to call and confirm appt.' },
                   ].map(h => (
                     <div key={h.to} className="border border-border rounded-lg p-2.5">
                       <div className="font-semibold text-navy mb-0.5">{h.to}</div>
@@ -482,9 +482,9 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
                   {[
                     { resource: 'SAMHSA National Helpline', detail: '1-800-662-4357 · Free, confidential, 24/7' },
                     { resource: 'Crisis Text Line', detail: 'Text HOME to 741741' },
-                    { resource: 'Alcoholics Anonymous (Local)', detail: 'aa.org/find-aa · Group 114 Mon 7 PM, First Baptist Nashville' },
+                    { resource: 'Alcoholics Anonymous (Local)', detail: 'aa.org/find-aa · Group 114 Mon 7 PM, First Baptist Rockville' },
                     { resource: 'SMART Recovery', detail: 'smartrecovery.org · Online and in-person meetings' },
-                    { resource: 'Tennessee REDLINE (Opioid Helpline)', detail: '1-800-889-9789' },
+                    { resource: 'Maryland REDLINE (Opioid Helpline)', detail: '1-800-889-9789' },
                     { resource: 'Patient Bill of Rights', detail: 'Provided in writing at discharge — signed by patient' },
                     { resource: '42 CFR Part 2 Notice', detail: 'Confidentiality of SUD records — patient copy provided' },
                   ].map(r => (
@@ -533,11 +533,11 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { patient: 'Marcus Webb', dc: '2026-07-14', recipient: 'Dr. R. Evans, Nashville Health', type: 'PCP', method: 'Secure Fax', sent: '2026-07-14 14:22', status: 'Confirmed', ok: true },
+                  { patient: 'Marcus Webb', dc: '2026-07-14', recipient: 'Dr. R. Evans, Rockville Health', type: 'PCP', method: 'Secure Fax', sent: '2026-07-14 14:22', status: 'Confirmed', ok: true },
                   { patient: 'Marcus Webb', dc: '2026-07-14', recipient: 'Patient Self', type: 'Patient', method: 'Printed / Given', sent: '2026-07-14 10:05', status: 'Confirmed', ok: true },
                   { patient: 'Samantha Choi', dc: '2026-07-15', recipient: 'Recovery Works IOP', type: 'Step-down', method: 'Secure Email', sent: '2026-07-15 09:41', status: 'Confirmed', ok: true },
                   { patient: 'Samantha Choi', dc: '2026-07-15', recipient: 'Patient Self', type: 'Patient', method: 'MyChart Portal', sent: '2026-07-15 09:00', status: 'Confirmed', ok: true },
-                  { patient: 'James Thornton', dc: '2026-07-16', recipient: 'TN Drug Court', type: 'Legal', method: 'Secure Fax', sent: '2026-07-16 11:15', status: 'Pending Confirm', ok: false },
+                  { patient: 'James Thornton', dc: '2026-07-16', recipient: 'Montgomery County Drug Court', type: 'Legal', method: 'Secure Fax', sent: '2026-07-16 11:15', status: 'Pending Confirm', ok: false },
                   { patient: 'James Thornton', dc: '2026-07-16', recipient: 'Vanderbilt Psychiatry', type: 'Specialist', method: 'CommonWell HIE', sent: '2026-07-16 11:16', status: 'Delivered', ok: true },
                   { patient: 'Patricia Holloway', dc: '2026-07-17', recipient: 'Patient Self', type: 'Patient', method: 'Printed / Given', sent: '2026-07-17 08:30', status: 'Confirmed', ok: true },
                   { patient: 'Patricia Holloway', dc: '2026-07-17', recipient: 'Serenity Sober Living', type: 'Housing', method: 'Secure Email', sent: '2026-07-17 09:00', status: 'Pending Confirm', ok: false },
@@ -614,9 +614,9 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
             <h3 className="font-semibold text-navy text-sm mb-3">Drug Court / Probation Contact Directory</h3>
             <div className="grid grid-cols-3 gap-3 text-xs">
               {[
-                { role: 'Presiding Drug Court Judge', name: 'Hon. M. Harrison', phone: '615-555-0301', email: 'drug.court@tncourt.gov', notes: 'CC all compliance letters' },
-                { role: 'Probation Officer', name: 'D. Reyes, USPO', phone: '615-555-0302', email: 'd.reyes@uspo.gov', notes: 'Monthly check-in required' },
-                { role: 'Drug Court Coordinator', name: 'T. Kwan, MSW', phone: '615-555-0303', email: 't.kwan@drugcourt.gov', notes: 'Aftercare plan point of contact' },
+                { role: 'Presiding Drug Court Judge', name: 'Hon. M. Harrison', phone: '301-555-0301', email: 'drug.court@tncourt.gov', notes: 'CC all compliance letters' },
+                { role: 'Probation Officer', name: 'D. Reyes, USPO', phone: '301-555-0302', email: 'd.reyes@uspo.gov', notes: 'Monthly check-in required' },
+                { role: 'Drug Court Coordinator', name: 'T. Kwan, MSW', phone: '301-555-0303', email: 't.kwan@drugcourt.gov', notes: 'Aftercare plan point of contact' },
               ].map(c => (
                 <div key={c.role} className="border border-border rounded-xl p-3">
                   <div className="font-semibold text-navy">{c.name}</div>

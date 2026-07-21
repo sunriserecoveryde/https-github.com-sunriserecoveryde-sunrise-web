@@ -181,7 +181,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
                   { dx: 'Major Depressive Disorder', n: 11, pct: 61, color: 'bg-blue-400' },
                   { dx: 'PTSD', n: 8, pct: 44, color: 'bg-purple-400' },
                   { dx: 'Anxiety Disorder', n: 9, pct: 50, color: 'bg-teal-400' },
-                  { dx: 'ADHD', n: 4, pct: 22, color: 'bg-green-400' },
+                  { dx: 'ADHD', n: 4, pct: 10, color: 'bg-green-400' },
                   { dx: 'Bipolar Disorder', n: 2, pct: 11, color: 'bg-orange-400' },
                   { dx: 'Eating Disorder (co-occurring)', n: 2, pct: 11, color: 'bg-pink-400' },
                 ].map(r => (
@@ -209,7 +209,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
                     { range: '0–2 (Low)', n: 3, pct: 17, color: 'bg-green-400' },
                     { range: '3–4 (Moderate)', n: 5, pct: 28, color: 'bg-amber-400' },
                     { range: '5–6 (High)', n: 6, pct: 33, color: 'bg-orange-400' },
-                    { range: '7–10 (Very High)', n: 4, pct: 22, color: 'bg-red-500' },
+                    { range: '7–10 (Very High)', n: 4, pct: 10, color: 'bg-red-500' },
                   ].map(r => (
                     <div key={r.range}>
                       <div className="flex justify-between text-xs mb-1">
@@ -367,13 +367,13 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
 
       {bpsTab === 'SUD Epidemiology' && (
         <div className="space-y-5">
-          <div className="text-sm text-slate">Reference data for clinicians — national and Tennessee-specific SUD prevalence, trends, and population benchmarks relevant to treatment planning.</div>
+          <div className="text-sm text-slate">Reference data for clinicians — national and Maryland-specific SUD prevalence, trends, and population benchmarks relevant to treatment planning.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: 'Americans with SUD (2023)', value: '48.7M', color: 'text-navy', sub: 'SAMHSA NSDUH 2023' },
               { label: 'Received Tx in Past Year', value: '13%', color: 'text-amber-600', sub: '6.3M of 48.7M affected' },
-              { label: 'TN Opioid Deaths (2023)', value: '3,281', color: 'text-red-600', sub: '~9/day · TDMHSAS' },
-              { label: 'TN SUD Tx Capacity Gap', value: '~70%', color: 'text-amber-600', sub: 'Unmet need statewide' },
+              { label: 'MD Opioid Deaths (2023)', value: '2,681', color: 'text-red-600', sub: '~9/day · MD BHA' },
+              { label: 'MD SUD Tx Capacity Gap', value: '~70%', color: 'text-amber-600', sub: 'Unmet need statewide' },
             ].map(k => (
               <div key={k.label} className="card">
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
@@ -412,22 +412,22 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
 
             <div className="space-y-4">
               <div className="card">
-                <h3 className="font-semibold text-navy text-sm mb-3">Tennessee-Specific Highlights</h3>
+                <h3 className="font-semibold text-navy text-sm mb-3">Maryland-Specific Highlights</h3>
                 <div className="space-y-2 text-xs text-slate">
                   {[
-                    { label: 'Opioid overdose deaths (2023)', value: '3,281 · 5th highest per capita in US' },
-                    { label: 'TN buprenorphine prescribers', value: '~2,800 DATA-waiver providers statewide' },
-                    { label: 'TN Medicaid (TennCare) SUD coverage', value: 'Residential + MAT covered; PHP/IOP carved in as of 2022' },
-                    { label: 'Alcohol-related deaths (TN, 2022)', value: '1,847 · liver disease + poisoning combined' },
-                    { label: 'Stimulant (meth) tx admissions, TN', value: '38% of all TN SUD tx admissions involve stimulants' },
-                    { label: 'Rural access gap', value: '72% of TN counties have no licensed SUD tx facility' },
+                    { label: 'Opioid overdose deaths (2023)', value: '2,681 · 5th highest per capita in US' },
+                    { label: 'MD buprenorphine prescribers', value: '~3,100 DATA-waiver providers statewide' },
+                    { label: 'MD Medicaid SUD coverage', value: 'Residential + MAT covered; PHP/IOP carved in as of 2022' },
+                    { label: 'Alcohol-related deaths (MD, 2023)', value: '1,847 · liver disease + poisoning combined' },
+                    { label: 'Stimulant (meth) tx admissions, MD', value: '28% of all MD SUD tx admissions involve stimulants' },
+                    { label: 'Rural access gap', value: '44% of MD counties have no licensed SUD tx facility' },
                   ].map(r => (
                     <div key={r.label} className="border border-border rounded p-2">
                       <span className="font-semibold text-navy">{r.label}: </span>
                       <span>{r.value}</span>
                     </div>
                   ))}
-                  <div className="text-[10px] italic">Sources: TDMHSAS, TN Dept. of Health, SAMHSA TEDS</div>
+                  <div className="text-[10px] italic">Sources: MD BHA, MD Dept. of Health, SAMHSA TEDS</div>
                 </div>
               </div>
 
@@ -695,7 +695,7 @@ function DiagnosticCodingTab() {
 function AssessmentQualityTab() {
   const metrics = [
     { clinician: 'A. Brooks, LPC', completed: 12, avgDays: 1.1, sigRate: '100%', score: 96, trend: 'up' },
-    { clinician: 'T. Jackson, CADC', completed: 9, avgDays: 1.4, sigRate: '100%', score: 93, trend: 'stable' },
+    { clinician: 'T. Jackson, CAC-AD', completed: 9, avgDays: 1.4, sigRate: '100%', score: 93, trend: 'stable' },
     { clinician: 'M. Rivera, MS', completed: 7, avgDays: 2.1, sigRate: '86%', score: 84, trend: 'down' },
     { clinician: 'R. Torres, LPC-MHSP', completed: 5, avgDays: 1.0, sigRate: '100%', score: 98, trend: 'up' },
   ];

@@ -371,11 +371,11 @@ export function ChartReview({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { clinician: 'T. Jackson, CADC', type: 'Progress Note', score: 92, strength: 'Excellent CBT language', improve: 'Goal linkage', reviewer: 'Dr. Okafor', outcome: 'Exemplary', oColor: 'bg-green-100 text-green-700' },
+                  { clinician: 'T. Jackson, CAC-AD', type: 'Progress Note', score: 92, strength: 'Excellent CBT language', improve: 'Goal linkage', reviewer: 'Dr. Okafor', outcome: 'Exemplary', oColor: 'bg-green-100 text-green-700' },
                   { clinician: 'M. Rivera, MS', type: 'Biopsychosocial', score: 88, strength: 'Thorough psychosocial hx', improve: 'SUD history detail', reviewer: 'A. Simms, LCSW', outcome: 'Satisfactory', oColor: 'bg-blue-100 text-blue-700' },
                   { clinician: 'A. Brooks, LPC', type: 'Group Note', score: 74, strength: 'Good attendance tracking', improve: 'Individualized observations', reviewer: 'Dr. Okafor', outcome: 'Action Plan', oColor: 'bg-amber-100 text-amber-700' },
                   { clinician: 'K. Santos, RN', type: 'Nursing Note', score: 95, strength: 'CIWA documentation thorough', improve: '—', reviewer: 'J. Martinez, DON', outcome: 'Exemplary', oColor: 'bg-green-100 text-green-700' },
-                  { clinician: 'D. Williams, CADC', type: 'Treatment Plan', score: 71, strength: 'Goal clarity', improve: 'Measurable objectives needed', reviewer: 'A. Simms, LCSW', outcome: 'Action Plan', oColor: 'bg-amber-100 text-amber-700' },
+                  { clinician: 'D. Williams, CAC-AD', type: 'Treatment Plan', score: 71, strength: 'Goal clarity', improve: 'Measurable objectives needed', reviewer: 'A. Simms, LCSW', outcome: 'Action Plan', oColor: 'bg-amber-100 text-amber-700' },
                   { clinician: 'P. Chen, LMFT', type: 'Family Session Note', score: 90, strength: 'Systems lens applied well', improve: 'Follow-up documentation', reviewer: 'Dr. Okafor', outcome: 'Satisfactory', oColor: 'bg-blue-100 text-blue-700' },
                 ].map(r => (
                   <tr key={r.clinician} className="hover:bg-gray-50">
@@ -467,8 +467,8 @@ export function ChartReview({ navigate, readOnly }: Props) {
                   { name: 'S. Jenkins', cred: 'LPC', notes: 48, ontime: '96%', def: '4%', cosign: '100%', quality: 94, top: 'Missing TP link', trend: '↑' },
                   { name: 'D. Odom', cred: 'LMFT', notes: 41, ontime: '93%', def: '7%', cosign: '100%', quality: 91, top: 'Vague response content', trend: '→' },
                   { name: 'M. Gonzales', cred: 'LCSW', notes: 55, ontime: '89%', def: '11%', cosign: '87%', quality: 83, top: 'Missing co-sign + late notes', trend: '↓' },
-                  { name: 'T. Osei', cred: 'CADC', notes: 32, ontime: '100%', def: '3%', cosign: '100%', quality: 97, top: 'None identified', trend: '↑' },
-                  { name: 'R. Patel', cred: 'CADC-II', notes: 29, ontime: '97%', def: '3%', cosign: '100%', quality: 95, top: 'Missing crisis plan link', trend: '↑' },
+                  { name: 'T. Osei', cred: 'CAC-AD', notes: 32, ontime: '100%', def: '3%', cosign: '100%', quality: 97, top: 'None identified', trend: '↑' },
+                  { name: 'R. Patel', cred: 'CAADC', notes: 29, ontime: '97%', def: '3%', cosign: '100%', quality: 95, top: 'Missing crisis plan link', trend: '↑' },
                   { name: 'L. Washington', cred: 'LCAS', notes: 44, ontime: '86%', def: '14%', cosign: '91%', quality: 79, top: 'Late entries + vague content', trend: '↓' },
                   { name: 'J. Torres', cred: 'RN, CARN', notes: 67, ontime: '98%', def: '2%', cosign: 'N/A', quality: 96, top: 'Rare: missing VS reference', trend: '→' },
                 ].map(r => (

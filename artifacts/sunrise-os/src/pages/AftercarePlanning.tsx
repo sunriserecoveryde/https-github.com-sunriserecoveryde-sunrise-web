@@ -43,7 +43,7 @@ const AFTERCARE_DATA: AftercareRecord[] = [
     patientId: 'p3',
     targetDischargeDate: '2026-08-01',
     safetyPlan: true, naloxoneKitGiven: true, alumniEnrolled: false,
-    aaNaveen: 'Nashville AA — Monday 7PM, Brentwood NA — Thursday 8PM',
+    aaNaveen: 'Rockville AA — Monday 7PM, Brentwood NA — Thursday 8PM',
     checklist: [
       { id: 'c1', category: 'Housing', task: 'Confirm safe housing on discharge', completed: false, dueBy: '2026-07-26', assignedTo: 'Sarah Jenkins' },
       { id: 'c2', category: 'MAT', task: 'Suboxone prescription to discharge pharmacy', completed: false, dueBy: '2026-07-30', assignedTo: 'Dr. Robert Chen' },
@@ -60,7 +60,7 @@ const AFTERCARE_DATA: AftercareRecord[] = [
       { type: '90-Day', scheduledDate: '2026-11-01' },
       { type: '6-Month', scheduledDate: '2027-02-01' },
     ],
-    recoveryHousing: { name: 'Serenity House Nashville', address: '4201 Nolensville Pike, Nashville, TN', phone: '(615) 555-0211', type: 'Sober Living (Men)', beds: 12, waitlist: false },
+    recoveryHousing: { name: 'Serenity House Rockville', address: '4201 Nolensville Pike, Rockville, MD', phone: '(615) 555-0211', type: 'Sober Living (Men)', beds: 12, waitlist: false },
   },
   {
     patientId: 'p1',
@@ -109,7 +109,7 @@ const AFTERCARE_DATA: AftercareRecord[] = [
 ];
 
 const RECOVERY_HOUSING_DIRECTORY = [
-  { name: 'Serenity House Nashville', address: '4201 Nolensville Pike', phone: '(615) 555-0211', type: 'Men\'s Sober Living', beds: 12, waitlist: false, rating: 4.5, cost: '$600/mo', affiliation: 'Oxford House affiliated' },
+  { name: 'Serenity House Rockville', address: '4201 Nolensville Pike', phone: '(615) 555-0211', type: 'Men\'s Sober Living', beds: 12, waitlist: false, rating: 4.5, cost: '$600/mo', affiliation: 'Oxford House affiliated' },
   { name: 'New Hope Women\'s Recovery', address: '714 W. Trinity Lane', phone: '(615) 555-0334', type: 'Women\'s Sober Living', beds: 8, waitlist: true, rating: 4.8, cost: '$550/mo', affiliation: 'NARR Level 3' },
   { name: 'Three Rivers Sober Living (Men)', address: '2200 Lebanon Pike, Donelson', phone: '(615) 555-0412', type: 'Men\'s Sober Living', beds: 16, waitlist: false, rating: 4.2, cost: '$700/mo', affiliation: 'Oxford House' },
   { name: 'Harmony House (Co-ed)', address: '910 Fern Ave, Franklin', phone: '(615) 555-0561', type: 'Co-ed Transitional Housing', beds: 20, waitlist: false, rating: 4.0, cost: '$500/mo', affiliation: 'State-certified' },
@@ -345,7 +345,7 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
 
       {tab === 'Housing Directory' && (
         <div className="space-y-4">
-          <div className="text-sm text-slate">Nashville / Middle Tennessee recovery housing directory — {RECOVERY_HOUSING_DIRECTORY.length} facilities</div>
+          <div className="text-sm text-slate">Rockville / Middle Maryland recovery housing directory — {RECOVERY_HOUSING_DIRECTORY.length} facilities</div>
           <div className="grid grid-cols-2 gap-4">
             {RECOVERY_HOUSING_DIRECTORY.map(h => (
               <div key={h.name} className={`card ${h.waitlist ? 'border-amber-200' : ''}`}>
@@ -449,35 +449,35 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
             {
               category: '🏠 Sober Living / Recovery Housing',
               resources: [
-                { name: 'Sunrise Sober Living — East', address: '842 Maple Ave, Nashville TN 37206', phone: '(615) 555-0221', notes: 'Men only · MAT-friendly · 12 beds · $750/mo', partner: true },
-                { name: 'New Paths Women\'s Residence', address: '1015 Oak St, Nashville TN 37208', phone: '(615) 555-0234', notes: 'Women only · Children welcome (under 5) · 8 beds · $825/mo', partner: true },
-                { name: 'Oxford House — Hillsboro', address: '337 Hillsboro Rd, Nashville TN 37215', phone: '(615) 555-0189', notes: 'Democratically run · Any gender · 10 beds · $500/mo', partner: false },
-                { name: 'Alano House', address: '204 Church St, Nashville TN 37201', phone: '(615) 555-0144', notes: 'Men only · No MAT policy · 14 beds · $600/mo', partner: false },
+                { name: 'Sunrise Sober Living — East', address: '842 Maple Ave, Rockville MD 20850', phone: '(301) 555-0221', notes: 'Men only · MAT-friendly · 12 beds · $750/mo', partner: true },
+                { name: 'New Paths Women\'s Residence', address: '1015 Oak St, Rockville MD 20852', phone: '(301) 555-0234', notes: 'Women only · Children welcome (under 5) · 8 beds · $825/mo', partner: true },
+                { name: 'Oxford House — Hillsboro', address: '337 Hillsboro Rd, Rockville MD 20854', phone: '(301) 555-0189', notes: 'Democratically run · Any gender · 10 beds · $500/mo', partner: false },
+                { name: 'Alano House', address: '204 Church St, Rockville MD 20850', phone: '(301) 555-0144', notes: 'Men only · No MAT policy · 14 beds · $600/mo', partner: false },
               ]
             },
             {
               category: '📞 Crisis & Peer Support Lines',
               resources: [
                 { name: 'SAMHSA National Helpline', address: 'National — 24/7', phone: '1-800-662-4357', notes: 'Free, confidential · English & Spanish · Treatment referrals', partner: true },
-                { name: 'Tennessee REDLINE', address: 'TN Statewide — 24/7', phone: '1-800-889-9789', notes: 'State addiction crisis line · Referral coordination', partner: true },
+                { name: 'Maryland REDLINE', address: 'MD Statewide — 24/7', phone: '1-800-889-9789', notes: 'State addiction crisis line · Referral coordination', partner: true },
                 { name: 'Crisis Text Line', address: 'National — 24/7', phone: 'Text HOME to 741741', notes: 'Text-based crisis support · Free', partner: false },
-                { name: 'Nashville AA Central Office', address: '855 5th Ave N, Nashville TN 37219', phone: '(615) 831-1050', notes: 'Meeting finder · Intergroup support · Speaker requests', partner: false },
+                { name: 'Rockville AA Central Office', address: '855 5th Ave N, Rockville MD 20851', phone: '(301) 948-1050', notes: 'Meeting finder · Intergroup support · Speaker requests', partner: false },
               ]
             },
             {
               category: '💼 Employment & Vocational Services',
               resources: [
-                { name: 'Nashville Career Advancement Center', address: '301 Plus Park Blvd, Nashville TN 37217', phone: '(615) 862-8890', notes: 'Free job training · Resume help · Justice-involved friendly', partner: true },
-                { name: 'Goodwill Industries of Middle TN', address: '937 Herman St, Nashville TN 37208', phone: '(615) 742-7151', notes: 'On-the-job training · Recovery-friendly employer', partner: true },
-                { name: 'TN Vocational Rehabilitation', address: '220 French Landing Dr, Nashville TN 37243', phone: '(615) 313-4891', notes: 'State-funded voc rehab · SUD-recovery applicants accepted', partner: false },
+                { name: 'Rockville Career Advancement Center', address: '301 Plus Park Blvd, Rockville MD 20855', phone: '(301) 738-8890', notes: 'Free job training · Resume help · Justice-involved friendly', partner: true },
+                { name: 'Goodwill Industries of Central MD', address: '937 Herman St, Rockville MD 20852', phone: '(301) 926-7151', notes: 'On-the-job training · Recovery-friendly employer', partner: true },
+                { name: 'MD Vocational Rehabilitation', address: '220 French Landing Dr, Rockville MD 20852', phone: '(301) 592-4891', notes: 'State-funded voc rehab · SUD-recovery applicants accepted', partner: false },
               ]
             },
             {
               category: '🏥 Ongoing Treatment & Medication Access',
               resources: [
-                { name: 'Centerstone — Nashville Outpatient', address: '1921 Ransom Place, Nashville TN 37228', phone: '(615) 460-4500', notes: 'OP / IOP · MAT program · Medicaid accepted', partner: true },
-                { name: 'Matthew Walker Comprehensive Health', address: '1035 14th Ave N, Nashville TN 37208', phone: '(615) 341-4600', notes: 'FQHC · MOUD / buprenorphine · Sliding scale', partner: true },
-                { name: 'CVS MinuteClinic — MAT Program', address: 'Multiple TN locations', phone: '1-800-746-7287', notes: 'Buprenorphine · No prior auth for first 30 days', partner: false },
+                { name: 'Centerstone — Rockville Outpatient', address: '1921 Ransom Place, Rockville MD 20853', phone: '(301) 424-4500', notes: 'OP / IOP · MAT program · Medicaid accepted', partner: true },
+                { name: 'Matthew Walker Comprehensive Health', address: '1035 14th Ave N, Rockville MD 20852', phone: '(301) 762-4600', notes: 'FQHC · MOUD / buprenorphine · Sliding scale', partner: true },
+                { name: 'CVS MinuteClinic — MAT Program', address: 'Multiple MD locations', phone: '1-800-746-7287', notes: 'Buprenorphine · No prior auth for first 30 days', partner: false },
               ]
             },
           ].map(section => (
@@ -597,7 +597,7 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
           <div className="text-sm text-slate">Post-discharge outcomes for patients with completed aftercare plans — housing stability, sobriety milestones, and alumni re-engagement tracking.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: 'Discharged (90d)', value: 22, color: 'text-navy', sub: 'With documented aftercare plan' },
+              { label: 'Discharged (90d)', value: 10, color: 'text-navy', sub: 'With documented aftercare plan' },
               { label: 'Housing Stable at 90d', value: '77%', color: 'text-green-600', sub: '17 of 22 confirmed stable' },
               { label: '30-Day Sobriety (Self-Report)', value: '73%', color: 'text-teal-600', sub: 'via alumni check-in call' },
               { label: 'Alumni Enrolled', value: '64%', color: 'text-blue-600', sub: '14 of 22 in alumni program' },
@@ -713,12 +713,12 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
               <h3 className="font-semibold text-navy text-sm mb-3">Community Mutual Aid — AA/NA/SMART Recovery Meetings</h3>
               <div className="space-y-2 text-xs">
                 {[
-                  { name: 'Nashville Central AA (Downtown)', days: 'Daily 7pm', format: 'In-person', focus: 'Open AA', contact: '615-555-0100' },
-                  { name: 'Narcotics Anonymous (Bellevue)', days: 'Mon/Wed/Fri 6:30pm', format: 'In-person', focus: 'Open NA', contact: '615-555-0210' },
-                  { name: 'SMART Recovery Nashville', days: 'Tue/Thu 5:30pm', format: 'Hybrid', focus: 'CBT-based, secular', contact: '615-555-0322' },
-                  { name: 'Women for Sobriety (Franklin)', days: 'Sat 10am', format: 'In-person', focus: 'Women-specific', contact: '615-555-0418' },
+                  { name: 'Rockville Central AA (Downtown)', days: 'Daily 7pm', format: 'In-person', focus: 'Open AA', contact: '301-555-0100' },
+                  { name: 'Narcotics Anonymous (Bellevue)', days: 'Mon/Wed/Fri 6:30pm', format: 'In-person', focus: 'Open NA', contact: '301-555-0210' },
+                  { name: 'SMART Recovery Rockville', days: 'Tue/Thu 5:30pm', format: 'Hybrid', focus: 'CBT-based, secular', contact: '301-555-0322' },
+                  { name: 'Women for Sobriety (Franklin)', days: 'Sat 10am', format: 'In-person', focus: 'Women-specific', contact: '301-555-0418' },
                   { name: 'Online AA (Zoom)', days: 'Daily multiple times', format: 'Virtual', focus: 'Open AA — any device', contact: 'aa-intergroup.org' },
-                  { name: 'Refuge Recovery (East Nashville)', days: 'Mon/Thu 7pm', format: 'In-person', focus: 'Mindfulness-based', contact: '615-555-0511' },
+                  { name: 'Refuge Recovery (East Rockville)', days: 'Mon/Thu 7pm', format: 'In-person', focus: 'Mindfulness-based', contact: '301-555-0511' },
                 ].map(m => (
                   <div key={m.name} className="flex items-center justify-between border border-border rounded p-2">
                     <div>

@@ -437,7 +437,7 @@ export function Training({ navigate, readOnly }: Props) {
             <div className="space-y-4">
               {[
                 {
-                  name: 'K. Nguyen, CADC-II', role: 'Primary Counselor', startDate: '2026-07-07', preceptor: 'T. Jackson, CADC',
+                  name: 'K. Nguyen, CAADC', role: 'Primary Counselor', startDate: '2026-07-07', preceptor: 'T. Jackson, CAC-AD',
                   modules: [
                     { name: 'Orientation & HR Policies', done: true, dueDate: 'Day 1' },
                     { name: 'HIPAA & 42 CFR Part 2 Training', done: true, dueDate: 'Day 2' },
@@ -496,7 +496,7 @@ export function Training({ navigate, readOnly }: Props) {
             {[
               { label: 'Total Courses Available', value: 48, color: 'text-navy', sub: 'All categories combined' },
               { label: 'Completed (YTD, avg)', value: 12.4, color: 'text-green-600', sub: 'Per staff member' },
-              { label: 'Clinical Modules', value: 22, color: 'text-blue-600', sub: 'SUD, MAT, trauma, co-occurring' },
+              { label: 'Clinical Modules', value: 10, color: 'text-blue-600', sub: 'SUD, MAT, trauma, co-occurring' },
               { label: 'New This Quarter', value: 6, color: 'text-teal-600', sub: 'Recently added' },
             ].map(k => (
               <div key={k.label} className="card">

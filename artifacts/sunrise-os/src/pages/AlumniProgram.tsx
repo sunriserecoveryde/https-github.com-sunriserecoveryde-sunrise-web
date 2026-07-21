@@ -44,7 +44,7 @@ const ALUMNI: AlumniRecord[] = [
     primaryDx: 'Alcohol Use Disorder, Severe', onMat: false,
     contacts: [
       { type: '30-Day', date: '2026-04-22', outcome: 'Sober', notes: 'Doing well. AA daily. Licensed therapist resumed practice.' },
-      { type: '60-Day', date: '2026-05-22', outcome: 'Sober', notes: 'Applying for CADC certification. Wants to work in addiction counseling.' },
+      { type: '60-Day', date: '2026-05-22', outcome: 'Sober', notes: 'Applying for CAC-AD certification. Wants to work in addiction counseling.' },
       { type: '90-Day', date: '2026-06-22', outcome: 'Sober', notes: '92 days. Presented her recovery story at alumni meeting.' },
       { type: '6-Month', date: '2026-09-22', outcome: 'Pending' },
     ],
@@ -138,7 +138,7 @@ const OUTCOME_COLOR: Record<string, string> = {
 
 const UPCOMING_EVENTS = [
   { date: '2026-08-01', event: 'Monthly Alumni Meeting', location: 'Sunrise Recovery, Sunrise Room', time: '6:00 PM' },
-  { date: '2026-08-07', event: 'Recovery Walk Nashville', location: 'Riverfront Park', time: '9:00 AM — All alumni welcome' },
+  { date: '2026-08-07', event: 'Recovery Walk Rockville', location: 'Croydon Creek Nature Center', time: '9:00 AM — All alumni welcome' },
   { date: '2026-08-15', event: 'Alumni Family BBQ', location: 'Sunrise Recovery, Outdoor Pavilion', time: '12:00 PM noon' },
   { date: '2026-09-06', event: 'Monthly Alumni Meeting + 1-Year Chip Ceremony', location: 'Sunrise Recovery', time: '6:00 PM' },
 ];

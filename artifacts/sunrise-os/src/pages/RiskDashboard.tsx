@@ -472,7 +472,7 @@ export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: 
                 {[
                   { label: 'Sunrise (Alumni Survey)', rate: 34, color: 'bg-teal-500' },
                   { label: 'National Average', rate: 48, color: 'bg-gray-400' },
-                  { label: 'Top-Quartile Programs', rate: 22, color: 'bg-green-500' },
+                  { label: 'Top-Quartile Programs', rate: 10, color: 'bg-green-500' },
                   { label: 'National OUD-Specific', rate: 59, color: 'bg-red-500' },
                 ].map(b => (
                   <div key={b.label}>
@@ -595,7 +595,7 @@ export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: 
                   { factor: 'Opioid use disorder (primary)', pct: 47, color: 'bg-blue-500' },
                   { factor: 'Trauma history documented', pct: 72, color: 'bg-orange-400' },
                   { factor: 'Unstable housing at admission', pct: 29, color: 'bg-amber-500' },
-                  { factor: 'Pending legal matters', pct: 22, color: 'bg-teal-500' },
+                  { factor: 'Pending legal matters', pct: 10, color: 'bg-teal-500' },
                   { factor: 'Limited social support', pct: 44, color: 'bg-navy' },
                 ].map(f => (
                   <div key={f.factor}>

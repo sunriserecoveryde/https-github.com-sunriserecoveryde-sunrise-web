@@ -6,7 +6,7 @@ import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
-type SuperviseeRole = 'LPC-A (MD)' | 'CSC-AD (MD)' | 'ADT (DE)' | 'CADC (DE)' | 'BHT';
+type SuperviseeRole = 'LPC-A (MD)' | 'CSC-AD (MD)' | 'ADT (DE)' | '__DE_CAC-AD_TYPE__' | 'BHT';
 type NoteStatus = 'Draft' | 'Signed' | 'Co-signed' | 'Pending Review';
 
 interface SuperviseeRecord {
@@ -72,7 +72,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
     ],
   },
   {
-    id: 'SV-002', name: 'Michael Boyd', role: 'ADT (DE)', supervisor: 'Kevin Wright, CADC, PRS (DSAMH BAS)',
+    id: 'SV-002', name: 'Michael Boyd', role: 'ADT (DE)', supervisor: '__DE_CAC-AD_WRIGHT__, PRS (DSAMH BAS)',
     hoursRequiredMonthly: 1, hoursCompletedThisMonth: 0, licenseExpiry: '2027-03-15',
     supervisionType: 'Individual', nextSession: '2026-07-23', caseload: 6, pendingCosigns: 5,
     competencyScores: { assessment: 3.5, treatmentPlanning: 3.2, documentation: 3.0, therapeuticAlliance: 4.0, ethicsCompliance: 4.5, culturalHumility: 3.8 },
@@ -83,7 +83,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Great group energy — patients respond well to Kevin\'s peer-informed perspective. Authentic and genuine. Strong in early engagement.',
         growthAreas: 'Documentation: 3 notes submitted after 24-hour deadline this week. Reviewed CMS documentation requirements. Also: avoid advice-giving in MI — practice reflective listening.',
         goals: 'By 7/23: all progress notes submitted within 24 hours. Complete online MI module (Level 2). Practice open-ended questions in group.',
-        supervisorSignature: 'Kevin Wright, CADC, DSAMH BAS, 7/8/2026', superviseeSignature: 'Michael Boyd, ADT-DSAMH, 7/8/2026',
+        supervisorSignature: '__DE_CAC-AD_WRIGHT__, DSAMH BAS, 7/8/2026', superviseeSignature: 'Michael Boyd, ADT-DSAMH, 7/8/2026',
       },
     ],
   },
@@ -377,7 +377,7 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
           {[
             {
               supervisee: 'Sarah Jenkins, LPC',
-              credential: 'LPC · CADC-II · 6 yrs exp',
+              credential: 'LPC · CAADC · 6 yrs exp',
               supervisor: 'James S. Collins III, CAC-AD, BAS',
               date: '2026-07-14',
               type: 'Individual Supervision',
@@ -390,7 +390,7 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
             },
             {
               supervisee: 'David Odom, LMFT',
-              credential: 'LMFT · CADC-I · 4 yrs exp',
+              credential: 'LMFT · CAC-AD · 4 yrs exp',
               supervisor: 'James S. Collins III, CAC-AD, BAS',
               date: '2026-07-10',
               type: 'Individual Supervision',
@@ -521,10 +521,10 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
               <tbody className="divide-y divide-border">
                 {[
                   { name: 'A. Brooks, LPC', score: 94, low: 'Documentation', status: 'Exceeds', next: '2027-06', ok: true },
-                  { name: 'T. Jackson, CADC', score: 88, low: 'MAT Knowledge', status: 'Meets', next: '2027-06', ok: true },
+                  { name: 'T. Jackson, CAC-AD', score: 88, low: 'MAT Knowledge', status: 'Meets', next: '2027-06', ok: true },
                   { name: 'M. Rivera, MS', score: 71, low: 'Documentation', status: 'PIP', next: '2026-10', ok: false },
                   { name: 'R. Torres, LPC-MHSP', score: 96, low: 'None', status: 'Exceeds', next: '2027-06', ok: true },
-                  { name: 'K. Nguyen, CADC-II', score: 79, low: 'Group Facilitation', status: 'Probationary', next: '2026-10', ok: false },
+                  { name: 'K. Nguyen, CAADC', score: 79, low: 'Group Facilitation', status: 'Probationary', next: '2026-10', ok: false },
                 ].map(s => (
                   <tr key={s.name} className={`hover:bg-gray-50 ${!s.ok ? 'bg-amber-50/40' : ''}`}>
                     <td className="py-2 font-medium text-navy">{s.name}</td>
