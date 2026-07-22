@@ -30,6 +30,7 @@ import {
   makeHandoffNotesKey,
   makeHandoffShiftKey,
   makeHandoffDraftNotesKey,
+  makeHandoffCompletedKey,
   loadHandoffState,
   saveJsonToStorage,
   pruneStaleStorageKeys,
@@ -1114,5 +1115,167 @@ describe('handoff cold-start — note typed before storage load resolves', () =>
 
     expect(handoffLoaded).toBe(true);
     expect(resolvedShift).toBe('night'); // stored value preserved
+  });
+});
+
+// ─── Tests: completed key midnight rollover — banner must NOT show the next day ─
+//
+// This is the regression guard for the specific scenario described in Task #334:
+// a nurse completes handoff on the eve shift, the app stays open past midnight,
+// and the day-shift nurse relaunches to a fresh session.  The "Handoff Complete"
+// banner must NOT appear on the new calendar day.
+//
+// The completed flag uses `makeHandoffCompletedKey` which produces a date-scoped
+// key (`@sunrise_handoff_completed_YYYY-MM-DD`).  `pruneStaleStorageKeys` removes
+// previous-day entries on cold-start, so today's key returns null — meaning the
+// banner starts hidden even if yesterday's key held 'true'.
+
+describe('handoff completed key — overnight rollover banner suppression', () => {
+  it('eve-shift completes handoff → midnight → day-shift relaunch → banner NOT shown', async () => {
+    // ── EVE SHIFT (2026-07-21): nurse completes handoff ───────────────────
+    const eveDate          = new Date('2026-07-21T22:30:00.000Z');
+    const eveNotesKey      = makeHandoffNotesKey(eveDate);
+    const eveShiftKey      = makeHandoffShiftKey(eveDate);
+    const eveCompletedKey  = makeHandoffCompletedKey(eveDate);
+
+    // Mirrors handleComplete() write-through in HandoffScreen
+    const storage = makeMemoryStorage({
+      [eveNotesKey]:     JSON.stringify({ p1: 'Last vitals 22:15 — all stable', p2: '' }),
+      [eveShiftKey]:     'eve',
+      [eveCompletedKey]: 'true',   // banner was showing at end of eve shift
+    });
+
+    // Sanity: banner IS shown during the eve session
+    expect(await storage.getItem(eveCompletedKey)).toBe('true');
+
+    // ── MIDNIGHT ROLLOVER: clock advances to 2026-07-22 ───────────────────
+    const dayDate         = new Date('2026-07-22T00:00:00.000Z');
+    const dayNotesKey     = makeHandoffNotesKey(dayDate);
+    const dayShiftKey     = makeHandoffShiftKey(dayDate);
+    const dayCompletedKey = makeHandoffCompletedKey(dayDate);
+
+    // Verify the two completed keys are different (date-scoped)
+    expect(eveCompletedKey).toBe('@sunrise_handoff_completed_2026-07-21');
+    expect(dayCompletedKey).toBe('@sunrise_handoff_completed_2026-07-22');
+    expect(eveCompletedKey).not.toBe(dayCompletedKey);
+
+    // ── DAY-SHIFT RELAUNCH: cold-start prune runs first ───────────────────
+    // HandoffScreen's load effect calls pruneStaleStorageKeys before loadHandoffState.
+    // The completed key MUST be included so yesterday's 'true' is removed.
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_notes_',     currentKey: dayNotesKey },
+      { prefix: '@sunrise_handoff_shift_',     currentKey: dayShiftKey },
+      { prefix: '@sunrise_handoff_completed_', currentKey: dayCompletedKey },
+    ]);
+
+    // Yesterday's entries must be gone
+    expect(storage.store[eveNotesKey]).toBeUndefined();
+    expect(storage.store[eveShiftKey]).toBeUndefined();
+    expect(storage.store[eveCompletedKey]).toBeUndefined();  // ← the key regression covers
+
+    // ── COLD-START LOAD: Promise.all reads today's keys ───────────────────
+    const [{ notes, shift, loaded }, completedRaw] = await Promise.all([
+      loadHandoffState(
+        storage,
+        { notes: dayNotesKey, shift: dayShiftKey },
+        { notes: DEFAULT_NOTES, shift: 'day' },
+      ),
+      storage.getItem(dayCompletedKey),
+    ]);
+
+    expect(loaded).toBe(true);
+    expect(notes).toEqual(DEFAULT_NOTES);   // fresh slate for the new day
+    expect(shift).toBe('day');              // default shift
+
+    // TODAY's completed key has no entry → getItem returns null
+    expect(completedRaw).toBeNull();
+    // setCompleted(null === 'true') = false → banner is hidden ✓
+    expect(completedRaw === 'true').toBe(false);
+  });
+
+  it('completed key for the new day is null even when yesterday key was true (no prune needed for the key shape)', async () => {
+    // Secondary check: if for any reason pruning were skipped, the new day's
+    // key simply does not exist yet — getItem still returns null and the banner
+    // is hidden.  This proves the date-scoping alone is sufficient as a
+    // last-resort guard, while pruning is the primary cleanup path.
+    const eveDate         = new Date('2026-07-21T23:59:00.000Z');
+    const eveCompletedKey = makeHandoffCompletedKey(eveDate);
+
+    const dayDate         = new Date('2026-07-22T00:00:00.000Z');
+    const dayNotesKey     = makeHandoffNotesKey(dayDate);
+    const dayShiftKey     = makeHandoffShiftKey(dayDate);
+    const dayCompletedKey = makeHandoffCompletedKey(dayDate);
+
+    // Storage has ONLY yesterday's completed=true; today's key is absent
+    const storage = makeMemoryStorage({
+      [eveCompletedKey]: 'true',
+    });
+
+    // Cold-start: read today's completed key (today's key does not exist)
+    const [{ loaded }, completedRaw] = await Promise.all([
+      loadHandoffState(
+        storage,
+        { notes: dayNotesKey, shift: dayShiftKey },
+        { notes: DEFAULT_NOTES, shift: 'day' },
+      ),
+      storage.getItem(dayCompletedKey),   // ← today's key, not yesterday's
+    ]);
+
+    expect(loaded).toBe(true);
+    expect(completedRaw).toBeNull();           // today has no completed entry
+    expect(completedRaw === 'true').toBe(false); // banner hidden on new day ✓
+  });
+
+  it('full overnight sequence: eve completes → checkDateRollover detects midnight → prune → new key null', async () => {
+    // End-to-end trace using checkDateRollover (the live midnight-timer path)
+    // to prove the completed key follows the same rollover lifecycle as notes/shift.
+
+    const eveDateStr      = formatDateKey(new Date('2026-07-21T22:30:00.000Z'));  // '2026-07-21'
+    const eveCompletedKey = `@sunrise_handoff_completed_${eveDateStr}`;
+    const eveNotesKey     = `@sunrise_handoff_notes_${eveDateStr}`;
+    const eveShiftKey     = `@sunrise_handoff_shift_${eveDateStr}`;
+
+    const storage = makeMemoryStorage({
+      [eveNotesKey]:     JSON.stringify({ p1: 'Last vitals — stable' }),
+      [eveShiftKey]:     'eve',
+      [eveCompletedKey]: 'true',
+    });
+
+    // ── Clock crosses midnight ────────────────────────────────────────────
+    const { rolled, newDateStr } = checkDateRollover(
+      eveDateStr,
+      new Date('2026-07-22T00:00:00.000Z'),
+    );
+    expect(rolled).toBe(true);
+    expect(newDateStr).toBe('2026-07-22');
+
+    const dayNotesKey     = `@sunrise_handoff_notes_${newDateStr}`;
+    const dayShiftKey     = `@sunrise_handoff_shift_${newDateStr}`;
+    const dayCompletedKey = `@sunrise_handoff_completed_${newDateStr}`;
+
+    // ── Cold-start prune (includes completed prefix) ──────────────────────
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_notes_',     currentKey: dayNotesKey },
+      { prefix: '@sunrise_handoff_shift_',     currentKey: dayShiftKey },
+      { prefix: '@sunrise_handoff_completed_', currentKey: dayCompletedKey },
+    ]);
+
+    expect(storage.store[eveCompletedKey]).toBeUndefined();  // pruned
+
+    // ── Day-shift cold-start load + completed read ────────────────────────
+    const [{ notes, shift, loaded }, completedRaw] = await Promise.all([
+      loadHandoffState(
+        storage,
+        { notes: dayNotesKey, shift: dayShiftKey },
+        { notes: DEFAULT_NOTES, shift: 'day' },
+      ),
+      storage.getItem(dayCompletedKey),
+    ]);
+
+    expect(loaded).toBe(true);
+    expect(notes).toEqual(DEFAULT_NOTES);  // fresh — no eve notes
+    expect(shift).toBe('day');
+    expect(completedRaw).toBeNull();             // today's key absent
+    expect(completedRaw === 'true').toBe(false); // banner suppressed ✓
   });
 });
