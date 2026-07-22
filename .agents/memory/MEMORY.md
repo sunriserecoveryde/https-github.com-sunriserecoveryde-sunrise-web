@@ -4,3 +4,4 @@
 - [MD/DE credential compliance](md-de-compliance.md) — Facilities in Rockville MD + Wilmington DE; MD BHA/ADAA and IC&RC/DSAMH credential pathways; all TN refs replaced
 - [Competitive feature adoptions](competitive-features.md) — MBC (Valant), GroupNotes participation (Kipu), LOS alerts (BestNotes), ProgressNotes Templates tab fix
 - [Apostrophe TS bug pattern](apostrophe-ts-bug.md) — ASCII apostrophe inside single-quoted TS string literals silently breaks parse; fix by switching outer delimiters to double quotes
+- [Login page height constraint](login-height-constraint.md) — outer wrapper needs h-screen not min-h-screen; without definite height flex children silently grow to content size

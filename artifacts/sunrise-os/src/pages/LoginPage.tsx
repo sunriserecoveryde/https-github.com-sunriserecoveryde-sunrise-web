@@ -9,7 +9,7 @@
  * Accessibility: WCAG 2.2 AA — 4.5:1 contrast, keyboard nav, reduced-motion, 44 px tap targets
  */
 
-import React, { useState, useRef, useId } from 'react';
+import React, { useState, useId } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   ChevronRight,
@@ -26,7 +26,7 @@ import {
 import { STAFF_MEMBERS, StaffMember } from '../data/mockStaff';
 import { getRoleById, RoleDefinition } from '../data/mockRoles';
 import { useAuth } from '../context/AuthContext';
-import sunriseLogo from '@assets/0_SunriseOS_Logo_1784397889924.png';
+import sunriseLogo from '@assets/0_SunriseOS_Logo_transparent.png';
 
 // ─── Config (make this page reusable by externalising these values) ────────────
 
@@ -231,11 +231,11 @@ function BrandPanel({ org }: { org: OrgConfig }) {
         ].join(', '),
         width: '42%',
         minWidth: '320px',
-        padding: '24px',          /* ¼ inch at 96 dpi */
+        padding: '24px',
       }}
       aria-label="Sunrise OS brand panel"
     >
-      {/* Subtle grid overlay */}
+      {/* Decorative overlays (absolute — out of flex flow) */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -248,15 +248,11 @@ function BrandPanel({ org }: { org: OrgConfig }) {
         }}
         aria-hidden
       />
-
-      {/* Sunrise glow orb */}
       <div
         className="absolute pointer-events-none"
         style={{
-          bottom: '-60px',
-          left: '-40px',
-          width: '360px',
-          height: '260px',
+          bottom: '-60px', left: '-40px',
+          width: '360px', height: '260px',
           borderRadius: '50%',
           background: 'radial-gradient(ellipse, rgba(242,140,40,0.28) 0%, rgba(242,140,40,0.08) 40%, transparent 70%)',
           filter: 'blur(24px)',
@@ -264,37 +260,22 @@ function BrandPanel({ org }: { org: OrgConfig }) {
         aria-hidden
       />
 
-      {/* Logo — 4 × 4 inch (384 × 384 CSS px at 96 dpi), centred */}
+      {/* ── Text — in DOM first so it can establish natural height; visually last via order ── */}
       <div
-        className="shrink-0 self-center"
         style={{
-          width: '384px',
-          height: '384px',
-          maxWidth: '100%',
-          mixBlendMode: 'screen',
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          order: 2,
         }}
       >
-        <img
-          src={sunriseLogo}
-          alt="Sunrise OS logo"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
-            objectPosition: 'center center',
-            filter: 'invert(1) hue-rotate(180deg) saturate(1.25) brightness(1.1)',
-          }}
-        />
-      </div>
-
-      {/* Remaining content fills the rest of the panel, centred */}
-      <div className="relative z-10 flex flex-col flex-1 min-h-0 items-center text-center">
-
         <h1
-          className="font-bold leading-tight mb-8 w-full"
+          className="font-bold leading-tight mb-6 w-full"
           style={{
             color: '#F8FAFC',
-            fontSize: 'clamp(24px, 2.2vw, 36px)',
+            fontSize: 'clamp(22px, 2vw, 34px)',
             letterSpacing: '-0.02em',
             lineHeight: 1.2,
           }}
@@ -302,18 +283,10 @@ function BrandPanel({ org }: { org: OrgConfig }) {
           {org.tagline}
         </h1>
 
-        {/* Benefits — icons + text left-aligned within a centred block */}
-        <ul className="space-y-5 inline-flex flex-col items-start" role="list" aria-label="Platform benefits">
+        <ul className="space-y-4 inline-flex flex-col items-start mb-6" role="list" aria-label="Platform benefits">
           {org.benefits.map((b, i) => (
-            <li
-              key={i}
-              className="flex items-center gap-3"
-              style={{ color: '#B8C4D0' }}
-            >
-              <div
-                className="p-1.5 rounded-lg shrink-0"
-                style={{ background: 'rgba(242,140,40,0.14)', color: '#F28C28' }}
-              >
+            <li key={i} className="flex items-center gap-3" style={{ color: '#B8C4D0' }}>
+              <div className="p-1.5 rounded-lg shrink-0" style={{ background: 'rgba(242,140,40,0.14)', color: '#F28C28' }}>
                 {b.icon}
               </div>
               <span className="text-[15px] leading-snug text-left">{b.text}</span>
@@ -321,26 +294,20 @@ function BrandPanel({ org }: { org: OrgConfig }) {
           ))}
         </ul>
 
-        {/* Push tagline to bottom */}
-        <div className="mt-auto pt-6 w-full">
-          <div
-            className="h-px mb-6"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)' }}
-            aria-hidden
-          />
-          <p
-            className="text-[14px] font-medium mb-3"
-            style={{ color: '#8A9BAD' }}
-          >
-            {org.brandStatement}
-          </p>
-          <p
-            className="text-[12px]"
-            style={{ color: '#4A5A6B' }}
-          >
-            Sunrise OS {org.version} &nbsp;·&nbsp; Demo Environment
-          </p>
+        <div className="w-full">
+          <div className="h-px mb-4" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)' }} aria-hidden />
+          <p className="text-[14px] font-medium mb-1" style={{ color: '#8A9BAD' }}>{org.brandStatement}</p>
+          <p className="text-[12px]" style={{ color: '#4A5A6B' }}>Sunrise OS {org.version} &nbsp;·&nbsp; Demo Environment</p>
         </div>
+      </div>
+
+      {/* ── Logo — grows to fill all space above the text (order: 1) ── */}
+      <div style={{ flex: '1 1 0%', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', order: 1 }}>
+        <img
+          src={sunriseLogo}
+          alt="Sunrise OS logo"
+          style={{ width: '100%', maxHeight: '100%', objectFit: 'contain' }}
+        />
       </div>
     </aside>
   );
@@ -375,7 +342,7 @@ export function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="h-screen overflow-hidden flex flex-col"
       style={{ background: '#071522' }}
     >
       {/* Demo mode banner */}
