@@ -1014,4 +1014,105 @@ describe('handoff cold-start — note typed before storage load resolves', () =>
     const persisted = JSON.parse(persistentStore[notesKey]!);
     expect(persisted['p1']).toBe('Critical: BP spike noted at 08:12');
   });
+
+  it('shift tapped during load window is merged when load resolves (Task #330)', async () => {
+    // Reproduces the force-quit gap for shift selection: nurse taps Eve before
+    // AsyncStorage has finished reading the saved shift.  isPersistSafe blocks
+    // the write, so pendingShiftRef buffers the tap.  When the .then() callback
+    // fires it must prefer the buffered tap over the stored 'day' value.
+    const today = new Date('2026-07-21T14:45:00.000Z');
+    const notesKey = makeHandoffNotesKey(today);
+    const shiftKey = makeHandoffShiftKey(today);
+
+    // Storage has day shift from a previous session
+    const { adapter, release } = makeDeferredStorage({
+      [notesKey]: JSON.stringify({ p1: 'Afternoon check — stable', p2: '' }),
+      [shiftKey]: 'day',
+    });
+
+    // ── PHASE 1: load in-flight ────────────────────────────────────────────
+    let handoffLoaded = false;
+    let loadedForKey: string | null = null;
+    // Buffer that mirrors pendingShiftRef in handoff.tsx
+    let pendingShift: Shift | null = null;
+
+    const loadPromise = loadHandoffState(
+      adapter,
+      { notes: notesKey, shift: shiftKey },
+      { notes: DEFAULT_NOTES, shift: 'day' },
+    );
+
+    // Yield the microtask queue — load still pending
+    await Promise.resolve();
+
+    // Nurse taps 'eve' while the load is in-flight.
+    // handleShiftChange: isPersistSafe returns false → buffer the tap.
+    const persistSafeDuringLoad = isPersistSafe(handoffLoaded, loadedForKey, notesKey);
+    expect(persistSafeDuringLoad).toBe(false); // guard is closed
+
+    if (persistSafeDuringLoad) {
+      // This branch must NOT execute during the load window
+      // (would be: AsyncStorage.setItem(shiftKey, 'eve'))
+    } else {
+      pendingShift = 'eve'; // mirror pendingShiftRef.current = s
+    }
+
+    expect(pendingShift).toBe('eve'); // tap buffered, not discarded
+
+    // ── PHASE 2: load resolves — pending shift is merged ──────────────────
+    release();
+    const { notes: savedNotes, shift: savedShift, loaded: freshLoaded } = await loadPromise;
+
+    // Mirrors the .then() callback in handoff.tsx:
+    //   resolvedShift = pendingShift ?? savedShift
+    const resolvedShift: Shift = pendingShift ?? savedShift;
+    pendingShift = null; // clear the buffer
+
+    loadedForKey = notesKey;
+    handoffLoaded = freshLoaded;
+
+    expect(handoffLoaded).toBe(true);
+    // The stored value was 'day'; the nurse's tap ('eve') must win
+    expect(savedShift).toBe('day');
+    expect(resolvedShift).toBe('eve');
+
+    // Guard is now open — shift persist would fire with the resolved shift
+    expect(isPersistSafe(handoffLoaded, loadedForKey, notesKey)).toBe(true);
+  });
+
+  it('stored shift is used when no shift was tapped during the load window (Task #330)', async () => {
+    // Sanity-check: when pendingShiftRef is null (nurse did not tap anything
+    // during the load window), the .then() callback falls back to savedShift.
+    const today = new Date('2026-07-21T22:00:00.000Z');
+    const notesKey = makeHandoffNotesKey(today);
+    const shiftKey = makeHandoffShiftKey(today);
+
+    const { adapter, release } = makeDeferredStorage({
+      [notesKey]: JSON.stringify({ p1: '', p2: '' }),
+      [shiftKey]: 'night',
+    });
+
+    let handoffLoaded = false;
+    let loadedForKey: string | null = null;
+    let pendingShift: Shift | null = null; // nurse did NOT tap anything
+
+    const loadPromise = loadHandoffState(
+      adapter,
+      { notes: notesKey, shift: shiftKey },
+      { notes: DEFAULT_NOTES, shift: 'day' },
+    );
+
+    await Promise.resolve(); // yield — still pending
+
+    release();
+    const { shift: savedShift, loaded: freshLoaded } = await loadPromise;
+
+    // Mirrors .then() callback: pendingShift is null → use savedShift
+    const resolvedShift: Shift = pendingShift ?? savedShift;
+    loadedForKey = notesKey;
+    handoffLoaded = freshLoaded;
+
+    expect(handoffLoaded).toBe(true);
+    expect(resolvedShift).toBe('night'); // stored value preserved
+  });
 });

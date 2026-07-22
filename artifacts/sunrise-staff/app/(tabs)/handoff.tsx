@@ -364,8 +364,8 @@ export default function HandoffScreen() {
     // screen with the static default notes and 'day' shift.  loadedForKeyRef is
     // intentionally left null so the persist-write effects stay blocked — the
     // timed-out defaults should never be written back to storage.
-    // Any note typed during the hang window is merged so the nurse's text is
-    // preserved even if storage never resolved.
+    // Any note or shift selection made during the hang window is merged so the
+    // nurse's input is preserved even if storage never resolved.
     const timeoutId = setTimeout(() => {
       if (!mountedRef.current || settled) return;
       settled = true;
@@ -374,8 +374,10 @@ export default function HandoffScreen() {
       const mergedNotes = Object.keys(pending).length > 0
         ? { ...defaultNotes, ...pending }
         : defaultNotes;
+      const pendingShift = pendingShiftRef.current;
+      pendingShiftRef.current = null;
       setNotes(mergedNotes);
-      setShift('day');
+      setShift(pendingShift ?? 'day');
       setCompleted(false);
       // loadedForKeyRef.current stays null — persist effects remain blocked.
       setLoaded(true);
@@ -425,8 +427,14 @@ export default function HandoffScreen() {
           ? { ...savedNotes, ...draftNotes, ...pending }
           : savedNotes;
 
+      // Merge pending shift: if the nurse tapped a shift while the load was
+      // in-flight, honour that tap instead of overwriting it with savedShift.
+      const pendingShift = pendingShiftRef.current;
+      pendingShiftRef.current = null;
+      const resolvedShift = pendingShift ?? savedShift;
+
       setNotes(mergedNotes);
-      setShift(savedShift);
+      setShift(resolvedShift);
       setCompleted(completedRaw === 'true');
       loadedForKeyRef.current = storageKeyNotes;
       setLoaded(true);
@@ -455,6 +463,14 @@ export default function HandoffScreen() {
   // The ref is cleared immediately after each merge to avoid stale accumulation.
   const pendingNotesRef = useRef<Record<string, string>>({});
 
+  // Pending-shift buffer: mirrors pendingNotesRef for the shift selector.
+  // If the nurse taps a shift (Day/Eve/Night) before the AsyncStorage load
+  // resolves, isPersistSafe blocks the write and setShift(savedShift) in the
+  // .then() callback would otherwise silently overwrite the tap.  Storing the
+  // selection here lets the .then() callback honour it by preferring the
+  // pending value over the stored one (Task #330).
+  const pendingShiftRef = useRef<Shift | null>(null);
+
   // Persist notes when they change (after initial load).
   // isPersistSafe guards against writing yesterday's in-memory state into today's
   // bucket during the rollover window before the fresh load completes.
@@ -471,11 +487,18 @@ export default function HandoffScreen() {
   }, [shift, loaded, storageKeyShift, storageKeyNotes]);
 
   /** Write-through shift setter — persists immediately so a force-quit in the
-   *  React render/effect gap can't silently revert the selection (#330). */
+   *  React render/effect gap can't silently revert the selection (#330).
+   *  When the load is still in-flight (isPersistSafe returns false), the
+   *  selection is buffered in pendingShiftRef so the .then() callback can
+   *  honour it instead of overwriting it with the stored value. */
   function handleShiftChange(s: Shift) {
     setShift(s);
     if (isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) {
       AsyncStorage.setItem(storageKeyShiftRef.current, s).catch(() => {});
+    } else {
+      // Load is still in-flight — buffer the tap so the .then() callback can
+      // merge it on top of the stored shift rather than silently overwriting it.
+      pendingShiftRef.current = s;
     }
   }
 
