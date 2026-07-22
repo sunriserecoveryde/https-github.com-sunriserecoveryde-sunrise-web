@@ -11,7 +11,7 @@ import {
   ArrowLeftRight, Star, CreditCard, MapPin, BookUser, Download,
   Video, UserCheck, FolderOpen, DollarSign, BookOpen, HandHelping,
   Award, ClipboardCheck, MessageSquare, ListOrdered, Grid3X3,
-  Eye, Sparkles, Brain
+  Eye, Sparkles, Brain, FlaskConical
 } from 'lucide-react';
 import { Screen } from '../../App';
 import { useRole } from '../../context/RoleContext';
@@ -146,6 +146,7 @@ const ALL_SECTIONS: SidebarSection[] = [
   {
     title: 'AI TOOLS',
     items: [
+      { id: 'DAPNoteWorkflow', label: 'DAP Note (AI) — Testing', icon: FlaskConical },
       { id: 'AIAssistant', label: 'Sunrise AI (HITL)', icon: Sparkles },
     ]
   },
