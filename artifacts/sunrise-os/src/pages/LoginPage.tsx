@@ -302,12 +302,12 @@ function BrandPanel({ org }: { org: OrgConfig }) {
           {org.tagline}
         </h1>
 
-        {/* Benefits */}
-        <ul className="space-y-5 w-full" role="list" aria-label="Platform benefits">
+        {/* Benefits — icons + text left-aligned within a centred block */}
+        <ul className="space-y-5 inline-flex flex-col items-start" role="list" aria-label="Platform benefits">
           {org.benefits.map((b, i) => (
             <li
               key={i}
-              className="flex items-center justify-center gap-3"
+              className="flex items-center gap-3"
               style={{ color: '#B8C4D0' }}
             >
               <div
@@ -316,7 +316,7 @@ function BrandPanel({ org }: { org: OrgConfig }) {
               >
                 {b.icon}
               </div>
-              <span className="text-[15px] leading-snug">{b.text}</span>
+              <span className="text-[15px] leading-snug text-left">{b.text}</span>
             </li>
           ))}
         </ul>
