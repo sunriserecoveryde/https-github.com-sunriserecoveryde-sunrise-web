@@ -399,46 +399,45 @@ export function LoginPage() {
         DEMO MODE &nbsp;·&nbsp; Fictitious patient data only &nbsp;·&nbsp; Not for clinical use
       </div>
 
-      {/* Split-screen body */}
-      <div className="flex-1 flex min-h-0">
+      {/* Split-screen body — locked to remaining viewport height, no outer scroll */}
+      <div className="flex-1 flex overflow-hidden">
 
         {/* ── Left brand panel ── */}
         <BrandPanel org={ORG} />
 
-        {/* ── Right login area ── */}
+        {/* ── Right login area: 24 px (¼ in) padding on all sides, card fills the rest ── */}
         <main
-          className="flex-1 flex flex-col items-center justify-center px-5 py-10 lg:py-12 overflow-y-auto"
-          style={{ background: 'rgba(7,21,34,0.95)' }}
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{ background: 'rgba(7,21,34,0.95)', padding: '24px' }}
           aria-label="Profile selection"
         >
           {/* Mobile-only logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-8">
+          <div className="lg:hidden flex items-center gap-3 mb-4 shrink-0">
             <img
               src={sunriseLogo}
               alt="Sunrise OS"
               className="h-8 w-auto object-contain"
-              style={{ filter: 'brightness(1.1) saturate(1.2)' }}
+              style={{ filter: 'invert(1) hue-rotate(180deg) saturate(1.2)', mixBlendMode: 'screen' }}
             />
           </div>
 
-          {/* Card */}
+          {/* Card — fills all remaining space in the right panel */}
           <motion.div
             initial={prefersReducedMotion ? {} : { opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full"
+            className="flex-1 flex flex-col min-h-0 w-full"
             style={{
-              maxWidth: '490px',
               background: 'rgba(15,34,53,0.88)',
               border: '1px solid rgba(255,255,255,0.10)',
               borderRadius: '20px',
               boxShadow: '0 24px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.35)',
               backdropFilter: 'blur(16px)',
-              padding: 'clamp(24px, 4vw, 34px)',
+              padding: '32px',
             }}
           >
             {/* Card header */}
-            <header className="mb-6">
+            <header className="mb-6 shrink-0">
               <div className="flex items-start justify-between gap-2 mb-4">
                 <div>
                   <p
@@ -482,7 +481,7 @@ export function LoginPage() {
             </header>
 
             {/* Search */}
-            <div className="relative mb-4">
+            <div className="relative mb-4 shrink-0">
               <label htmlFor={searchId} className="sr-only">Search profiles by name, role, or department</label>
               <Search
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
@@ -519,13 +518,13 @@ export function LoginPage() {
               )}
             </div>
 
-            {/* Profile list */}
+            {/* Profile list — grows to fill all available card height */}
             <div
               id={listId}
               role="listbox"
               aria-label="Staff profiles"
               aria-live="polite"
-              className="space-y-2 max-h-[360px] overflow-y-auto pr-0.5"
+              className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1"
               style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.10) transparent' }}
             >
               <AnimatePresence mode="popLayout" initial={false}>
@@ -562,12 +561,13 @@ export function LoginPage() {
               )}
             </div>
 
-            {/* Use another account */}
-            <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+            {/* Footer — pinned to bottom of card */}
+            <div className="shrink-0 mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              {/* Use another account */}
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="flex items-center gap-2 text-[14px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F80ED] rounded px-1"
+                className="flex items-center gap-2 text-[14px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F80ED] rounded px-1 mb-4"
                 style={{ color: '#2F80ED' }}
                 onMouseEnter={e => { e.currentTarget.style.color = '#5B9EF5'; }}
                 onMouseLeave={e => { e.currentTarget.style.color = '#2F80ED'; }}
@@ -576,50 +576,50 @@ export function LoginPage() {
                 <UserPlus className="w-4 h-4 shrink-0" aria-hidden />
                 Use another account
               </button>
-            </div>
 
-            {/* Security badge */}
-            <div
-              className="mt-5 flex items-center justify-center gap-1.5 rounded-lg py-2"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-              role="note"
-              aria-label="Security information"
-            >
-              <Shield className="w-3.5 h-3.5 shrink-0" style={{ color: '#4A9B6F' }} aria-hidden />
-              <span className="text-[12px]" style={{ color: '#8A9BAD' }}>
-                Secure access &nbsp;·&nbsp; Session protected &nbsp;·&nbsp; Authorized users only
-              </span>
-            </div>
+              {/* Security badge */}
+              <div
+                className="flex items-center justify-center gap-1.5 rounded-lg py-2 mb-3"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                role="note"
+                aria-label="Security information"
+              >
+                <Shield className="w-3.5 h-3.5 shrink-0" style={{ color: '#4A9B6F' }} aria-hidden />
+                <span className="text-[12px]" style={{ color: '#8A9BAD' }}>
+                  Secure access &nbsp;·&nbsp; Session protected &nbsp;·&nbsp; Authorized users only
+                </span>
+              </div>
 
-            {/* Footer links */}
-            <nav
-              className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1"
-              aria-label="Account and legal links"
-            >
-              {[
-                { label: 'Forgot your password?', href: '#forgot' },
-                { label: 'Contact support', href: `mailto:${ORG.supportEmail}` },
-                { label: 'Privacy', href: ORG.privacyUrl },
-                { label: 'Terms', href: ORG.termsUrl },
-              ].map(link => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  className="text-[12px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F80ED] rounded"
-                  style={{ color: '#4A5A6B' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#B8C4D0'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#4A5A6B'; }}
-                  onClick={e => e.preventDefault()}
-                >
-                  {link.label}
-                </a>
-              ))}
-            </nav>
+              {/* Footer links */}
+              <nav
+                className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1"
+                aria-label="Account and legal links"
+              >
+                {[
+                  { label: 'Forgot your password?', href: '#forgot' },
+                  { label: 'Contact support', href: `mailto:${ORG.supportEmail}` },
+                  { label: 'Privacy', href: ORG.privacyUrl },
+                  { label: 'Terms', href: ORG.termsUrl },
+                ].map(link => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    className="text-[12px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F80ED] rounded"
+                    style={{ color: '#4A5A6B' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#B8C4D0'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#4A5A6B'; }}
+                    onClick={e => e.preventDefault()}
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </nav>
+            </div>
           </motion.div>
 
           {/* Mobile brand statement */}
           <p
-            className="lg:hidden mt-6 text-center text-[12px] px-4"
+            className="lg:hidden mt-4 text-center text-[12px] shrink-0"
             style={{ color: '#4A5A6B' }}
           >
             {ORG.brandStatement}
