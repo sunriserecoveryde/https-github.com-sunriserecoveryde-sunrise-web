@@ -91,6 +91,18 @@ export function makeHandoffDraftNotesKey(date: Date): string {
 }
 
 /**
+ * Return the handoff-completed flag storage key for a given date.
+ * e.g. `@sunrise_handoff_completed_2026-07-20`
+ *
+ * Written as the string `'true'` by handleComplete() and read back via
+ * AsyncStorage.getItem() in the cold-start Promise.all.  Date-scoped so the
+ * banner never bleeds across calendar days (a new shift starts un-completed).
+ */
+export function makeHandoffCompletedKey(date: Date): string {
+  return `@sunrise_handoff_completed_${formatDateKey(date)}`;
+}
+
+/**
  * Guard function for persist effects in MARContext.
  *
  * Returns `true` only when both conditions hold:

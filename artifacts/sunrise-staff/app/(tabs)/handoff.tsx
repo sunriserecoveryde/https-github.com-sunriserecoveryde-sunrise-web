@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadHandoffState, saveJsonToStorage, pruneStaleStorageKeys, makeHandoffNotesKey, makeHandoffShiftKey, makeHandoffDraftNotesKey, formatDateKey, isPersistSafe, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
+import { loadHandoffState, saveJsonToStorage, pruneStaleStorageKeys, makeHandoffNotesKey, makeHandoffShiftKey, makeHandoffDraftNotesKey, makeHandoffCompletedKey, formatDateKey, isPersistSafe, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { useNursingNotes, type NoteType } from '@/context/NursingNotesContext';
@@ -274,7 +274,7 @@ export default function HandoffScreen() {
   // keys, so it re-runs whenever the day rolls over.
   const storageKeyNotes      = makeHandoffNotesKey(today);
   const storageKeyShift      = makeHandoffShiftKey(today);
-  const storageKeyCompleted  = `@sunrise_handoff_completed_${formatDateKey(today)}`;
+  const storageKeyCompleted  = makeHandoffCompletedKey(today);
   // Crash-safe draft key: notes typed while isPersistSafe is false are written
   // here immediately so they survive a force-quit before the load resolves.
   // The .then() callback reads, merges, and clears this key on startup.
@@ -486,6 +486,15 @@ export default function HandoffScreen() {
     AsyncStorage.setItem(storageKeyShift, shift).catch(() => {});
   }, [shift, loaded, storageKeyShift, storageKeyNotes]);
 
+  // Persist completed flag so both handleComplete (true) and the Undo button
+  // (false) survive a force-quit + relaunch (#331).
+  // Write-through in handleComplete() covers the narrow render/effect gap for
+  // the true→false direction; this effect covers the false direction (Undo).
+  React.useEffect(() => {
+    if (!isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) return;
+    AsyncStorage.setItem(storageKeyCompleted, completed ? 'true' : 'false').catch(() => {});
+  }, [completed, loaded, storageKeyCompleted, storageKeyNotes]);
+
   /** Write-through shift setter — persists immediately so a force-quit in the
    *  React render/effect gap can't silently revert the selection (#330).
    *  When the load is still in-flight (isPersistSafe returns false), the
@@ -686,7 +695,14 @@ export default function HandoffScreen() {
               </Text>
               <Pressable
                 style={[styles.undoBtn, { borderColor: colors.success }]}
-                onPress={() => setCompleted(false)}
+                onPress={() => {
+                  setCompleted(false);
+                  // Write-through: persist the undo immediately so a force-quit
+                  // in the render/effect gap can't re-show the banner on relaunch (#331).
+                  if (isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) {
+                    AsyncStorage.setItem(storageKeyCompleted, 'false').catch(() => {});
+                  }
+                }}
               >
                 <Text style={[styles.undoText, { color: colors.success }]}>Undo</Text>
               </Pressable>
