@@ -357,6 +357,16 @@ export default function HandoffScreen() {
     setLoaded(false);
     loadedForKeyRef.current = null;
 
+    // Clear any pending buffers accumulated during the old day's load window.
+    // Without this reset, a shift tap or note edit buffered during yesterday's
+    // load window would survive the midnight rollover and be merged on top of
+    // today's stored values when the new-day Promise.all resolves — silently
+    // applying yesterday's in-flight intent to the wrong calendar day.
+    // The buffers are re-populated by any nurse interaction that occurs while
+    // this new-day load is itself in-flight, so no input is lost.
+    pendingShiftRef.current = null;
+    pendingNotesRef.current = {};
+
     const defaultNotes = Object.fromEntries(RESIDENTIAL_PATIENTS.map(p => [p.id, p.handoffNote ?? '']));
 
     // Flag shared between the promise path and the timeout path so only the

@@ -605,6 +605,177 @@ describe('4-second timeout fallback — draft-completed key compatibility', () =
   });
 });
 
+// ─── Tests: day rollover clears both in-flight buffers (Task #339) ────────────
+//
+// When the calendar day changes and the load effect re-runs, two sources of
+// stale "in-flight" state must be neutralised before the new-day load begins:
+//
+//   A) pendingShiftRef — a Shift tap buffered while yesterday's load was in-flight.
+//      The effect now clears this ref at its top (before the async work) so the
+//      old-day intent can never overwrite today's stored shift.
+//
+//   B) storageKeyCompletedDraft — an undo intent written during yesterday's
+//      load window.  The pruneStaleStorageKeys call at the start of each load
+//      removes all draft keys whose date suffix does not match the current day,
+//      so the new-day cold-start never mistakenly reads yesterday's draft.
+//
+// These tests cover the storage-layer half of (B) — (A) is a React-ref
+// manipulation that cannot be exercised in a pure-storage test, but the fix
+// (clearing the refs at the top of the load effect) is documented in
+// handoff.tsx and confirmed by reading the source.
+
+describe('day rollover — both in-flight buffers cleared (Task #339)', () => {
+  const YESTERDAY      = new Date('2026-07-21T23:59:00.000Z');
+  const YESTERDAY_KEY  = makeHandoffNotesKey(YESTERDAY);
+  const YESTERDAY_SHIFT_KEY    = makeHandoffShiftKey(YESTERDAY);
+  const YESTERDAY_COMPLETED_KEY = makeHandoffCompletedKey(YESTERDAY);
+  const YESTERDAY_DRAFT_KEY    = makeHandoffCompletedDraftKey(YESTERDAY);
+
+  it('stale draft-completed key from the prior day is pruned before the new-day cold-start reads', async () => {
+    // Scenario:
+    //   Yesterday the nurse tapped Undo while isPersistSafe was false.
+    //   The undo intent was written to yesterday's draft key.
+    //   Midnight rolled over; the load effect re-runs for today.
+    //   pruneStaleStorageKeys must remove the yesterday draft key so the
+    //   new-day cold-start cannot accidentally apply the old intent.
+    const storage = makeMemoryStorage({
+      [YESTERDAY_DRAFT_KEY]: 'false',  // stale undo from yesterday's load window
+      [COMPLETED_DRAFT_KEY]: 'false',  // hypothetical current-day draft (for completeness)
+      [COMPLETED_KEY]:       'false',  // today's main completed key
+    });
+
+    // This mirrors what HandoffScreen's load effect does at the top of each
+    // re-run: prune stale keys first, then read.
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_undo_draft_', currentKey: COMPLETED_DRAFT_KEY },
+    ]);
+
+    // Yesterday's draft key is gone — cannot influence today's cold-start.
+    expect(storage.store[YESTERDAY_DRAFT_KEY]).toBeUndefined();
+    // Today's draft key (if any) and main key are untouched.
+    expect(storage.store[COMPLETED_DRAFT_KEY]).toBe('false');
+    expect(storage.store[COMPLETED_KEY]).toBe('false');
+  });
+
+  it('new-day cold-start reads null for draft key after stale key is pruned', async () => {
+    // After pruning, getItem for the new-day draft key returns null because the
+    // nurse has not tapped Undo during today's load window yet.
+    // This ensures `resolvedCompleted` is derived solely from the main key (or
+    // the static default) — not from any ghost of yesterday's undo intent.
+    const storage = makeMemoryStorage({
+      [YESTERDAY_DRAFT_KEY]: 'false',   // stale — will be pruned
+      // No current-day draft key, no current-day main key → fresh day
+    });
+
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_undo_draft_', currentKey: COMPLETED_DRAFT_KEY },
+    ]);
+
+    const [, completedRaw] = await Promise.all([
+      loadHandoffState(storage, { notes: NOTES_KEY, shift: SHIFT_KEY }, DEFAULTS),
+      storage.getItem(COMPLETED_KEY),
+    ]);
+    const draftRaw = await storage.getItem(COMPLETED_DRAFT_KEY);
+
+    // Both reads return null — new day is clean.
+    expect(draftRaw).toBeNull();
+    expect(completedRaw).toBeNull();
+    expect(completedRaw === 'true').toBe(false);  // banner hidden on new day ✓
+  });
+
+  it('yesterday completed key is also pruned so it cannot influence the new day', async () => {
+    // The main completed key from yesterday must likewise be purged; otherwise
+    // the new-day cold-start would read 'true' from the stale bucket and show
+    // a ghost "Handoff Complete" banner.
+    const storage = makeMemoryStorage({
+      [YESTERDAY_COMPLETED_KEY]: 'true',  // stale — nurse completed yesterday's shift
+      // No current-day completed key → fresh day starts un-completed
+    });
+
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_completed_', currentKey: COMPLETED_KEY },
+    ]);
+
+    const completedRaw = await storage.getItem(COMPLETED_KEY);
+
+    expect(storage.store[YESTERDAY_COMPLETED_KEY]).toBeUndefined(); // stale key pruned ✓
+    expect(completedRaw).toBeNull();               // no entry for today ✓
+    expect(completedRaw === 'true').toBe(false);   // banner hidden ✓
+  });
+
+  it('combined prune pass: full production entry list removes all stale keys from prior day', async () => {
+    // Simulates the exact pruneStaleStorageKeys call at the top of HandoffScreen's
+    // load effect after a midnight rollover.  All five key families must be swept
+    // in a single call; no stale key from yesterday should survive.
+    const yesterdayDraftNotesKey = `@sunrise_handoff_draft_notes_${formatDateKey(YESTERDAY)}`;
+    const todayDraftNotesKey     = `@sunrise_handoff_draft_notes_${formatDateKey(TODAY)}`;
+
+    const storage = makeMemoryStorage({
+      // Yesterday's keys (all stale)
+      [YESTERDAY_KEY]:          JSON.stringify({ p1: 'Yesterday note' }),
+      [YESTERDAY_SHIFT_KEY]:    'eve',
+      [YESTERDAY_DRAFT_KEY]:    'false',   // stale undo intent
+      [YESTERDAY_COMPLETED_KEY]: 'true',   // yesterday's completed flag
+      [yesterdayDraftNotesKey]: JSON.stringify({ p1: 'draft note' }),
+      // Today's keys (must survive)
+      [NOTES_KEY]:              JSON.stringify({ p1: '' }),
+      [SHIFT_KEY]:              'day',
+      [COMPLETED_DRAFT_KEY]:    'false',   // today's undo intent
+      [COMPLETED_KEY]:          'false',
+      [todayDraftNotesKey]:     JSON.stringify({}),
+    });
+
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_notes_',       currentKey: NOTES_KEY },
+      { prefix: '@sunrise_handoff_shift_',       currentKey: SHIFT_KEY },
+      { prefix: '@sunrise_handoff_undo_draft_',  currentKey: COMPLETED_DRAFT_KEY },
+      { prefix: '@sunrise_handoff_completed_',   currentKey: COMPLETED_KEY },
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: todayDraftNotesKey },
+    ]);
+
+    // All yesterday's keys pruned
+    expect(storage.store[YESTERDAY_KEY]).toBeUndefined();
+    expect(storage.store[YESTERDAY_SHIFT_KEY]).toBeUndefined();
+    expect(storage.store[YESTERDAY_DRAFT_KEY]).toBeUndefined();
+    expect(storage.store[YESTERDAY_COMPLETED_KEY]).toBeUndefined();
+    expect(storage.store[yesterdayDraftNotesKey]).toBeUndefined();
+
+    // All today's keys survive
+    expect(storage.store[NOTES_KEY]).toBeDefined();
+    expect(storage.store[SHIFT_KEY]).toBe('day');
+    expect(storage.store[COMPLETED_DRAFT_KEY]).toBe('false');
+    expect(storage.store[COMPLETED_KEY]).toBe('false');
+    expect(storage.store[todayDraftNotesKey]).toBeDefined();
+  });
+
+  it('pruning runs before cold-start read — stale draft cannot flash for a frame', async () => {
+    // Structural guarantee: pruneStaleStorageKeys is called synchronously at
+    // the top of the load effect BEFORE the Promise.all that reads the keys.
+    // This test models that ordering: prune first, then read, and verifies that
+    // the stale draft key is absent when the read runs.
+    const storage = makeMemoryStorage({
+      [YESTERDAY_DRAFT_KEY]: 'false',  // stale undo intent from yesterday
+    });
+
+    // Step 1: prune (mirrors effect top)
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_undo_draft_', currentKey: COMPLETED_DRAFT_KEY },
+    ]);
+
+    // Step 2: cold-start read (mirrors Promise.all in effect)
+    const [, completedRaw] = await Promise.all([
+      loadHandoffState(storage, { notes: NOTES_KEY, shift: SHIFT_KEY }, DEFAULTS),
+      storage.getItem(COMPLETED_KEY),
+    ]);
+    const draftRaw = await storage.getItem(COMPLETED_DRAFT_KEY);
+
+    // Neither key has a value — new day starts clean; no stale flash possible.
+    expect(storage.store[YESTERDAY_DRAFT_KEY]).toBeUndefined();
+    expect(draftRaw).toBeNull();
+    expect(completedRaw).toBeNull();
+  });
+});
+
 describe('crash-safe draft-completed — stale key pruning', () => {
   it('stale draft-completed key from the previous day is pruned on cold-start', async () => {
     const yesterday     = new Date('2026-07-21T23:59:00.000Z');
