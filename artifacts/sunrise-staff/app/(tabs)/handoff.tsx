@@ -370,6 +370,13 @@ export default function HandoffScreen() {
     // timed-out defaults should never be written back to storage.
     // Any note or shift selection made during the hang window is merged so the
     // nurse's input is preserved even if storage never resolved.
+    //
+    // completed is set to false (not read from storageKeyCompletedDraft) because
+    // AsyncStorage is not responding — a second read would also hang.  false is
+    // the safe direction: it can never produce a ghost "Handoff Complete" banner.
+    // It also agrees with any undo intent the nurse may have written to the draft
+    // key during the load window (that write is 'false' too), so no undo intent
+    // is ever silently overridden by this path.
     const timeoutId = setTimeout(() => {
       if (!mountedRef.current || settled) return;
       settled = true;
@@ -382,6 +389,8 @@ export default function HandoffScreen() {
       pendingShiftRef.current = null;
       setNotes(mergedNotes);
       setShift(pendingShift ?? 'day');
+      // false is the safe default: no ghost banner, and matches any undo intent
+      // written to storageKeyCompletedDraft during the load window (Task #338).
       setCompleted(false);
       // loadedForKeyRef.current stays null — persist effects remain blocked.
       setLoaded(true);
