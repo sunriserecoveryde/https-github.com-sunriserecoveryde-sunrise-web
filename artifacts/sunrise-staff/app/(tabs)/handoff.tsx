@@ -397,11 +397,15 @@ export default function HandoffScreen() {
         : defaultNotes;
       const pendingShift = pendingShiftRef.current;
       pendingShiftRef.current = null;
+      // Read the pending-completed buffer: if the nurse tapped Complete (or Undo)
+      // during the load window, honour that tap.  Otherwise default to false — the
+      // safe direction: no ghost banner, and compatible with any undo intent
+      // written to storageKeyCompletedDraft during the load window (Task #340 / #338).
+      const pendingCompleted = pendingCompletedRef.current;
+      pendingCompletedRef.current = null;
       setNotes(mergedNotes);
       setShift(pendingShift ?? 'day');
-      // false is the safe default: no ghost banner, and matches any undo intent
-      // written to storageKeyCompletedDraft during the load window (Task #338).
-      setCompleted(false);
+      setCompleted(pendingCompleted ?? false);
       // loadedForKeyRef.current stays null — persist effects remain blocked.
       setLoaded(true);
     }, 4000);
@@ -474,9 +478,17 @@ export default function HandoffScreen() {
       pendingShiftRef.current = null;
       const resolvedShift = pendingShift ?? savedShift;
 
+      // Merge pending completed: if the nurse tapped Complete (or Undo) while
+      // the load was in-flight, honour that tap over the resolved storage value.
+      // This prevents a setCompleted(resolvedCompleted) call here from silently
+      // discarding a Complete tap that occurred during the load window (Task #340).
+      const pendingCompleted = pendingCompletedRef.current;
+      pendingCompletedRef.current = null;
+      const finalCompleted = pendingCompleted !== null ? pendingCompleted : resolvedCompleted;
+
       setNotes(mergedNotes);
       setShift(resolvedShift);
-      setCompleted(resolvedCompleted);
+      setCompleted(finalCompleted);
       loadedForKeyRef.current = storageKeyNotes;
       setLoaded(true);
     }).catch(() => {
@@ -503,6 +515,15 @@ export default function HandoffScreen() {
   // during the load window cannot silently discard a nurse's in-progress text.
   // The ref is cleared immediately after each merge to avoid stale accumulation.
   const pendingNotesRef = useRef<Record<string, string>>({});
+
+  // Pending-completed buffer: mirrors pendingShiftRef for the Mark Complete /
+  // Undo button.  If the nurse taps "Mark Handoff Complete" (or Undo) while the
+  // AsyncStorage load is still in flight, isPersistSafe blocks the write-through
+  // and setCompleted(resolvedCompleted) in the .then() callback would otherwise
+  // silently overwrite the tap.  Storing the intent here lets both the .then()
+  // callback and the 4-second timeout honour the tap instead of discarding it
+  // (Task #340).  null means no tap occurred during the load window.
+  const pendingCompletedRef = useRef<boolean | null>(null);
 
   // Pending-shift buffer: mirrors pendingNotesRef for the shift selector.
   // If the nurse taps a shift (Day/Eve/Night) before the AsyncStorage load
@@ -663,10 +684,18 @@ export default function HandoffScreen() {
     clearAcknowledgments();
     clearFilters();
     setCompleted(true);
-    // Write-through: persist completed flag immediately so a force-quit while
-    // the Share sheet is open can't reset the screen to the pre-complete state
-    // on relaunch (#331).
-    AsyncStorage.setItem(storageKeyCompleted, 'true').catch(() => {});
+    if (isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) {
+      // Write-through: persist completed flag immediately so a force-quit while
+      // the Share sheet is open can't reset the screen to the pre-complete state
+      // on relaunch (#331).
+      AsyncStorage.setItem(storageKeyCompleted, 'true').catch(() => {});
+    } else {
+      // Load is still in-flight — the write-through is blocked by isPersistSafe
+      // and the .then() callback would otherwise overwrite this tap with the
+      // stored completed value.  Buffer the intent so the .then() callback and
+      // the 4-second timeout both honour it (Task #340).
+      pendingCompletedRef.current = true;
+    }
   }
 
   return (
@@ -750,6 +779,10 @@ export default function HandoffScreen() {
                     // reads this key, applies it (draft wins over main), then
                     // deletes it (#335).
                     AsyncStorage.setItem(storageKeyCompletedDraft, 'false').catch(() => {});
+                    // Also buffer in pendingCompletedRef so the .then() callback
+                    // and the 4-second timeout honour this tap without needing to
+                    // re-read the draft key (Task #340).
+                    pendingCompletedRef.current = false;
                   }
                 }}
               >

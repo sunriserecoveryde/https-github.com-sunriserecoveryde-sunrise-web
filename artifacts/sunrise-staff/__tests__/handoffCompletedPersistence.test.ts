@@ -776,6 +776,169 @@ describe('day rollover — both in-flight buffers cleared (Task #339)', () => {
   });
 });
 
+// ─── Tests: pendingCompletedRef — Complete tap during load window (Task #340) ─
+//
+// If the nurse taps "Mark Handoff Complete" while the storage load is in-flight
+// (isPersistSafe is false), the tap is buffered in pendingCompletedRef.  Both
+// the 4-second timeout path and the .then() callback read and clear this ref so
+// the tap is never silently discarded.
+//
+// This suite tests the pure buffer-and-merge logic used by the component without
+// requiring React Native or Expo.
+
+describe('pendingCompletedRef — Complete tap during load window survives storage hang', () => {
+  /**
+   * Simulates the scenario described in Task #340:
+   *   1. App cold-starts; AsyncStorage hangs (4-second timeout fires before the
+   *      Promise.all resolves).
+   *   2. During the hang window the nurse taps "Mark Handoff Complete".
+   *   3. isPersistSafe is false → the write-through is blocked → the tap is
+   *      buffered in pendingCompletedRef.
+   *   4. The timeout fires, reads pendingCompletedRef.current (true), and calls
+   *      setCompleted(true) — the banner appears correctly instead of being reset
+   *      to the false default.
+   */
+  it('Complete tap during storage hang is applied by the timeout path (not reset to false)', () => {
+    // Simulate the timeout path's buffer read-and-clear logic.
+    // In the real component pendingCompletedRef is a useRef; here we model it
+    // as a plain object so the logic is identical but runs in Node.
+
+    // Before any tap: ref is null.
+    const pendingCompletedRef = { current: null as boolean | null };
+    expect(pendingCompletedRef.current).toBeNull();
+
+    // Nurse taps Complete during the load window (isPersistSafe is false).
+    const persistSafe = isPersistSafe(false, null, NOTES_KEY);
+    expect(persistSafe).toBe(false);
+    // Mirrors handleComplete()'s else-branch:
+    pendingCompletedRef.current = true;
+
+    // Timeout fires: reads and clears the buffer.
+    const pendingCompleted = pendingCompletedRef.current;
+    pendingCompletedRef.current = null;
+    const timeoutSetCompleted = pendingCompleted ?? false;  // honours the tap
+
+    // Banner must show: tap is preserved, not reset to the false default.
+    expect(timeoutSetCompleted).toBe(true);
+    // Ref is cleared so a subsequent .then() callback won't double-apply.
+    expect(pendingCompletedRef.current).toBeNull();
+  });
+
+  it('no tap during load window → timeout applies the safe false default', () => {
+    const pendingCompletedRef = { current: null as boolean | null };
+
+    // Timeout fires with no pending tap.
+    const pendingCompleted = pendingCompletedRef.current;
+    pendingCompletedRef.current = null;
+    const timeoutSetCompleted = pendingCompleted ?? false;
+
+    expect(timeoutSetCompleted).toBe(false);  // safe default: no ghost banner ✓
+  });
+
+  it('Complete tap during load window is applied by the .then() callback path', async () => {
+    // Scenario: storage resolves normally (no hang) but nurse tapped Complete
+    // before the Promise.all returned.  The .then() callback must honour the tap
+    // instead of overwriting it with the stored completed value.
+    const storage = makeMemoryStorage({
+      [NOTES_KEY]:     JSON.stringify({ p1: 'Stable overnight', p2: '' }),
+      [SHIFT_KEY]:     'day',
+      // No COMPLETED_KEY entry — nurse hadn't completed the handoff in storage.
+    });
+
+    const pendingCompletedRef = { current: null as boolean | null };
+
+    // Nurse taps Complete during the load window.
+    pendingCompletedRef.current = true;
+
+    // .then() callback runs: reads storage + draft key.
+    const [{ notes, shift, loaded }, completedRaw] = await Promise.all([
+      loadHandoffState(storage, { notes: NOTES_KEY, shift: SHIFT_KEY }, DEFAULTS),
+      storage.getItem(COMPLETED_KEY),
+    ]);
+    // No draft key in this scenario.
+    const completedDraftRaw = await storage.getItem(makeHandoffCompletedDraftKey(TODAY));
+    let resolvedCompleted = completedRaw === 'true';
+    if (completedDraftRaw !== null) {
+      resolvedCompleted = completedDraftRaw === 'true';
+    }
+
+    // .then() reads and clears pendingCompletedRef (mirrors the component code).
+    const pendingCompleted = pendingCompletedRef.current;
+    pendingCompletedRef.current = null;
+    const finalCompleted = pendingCompleted !== null ? pendingCompleted : resolvedCompleted;
+
+    expect(loaded).toBe(true);
+    expect(notes['p1']).toBe('Stable overnight');
+    expect(shift).toBe('day');
+    // Pending tap wins: banner shows Complete even though storage had no entry.
+    expect(finalCompleted).toBe(true);
+    // Ref is cleared for future use.
+    expect(pendingCompletedRef.current).toBeNull();
+  });
+
+  it('Undo tap during load window is applied by the .then() callback path', async () => {
+    // Nurse had completed the handoff in a prior session; on relaunch she taps
+    // Undo during the storage-load window.  pendingCompletedRef captures false.
+    const storage = makeMemoryStorage({
+      [NOTES_KEY]:     JSON.stringify({ p1: '' }),
+      [SHIFT_KEY]:     'night',
+      [COMPLETED_KEY]: 'true',   // prior session marked complete
+    });
+
+    const pendingCompletedRef = { current: null as boolean | null };
+
+    // Undo tapped during load window — mirrors the Undo handler's else-branch.
+    pendingCompletedRef.current = false;
+
+    const [, completedRaw] = await Promise.all([
+      loadHandoffState(storage, { notes: NOTES_KEY, shift: SHIFT_KEY }, DEFAULTS),
+      storage.getItem(COMPLETED_KEY),
+    ]);
+    const completedDraftRaw = await storage.getItem(makeHandoffCompletedDraftKey(TODAY));
+    let resolvedCompleted = completedRaw === 'true';  // true from storage
+    if (completedDraftRaw !== null) {
+      resolvedCompleted = completedDraftRaw === 'true';
+    }
+
+    const pendingCompleted = pendingCompletedRef.current;
+    pendingCompletedRef.current = null;
+    const finalCompleted = pendingCompleted !== null ? pendingCompleted : resolvedCompleted;
+
+    // Undo intent survives: banner is hidden even though storage said 'true'.
+    expect(finalCompleted).toBe(false);
+  });
+
+  it('Complete tap wins over storage false value in .then() path', async () => {
+    // Edge case: a prior session stored completed=false (undo was tapped).
+    // In this new session the nurse taps Complete during the load window.
+    const storage = makeMemoryStorage({
+      [NOTES_KEY]:     JSON.stringify({ p1: '' }),
+      [SHIFT_KEY]:     'day',
+      [COMPLETED_KEY]: 'false',   // prior undo
+    });
+
+    const pendingCompletedRef = { current: null as boolean | null };
+    pendingCompletedRef.current = true;  // nurse tapped Complete during load
+
+    const [, completedRaw] = await Promise.all([
+      loadHandoffState(storage, { notes: NOTES_KEY, shift: SHIFT_KEY }, DEFAULTS),
+      storage.getItem(COMPLETED_KEY),
+    ]);
+    const completedDraftRaw = await storage.getItem(makeHandoffCompletedDraftKey(TODAY));
+    let resolvedCompleted = completedRaw === 'true';  // false from storage
+
+    if (completedDraftRaw !== null) {
+      resolvedCompleted = completedDraftRaw === 'true';
+    }
+
+    const pendingCompleted = pendingCompletedRef.current;
+    pendingCompletedRef.current = null;
+    const finalCompleted = pendingCompleted !== null ? pendingCompleted : resolvedCompleted;
+
+    expect(finalCompleted).toBe(true);  // Complete tap honoured ✓
+  });
+});
+
 describe('crash-safe draft-completed — stale key pruning', () => {
   it('stale draft-completed key from the previous day is pruned on cold-start', async () => {
     const yesterday     = new Date('2026-07-21T23:59:00.000Z');
