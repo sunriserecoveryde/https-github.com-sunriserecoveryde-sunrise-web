@@ -3,7 +3,8 @@ import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { LockedButton } from '../components/common/LockedButton';
 import { getPatientMedications } from '../data/mockMedications';
-import { CheckCircle, Printer, Save, Download } from 'lucide-react';
+import { CheckCircle, Printer, Save, Download, PenTool } from 'lucide-react';
+import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -119,6 +120,12 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
   const [selectedPatient, setSelectedPatient] = useState('p4');
   const [tab, setTab] = useState<'Draft' | 'Print Preview' | 'Continuity of Care' | 'Distribution Log' | 'Legal & Court Docs'>('Draft');
   const [saved, setSaved] = useState(false);
+  // Wet signature state
+  const [clinicianSig, setClinicianSig] = useState<SignatureRecord | null>(null);
+  const [cosignSig, setCosignSig] = useState<SignatureRecord | null>(null);
+  const [physicianSig, setPhysicianSig] = useState<SignatureRecord | null>(null);
+  const [clientSig, setClientSig] = useState<SignatureRecord | null>(null);
+  const [activeSigModal, setActiveSigModal] = useState<'clinician' | 'cosign' | 'physician' | 'client' | null>(null);
 
   const p = MOCK_PATIENTS.find(pt => pt.id === selectedPatient) ?? MOCK_PATIENTS[0];
   const meds = getPatientMedications(p.id);
@@ -277,29 +284,112 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
 
           {/* Signatures */}
           <div className="card space-y-4">
-            <h3 className="font-semibold text-navy">Signatures</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { label: 'Primary Counselor', val: DISCHARGE_DATA.clinicianSignature as string, signed: true },
-                { label: 'Clinical Director (Co-sign)', val: DISCHARGE_DATA.cosignature as string, signed: true },
-                { label: 'Medical Director', val: DISCHARGE_DATA.physicianSignature as string, signed: true },
-              ].map(s => (
-                <div key={s.label}>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">{s.label}</label>
-                  <div className={`border rounded-lg p-3 ${s.signed ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-dashed border-border'}`}>
-                    {s.signed ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-                        <span className="text-xs text-green-700">{s.val}</span>
-                      </div>
-                    ) : (
-                      <button onClick={() => setSaved(true)} className="text-xs text-orange hover:underline w-full text-center">Click to sign</button>
-                    )}
+            <h3 className="font-semibold text-navy flex items-center gap-2">
+              <PenTool className="w-4 h-4 text-sunrise-blue" /> Document Signatures
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Primary Counselor */}
+              <div className="border border-border rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] font-bold text-slate uppercase tracking-wide">Primary Counselor</div>
+                    <div className="text-sm font-semibold text-navy mt-0.5">Sarah Jenkins, LPC</div>
                   </div>
+                  {!clinicianSig && !readOnly && (
+                    <button onClick={() => setActiveSigModal('clinician')} className="flex items-center gap-1.5 text-xs font-semibold bg-navy text-white px-3 py-1.5 rounded-lg hover:bg-navy/90">
+                      <PenTool className="w-3 h-3" /> Sign
+                    </button>
+                  )}
                 </div>
-              ))}
+                {clinicianSig
+                  ? <SignedBadge record={clinicianSig} />
+                  : <div className="text-xs text-slate bg-gray-50 border border-dashed border-border rounded-lg px-3 py-2">Awaiting clinician signature</div>}
+              </div>
+
+              {/* Clinical Director Co-sign */}
+              <div className="border border-border rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] font-bold text-slate uppercase tracking-wide">Clinical Director (Co-sign)</div>
+                    <div className="text-sm font-semibold text-navy mt-0.5">James S. Collins III, CAADC</div>
+                  </div>
+                  {!cosignSig && !readOnly && (
+                    <button onClick={() => setActiveSigModal('cosign')} className="flex items-center gap-1.5 text-xs font-semibold bg-navy text-white px-3 py-1.5 rounded-lg hover:bg-navy/90">
+                      <PenTool className="w-3 h-3" /> Co-sign
+                    </button>
+                  )}
+                </div>
+                {cosignSig
+                  ? <SignedBadge record={cosignSig} />
+                  : <div className="text-xs text-slate bg-gray-50 border border-dashed border-border rounded-lg px-3 py-2">Awaiting supervisor co-signature</div>}
+              </div>
+
+              {/* Medical Director */}
+              <div className="border border-border rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] font-bold text-slate uppercase tracking-wide">Medical Director</div>
+                    <div className="text-sm font-semibold text-navy mt-0.5">Dr. Robert Chen, MD</div>
+                  </div>
+                  {!physicianSig && !readOnly && (
+                    <button onClick={() => setActiveSigModal('physician')} className="flex items-center gap-1.5 text-xs font-semibold bg-navy text-white px-3 py-1.5 rounded-lg hover:bg-navy/90">
+                      <PenTool className="w-3 h-3" /> Sign
+                    </button>
+                  )}
+                </div>
+                {physicianSig
+                  ? <SignedBadge record={physicianSig} />
+                  : <div className="text-xs text-slate bg-gray-50 border border-dashed border-border rounded-lg px-3 py-2">Awaiting physician signature</div>}
+              </div>
+
+              {/* Client Acknowledgment */}
+              <div className="border border-teal-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] font-bold text-teal-700 uppercase tracking-wide">Client Acknowledgment</div>
+                    <div className="text-sm font-semibold text-navy mt-0.5">{p.firstName} {p.lastName}</div>
+                  </div>
+                  {!clientSig && !readOnly && (
+                    <button onClick={() => setActiveSigModal('client')} className="flex items-center gap-1.5 text-xs font-semibold bg-teal-600 text-white px-3 py-1.5 rounded-lg hover:bg-teal-700">
+                      <PenTool className="w-3 h-3" /> Collect
+                    </button>
+                  )}
+                </div>
+                {clientSig
+                  ? <SignedBadge record={clientSig} />
+                  : <div className="text-xs text-slate bg-teal-50 border border-dashed border-teal-200 rounded-lg px-3 py-2">Client acknowledges receipt of discharge plan</div>}
+              </div>
             </div>
           </div>
+
+          <SignatureModal
+            isOpen={!!activeSigModal}
+            onClose={() => setActiveSigModal(null)}
+            signerType={activeSigModal === 'client' ? 'client' : 'staff'}
+            title={
+              activeSigModal === 'clinician' ? 'Primary Clinician Signature' :
+              activeSigModal === 'cosign' ? 'Clinical Supervisor Co-Signature' :
+              activeSigModal === 'physician' ? 'Medical Director Signature' : 'Client Acknowledgment'
+            }
+            documentTitle="Discharge Summary"
+            signerName={
+              activeSigModal === 'clinician' ? 'Sarah Jenkins' :
+              activeSigModal === 'cosign' ? 'James S. Collins III' :
+              activeSigModal === 'physician' ? 'Dr. Robert Chen' : `${p.firstName} ${p.lastName}`
+            }
+            signerRole={
+              activeSigModal === 'clinician' ? 'Primary Counselor, LPC' :
+              activeSigModal === 'cosign' ? 'Clinical Director, CAADC' :
+              activeSigModal === 'physician' ? 'Medical Director, MD' : ''
+            }
+            onSign={(record) => {
+              if (activeSigModal === 'clinician') setClinicianSig(record);
+              else if (activeSigModal === 'cosign') setCosignSig(record);
+              else if (activeSigModal === 'physician') setPhysicianSig(record);
+              else if (activeSigModal === 'client') setClientSig(record);
+              setActiveSigModal(null);
+            }}
+          />
         </div>
       )}
 

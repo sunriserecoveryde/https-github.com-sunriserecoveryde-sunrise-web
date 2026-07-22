@@ -14,7 +14,7 @@ export interface ProgressNote {
   author: string;
   content: string;
   status: 'Signed' | 'Awaiting Co-sign' | 'Draft';
-  format: 'BIRP' | 'DAP';
+  format: 'BIRP' | 'DAP' | 'SOAP' | 'GIRP';
 }
 
 export interface TreatmentGoal {

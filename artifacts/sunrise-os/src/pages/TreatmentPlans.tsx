@@ -6,6 +6,7 @@ import {
   Target, CheckCircle2, Clock, Search, ChevronDown, ChevronUp,
   AlertTriangle, TrendingUp, BarChart3, PenTool, Plus, Calendar,
 } from 'lucide-react';
+import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
@@ -239,6 +240,9 @@ function PatientPlanCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [clientSig, setClientSig] = useState<SignatureRecord | null>(null);
+  const [clinicianSig, setClinicianSig] = useState<SignatureRecord | null>(null);
+  const [sigModal, setSigModal] = useState<'client' | 'staff' | null>(null);
   const goals = [...getGoals(patient), ...sessionGoals].map(g => ({ ...g, status: goalStatuses[g.id] ?? g.status }));
   const metCount = goals.filter(g => g.status === 'Met').length;
   const inProgressCount = goals.filter(g => g.status === 'In Progress').length;
@@ -361,6 +365,46 @@ function PatientPlanCard({
               onCancel={() => setShowAddForm(false)}
             />
           )}
+
+          {/* Treatment Plan Signatures */}
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="text-[10px] font-bold text-slate uppercase tracking-wider flex items-center gap-1.5 mb-3">
+              <PenTool className="w-3 h-3" /> Treatment Plan Signatures
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="border border-teal-200 rounded-xl p-3 space-y-2">
+                <div className="text-[10px] font-bold text-teal-700 uppercase tracking-wide">Client Signature</div>
+                <div className="text-xs text-slate">Client agrees to and acknowledges this treatment plan.</div>
+                {clientSig
+                  ? <SignedBadge record={clientSig} />
+                  : <LockedButton locked={readOnly} editRoles={readOnly ? [] : ['Primary Counselor', 'Certified Clinician', 'Clinical Supervisor']} onClick={() => setSigModal('client')} className="text-xs px-3 py-1.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-semibold w-full text-center">
+                      Collect Client Signature
+                    </LockedButton>}
+              </div>
+              <div className="border border-border rounded-xl p-3 space-y-2">
+                <div className="text-[10px] font-bold text-slate uppercase tracking-wide">Clinician Signature</div>
+                <div className="text-xs text-slate">Clinician authorizes this treatment plan.</div>
+                {clinicianSig
+                  ? <SignedBadge record={clinicianSig} />
+                  : <LockedButton locked={readOnly} editRoles={readOnly ? [] : ['Primary Counselor', 'Certified Clinician', 'Clinical Supervisor']} onClick={() => setSigModal('staff')} className="text-xs px-3 py-1.5 bg-navy text-white rounded-lg hover:bg-navy/90 font-semibold w-full text-center">
+                      Sign Treatment Plan
+                    </LockedButton>}
+              </div>
+            </div>
+          </div>
+
+          <SignatureModal
+            isOpen={!!sigModal}
+            onClose={() => setSigModal(null)}
+            signerType={sigModal ?? 'staff'}
+            title={sigModal === 'client' ? 'Client Treatment Plan Signature' : 'Clinician Treatment Plan Signature'}
+            documentTitle={`Treatment Plan — ${patient.firstName} ${patient.lastName}`}
+            onSign={(record) => {
+              if (sigModal === 'client') setClientSig(record);
+              else setClinicianSig(record);
+              setSigModal(null);
+            }}
+          />
         </div>
       )}
     </div>

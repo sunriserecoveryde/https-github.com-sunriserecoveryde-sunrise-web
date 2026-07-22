@@ -5,11 +5,16 @@ import { useSessionChart, SessionNote } from '../context/SessionChartContext';
 import { useAuth } from '../context/AuthContext';
 import {
   Search, Filter, PenTool, CheckCircle, Clock, ChevronDown, ChevronUp,
-  FileText, AlertTriangle, Plus, Download, Eye
+  FileText, AlertTriangle, Plus, Download, Eye, Sparkles
 } from 'lucide-react';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
+import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
+import {
+  generateProgressNote, getAiFormSections, sectionsToString,
+  NoteFormat, ProgressNoteInput,
+} from '../lib/aiNoteEngine';
 
 // ─── Extended mock notes ─────────────────────────────────────────────────────
 
@@ -122,6 +127,8 @@ function NoteRow({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [localSigned, setLocalSigned] = useState(false);
+  const [sigOpen, setSigOpen] = useState(false);
+  const [localSig, setLocalSig] = useState<SignatureRecord | null>(null);
   const badge = STATUS_BADGE[note.status];
   const parsed = note.format === 'BIRP' ? parseBIRP(note.content) : parseDAP(note.content);
 
@@ -191,104 +198,143 @@ function NoteRow({
           ) : (
             <p className="text-sm text-navy leading-relaxed">{note.content}</p>
           )}
-          <div className="flex gap-2 pt-2 border-t border-border">
-            <LockedButton
-              locked={readOnly && note.status === 'Awaiting Co-sign'}
-              onClick={() => { if (!localSigned) { setLocalSigned(true); } }}
-              className={`px-3 py-1.5 text-xs font-semibold rounded hover:opacity-90 ${localSigned || note.status !== 'Awaiting Co-sign' ? 'bg-green-100 text-green-700' : 'bg-success text-white'}`}
-            >
-              {localSigned || note.status !== 'Awaiting Co-sign' ? '✓ Signed' : 'Sign & Approve'}
-            </LockedButton>
-            <button onClick={() => { setExpanded(false); }} className="px-3 py-1.5 border border-border text-xs font-semibold rounded hover:bg-white text-slate flex items-center gap-1">
+          {localSig && <div className="mt-2"><SignedBadge record={localSig} /></div>}
+          <div className="flex gap-2 pt-2 border-t border-border flex-wrap">
+            {!localSig && (
+              <LockedButton
+                locked={readOnly && note.status === 'Awaiting Co-sign'}
+                onClick={() => setSigOpen(true)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded hover:opacity-90 flex items-center gap-1.5 ${localSigned || note.status !== 'Awaiting Co-sign' ? 'bg-green-100 text-green-700' : 'bg-success text-white'}`}
+              >
+                <PenTool className="w-3 h-3" />
+                {localSigned || note.status !== 'Awaiting Co-sign' ? '✓ Signed' : 'Sign & Approve'}
+              </LockedButton>
+            )}
+            <button onClick={() => setExpanded(false)} className="px-3 py-1.5 border border-border text-xs font-semibold rounded hover:bg-white text-slate flex items-center gap-1">
               <Eye className="w-3 h-3" /> Print Note
             </button>
-            <button onClick={() => { setExpanded(false); }} className="px-3 py-1.5 border border-border text-xs font-semibold rounded hover:bg-white text-slate flex items-center gap-1">
+            <button onClick={() => setExpanded(false)} className="px-3 py-1.5 border border-border text-xs font-semibold rounded hover:bg-white text-slate flex items-center gap-1">
               <Download className="w-3 h-3" /> Export PDF
             </button>
           </div>
         </div>
       )}
+
+      <SignatureModal
+        isOpen={sigOpen}
+        onClose={() => setSigOpen(false)}
+        signerType="staff"
+        documentTitle={`${note.type} Progress Note — ${note.patientFirstName} ${note.patientLastName}`}
+        signerName={note.author.split(',')[0]}
+        signerRole={note.author.split(',').slice(1).join(',').trim()}
+        onSign={(record) => { setLocalSig(record); setLocalSigned(true); setSigOpen(false); }}
+      />
     </div>
   );
 }
 
 // ─── New Note Form ────────────────────────────────────────────────────────────
 
+const FORMAT_FIELDS: Record<NoteFormat, string[]> = {
+  BIRP: ['Behavior', 'Intervention', 'Response', 'Plan'],
+  DAP:  ['Data', 'Assessment', 'Plan'],
+  SOAP: ['Subjective', 'Objective', 'Assessment', 'Plan'],
+  GIRP: ['Goal', 'Intervention', 'Response', 'Plan'],
+};
+
 function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: SessionNote) => void }) {
-  const [format, setFormat] = useState<'BIRP' | 'DAP'>('BIRP');
+  const [format, setFormat] = useState<NoteFormat>('BIRP');
   const [type, setType] = useState('Individual');
-  const [patient, setPatient] = useState('p_demo'); // default to Jonny Quest
-  const birpFields = ['Behavior', 'Intervention', 'Response', 'Plan'];
-  const dapFields = ['Data', 'Assessment', 'Plan'];
-  const fields = format === 'BIRP' ? birpFields : dapFields;
+  const [patient, setPatient] = useState('p_demo');
   const [values, setValues] = useState<Record<string, string>>({});
+  // AI assist state
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiInput, setAiInput] = useState<Partial<ProgressNoteInput>>({});
+  const [aiGenerating, setAiGenerating] = useState(false);
+  // Signature modal state
+  const [sigOpen, setSigOpen] = useState(false);
   const { currentStaff } = useAuth();
   const authorLabel = currentStaff
     ? `${currentStaff.firstName} ${currentStaff.lastName}${(currentStaff.credentials ?? []).length ? ', ' + (currentStaff.credentials ?? []).join(', ') : ''}`
     : 'Staff Member';
 
-  const handleSave = (status: ProgressNote['status']) => {
+  const fields = FORMAT_FIELDS[format];
+
+  function buildContent() {
+    return fields.map(f => `${f[0]}: ${values[f] ?? '(not entered)'}`).join('\n');
+  }
+
+  function buildNote(status: ProgressNote['status']) {
     const pt = MOCK_PATIENTS.find(p => p.id === patient);
-    if (!pt || !patient) return;
-    const contentParts = format === 'BIRP' ? birpFields : dapFields;
-    const content = contentParts.map(f => `${f}: ${values[f] ?? '(not entered)'}`).join('\n');
+    if (!pt) return null;
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
-    const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    onSave({
+    return {
       id: `session-${Date.now()}`,
-      date: dateStr,
-      type,
-      author: authorLabel,
-      status,
-      format,
-      content,
-      patientId: pt.id,
-      patientFirstName: pt.firstName,
-      patientLastName: pt.lastName,
-      program: pt.program,
-    });
+      date: `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
+      type, author: authorLabel, status, format,
+      content: buildContent(),
+      patientId: pt.id, patientFirstName: pt.firstName,
+      patientLastName: pt.lastName, program: pt.program,
+    };
+  }
+
+  function handleSave(status: ProgressNote['status']) {
+    const note = buildNote(status);
+    if (!note) return;
+    onSave(note);
     onClose();
-  };
+  }
+
+  function handleGenerateAI() {
+    const pt = MOCK_PATIENTS.find(p => p.id === patient);
+    setAiGenerating(true);
+    const sects = generateProgressNote(format, {
+      clientName: pt ? `${pt.firstName} ${pt.lastName}` : 'Client',
+      noteType: type,
+      ...aiInput,
+      engagementLevel: aiInput.engagementLevel as ProgressNoteInput['engagementLevel'],
+    });
+    const sectValues = Object.values(sects);
+    const newValues: Record<string, string> = {};
+    fields.forEach((f, i) => { if (sectValues[i]) newValues[f] = sectValues[i]; });
+    setValues(prev => ({ ...prev, ...newValues }));
+    setAiGenerating(false);
+    setAiOpen(false);
+  }
+
+  const aiFormSections = getAiFormSections(format);
 
   return (
     <div className="bg-white border border-border rounded-xl shadow-sm p-5 mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-bold text-navy text-lg flex items-center gap-2"><PenTool className="w-5 h-5 text-sunrise-blue" /> New Progress Note</h2>
+        <h2 className="font-bold text-navy text-lg flex items-center gap-2">
+          <PenTool className="w-5 h-5 text-sunrise-blue" /> New Progress Note
+        </h2>
         <button onClick={onClose} className="text-slate hover:text-navy text-sm">Cancel</button>
       </div>
 
+      {/* Context row */}
       <div className="grid grid-cols-3 gap-4 mb-4">
         <div>
           <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">Patient</label>
-          <select
-            value={patient}
-            onChange={e => setPatient(e.target.value)}
-            className="w-full bg-bg border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue"
-          >
+          <select value={patient} onChange={e => setPatient(e.target.value)} className="w-full bg-bg border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue">
             <option value="">Select patient…</option>
             {MOCK_PATIENTS.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName} ({p.mrn})</option>)}
           </select>
         </div>
         <div>
           <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">Note Type</label>
-          <select
-            value={type}
-            onChange={e => setType(e.target.value)}
-            className="w-full bg-bg border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue"
-          >
+          <select value={type} onChange={e => setType(e.target.value)} className="w-full bg-bg border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue">
             {['Individual', 'Group', 'Medical', 'Nursing', 'Psychiatric'].map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">Format</label>
-          <div className="flex gap-2">
-            {(['BIRP', 'DAP'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFormat(f)}
-                className={`flex-1 px-3 py-2 text-sm font-semibold rounded border transition-colors ${format === f ? 'bg-navy text-white border-navy' : 'bg-white text-slate border-border hover:border-slate-300'}`}
-              >
+          <div className="flex gap-1">
+            {(['BIRP', 'DAP', 'SOAP', 'GIRP'] as NoteFormat[]).map(f => (
+              <button key={f} onClick={() => { setFormat(f); setValues({}); setAiInput({}); }}
+                className={`flex-1 px-1.5 py-2 text-xs font-semibold rounded border transition-colors ${format === f ? 'bg-navy text-white border-navy' : 'bg-white text-slate border-border hover:border-slate-300'}`}>
                 {f}
               </button>
             ))}
@@ -296,26 +342,95 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
         </div>
       </div>
 
+      {/* AI Assist toggle */}
+      <div className="mb-4">
+        <button onClick={() => setAiOpen(o => !o)}
+          className={`flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${aiOpen ? 'bg-teal-50 border-teal-300 text-teal-700' : 'bg-white border-border text-slate hover:border-slate-300 hover:text-navy'}`}>
+          <Sparkles className="w-3.5 h-3.5" />
+          {aiOpen ? 'Hide AI Draft Assistant' : '✨ AI Draft Assistant'}
+        </button>
+      </div>
+
+      {/* AI Assist panel */}
+      {aiOpen && (
+        <div className="mb-5 border border-teal-200 rounded-xl bg-teal-50/40 p-4 space-y-4">
+          <div className="flex items-start gap-2">
+            <Sparkles className="w-4 h-4 text-teal-600 flex-none mt-0.5" />
+            <div>
+              <div className="text-sm font-semibold text-teal-800">AI Draft Assistant — {format} Format</div>
+              <div className="text-xs text-teal-600 mt-0.5">Fill fields below, then Generate Draft. All AI output must be reviewed and edited by a clinician before signing.</div>
+            </div>
+          </div>
+          {aiFormSections.map(section => (
+            <div key={section.heading}>
+              <div className="text-[10px] font-bold text-teal-700 uppercase tracking-wider mb-2">{section.heading}</div>
+              <div className="space-y-2">
+                {section.fields.map(field => (
+                  <div key={field.key}>
+                    <label className="block text-[10px] font-semibold text-slate uppercase tracking-wide mb-0.5">
+                      {field.label}{field.required ? ' *' : ''}
+                    </label>
+                    {field.key === 'engagementLevel' ? (
+                      <select
+                        value={aiInput.engagementLevel ?? ''}
+                        onChange={e => setAiInput(prev => ({ ...prev, engagementLevel: e.target.value as ProgressNoteInput['engagementLevel'] }))}
+                        className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400">
+                        <option value="">Select…</option>
+                        {['Active', 'Moderate', 'Passive', 'Minimal'].map(o => <option key={o}>{o}</option>)}
+                      </select>
+                    ) : field.multiline ? (
+                      <textarea rows={2} value={(aiInput[field.key] as string) ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [field.key]: e.target.value }))}
+                        placeholder={field.placeholder} className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:border-teal-400" />
+                    ) : (
+                      <input type="text" value={(aiInput[field.key] as string) ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [field.key]: e.target.value }))}
+                        placeholder={field.placeholder} className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button onClick={handleGenerateAI} disabled={aiGenerating || !patient}
+            className="flex items-center gap-2 bg-teal-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors">
+            {aiGenerating ? (
+              <><span className="animate-spin inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full" /> Generating…</>
+            ) : (
+              <><Sparkles className="w-3.5 h-3.5" /> Generate Draft</>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Note sections */}
       <div className="space-y-3">
         {fields.map(f => (
           <div key={f}>
             <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">{f}</label>
-            <textarea
-              rows={3}
-              value={values[f] ?? ''}
-              onChange={e => setValues(prev => ({ ...prev, [f]: e.target.value }))}
+            <textarea rows={3} value={values[f] ?? ''} onChange={e => setValues(prev => ({ ...prev, [f]: e.target.value }))}
               placeholder={`Enter ${f.toLowerCase()} here…`}
-              className="w-full bg-bg border border-border rounded px-3 py-2 text-sm resize-none focus:outline-none focus:border-sunrise-blue"
-            />
+              className="w-full bg-bg border border-border rounded px-3 py-2 text-sm resize-none focus:outline-none focus:border-sunrise-blue" />
           </div>
         ))}
       </div>
 
-      <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+      <div className="flex gap-2 mt-4 pt-4 border-t border-border flex-wrap">
         <button onClick={() => handleSave('Awaiting Co-sign')} disabled={!patient} className="px-4 py-2 bg-sunrise-blue text-white text-sm font-semibold rounded hover:bg-sunrise-blue-light disabled:opacity-40 disabled:cursor-not-allowed">Submit for Co-sign</button>
         <button onClick={() => handleSave('Draft')} disabled={!patient} className="px-4 py-2 border border-border text-slate text-sm font-semibold rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">Save as Draft</button>
+        <button onClick={() => setSigOpen(true)} disabled={!patient} className="px-4 py-2 bg-navy text-white text-sm font-semibold rounded hover:bg-navy/90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+          <PenTool className="w-4 h-4" /> Sign & Submit
+        </button>
         <button onClick={onClose} className="px-4 py-2 text-slate text-sm">Cancel</button>
       </div>
+
+      <SignatureModal
+        isOpen={sigOpen}
+        onClose={() => setSigOpen(false)}
+        signerType="staff"
+        documentTitle="Progress Note"
+        signerName={authorLabel.split(',')[0]}
+        signerRole={authorLabel.split(',').slice(1).join(',').trim()}
+        onSign={() => { handleSave('Signed'); setSigOpen(false); }}
+      />
     </div>
   );
 }

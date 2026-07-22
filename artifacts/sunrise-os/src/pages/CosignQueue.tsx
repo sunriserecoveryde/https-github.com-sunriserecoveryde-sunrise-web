@@ -21,7 +21,7 @@ interface CosignItem {
   daysWaiting: number;
   priority: 'Urgent' | 'Routine';
   preview: string;
-  format?: 'BIRP' | 'DAP';
+  format?: 'BIRP' | 'DAP' | 'SOAP' | 'GIRP';
   content?: {
     behavior?: string;
     intervention?: string;

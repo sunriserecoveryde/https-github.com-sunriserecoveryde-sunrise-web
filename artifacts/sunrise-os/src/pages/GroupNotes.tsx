@@ -3,6 +3,9 @@ import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
+import { Sparkles } from 'lucide-react';
+import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
+import { generateGroupNote, GroupNoteInput } from '../lib/aiNoteEngine';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -106,6 +109,11 @@ export function GroupNotes({ navigate, readOnly }: Props) {
   const saveGroupNote = (msg: string) => { setGroupNoteSaved(msg); setTimeout(() => setGroupNoteSaved(null), 2500); };
   // Per-patient participation map, keyed by sessionId → patientId → { level, note }
   const [participationMap, setParticipationMap] = useState<Record<string, Record<string, { level: PartLevel; note: string }>>>({});
+  // AI draft + signature state
+  const [aiDraftOpen, setAiDraftOpen] = useState(false);
+  const [aiInput, setAiInput] = useState<Partial<GroupNoteInput>>({});
+  const [sigModal, setSigModal] = useState<string | null>(null); // session ID
+  const [sessionSigs, setSessionSigs] = useState<Record<string, SignatureRecord>>({});
 
   function getSessionPatients(session: GroupSession) {
     return MOCK_PATIENTS.filter(p =>
@@ -318,6 +326,7 @@ export function GroupNotes({ navigate, readOnly }: Props) {
                     {!readOnly && <button onClick={() => { setNoteText(selected.note || ''); setShowNoteEditor(true); }} className="text-xs text-orange hover:underline">Edit</button>}
                   </div>
                   <p className="text-sm text-navy">{selected.note}</p>
+                  {sessionSigs[selected.id] && <div className="mt-3"><SignedBadge record={sessionSigs[selected.id]} /></div>}
                 </div>
               )}
 
@@ -369,9 +378,51 @@ export function GroupNotes({ navigate, readOnly }: Props) {
                     </div>
                   </div>
 
-                  {/* Group narrative */}
+                  {/* AI Draft assistant */}
                   <div>
-                    <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Group Narrative Note</div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[10px] font-bold text-slate uppercase tracking-wider">Group Narrative Note</div>
+                      <button
+                        onClick={() => {
+                          setAiDraftOpen(o => !o);
+                          if (!aiDraftOpen && selected) {
+                            setAiInput({ groupName: selected.name, groupType: selected.type, topic: selected.topic, objectives: selected.objectives, facilitator: selected.facilitator, attendance: selected.actualAttendance, expectedCensus: selected.expectedCensus, program: selected.program });
+                          }
+                        }}
+                        className={`flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-lg border transition-colors ${aiDraftOpen ? 'bg-teal-50 border-teal-300 text-teal-700' : 'bg-white border-border text-slate hover:border-slate-400'}`}
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        {aiDraftOpen ? 'Hide AI Assistant' : '✨ Generate AI Draft'}
+                      </button>
+                    </div>
+                    {aiDraftOpen && (
+                      <div className="mb-3 border border-teal-200 rounded-xl bg-teal-50/40 p-3 space-y-2">
+                        <div className="text-[10px] font-semibold text-teal-700 uppercase tracking-wider">AI Draft fields — review then Generate</div>
+                        {([
+                          { key: 'groupDynamics', label: 'Group Dynamics / Energy', ph: 'Describe overall group energy, cohesion, participation patterns…' },
+                          { key: 'notableThemes', label: 'Notable Themes', ph: 'Key themes or insights that emerged in group discussion…' },
+                          { key: 'participantHighlights', label: 'Individual Highlights', ph: 'Notable individual moments, concerns, or breakthroughs…' },
+                          { key: 'followUpActions', label: 'Follow-up Actions', ph: 'Counselor follow-up actions, referrals, or next session goals…' },
+                        ] as const).map(f => (
+                          <div key={f.key}>
+                            <label className="block text-[10px] font-semibold text-slate uppercase mb-0.5">{f.label}</label>
+                            <textarea rows={2} value={(aiInput as Record<string,string>)[f.key] ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.ph}
+                              className="w-full bg-white border border-border rounded px-2 py-1 text-xs resize-none focus:outline-none focus:border-teal-400" />
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => {
+                            if (!selected) return;
+                            const draft = generateGroupNote({ groupName: selected.name, groupType: selected.type, topic: selected.topic, objectives: selected.objectives, facilitator: selected.facilitator, attendance: selected.actualAttendance, expectedCensus: selected.expectedCensus, program: selected.program, ...aiInput });
+                            setNoteText(draft);
+                            setAiDraftOpen(false);
+                          }}
+                          className="flex items-center gap-1.5 bg-teal-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-teal-700"
+                        >
+                          <Sparkles className="w-3 h-3" /> Generate Draft
+                        </button>
+                      </div>
+                    )}
                     <textarea
                       value={noteText}
                       onChange={e => setNoteText(e.target.value)}
@@ -379,8 +430,10 @@ export function GroupNotes({ navigate, readOnly }: Props) {
                       className="w-full border border-border rounded-lg p-3 text-sm min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50"
                     />
                   </div>
-                  <div className="flex gap-2 mt-2">
-                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => { setShowNoteEditor(false); saveGroupNote('Group note signed and locked'); }} className="btn-primary text-sm px-4 py-2">Sign Note</LockedButton>
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => { if (!readOnly && selected) { setSigModal(selected.id); } }} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" /> Sign Note
+                    </LockedButton>
                     <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => { setShowNoteEditor(false); saveGroupNote('Draft saved'); }} className="btn-outline text-sm px-4 py-2">Save Draft</LockedButton>
                     <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && navigate('CosignQueue')} className="btn-outline text-sm px-4 py-2">Send for Co-sign</LockedButton>
                     {showNoteEditor && <button onClick={() => setShowNoteEditor(false)} className="btn-outline text-sm px-4 py-2 text-slate">Cancel</button>}

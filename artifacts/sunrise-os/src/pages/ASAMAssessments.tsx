@@ -4,8 +4,9 @@ import { Screen } from '../App';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import {
   Search, Filter, FileCheck, AlertCircle, ChevronDown, ChevronUp,
-  ClipboardList, BarChart3, Plus, Calendar, CheckCircle2
+  ClipboardList, BarChart3, Plus, Calendar, CheckCircle2, PenTool
 } from 'lucide-react';
+import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
 import { LockedButton } from '../components/common/LockedButton';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip
@@ -107,6 +108,9 @@ function buildRadarData(asam: Patient['asam']) {
 
 function AssessmentDetail({ patient, readOnly, onSave }: { patient: Patient; readOnly?: boolean; onSave: (msg: string) => void }) {
   const radarData = buildRadarData(patient.asam);
+  const [clinicianSig, setClinicianSig] = useState<SignatureRecord | null>(null);
+  const [clientSig, setClientSig] = useState<SignatureRecord | null>(null);
+  const [sigModal, setSigModal] = useState<'client' | 'staff' | null>(null);
 
   return (
     <div className="border-t border-border bg-slate-50/50 p-5">
@@ -181,6 +185,46 @@ function AssessmentDetail({ patient, readOnly, onSave }: { patient: Patient; rea
           <Calendar className="w-3.5 h-3.5" /> Schedule Review
         </LockedButton>
       </div>
+
+      {/* Assessment Signatures */}
+      <div className="mt-5 pt-4 border-t border-border space-y-3">
+        <div className="text-[10px] font-bold text-slate uppercase tracking-wider flex items-center gap-1.5">
+          <PenTool className="w-3 h-3" /> Assessment Signatures
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="border border-border rounded-xl p-4 space-y-2">
+            <div className="text-[10px] font-bold text-slate uppercase tracking-wide">Clinician Signature</div>
+            <div className="text-xs text-slate">Certifies this ASAM assessment is clinically accurate.</div>
+            {clinicianSig
+              ? <SignedBadge record={clinicianSig} />
+              : <LockedButton locked={readOnly} editRoles={readOnly ? [] : ['Primary Counselor', 'Certified Clinician', 'Clinical Supervisor', 'MD / Medical Director']} onClick={() => setSigModal('staff')} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-navy text-white rounded-lg hover:bg-navy/90 w-full justify-center">
+                  <PenTool className="w-3 h-3" /> Sign Assessment
+                </LockedButton>}
+          </div>
+          <div className="border border-teal-200 rounded-xl p-4 space-y-2">
+            <div className="text-[10px] font-bold text-teal-700 uppercase tracking-wide">Client Acknowledgment</div>
+            <div className="text-xs text-slate">Client acknowledges receipt and review of their ASAM assessment.</div>
+            {clientSig
+              ? <SignedBadge record={clientSig} />
+              : <LockedButton locked={readOnly} editRoles={readOnly ? [] : ['Primary Counselor', 'Certified Clinician', 'Clinical Supervisor']} onClick={() => setSigModal('client')} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-teal-300 text-teal-700 rounded-lg hover:bg-teal-50 w-full justify-center">
+                  Collect Client Acknowledgment
+                </LockedButton>}
+          </div>
+        </div>
+      </div>
+
+      <SignatureModal
+        isOpen={!!sigModal}
+        onClose={() => setSigModal(null)}
+        signerType={sigModal ?? 'staff'}
+        title={sigModal === 'client' ? `Client Acknowledgment — ASAM Assessment` : 'Clinician Signature — ASAM Assessment'}
+        documentTitle={`ASAM Assessment — ${patient.firstName} ${patient.lastName}`}
+        onSign={(record) => {
+          if (sigModal === 'staff') setClinicianSig(record);
+          else setClientSig(record);
+          setSigModal(null);
+        }}
+      />
     </div>
   );
 }
