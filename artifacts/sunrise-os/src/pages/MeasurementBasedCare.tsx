@@ -134,7 +134,7 @@ const MOCK_SCORES: Record<string, ScoreEntry[]> = {
 
 const NEXT_DUE: Record<string, string> = {
   p1: '2026-07-25', p2: '2026-07-26', p3: '2026-07-23', p4: '2026-07-22',
-  p5: '2026-07-25', p6: '2026-07-20', p8: '2026-07-26',
+  p5: '2026-07-25', p6: '2026-07-24', p8: '2026-07-26',
 };
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
@@ -293,7 +293,7 @@ export function MeasurementBasedCare({ navigate, readOnly }: Props) {
     const latest = adminScores[p.id]?.at(-1);
     return latest?.pcl5 != null && latest.pcl5 >= 33;
   }).length;
-  const today = '2026-07-19';
+  const today = '2026-07-22';
   const assessmentDue = allPatients.filter(p => {
     const nextDue = NEXT_DUE[p.id];
     return nextDue && nextDue <= today;
@@ -331,7 +331,7 @@ export function MeasurementBasedCare({ navigate, readOnly }: Props) {
       return { ...prev, [adminPatient]: [...existing, newEntry] };
     });
     setSavedFlash(`${adminInstrument} score of ${score} saved for ${MOCK_PATIENTS.find(p => p.id === adminPatient)?.firstName}`);
-    setTimeout(() => setSavedFlash(null), 4000);
+    setTimeout(() => setSavedFlash(null), 2500);
     setAdminStep(1);
     setAdminPatient('');
   }

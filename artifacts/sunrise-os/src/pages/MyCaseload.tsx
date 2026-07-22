@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
-import { CheckCircle, Clock, AlertTriangle, FileText, Calendar, ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, FileText, Calendar, ChevronRight, TrendingUp, TrendingDown, Minus, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { LockedButton } from '../components/common/LockedButton';
 
@@ -24,17 +24,17 @@ const MY_SESSIONS = [
 
 const NOTES_DUE = [
   { patientId: 'p1', patientName: 'Marcus Webb', type: 'Individual 1:1', sessionDate: '2026-07-18', dueDate: '2026-07-19', status: 'Overdue' },
-  { patientId: 'p3', patientName: 'James Thornton', type: 'Withdrawal Support', sessionDate: '2026-07-18', dueDate: '2026-07-19', status: 'Due Today' },
+  { patientId: 'p3', patientName: 'James Thornton', type: 'Withdrawal Support', sessionDate: '2026-07-22', dueDate: '2026-07-22', status: 'Due Today' },
   { patientId: 'p8', patientName: 'Patricia Nguyen', type: 'Individual 1:1', sessionDate: '2026-07-17', dueDate: '2026-07-18', status: 'Overdue' },
-  { patientId: 'p17', patientName: 'Travis Holden', type: 'AMA Check-in', sessionDate: '2026-07-19', dueDate: '2026-07-20', status: 'Due Tomorrow' },
+  { patientId: 'p17', patientName: 'Travis Holden', type: 'AMA Check-in', sessionDate: '2026-07-22', dueDate: '2026-07-23', status: 'Due Tomorrow' },
 ];
 
 const PENDING_TASKS = [
-  { type: 'Treatment Plan Update', patientId: 'p1', patient: 'Marcus Webb', due: '2026-07-21', priority: 'High', detail: 'Review at 30 days — AMA risk goals need updating' },
-  { type: 'Treatment Plan Update', patientId: 'p3', patient: 'James Thornton', due: '2026-07-18', priority: 'Overdue', detail: 'Day 7 of admission — initial plan required' },
-  { type: 'Co-sign Request', patientId: 'p6', patient: 'Destiny Williams', due: '2026-07-19', priority: 'High', detail: 'BHT note 7/18 — 48h co-sign window closing' },
-  { type: 'Psychosocial Assessment', patientId: 'p17', patient: 'Travis Holden', due: '2026-07-19', priority: 'Due Today', detail: 'Admission bio-psychosocial assessment not yet completed' },
-  { type: 'Court Report', patientId: 'p4', patient: 'Robert Navarro', due: '2026-07-30', priority: 'Upcoming', detail: 'Pretrial diversion court report due 7/30' },
+  { id: 'pt1', type: 'Treatment Plan Update', patientId: 'p1', patient: 'Marcus Webb', due: '2026-07-22', priority: 'Due Today', detail: 'Review at 30 days — AMA risk goals need updating' },
+  { id: 'pt2', type: 'Treatment Plan Update', patientId: 'p3', patient: 'James Thornton', due: '2026-07-18', priority: 'Overdue', detail: 'Day 7 of admission — initial plan required' },
+  { id: 'pt3', type: 'Co-sign Request', patientId: 'p6', patient: 'Destiny Williams', due: '2026-07-22', priority: 'Overdue', detail: 'BHT note 7/21 — 24h co-sign window closing' },
+  { id: 'pt4', type: 'Psychosocial Assessment', patientId: 'p17', patient: 'Travis Holden', due: '2026-07-22', priority: 'Due Today', detail: 'Admission bio-psychosocial assessment not yet completed' },
+  { id: 'pt5', type: 'Court Report', patientId: 'p4', patient: 'Robert Navarro', due: '2026-07-30', priority: 'Upcoming', detail: 'Pretrial diversion court report due 7/30' },
 ];
 
 const PRIORITY_STYLE: Record<string, string> = {
@@ -62,6 +62,7 @@ const CASELOAD_RADAR = [
 
 export function MyCaseload({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Overview' | 'Schedule' | 'Notes Due' | 'Tasks' | 'Analytics' | 'Supervision' | 'My Goals'>('Overview');
+  const [taskCompletedId, setTaskCompletedId] = useState<string | null>(null);
 
   const overdueNotes = NOTES_DUE.filter(n => n.status === 'Overdue').length;
   const overdueTasks = PENDING_TASKS.filter(t => t.priority === 'Overdue').length;
@@ -71,7 +72,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy">My Caseload</h1>
-          <p className="text-slate text-sm mt-0.5">{MY_COUNSELOR} · July 19, 2026 · Day Shift</p>
+          <p className="text-slate text-sm mt-0.5">{MY_COUNSELOR} · July 22, 2026 · Day Shift</p>
         </div>
         <div className="flex gap-2">
           <LockedButton locked={readOnly} onClick={() => navigate('ProgressNotes')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
@@ -263,7 +264,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
                   <div className="text-xs text-slate mt-0.5">Due: <span className={`font-medium ${task.priority === 'Overdue' ? 'text-red-600' : 'text-navy'}`}>{task.due}</span></div>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <LockedButton locked={readOnly} className="text-xs btn-primary px-3 py-1.5">Complete</LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => { setTaskCompletedId(task.id); setTimeout(() => setTaskCompletedId(null), 2500); }} className={`text-xs px-3 py-1.5 rounded-lg font-semibold ${taskCompletedId === task.id ? 'bg-green-600 text-white' : 'btn-primary'}`}>{taskCompletedId === task.id ? '✓ Done' : 'Complete'}</LockedButton>
                   <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50" onClick={() => navigate('PatientDetail', task.patientId)}>Open Chart</button>
                 </div>
               </div>
@@ -363,7 +364,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
           <div className="grid grid-cols-3 gap-4">
             {[
               { label: 'Total Supervision Hours (YTD)', value: '42 hrs', sub: 'Individual + group', color: 'text-navy' },
-              { label: 'Next Supervision Session', value: 'Jul 21', sub: '2:00 PM with Collins', color: 'text-amber-600' },
+              { label: 'Next Supervision Session', value: 'Jul 28', sub: '2:00 PM with Collins', color: 'text-amber-600' },
               { label: 'Licensure Goal Progress', value: '67%', sub: '1,240 / 2,000 hrs toward LPC', color: 'text-green-600' },
             ].map(k => (
               <div key={k.label} className="card">

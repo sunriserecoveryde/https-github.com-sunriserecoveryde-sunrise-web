@@ -83,6 +83,12 @@ const VALID_SCORE_FILTERS: WithdrawalScoreFilter[] = ['all', 'cows', 'ciwa', 'al
 
 const WithdrawalFiltersContext = createContext<WithdrawalFiltersContextValue | null>(null);
 
+// Fields that can be mutated by the user during the rehydration window.
+type RehydratableFields = Partial<Pick<
+  WithdrawalFiltersState,
+  'scoreFilter' | 'bannerDismissed' | 'filterNoticeDismissedForPatientId'
+>>;
+
 export function WithdrawalFiltersProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<WithdrawalFiltersState>(DEFAULT_STATE);
 
@@ -94,6 +100,11 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
     };
   }, []);
 
+  // Captures user mutations that arrive before rehydration completes so the
+  // Promise.all callback can merge them on top rather than overwrite them.
+  const preLoadEditsRef = useRef<RehydratableFields>({});
+  const isRehydratingRef = useRef(true);
+
   // Rehydrate persisted values on mount
   useEffect(() => {
     Promise.all([
@@ -103,13 +114,29 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
       AsyncStorage.getItem(LAST_DISCHARGE_PATIENT_KEY),
     ]).then(([storedFilter, storedBannerDismissed, storedDismissed, storedLastDischarge]) => {
       if (!mountedRef.current) return;
+      isRehydratingRef.current = false;
+      const pending = preLoadEditsRef.current;
+      preLoadEditsRef.current = {};
       setState(prev => ({
         ...prev,
-        ...(storedFilter && VALID_SCORE_FILTERS.includes(storedFilter as WithdrawalScoreFilter)
+        // Prefer any user edit that arrived during the load window over the
+        // stored value — the user's intent wins over the persisted snapshot.
+        ...(pending.scoreFilter == null &&
+            storedFilter &&
+            VALID_SCORE_FILTERS.includes(storedFilter as WithdrawalScoreFilter)
           ? { scoreFilter: storedFilter as WithdrawalScoreFilter }
           : {}),
-        ...(storedBannerDismissed === 'true' ? { bannerDismissed: true } : {}),
-        ...(storedDismissed ? { filterNoticeDismissedForPatientId: storedDismissed } : {}),
+        ...(pending.scoreFilter != null ? { scoreFilter: pending.scoreFilter } : {}),
+        ...(pending.bannerDismissed == null && storedBannerDismissed === 'true'
+          ? { bannerDismissed: true }
+          : {}),
+        ...(pending.bannerDismissed != null ? { bannerDismissed: pending.bannerDismissed } : {}),
+        ...(pending.filterNoticeDismissedForPatientId == null && storedDismissed
+          ? { filterNoticeDismissedForPatientId: storedDismissed }
+          : {}),
+        ...(pending.filterNoticeDismissedForPatientId != null
+          ? { filterNoticeDismissedForPatientId: pending.filterNoticeDismissedForPatientId }
+          : {}),
         // Rehydrate lastTrackedDischargePatientId so trackDischargePatientId can
         // correctly detect whether the post-restart discharge is truly new.
         ...(storedLastDischarge ? { lastTrackedDischargePatientId: storedLastDischarge } : {}),
@@ -118,22 +145,27 @@ export function WithdrawalFiltersProvider({ children }: { children: React.ReactN
     }).catch(() => {
       // Even on read errors, clear the loading flag so UI is not permanently hidden.
       if (mountedRef.current) {
+        isRehydratingRef.current = false;
+        preLoadEditsRef.current = {};
         setState(prev => ({ ...prev, isRehydrating: false }));
       }
     });
   }, []);
 
   const setScoreFilter = useCallback((filter: WithdrawalScoreFilter) => {
+    if (isRehydratingRef.current) preLoadEditsRef.current.scoreFilter = filter;
     setState(prev => ({ ...prev, scoreFilter: filter }));
     AsyncStorage.setItem(SCORE_FILTER_KEY, filter).catch(() => {/* ignore write errors */});
   }, []);
 
   const dismissBanner = useCallback(() => {
+    if (isRehydratingRef.current) preLoadEditsRef.current.bannerDismissed = true;
     setState(prev => ({ ...prev, bannerDismissed: true }));
     AsyncStorage.setItem(BANNER_DISMISSED_KEY, 'true').catch(() => {/* ignore write errors */});
   }, []);
 
   const dismissFilterNotice = useCallback((patientId: string) => {
+    if (isRehydratingRef.current) preLoadEditsRef.current.filterNoticeDismissedForPatientId = patientId;
     setState(prev => ({ ...prev, filterNoticeDismissedForPatientId: patientId }));
     AsyncStorage.setItem(FILTER_NOTICE_DISMISSED_KEY, patientId).catch(() => {/* ignore write errors */});
   }, []);

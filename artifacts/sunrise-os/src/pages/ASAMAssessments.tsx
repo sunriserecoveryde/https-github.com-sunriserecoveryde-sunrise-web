@@ -52,13 +52,13 @@ const LAST_UPDATED: Record<string, string> = {
 };
 
 const NEXT_REVIEW: Record<string, string> = {
-  p1: '2026-07-21', p2: '2026-07-26', p3: '2026-07-22',
-  p4: '2026-07-23', p5: '2026-07-17', p6: '2026-07-24',
-  p7: '2026-07-18', p8: '2026-07-20', p9: '2026-07-16',
+  p1: '2026-07-25', p2: '2026-07-26', p3: '2026-07-22',
+  p4: '2026-07-23', p5: '2026-07-24', p6: '2026-07-24',
+  p7: '2026-07-23', p8: '2026-07-24', p9: '2026-07-23',
   p_demo: '2026-07-27',
 };
 
-const TODAY = '2026-07-19';
+const TODAY = '2026-07-22';
 
 // ─── Narrative mock per patient ───────────────────────────────────────────────
 
@@ -105,7 +105,7 @@ function buildRadarData(asam: Patient['asam']) {
 
 // ─── Expanded row content ─────────────────────────────────────────────────────
 
-function AssessmentDetail({ patient, readOnly }: { patient: Patient; readOnly?: boolean }) {
+function AssessmentDetail({ patient, readOnly, onSave }: { patient: Patient; readOnly?: boolean; onSave: (msg: string) => void }) {
   const radarData = buildRadarData(patient.asam);
 
   return (
@@ -165,15 +165,17 @@ function AssessmentDetail({ patient, readOnly }: { patient: Patient; readOnly?: 
       <div className="flex gap-2 mt-4 pt-4 border-t border-border">
         <LockedButton
           locked={readOnly}
+          onClick={() => onSave('Assessment updated')}
           className="flex items-center gap-2 bg-sunrise-blue text-white text-xs font-semibold px-4 py-2 rounded hover:bg-sunrise-blue-light transition-colors"
         >
           <ClipboardList className="w-3.5 h-3.5" /> Update Assessment
         </LockedButton>
-        <button className="flex items-center gap-2 border border-border text-slate text-xs font-semibold px-3 py-2 rounded hover:bg-white transition-colors">
+        <button onClick={() => onSave('Assessment sent to printer')} className="flex items-center gap-2 border border-border text-slate text-xs font-semibold px-3 py-2 rounded hover:bg-white transition-colors">
           <FileCheck className="w-3.5 h-3.5" /> Print Assessment
         </button>
         <LockedButton
           locked={readOnly}
+          onClick={() => onSave('Review scheduled')}
           className="flex items-center gap-2 border border-border text-slate text-xs font-semibold px-3 py-2 rounded hover:bg-white transition-colors"
         >
           <Calendar className="w-3.5 h-3.5" /> Schedule Review
@@ -196,6 +198,8 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
   const [filterMode, setFilterMode] = useState<FilterMode>('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tab, setTab] = useState<'Assessments' | 'Population View' | 'ASAM Reference' | 'Outcome Tracking' | 'Criteria Reference' | 'Utilization Review'>('Assessments');
+  const [asamSaved, setAsamSaved] = useState<string | null>(null);
+  const saveAsam = (msg: string) => { setAsamSaved(msg); setTimeout(() => setAsamSaved(null), 2500); };
 
   const highRiskCount = MOCK_PATIENTS.filter(p => p.asam.d5 >= 3 || p.asam.d3 >= 3).length;
   const overdueCount = MOCK_PATIENTS.filter(p => (NEXT_REVIEW[p.id] ?? '') < TODAY).length;
@@ -249,6 +253,7 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
         </div>
         <LockedButton
           locked={readOnly}
+          onClick={() => saveAsam('New assessment started')}
           className="flex items-center gap-2 bg-sunrise-blue text-white px-4 py-2 rounded font-medium shadow-sm hover:bg-sunrise-blue-light transition-colors text-sm"
         >
           <Plus className="w-4 h-4" /> New Assessment
@@ -463,7 +468,7 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
                       </td>
                       <td className="p-4 text-right pr-6">
                         <div className="flex items-center justify-end gap-2">
-                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-2 py-1 rounded">
+                          <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => saveAsam('Assessment updated')} className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-2 py-1 rounded">
                             Update
                           </LockedButton>
                           {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
@@ -473,7 +478,7 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
                     {isExpanded && (
                       <tr>
                         <td colSpan={11}>
-                          <AssessmentDetail patient={p} readOnly={readOnly} />
+                          <AssessmentDetail patient={p} readOnly={readOnly} onSave={saveAsam} />
                         </td>
                       </tr>
                     )}
@@ -483,7 +488,11 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
             </tbody>
           </table>
           {sortedPatients.length === 0 && (
-            <div className="text-center py-12 text-slate">No patients match your criteria.</div>
+            <div className="text-center py-12">
+              <div className="text-3xl mb-2">🔍</div>
+              <div className="text-sm font-semibold text-navy">No patients match your criteria</div>
+              <div className="text-xs text-slate mt-1">Try clearing the risk filter or search term.</div>
+            </div>
           )}
         </div>
 
@@ -747,6 +756,12 @@ export function ASAMAssessments({ navigate, readOnly }: { navigate: (s: Screen, 
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {asamSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {asamSaved}
         </div>
       )}
     </div>

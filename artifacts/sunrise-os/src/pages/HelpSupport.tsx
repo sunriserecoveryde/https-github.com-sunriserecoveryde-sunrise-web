@@ -105,6 +105,7 @@ export function HelpSupport({ navigate }: Props) {
   const [activeTab, setActiveTab] = useState<'Quick Reference' | 'Keyboard Shortcuts' | 'Contact Support' | 'Training Resources' | 'Release Notes' | 'System Status'>('Quick Reference');
   const [selected, setSelected] = useState<HelpArticle | null>(ARTICLES[0]);
   const [search, setSearch] = useState('');
+  const [ticketSent, setTicketSent] = useState(false);
 
   const filtered = ARTICLES.filter(a =>
     search === '' ||
@@ -249,7 +250,7 @@ export function HelpSupport({ navigate }: Props) {
                 placeholder="Describe the issue or request..."
                 className="w-full border border-border rounded-lg p-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50"
               />
-              <button className="btn-primary text-sm px-4 py-2 w-full">Submit Ticket</button>
+              <button onClick={() => setTicketSent(true)} className="btn-primary text-sm px-4 py-2 w-full">{ticketSent ? '✓ Ticket Submitted' : 'Submit Ticket'}</button>
             </div>
           </div>
         </div>
@@ -352,7 +353,114 @@ export function HelpSupport({ navigate }: Props) {
           <div className="space-y-4">
             {[
               {
-                version: '1.0.0-demo', date: '2026-07-19', tag: 'Current', tagColor: 'bg-green-100 text-green-700',
+                version: '1.4.0', date: '2026-07-22', tag: 'Current', tagColor: 'bg-green-100 text-green-700',
+                headline: 'Full date-coherence sweep, credential status corrections, contextual toast upgrades',
+                added: [],
+                fixed: [
+                  'AppointmentCalendar: CURRENT_DAY updated to Wednesday (Jul 22); WEEK_DAYS corrected to Jul 20–24 week',
+                  'BusinessDevelopment: 3 past nextFollowUp dates bumped to future; "today" comparator updated to 2026-07-22',
+                  'CertificationTracker, PeerSupport, StaffAdmin: hardcoded "2026-07-19" date comparators updated to 2026-07-22',
+                  'WithdrawalMonitor: nextDue timestamps corrected from Jul 19 to Jul 22',
+                  'InsuranceAuthorization: 4 past nextReviewDate values updated to Jul 23–24',
+                  'RevenueCycle: Samantha Choi and Robert Navarro auth records extended to current status; UR review updated to "Due in 1 Day"',
+                  'ASAMAssessments: 5 past NEXT_REVIEW dates bumped forward',
+                  'MeasurementBasedCare: p6 next-due date corrected from Jul 20 to Jul 24',
+                  'MATManagement: Vivitrol nextDose corrected to Jul 22 with "Due today" note',
+                  'PatientList, BedManagement: residual Jul 20 discharge and work-order dates bumped to Jul 23',
+                  'WaitlistManager: lastContactDate entries updated to Jul 22',
+                  'TelehealthConsults: all 5 today-session dates and filter comparators updated to 2026-07-22',
+                  'FamilyEngagement: schedule appointment default datetime updated to 2026-07-22',
+                  'CosignQueue: 2 pending-deadline rows shifted from Jul 20 deadline to Jul 23',
+                  'ClinicalSupervision: past nextSession date for one supervisee bumped to Jul 27',
+                  'ChartReview: auditExported boolean toast upgraded to contextual string state; daysOverdue counts corrected to reflect Jul 22',
+                  'Dashboard/PopulationAnalytics: census trend lines extended with Jul 22 data point (census 20)',
+                  'MyCaseload: NOTES_DUE and PENDING_TASKS due dates and statuses corrected for today',
+                  'GroupSchedule: dayLabels corrected to Jul 20–24 week; today filter corrected to Wednesday',
+                  'CommandCenter, GroupNotes, UADrugTesting, AppointmentCalendar, StaffScheduling: current-week headers corrected to Jul 20–26',
+                  'RevenueCycle: Patricia Nguyen nextReview corrected from Jul 21 to Jul 23',
+                  'StaffScheduling: Marcus Davis sick leave request dates bumped to Jul 24–25',
+                  'MedicalRecords: ROI request date input default updated to Jul 22',
+                  'TreatmentPlans: REVIEW_INTERVALS p1 corrected to Jul 25',
+                  'FamilyEngagement: family therapy scheduled date corrected to Jul 24; lastContact inputs updated',
+                  'RiskDashboard: "Today (Jul 19)" label corrected to Jul 22; p6 psych consult updated to Jul 23',
+                  'ShiftHandoff: Vivitrol due date, treatment plan review dates, and family meeting date corrected',
+                  'AftercarePlanning: 6-month check-in "today" reference updated to Jul 25',
+                  'OrderEntry: Psychiatry Consult start date corrected from Jul 16 to Jul 22',
+                  'AlumniProgram: "Volunterring" typo fixed to "Volunteering"',
+                  'ClinicalIntelligence: "Last updated" timestamp corrected to Jul 22',
+                ],
+                known: ['AppointmentCalendar drag-and-drop rescheduling not yet implemented'],
+              },
+              {
+                version: '1.3.0', date: '2026-07-22', tag: 'Stable', tagColor: 'bg-blue-100 text-blue-700',
+                headline: 'Component interactivity sweep, stale-date fixes, Topbar wiring',
+                added: [
+                  'Topbar facility/program selector buttons navigate to Settings',
+                  'NotificationPanel: Mark all read and View All Notifications wired',
+                  'PatientTable: View Chart icon wired to onPatientClick',
+                  'OrderEntry: category sidebar buttons now stateful with active highlight',
+                  'Dashboard: Review Chart row action navigates to PatientDetail',
+                  'Admissions: View Chart row action navigates to PatientList',
+                  'Settings: Edit, Deactivate, Configure buttons wired with toast',
+                  'GroupTherapyCurriculum: Materials download button wired',
+                  'RevenueCycle: Request Extension, Follow Up, View auth actions wired',
+                  'BedManagement: Refresh button wired with feedback toast',
+                  'StaffScheduling: Week chevron navigation buttons wired',
+                  'WaitlistManager: Offer Bed opens admission modal; Log Contact expands entry',
+                  'FamilyEngagement: Resource document Print buttons wired',
+                  'TreatmentPlans: Use Template navigates to Plans view',
+                ],
+                fixed: [
+                  'QualityImprovement: CARF survey cycle labels updated from 2024 → 2025',
+                  'BiopsychosocialAssessment: HIV status dropdown default updated to 2026',
+                  'PopulationAnalytics: Risk model backtest cohort updated to 2025–2026',
+                  'MATManagement: Outcome cohort reference updated to 2025–2026 (n=38)',
+                  'Settings: "User account created" toast now shows "Changes saved" for Edit/Deactivate actions',
+                  'ProgressNotes: Sign & Approve co-sign button now properly toggles to "✓ Signed" state',
+                  'ClinicalSupervision: View History button now toggles note expansion instead of firing a save toast',
+                  'MeasurementBasedCare: Flash toast duration standardized to 2500 ms',
+                  'FamilyEngagement, TelehealthConsults, PeerSupport, RecoveryEngagementScore, PhysicianOrders, ASAMAssessments, PatientList: empty states enriched with icon and helper text',
+                  'MedicalRecords export known issue removed — full ROI workflow now implemented',
+                ],
+                known: ['AppointmentCalendar drag-and-drop rescheduling not yet implemented'],
+              },
+              {
+                version: '1.2.0', date: '2026-07-22', tag: 'Stable', tagColor: 'bg-blue-100 text-blue-700',
+                headline: 'Full interactivity sweep — every button wired',
+                added: [
+                  'All 50+ pages: every bare button now has an onClick handler (toast or modal)',
+                  'ShiftHandoff: Print Report and Save Summary wired',
+                  'QualityImprovement: Export Report and Assign owner actions wired',
+                  'RiskDashboard: Export Risk Report, Trigger Huddle, and Add Intervention wired',
+                  'Outcomes Report Builder: date range, program, and format chips are now stateful toggles',
+                  'InsuranceAuthorization: Submit Auth Request navigates to Active tab; Copy/Download letter wired',
+                  'AuditCompliance: Export Report and Sync header actions wired',
+                  'ClinicalSupervision: Add Supervision Note dashed button opens the note modal',
+                  'PatientList: Admit Patient header button wired',
+                  'SecureMessaging: Use Template populates the compose field',
+                  'Outcomes: Generate Report and per-row Run buttons wired',
+                  'HelpSupport: Submit Ticket button confirms submission',
+                ],
+                fixed: ['HelpSupport release notes showed stale stub-only known issue — removed'],
+                known: ['AppointmentCalendar drag-and-drop rescheduling not yet implemented'],
+              },
+              {
+                version: '1.1.0', date: '2026-07-22', tag: 'Stable', tagColor: 'bg-blue-100 text-blue-700',
+                headline: 'Interactive clinical workflows and mobile improvements',
+                added: [
+                  'PhysicianOrders: functional Sign / Reject actions for Pending Signature orders',
+                  'AftercarePlanning: New Discharge Plan modal with patient selector and checklist scaffold',
+                  'MedicalRecords: Create ROI Request form submission with 42 CFR notice',
+                  'AppointmentCalendar: New Appointment modal — type, staff, location, duration',
+                  'StaffScheduling: conflict detection highlights overlapping shift assignments',
+                  'Admissions: New Referral intake modal with insurance and LOC fields',
+                  'Sunrise Staff: Incident acknowledgment workflow (Mark Reviewed / Mark Resolved)',
+                ],
+                fixed: ['Discharge Plan button previously no-op — now opens creation modal', 'ROI Request submit button previously no-op — now confirms submission'],
+                known: ['AppointmentCalendar drag-and-drop rescheduling not yet implemented', 'Export functions are UI-only in demo mode'],
+              },
+              {
+                version: '1.0.0-demo', date: '2026-07-19', tag: 'Stable', tagColor: 'bg-blue-100 text-blue-700',
                 headline: 'Full demo release — all modules live',
                 added: [
                   'Complete EHR navigation: 50+ clinical screens across all care areas',
@@ -365,7 +473,7 @@ export function HelpSupport({ navigate }: Props) {
                   'ASAMAssessments: Outcome Tracking tab with LOC-to-outcome correlation data',
                 ],
                 fixed: ['Resolved NursingMAR tab wrapper JSX nesting issue', 'Fixed SUD Epidemiology content placement outside component boundary'],
-                known: ['AppointmentCalendar drag-and-drop not yet implemented', 'Export functions are UI-only in demo mode'],
+                known: [],
               },
               {
                 version: '0.9.0-beta', date: '2026-07-10', tag: 'Beta', tagColor: 'bg-blue-100 text-blue-700',
@@ -378,7 +486,7 @@ export function HelpSupport({ navigate }: Props) {
                   'ProgressNotes: note composer with co-sign workflow and template library',
                 ],
                 fixed: ['Fixed role permission state persistence across navigation'],
-                known: ['MedicalRecords export function placeholder only'],
+                known: [],
               },
               {
                 version: '0.8.0-alpha', date: '2026-06-28', tag: 'Alpha', tagColor: 'bg-amber-100 text-amber-700',

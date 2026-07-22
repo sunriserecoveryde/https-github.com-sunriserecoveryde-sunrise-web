@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
-import { Heart, Star, Users, MessageSquare, Calendar, CheckCircle, Plus, Award, TrendingUp } from 'lucide-react';
+import { Heart, Star, Users, MessageSquare, Calendar, CheckCircle, Plus, Award, TrendingUp, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { LockedButton } from '../components/common/LockedButton';
@@ -99,6 +99,7 @@ const CONTACT_OUTCOME_DATA = [
   { week: 'Jul 6',  positive: 14, neutral: 2, missed: 1 },
   { week: 'Jul 13', positive: 11, neutral: 4, missed: 3 },
   { week: 'Jul 19', positive: 12, neutral: 3, missed: 1 },
+  { week: 'Jul 20', positive: 13, neutral: 2, missed: 1 },
 ];
 
 const PEER_GROUPS = [
@@ -119,6 +120,8 @@ const OUTCOME_COLOR = {
 export function PeerSupport({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Specialists' | 'Contacts' | 'Groups' | 'Outcomes' | 'Training' | 'Impact Stories' | 'CPRS Standards'>('Specialists');
   const [selectedPeer, setSelectedPeer] = useState<string>('PS-001');
+  const [contactLogOpen, setContactLogOpen] = useState(false);
+  const [contactSaved, setContactSaved] = useState(false);
 
   const peer = PEER_SPECIALISTS.find(p => p.id === selectedPeer)!;
   const peerContacts = PEER_CONTACTS.filter(c => c.peerId === selectedPeer);
@@ -132,7 +135,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy">Peer Support Program</h1>
           <p className="text-slate text-sm mt-0.5">Certified peer recovery specialists · Lived experience · Recovery community integration</p>
         </div>
-        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Log Peer Contact</LockedButton>
+        <LockedButton locked={readOnly} onClick={() => setContactLogOpen(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Log Peer Contact</LockedButton>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -159,7 +162,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
       {tab === 'Specialists' && (
         <div className="grid grid-cols-3 gap-5">
           {PEER_SPECIALISTS.map(ps => {
-            const soberYears = Math.floor((new Date('2026-07-19').getTime() - new Date(ps.soberDate).getTime()) / (1000 * 60 * 60 * 24 * 365));
+            const soberYears = Math.floor((new Date('2026-07-22').getTime() - new Date(ps.soberDate).getTime()) / (1000 * 60 * 60 * 24 * 365));
             return (
               <div key={ps.id} className="card space-y-3">
                 <div className="flex items-center gap-3">
@@ -217,7 +220,13 @@ export function PeerSupport({ navigate, readOnly }: Props) {
             ))}
           </div>
           <div className="space-y-3">
-            {peerContacts.length === 0 && <div className="text-center text-slate py-8">No recent contacts logged for this peer specialist.</div>}
+            {peerContacts.length === 0 && (
+              <div className="text-center py-10">
+                <div className="text-3xl mb-2">🤝</div>
+                <div className="text-sm font-semibold text-navy">No contacts logged yet</div>
+                <div className="text-xs text-slate mt-1">Select a peer specialist above to view their contact log.</div>
+              </div>
+            )}
             {peerContacts.map(contact => {
               const p = MOCK_PATIENTS.find(pt => pt.id === contact.patientId);
               return (
@@ -486,6 +495,63 @@ export function PeerSupport({ navigate, readOnly }: Props) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {contactLogOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setContactLogOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[480px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy flex items-center gap-2"><Heart className="w-5 h-5 text-rose-500" /> Log Peer Contact</h2>
+              <button onClick={() => setContactLogOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Peer Specialist *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Marcus Thompson, CPRS</option><option>Elena Rodriguez, CPRS</option><option>James Carter, CPRS</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient / Alumni *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Devon Price (Residential)</option><option>Sarah M. (IOP)</option><option>Aiden K. (Alumni — 30 day)</option><option>Marcus R. (IOP)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Contact Type</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>1:1 Peer Meeting</option><option>Phone / Text Check-in</option><option>Group Peer Support</option><option>Recovery Event</option><option>Crisis Support</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Duration (min)</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>15</option><option>30</option><option>45</option><option>60</option><option>90</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Topics / Themes</label>
+                <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Cravings, sober living, employment, family reconnection..." />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Notes (not clinical — peer voice)</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="What did you share from your own experience? What seemed to connect?" />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setContactLogOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setContactLogOpen(false); setContactSaved(true); setTimeout(() => setContactSaved(false), 2500); }} className="flex-1 bg-rose-500 text-white rounded-xl py-2.5 text-sm font-semibold">Save Contact</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {contactSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> Peer contact logged
         </div>
       )}
     </div>

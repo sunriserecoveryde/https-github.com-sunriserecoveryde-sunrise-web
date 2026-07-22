@@ -317,6 +317,13 @@ function PatientScoreRow({
 
   if (!hasCows && !hasCiwa) return null;
 
+  // Build a compact 3-point score trend from WITHDRAWAL_HISTORY (#50)
+  const whHistory = WITHDRAWAL_HISTORY[patient.id] ?? [];
+  type TrendEntry = { time: string; score: number; scoreType: 'COWS' | 'CIWA' };
+  const trendEntries: TrendEntry[] = hasCows
+    ? whHistory.filter(h => h.cows != null).slice(0, 3).reverse().map(h => ({ time: h.time, score: h.cows!, scoreType: 'COWS' as const }))
+    : whHistory.filter(h => h.ciwa != null).slice(0, 3).reverse().map(h => ({ time: h.time, score: h.ciwa!, scoreType: 'CIWA' as const }));
+
   return (
     <Pressable
       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
@@ -335,9 +342,27 @@ function PatientScoreRow({
         <View style={[styles.bedBadge, { backgroundColor: colors.navyMid }]}>
           <Text style={styles.bedBadgeText}>{patient.bed}</Text>
         </View>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={[styles.patientName, { color: colors.navy }]}>{patient.firstName} {patient.lastName}</Text>
           <Text style={[styles.patientMeta, { color: colors.mutedForeground }]}>{patient.primaryDiagnosis.split(' ')[0]} · LOS {patient.los}d</Text>
+          {trendEntries.length > 0 && (
+            <View style={styles.trendRow}>
+              {trendEntries.map((e, i) => {
+                const c = getScoreColor(e.score, e.scoreType === 'COWS' ? 13 : 15, colors);
+                return (
+                  <React.Fragment key={e.time}>
+                    <Text style={[styles.trendEntry, { color: colors.mutedForeground }]}>
+                      {e.time}{' '}
+                      <Text style={[styles.trendScore, { color: c.text }]}>{e.score}</Text>
+                    </Text>
+                    {i < trendEntries.length - 1 && (
+                      <Text style={[styles.trendArrow, { color: colors.mutedForeground }]}>›</Text>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </View>
+          )}
         </View>
       </View>
       <View style={styles.scoresRight}>
@@ -456,6 +481,9 @@ export default function VitalsScreen() {
 
   useEffect(() => {
     if (totalAlertCount > prevAlertCount.current) {
+      // #176: Haptic pulse so nurses feel the new threshold breach even when
+      // the badge is off-screen or the device face-down.
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       alertScaleAnimRef.current?.stop();
       alertScaleAnimRef.current = Animated.sequence([
         Animated.spring(alertScaleAnim, {
@@ -789,6 +817,10 @@ const styles = StyleSheet.create({
   bedBadgeText: { fontSize: 13, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   patientName: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   patientMeta: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 1 },
+  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, flexWrap: 'wrap' },
+  trendEntry: { fontSize: 10, fontFamily: 'Inter_400Regular' },
+  trendScore: { fontFamily: 'Inter_700Bold', fontSize: 10 },
+  trendArrow: { fontSize: 10, opacity: 0.4 },
   scoresRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   scorePill: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', borderWidth: 1, minWidth: 52 },
   scorePillLabel: { fontSize: 9, fontWeight: '700', fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },

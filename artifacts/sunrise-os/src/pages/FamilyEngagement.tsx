@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
-import { CheckCircle, XCircle, Phone, Mail, Users, Clock, Plus, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Phone, Mail, Users, Clock, Plus, AlertTriangle, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -57,7 +57,7 @@ const FAMILY_DATA: FamilyRecord[] = [
     engagementLevel: 'High',
     cfr42Consent: true,
     familyTherapySessions: 4,
-    familyTherapyScheduled: '2026-07-21, 3:00 PM',
+    familyTherapyScheduled: '2026-07-24, 3:00 PM',
     members: [
       { name: 'David Choi', relationship: 'Father', phone: '(615) 555-0201', email: 'dchoi@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-17', notes: 'Highly engaged. Attending family therapy weekly. Initially struggled with patient\'s eating disorder diagnosis.' },
       { name: 'Lydia Choi', relationship: 'Mother', phone: '(615) 555-0202', email: 'lchoi@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-17', notes: 'Empathetic. Working on not enabling through over-accommodation of food restrictions.' },
@@ -137,6 +137,8 @@ const CONTACT_STYLE: Record<string, string> = {
 export function FamilyEngagement({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Overview' | 'Sessions' | 'Family Education' | 'New Contact' | 'Resources' | 'Outcomes' | 'CRAFT Guide'>('Overview');
   const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
+  const [familySessionOpen, setFamilySessionOpen] = useState(false);
+  const [familySessionSaved, setFamilySessionSaved] = useState(false);
   const [logSubmitted, setLogSubmitted] = useState(false);
 
   const totalWithConsent = FAMILY_DATA.filter(r => r.cfr42Consent).length;
@@ -267,13 +269,17 @@ export function FamilyEngagement({ navigate, readOnly }: Props) {
                       </div>
                     )}
                     {record.log.length === 0 && (
-                      <div className="text-sm text-slate italic p-3 bg-gray-50 rounded-lg border border-border">No family contact logged for this patient.</div>
+                      <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-border">
+                        <div className="text-2xl mb-2">👨‍👩‍👧</div>
+                        <div className="text-sm font-semibold text-navy">No family contact logged yet</div>
+                        <div className="text-xs text-slate mt-1">Use "Log New Contact" below to record a call, visit, or letter.</div>
+                      </div>
                     )}
                     <div className="flex gap-2">
                       <LockedButton locked={readOnly} onClick={() => setTab('New Contact')} className="text-xs border border-orange text-orange px-3 py-1.5 rounded-lg hover:bg-orange/5">Log New Contact</LockedButton>
-                      <LockedButton locked={readOnly} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Schedule Family Session</LockedButton>
+                      <LockedButton locked={readOnly} onClick={() => setFamilySessionOpen(true)} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Schedule Family Session</LockedButton>
                       {!record.cfr42Consent && (
-                        <LockedButton locked={readOnly} className="text-xs border border-red-200 text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 flex items-center gap-1">
+                        <LockedButton locked={readOnly} onClick={() => { setFamilySessionSaved(true); setTimeout(() => setFamilySessionSaved(false), 2500); }} className="text-xs border border-red-200 text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 flex items-center gap-1">
                           <AlertTriangle className="w-3 h-3" /> Get 42 CFR Consent
                         </LockedButton>
                       )}
@@ -439,7 +445,7 @@ export function FamilyEngagement({ navigate, readOnly }: Props) {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate uppercase mb-1">Date & Time</label>
-                <input type="datetime-local" defaultValue="2026-07-19T10:00" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                <input type="datetime-local" defaultValue="2026-07-22T10:00" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate uppercase mb-1">Conducted By</label>
@@ -547,7 +553,7 @@ export function FamilyEngagement({ navigate, readOnly }: Props) {
                     <div className="text-[10px] text-slate mt-0.5">{f.status}</div>
                     <div className="text-[10px] text-orange mt-0.5 font-mono">{f.form}</div>
                   </div>
-                  <button className="text-xs text-blue-600 hover:underline shrink-0">Print</button>
+                  <button onClick={() => setFamilySessionSaved(true)} className="text-xs text-blue-600 hover:underline shrink-0">Print</button>
                 </div>
               ))}
             </div>
@@ -723,6 +729,69 @@ export function FamilyEngagement({ navigate, readOnly }: Props) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {familySessionOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setFamilySessionOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Schedule Family Session</h2>
+              <button onClick={() => setFamilySessionOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Devon Price</option><option>Sarah M.</option><option>Marcus R.</option><option>Aiden K.</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Session Type</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Family Therapy Session</option><option>Family Education (CRAFT)</option><option>Multifamily Group</option><option>Discharge Planning Conference</option><option>Crisis / Emergency Family Meeting</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Date *</label>
+                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Time</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Therapist</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Sarah Jenkins, LPC</option><option>Maria Gonzales, LCSW</option><option>David Odom, LMFT</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Format</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>In-person</option><option>Telehealth (Zoom)</option><option>Phone only</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Family Members Invited</label>
+                <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Names and relationship (e.g. Maria Price — mother, James Price — spouse)" />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setFamilySessionOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setFamilySessionOpen(false); setFamilySessionSaved(true); setTimeout(() => setFamilySessionSaved(false), 2500); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Schedule Session</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {familySessionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> Family session scheduled
         </div>
       )}
     </div>

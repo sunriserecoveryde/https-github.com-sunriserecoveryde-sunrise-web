@@ -76,10 +76,24 @@ export function PhysicianOrders({ navigate, readOnly }: Props) {
   const [filterType, setFilterType] = useState<OrderType | 'All'>('All');
   const [filterPatient, setFilterPatient] = useState('all');
   const [orderSubmitted, setOrderSubmitted] = useState(false);
+  const [orders, setOrders] = useState<Order[]>(ORDERS);
+  const [justSigned, setJustSigned] = useState<string | null>(null);
+  const [orderActionSaved, setOrderActionSaved] = useState<string | null>(null);
+  const saveOrderAction = (msg: string) => { setOrderActionSaved(msg); setTimeout(() => setOrderActionSaved(null), 2500); };
 
-  const pending = ORDERS.filter(o => o.status === 'Pending Signature');
-  const active = ORDERS.filter(o => o.status === 'Active');
-  const history = ORDERS.filter(o => o.status === 'Completed' || o.status === 'Discontinued');
+  function handleSign(id: string) {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Active' as OrderStatus, lastUpdated: new Date().toLocaleDateString('en-CA') } : o));
+    setJustSigned(id);
+    setTimeout(() => setJustSigned(null), 2000);
+  }
+
+  function handleReject(id: string) {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Discontinued' as OrderStatus, lastUpdated: new Date().toLocaleDateString('en-CA'), notes: 'Order rejected by reviewing physician.' } : o));
+  }
+
+  const pending = orders.filter(o => o.status === 'Pending Signature');
+  const active = orders.filter(o => o.status === 'Active');
+  const history = orders.filter(o => o.status === 'Completed' || o.status === 'Discontinued');
 
   const currentTab = tab === 'Active' ? active : tab === 'Pending' ? pending : history;
 
@@ -182,14 +196,22 @@ export function PhysicianOrders({ navigate, readOnly }: Props) {
                     <div className="flex items-center gap-2 shrink-0">
                       {order.status === 'Pending Signature' && (
                         <>
-                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">Sign Order</LockedButton>
-                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs border border-red-200 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50">Reject</LockedButton>
+                          {justSigned === order.id ? (
+                            <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
+                              <CheckCircle className="w-3.5 h-3.5" /> Signed
+                            </span>
+                          ) : (
+                            <>
+                              <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => { handleSign(order.id); setTab('Active'); }} className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600">Sign Order</LockedButton>
+                              <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => handleReject(order.id)} className="text-xs border border-red-200 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50">Reject</LockedButton>
+                            </>
+                          )}
                         </>
                       )}
                       {order.status === 'Active' && (
                         <>
-                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Modify</LockedButton>
-                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs border border-red-200 text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50"><X className="w-3.5 h-3.5" /></LockedButton>
+                          <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => saveOrderAction('Order modification submitted')} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Modify</LockedButton>
+                          <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => saveOrderAction('Order discontinued')} className="text-xs border border-red-200 text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50"><X className="w-3.5 h-3.5" /></LockedButton>
                         </>
                       )}
                     </div>
@@ -198,7 +220,11 @@ export function PhysicianOrders({ navigate, readOnly }: Props) {
               );
             })}
             {filtered.length === 0 && (
-              <div className="text-center py-10 text-slate text-sm">No orders in this category.</div>
+              <div className="text-center py-12">
+                <div className="text-3xl mb-2">📋</div>
+                <div className="text-sm font-semibold text-navy">No orders in this category</div>
+                <div className="text-xs text-slate mt-1">Switch to another tab or create a new order.</div>
+              </div>
             )}
           </div>
         </div>
@@ -502,6 +528,12 @@ export function PhysicianOrders({ navigate, readOnly }: Props) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {orderActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> {orderActionSaved}
         </div>
       )}
     </div>

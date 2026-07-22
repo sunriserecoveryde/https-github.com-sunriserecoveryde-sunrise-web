@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { AlertTriangle, X, CheckCircle } from 'lucide-react';
 
 import { LockedButton } from '../components/common/LockedButton';
 
@@ -29,10 +30,10 @@ interface DischargeEntry {
 }
 
 const UPCOMING: DischargeEntry[] = [
-  { patientId: 'p3', name: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', los: 28, expectedDate: '2026-07-19', daysUntil: 1, counselor: 'Maria Gonzales, LCSW', disposition: 'Sober Living', aftercarePlan: true, rxOrdered: false, followUpScheduled: true, transportArranged: false, summaryDictated: false, amaRisk: 'Med', notes: 'Sober living placement confirmed at Sunrise House. Vivitrol injection needed before discharge. Transport TBD.' },
-  { patientId: 'p4', name: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', los: 35, expectedDate: '2026-07-21', daysUntil: 3, counselor: 'Sarah Jenkins, LPC', disposition: 'Step-Down PHP', aftercarePlan: true, rxOrdered: true, followUpScheduled: true, transportArranged: true, summaryDictated: false, amaRisk: 'Low', notes: 'Transitioning to our PHP program Mon–Fri. Family meeting scheduled 7/20 at 3 PM.' },
-  { patientId: 'p7', name: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', los: 21, expectedDate: '2026-07-23', daysUntil: 5, counselor: 'David Odom, LMFT', disposition: 'Home with Family', aftercarePlan: true, rxOrdered: true, followUpScheduled: false, transportArranged: true, summaryDictated: false, amaRisk: 'Low', notes: 'Wife is engaged and supportive. AA sponsor identified. Outpatient therapy referral to Dr. Patel pending.' },
-  { patientId: 'p5', name: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', los: 42, expectedDate: '2026-07-25', daysUntil: 7, counselor: 'Maria Gonzales, LCSW', disposition: 'CJS / Probation', aftercarePlan: false, rxOrdered: false, followUpScheduled: false, transportArranged: false, summaryDictated: false, amaRisk: 'High', notes: 'Probation officer contact required before discharge. Drug court reporting starts 7/28. Aftercare plan in progress.' },
+  { patientId: 'p3', name: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', los: 31, expectedDate: '2026-07-22', daysUntil: 0, counselor: 'Maria Gonzales, LCSW', disposition: 'Sober Living', aftercarePlan: true, rxOrdered: false, followUpScheduled: true, transportArranged: false, summaryDictated: false, amaRisk: 'Med', notes: 'Sober living placement confirmed at Sunrise House. Vivitrol injection needed before discharge. Transport TBD — arrange before 4 PM today.' },
+  { patientId: 'p4', name: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', los: 36, expectedDate: '2026-07-23', daysUntil: 1, counselor: 'Sarah Jenkins, LPC', disposition: 'Step-Down PHP', aftercarePlan: true, rxOrdered: true, followUpScheduled: true, transportArranged: true, summaryDictated: false, amaRisk: 'Low', notes: 'Transitioning to our PHP program Mon–Fri. Family meeting completed 7/21.' },
+  { patientId: 'p7', name: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', los: 21, expectedDate: '2026-07-25', daysUntil: 3, counselor: 'David Odom, LMFT', disposition: 'Home with Family', aftercarePlan: true, rxOrdered: true, followUpScheduled: false, transportArranged: true, summaryDictated: false, amaRisk: 'Low', notes: 'Wife is engaged and supportive. AA sponsor identified. Outpatient therapy referral to Dr. Patel pending.' },
+  { patientId: 'p5', name: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', los: 42, expectedDate: '2026-07-28', daysUntil: 6, counselor: 'Maria Gonzales, LCSW', disposition: 'CJS / Probation', aftercarePlan: false, rxOrdered: false, followUpScheduled: false, transportArranged: false, summaryDictated: false, amaRisk: 'High', notes: 'Probation officer contact required before discharge. Drug court reporting starts 7/31. Aftercare plan in progress.' },
 ];
 
 const AMA_RECENT = [
@@ -86,6 +87,12 @@ const OUTCOMES_30DAY = [
 export function Discharges({ navigate, readOnly }: Props) {
   const [activeTab, setActiveTab] = useState<'Upcoming' | 'AMA Tracking' | '30-Day Follow-Up' | 'Analytics' | 'Transition Planning' | 'Referral Directory'>('Upcoming');
   const [selected, setSelected] = useState<DischargeEntry | null>(UPCOMING[0]);
+  const [confirmDischarge, setConfirmDischarge] = useState<DischargeEntry | null>(null);
+  const [dischargedIds, setDischargedIds] = useState<Set<string>>(new Set());
+  const [extendStayOpen, setExtendStayOpen] = useState(false);
+  const [extendSaved, setExtendSaved] = useState(false);
+  const [amaOpen, setAmaOpen] = useState(false);
+  const [amaSaved, setAmaSaved] = useState(false);
 
   const checklistItems = (d: DischargeEntry) => [
     { label: 'Aftercare plan documented', done: d.aftercarePlan },
@@ -202,9 +209,15 @@ export function Discharges({ navigate, readOnly }: Props) {
                 </div>
 
                 <div className="flex gap-2 mt-4">
-                  <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex-1">Complete Discharge</LockedButton>
-                  <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2">Extend Stay</LockedButton>
-                  <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2 text-red-600 border-red-200 hover:bg-red-50">Record AMA</LockedButton>
+                  <LockedButton
+                    locked={readOnly}
+                    onClick={() => setConfirmDischarge(selected)}
+                    className={`btn-primary text-sm px-4 py-2 flex-1 ${dischargedIds.has(selected.patientId) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {dischargedIds.has(selected.patientId) ? '✓ Discharged' : 'Complete Discharge'}
+                  </LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => setExtendStayOpen(true)} className="btn-outline text-sm px-4 py-2">Extend Stay</LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => setAmaOpen(true)} className="btn-outline text-sm px-4 py-2 text-red-600 border-red-200 hover:bg-red-50">Record AMA</LockedButton>
                 </div>
               </div>
             </div>
@@ -391,7 +404,7 @@ export function Discharges({ navigate, readOnly }: Props) {
                   name: 'Marcus Webb', date: '2026-07-19',
                   checks: [
                     { item: 'Discharge summary completed & co-signed', done: true },
-                    { item: 'Aftercare appointment scheduled (IOP — Jul 21)', done: true },
+                    { item: 'Aftercare appointment scheduled (IOP — Jul 24)', done: true },
                     { item: 'MAT prescriber identified — Dr. Evans, Rockville', done: true },
                     { item: 'Housing confirmed — Oxford House, Brentwood', done: true },
                     { item: 'Medications dispensed (7-day supply)', done: true },
@@ -479,6 +492,155 @@ export function Discharges({ navigate, readOnly }: Props) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+      {/* ── Discharge Confirmation Modal ── */}
+      {confirmDischarge && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-navy/60 backdrop-blur-sm" onClick={() => setConfirmDischarge(null)} />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-700 to-red-600 px-6 py-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="text-white font-bold">Confirm Discharge</div>
+                <div className="text-red-200 text-xs">This action cannot be undone</div>
+              </div>
+              <button onClick={() => setConfirmDischarge(null)} className="text-white/70 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">You are about to discharge the following client from your facility:</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 space-y-0.5">
+                <div className="text-xl font-bold text-red-800">{confirmDischarge.name}</div>
+                <div className="text-sm text-red-700">{confirmDischarge.mrn} · {confirmDischarge.program} · LOS {confirmDischarge.los} days</div>
+                <div className="text-sm text-red-700">Disposition: <span className="font-semibold">{confirmDischarge.disposition}</span></div>
+              </div>
+
+              {/* Incomplete checklist warning */}
+              {checklistItems(confirmDischarge).some(c => !c.done) && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+                  <div className="font-semibold mb-1">⚠ Incomplete checklist items:</div>
+                  <ul className="space-y-0.5 list-disc list-inside">
+                    {checklistItems(confirmDischarge).filter(c => !c.done).map((c, i) => (
+                      <li key={i}>{c.label}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="text-xs text-slate-500">By confirming, you certify the discharge is clinically appropriate and all required documentation has been completed or delegated.</p>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmDischarge(null)}
+                className="px-5 py-2 text-sm font-semibold text-slate rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setDischargedIds(prev => new Set([...prev, confirmDischarge.patientId]));
+                  setConfirmDischarge(null);
+                }}
+                className="px-5 py-2 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Confirm Discharge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {extendStayOpen && selected && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setExtendStayOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[440px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Extend Length of Stay</h2>
+              <button onClick={() => setExtendStayOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-navy">Patient: <span className="font-semibold">{selected.name}</span></p>
+              <p className="text-sm text-slate">Current discharge target: <span className="font-medium text-navy">{selected.expectedDate}</span></p>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">New Target Discharge Date *</label>
+                <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Clinical Justification</label>
+                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                  <option>Ongoing medical stabilization required</option><option>Pending safe housing placement</option><option>Patient requested / family support needed</option><option>Insurance authorization extended</option><option>Psychiatric instability</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Notes</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="Clinical rationale, payer notification, attending physician approval..." />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setExtendStayOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setExtendStayOpen(false); setExtendSaved(true); setTimeout(() => setExtendSaved(false), 2500); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Save Extension</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {amaOpen && selected && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setAmaOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[440px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-red-100 bg-red-50 rounded-t-2xl">
+              <h2 className="text-lg font-bold text-red-800 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" /> Record Against Medical Advice
+              </h2>
+              <button onClick={() => setAmaOpen(false)} className="text-red-400 hover:text-red-700"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-navy">Patient: <span className="font-semibold">{selected.name}</span></p>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Date & Time of AMA Departure *</label>
+                <input type="datetime-local" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Risk Level at Departure</label>
+                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                  <option>High — SI/HI present, psychiatric instability</option><option>Moderate — Partial stabilization, ongoing withdrawal</option><option>Low — Behaviorally stable, no acute safety concerns</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">AMA Form Signed?</label>
+                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                  <option>Yes — signed and witnessed</option><option>No — patient refused to sign</option><option>Unable to obtain — patient left before form completed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Physician Notified?</label>
+                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                  <option>Yes — notified prior to departure</option><option>Yes — notified after departure</option><option>No — physician unavailable</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Clinical Note</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="De-escalation attempts, safety plan provided, emergency contacts notified, aftercare resources given..." />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setAmaOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setAmaOpen(false); setAmaSaved(true); setTimeout(() => setAmaSaved(false), 2500); }} className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold">Document AMA</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(extendSaved || amaSaved) && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> {amaSaved ? 'AMA documented' : 'Stay extension saved'}
         </div>
       )}
     </div>

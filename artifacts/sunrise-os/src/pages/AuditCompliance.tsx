@@ -3,7 +3,7 @@ import { Screen } from '../App';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
-import { ShieldCheck, AlertTriangle, CheckCircle, Clock, FileText, Download, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, CheckCircle, Clock, FileText, Download, RefreshCw, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -106,11 +106,11 @@ const MOCK_SURVEYS = [
 ];
 
 const UPCOMING_AUDITS = [
-  { event: 'CARF 3-Year Re-Accreditation',       date: '2026-09-15', days: 58, status: 'On Track' },
-  { event: 'Maryland BHA Provider Audit',             date: '2026-08-05', days: 17, status: 'Preparation' },
-  { event: 'DEA Medication Inspection',           date: '2026-10-01', days: 74, status: 'Scheduled' },
-  { event: 'Joint Commission Mock Survey',        date: '2026-08-20', days: 32, status: 'On Track' },
-  { event: 'Fire Marshal Inspection',             date: '2026-09-30', days: 73, status: 'Scheduled' },
+  { event: 'CARF 3-Year Re-Accreditation',       date: '2026-09-15', days: 55, status: 'On Track' },
+  { event: 'Maryland BHA Provider Audit',             date: '2026-08-05', days: 14, status: 'Preparation' },
+  { event: 'DEA Medication Inspection',           date: '2026-10-01', days: 71, status: 'Scheduled' },
+  { event: 'Joint Commission Mock Survey',        date: '2026-08-20', days: 29, status: 'On Track' },
+  { event: 'Fire Marshal Inspection',             date: '2026-09-30', days: 70, status: 'Scheduled' },
 ];
 
 const LEVEL_COLORS: Record<FindingLevel, string> = {
@@ -141,6 +141,12 @@ function ScoreBar({ score }: { score: number }) {
 export function AuditCompliance({ navigate: _navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Dashboard' | 'Findings' | 'Surveys' | 'Standards' | 'Mock Surveys' | 'Training Records' | 'Regulatory Calendar'>('Dashboard');
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
+  const [updateStatusFor, setUpdateStatusFor] = useState<string | null>(null);
+  const [attachEvidenceFor, setAttachEvidenceFor] = useState<string | null>(null);
+  const [assignOwnerFor, setAssignOwnerFor] = useState<string | null>(null);
+  const [auditActionSaved, setAuditActionSaved] = useState<string | null>(null);
+  const [auditHeaderSaved, setAuditHeaderSaved] = useState<string | null>(null);
+  const saveAuditHeader = (msg: string) => { setAuditHeaderSaved(msg); setTimeout(() => setAuditHeaderSaved(null), 2500); };
 
   const totalStandards = CARF_STANDARDS.reduce((s, r) => s + r.total, 0);
   const metStandards   = CARF_STANDARDS.reduce((s, r) => s + r.met, 0);
@@ -163,8 +169,8 @@ export function AuditCompliance({ navigate: _navigate, readOnly }: Props) {
           <p className="text-slate text-sm mt-0.5">CARF accreditation · Joint Commission · Maryland Medicaid compliance · Active findings tracker</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="btn-outline text-xs flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> Export Report</button>
-          <button className="btn-outline text-xs flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5" /> Sync</button>
+          <button onClick={() => saveAuditHeader('Report exported')} className="btn-outline text-xs flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> Export Report</button>
+          <button onClick={() => saveAuditHeader('Compliance data synced')} className="btn-outline text-xs flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5" /> Sync</button>
         </div>
       </div>
 
@@ -303,11 +309,48 @@ export function AuditCompliance({ navigate: _navigate, readOnly }: Props) {
                 <div className="px-11 pb-4 pt-1 border-t border-border bg-slate-50">
                   <div className="text-xs font-bold text-slate uppercase tracking-wider mb-1">Remediation Notes</div>
                   <p className="text-sm text-navy">{f.notes}</p>
-                  <div className="flex gap-2 mt-3">
-                    <LockedButton locked={readOnly} className="btn-primary text-xs px-3 py-1.5">Update Status</LockedButton>
-                    <LockedButton locked={readOnly} className="btn-outline text-xs px-3 py-1.5">Attach Evidence</LockedButton>
-                    <LockedButton locked={readOnly} className="btn-outline text-xs px-3 py-1.5">Assign Owner</LockedButton>
+                  <div className="flex gap-2 mt-3 flex-wrap">
+                    <LockedButton locked={readOnly} onClick={() => { setUpdateStatusFor(f.id); setAttachEvidenceFor(null); setAssignOwnerFor(null); }} className="btn-primary text-xs px-3 py-1.5">Update Status</LockedButton>
+                    <LockedButton locked={readOnly} onClick={() => { setAttachEvidenceFor(f.id); setUpdateStatusFor(null); setAssignOwnerFor(null); }} className="btn-outline text-xs px-3 py-1.5">Attach Evidence</LockedButton>
+                    <LockedButton locked={readOnly} onClick={() => { setAssignOwnerFor(f.id); setUpdateStatusFor(null); setAttachEvidenceFor(null); }} className="btn-outline text-xs px-3 py-1.5">Assign Owner</LockedButton>
                   </div>
+                  {updateStatusFor === f.id && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-xs font-semibold text-slate mb-2">Move to status:</div>
+                      <div className="flex gap-2 flex-wrap">
+                        {['Open', 'In Progress', 'Resolved', 'Closed', 'Waived'].map(s => (
+                          <button key={s} onClick={() => { setUpdateStatusFor(null); setAuditActionSaved(f.id); setTimeout(() => setAuditActionSaved(null), 2500); }} className="text-xs px-3 py-1.5 rounded-lg bg-white border border-border text-navy hover:bg-gray-50 font-medium">{s}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {attachEvidenceFor === f.id && (
+                    <div className="mt-3 p-3 bg-gray-50 border border-border rounded-lg space-y-2">
+                      <div className="text-xs font-semibold text-slate">Upload supporting documentation</div>
+                      <input type="file" className="text-xs text-slate w-full" />
+                      <div className="flex gap-2">
+                        <button onClick={() => { setAttachEvidenceFor(null); setAuditActionSaved(f.id); setTimeout(() => setAuditActionSaved(null), 2500); }} className="text-xs bg-navy text-white px-3 py-1.5 rounded-lg">Attach</button>
+                        <button onClick={() => setAttachEvidenceFor(null)} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg">Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                  {assignOwnerFor === f.id && (
+                    <div className="mt-3 p-3 bg-gray-50 border border-border rounded-lg space-y-2">
+                      <div className="text-xs font-semibold text-slate mb-1">Assign remediation owner</div>
+                      <select className="w-full border border-border rounded-lg px-3 py-2 text-xs">
+                        <option>James S. Collins III, CD</option><option>Dr. Allen Hughes</option><option>Sarah Jenkins, LPC</option><option>Jessica Torres, RN</option><option>Kevin Wright, BHT</option>
+                      </select>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setAssignOwnerFor(null); setAuditActionSaved(f.id); setTimeout(() => setAuditActionSaved(null), 2500); }} className="text-xs bg-navy text-white px-3 py-1.5 rounded-lg">Assign</button>
+                        <button onClick={() => setAssignOwnerFor(null)} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg">Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                  {auditActionSaved === f.id && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-green-700 font-semibold">
+                      <CheckCircle className="w-3.5 h-3.5" /> Saved
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -627,6 +670,12 @@ export function AuditCompliance({ navigate: _navigate, readOnly }: Props) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {auditHeaderSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {auditHeaderSaved}
         </div>
       )}
     </div>

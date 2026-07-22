@@ -177,6 +177,7 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
   const [newAssessmentPatient, setNewAssessmentPatient] = useState('p1');
   const [ideationType, setIdeationType] = useState<IdeationType>(0);
   const [behaviorScore, setBehaviorScore] = useState(0);
+  const [assessmentSaved, setAssessmentSaved] = useState(false);
 
   const computedRisk = (): RiskLevel => {
     if (behaviorScore >= 3) return 'Imminent';
@@ -307,7 +308,7 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
                                 <div key={i} className="text-xs text-navy">{i + 1}. {item}</div>
                               ))}
                             </div>
-                          ) : <span className="text-xs text-slate italic">No safety plan — low risk, no ideation</span>}
+                          ) : <span className="text-xs text-slate italic flex items-center gap-1"><span>✓</span> No safety plan — low risk, no active ideation documented</span>}
                         </div>
                       </div>
                       <div>
@@ -388,7 +389,7 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
             <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none" placeholder="Clinical notes — document context, precipitating factors, patient statements, clinicians notified, and interventions taken..." />
             <div className="flex gap-3">
               <button onClick={() => setTab('Dashboard')} className="border border-border text-slate rounded-lg px-5 py-2 text-sm">Cancel</button>
-              <LockedButton locked={readOnly} className="btn-primary text-sm px-5 py-2">Save Assessment & Generate Safety Plan</LockedButton>
+              <LockedButton locked={readOnly} onClick={() => { setAssessmentSaved(true); setTab('Dashboard'); setTimeout(() => setAssessmentSaved(false), 3000); }} className="btn-primary text-sm px-5 py-2">Save Assessment & Generate Safety Plan</LockedButton>
             </div>
           </div>
         </div>
@@ -783,6 +784,12 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900">
             <strong>Documentation Requirement:</strong> All crisis assessments must include risk stratification (Low / Moderate / High / Imminent), rationale for level, protective factors documented, safety planning status, and attending physician/supervisor co-signature within 24h per CARF and MD state licensure standards.
           </div>
+        </div>
+      )}
+
+      {assessmentSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> Assessment saved — safety plan generated
         </div>
       )}
     </div>

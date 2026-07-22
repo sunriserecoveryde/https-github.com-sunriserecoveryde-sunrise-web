@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
-import { CheckCircle, Circle, Phone, MapPin, AlertTriangle, Plus, Calendar, Star } from 'lucide-react';
+import { CheckCircle, Circle, Phone, MapPin, AlertTriangle, Plus, Calendar, Star, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -142,6 +142,9 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Discharge Plans' | 'Housing Directory' | 'Follow-up Tracker' | 'Community Resources' | 'Alumni Program' | 'Outcomes' | 'Peer Support Network'>('Discharge Plans');
   const [selectedPatient, setSelectedPatient] = useState<string>('p3');
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set(['c5', 'c7', 'd1', 'd3', 'd7', 'e1', 'e2', 'e3', 'e5', 'e6']));
+  const [newPlanOpen, setNewPlanOpen] = useState(false);
+  const [newPlan, setNewPlan] = useState({ patientId: 'p1', targetDate: '', type: 'Completed', destination: '', notes: '' });
+  const [planCreated, setPlanCreated] = useState(false);
 
   const toggleItem = (id: string) => {
     setCheckedItems(prev => {
@@ -150,6 +153,13 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
       return next;
     });
   };
+
+  function handleCreatePlan() {
+    setNewPlanOpen(false);
+    setPlanCreated(true);
+    setTimeout(() => setPlanCreated(false), 3000);
+    setNewPlan({ patientId: 'p1', targetDate: '', type: 'Completed', destination: '', notes: '' });
+  }
 
   const currentRecord = AFTERCARE_DATA.find(r => r.patientId === selectedPatient);
 
@@ -160,7 +170,7 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy">Aftercare Planning</h1>
           <p className="text-slate text-sm mt-0.5">Discharge checklists, recovery housing, follow-up calls, and alumni program</p>
         </div>
-        <LockedButton locked={readOnly} onClick={() => {}} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" /> New Discharge Plan</LockedButton>
+        <LockedButton locked={readOnly} onClick={() => setNewPlanOpen(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" /> New Discharge Plan</LockedButton>
       </div>
 
       {/* Stats */}
@@ -331,7 +341,7 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
                         {call.outcome && <div className={`text-[10px] px-2 py-0.5 rounded-full inline-block mt-1 font-medium ${FOLLOWUP_STYLE[call.outcome]}`}>{call.outcome}</div>}
                         {!call.completedDate && !call.scheduledDate && <div className="text-xs text-slate mt-1 italic">Not scheduled</div>}
                         {!call.completedDate && call.scheduledDate && (
-                          <button className="text-[10px] text-orange hover:underline mt-1 block">Log Call</button>
+                          <button onClick={() => setPlanCreated(true)} className="text-[10px] text-orange hover:underline mt-1 block">Log Call</button>
                         )}
                       </div>
                     ))}
@@ -373,7 +383,7 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
                       ))}
                       <span className="text-xs text-slate ml-1">{h.rating}</span>
                     </div>
-                    <button className="text-xs bg-navy text-white px-3 py-1.5 rounded-lg hover:bg-navy/90">Refer Patient</button>
+                    <button onClick={() => setPlanCreated(true)} className="text-xs bg-navy text-white px-3 py-1.5 rounded-lg hover:bg-navy/90">Refer Patient</button>
                   </div>
                 </div>
               </div>
@@ -417,7 +427,7 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
                         </td>
                       ))}
                       <td className="px-4 py-3">
-                        <button className="text-xs text-orange hover:underline">Log Call</button>
+                        <button onClick={() => setPlanCreated(true)} className="text-xs text-orange hover:underline">Log Call</button>
                       </td>
                     </tr>
                   );
@@ -556,7 +566,7 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
                     { interval: '30-Day Call', coverage: '85%', next: '4 calls due this week', color: 'text-green-600' },
                     { interval: '60-Day Call', coverage: '71%', next: '2 calls due this week', color: 'text-amber-600' },
                     { interval: '90-Day Call', coverage: '63%', next: '1 call due this week', color: 'text-amber-600' },
-                    { interval: '6-Month Check-in', coverage: '52%', next: 'Kevin Ashford — today', color: 'text-amber-600' },
+                    { interval: '6-Month Check-in', coverage: '52%', next: 'Kevin Ashford — Jul 25', color: 'text-amber-600' },
                     { interval: '1-Year Anniversary', coverage: '44%', next: '3 upcoming in next 30 days', color: 'text-orange' },
                   ].map(r => (
                     <div key={r.interval} className="flex items-center justify-between gap-3">
@@ -733,8 +743,59 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
           </div>
         </div>
       )}
+
+      {/* New Discharge Plan modal */}
+      {newPlanOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setNewPlanOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[520px] mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">New Discharge Plan</h2>
+              <button onClick={() => setNewPlanOpen(false)} className="text-slate hover:text-navy p-1 rounded"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient *</label>
+                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newPlan.patientId} onChange={e => setNewPlan(p => ({ ...p, patientId: e.target.value }))}>
+                  {MOCK_PATIENTS.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName} — {p.program}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Target Discharge Date</label>
+                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newPlan.targetDate} onChange={e => setNewPlan(p => ({ ...p, targetDate: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Discharge Type</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newPlan.type} onChange={e => setNewPlan(p => ({ ...p, type: e.target.value }))}>
+                    <option>Completed</option><option>AMA</option><option>Step-Down</option><option>Transfer</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Discharge Destination</label>
+                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Home, Oxford House, PHP step-down…" value={newPlan.destination} onChange={e => setNewPlan(p => ({ ...p, destination: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Initial Notes</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[70px] resize-none" placeholder="Clinical context, priority concerns, support network…" value={newPlan.notes} onChange={e => setNewPlan(p => ({ ...p, notes: e.target.value }))} />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setNewPlanOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={handleCreatePlan} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-navy-mid">Create Plan</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Plan created toast */}
+      {planCreated && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> Discharge plan created
+        </div>
+      )}
     </div>
   );
 }
 
-const TODAY = '2026-07-19';
+const TODAY = '2026-07-22';

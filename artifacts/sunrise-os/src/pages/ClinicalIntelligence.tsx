@@ -364,7 +364,7 @@ export function ClinicalIntelligence({ navigate, readOnly }: Props) {
           <div className="card p-0 overflow-hidden">
             <div className="px-5 py-3.5 border-b border-border bg-gray-50 flex items-center justify-between">
               <h3 className="font-bold text-navy text-sm">Patient Screening Matrix — Current Census</h3>
-              <span className="text-[10px] text-slate">Last updated: Jul 21, 2026</span>
+              <span className="text-[10px] text-slate">Last updated: Jul 22, 2026</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">

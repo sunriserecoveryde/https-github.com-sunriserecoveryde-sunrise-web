@@ -36,19 +36,19 @@ const WAITLIST: WaitlistEntry[] = [
     id: 'WL-001', name: 'Patricia Reynolds', dob: '1982-04-12', phone: '(615) 555-9071',
     referralSource: 'Vanderbilt Psychiatric Emergency — direct referral', primaryDx: 'Opioid Use Disorder, Severe / PTSD',
     requestedLOC: 'Residential', priority: 'P1 — Urgent',
-    addedDate: '2026-07-17', daysWaiting: 2, status: 'Active',
+    addedDate: '2026-07-17', daysWaiting: 5, status: 'Active',
     insuranceVerified: true, payer: 'CareFirst BlueCross BlueShield (auth pending)',
-    lastContactDate: '2026-07-18', lastContactOutcome: 'Spoke with patient — motivated, in withdrawal, staying with sister. Wants bed ASAP.',
-    notes: 'Referred by Dr. Linda Strauss at Vanderbilt Psych ED. Fentanyl OUD, last use 7/16. CIWA score estimated at 14 at ED. Insurance auth submitted — expecting decision in 24 hours. P1 — offer next available residential bed.',
-    assignedTo: 'Sarah Jenkins, LPC', preferredAdmitDate: '2026-07-20',
+    lastContactDate: '2026-07-22', lastContactOutcome: 'Spoke with patient — motivated, in withdrawal, staying with sister. Wants bed ASAP.',
+    notes: 'Referred by Dr. Linda Strauss at Vanderbilt Psych ED. Fentanyl OUD, last use 7/16. CIWA score estimated at 14 at ED. Insurance auth submitted — awaiting decision. P1 — offer next available residential bed.',
+    assignedTo: 'Sarah Jenkins, LPC', preferredAdmitDate: '2026-07-23',
   },
   {
     id: 'WL-002', name: 'Anthony Barnes', dob: '1990-08-30', phone: '(615) 555-4412',
     referralSource: 'Self-referral — saw radio ad', primaryDx: 'Alcohol Use Disorder, Severe',
     requestedLOC: 'Residential', priority: 'P2 — High',
-    addedDate: '2026-07-14', daysWaiting: 5, status: 'Active',
+    addedDate: '2026-07-14', daysWaiting: 8, status: 'Active',
     insuranceVerified: true, payer: 'Cigna (OON benefits — 60% after deductible)',
-    lastContactDate: '2026-07-18', lastContactOutcome: 'Confirmed still interested. Working with HR on medical leave.',
+    lastContactDate: '2026-07-22', lastContactOutcome: 'Confirmed still interested. Working with HR on medical leave.',
     notes: 'Employed software engineer. Currently drinking 10-12 drinks/day, attempting to taper. Liver enzymes elevated (self-reported). Needs residential for medical monitoring during detox.',
     assignedTo: 'Maria Gonzalez, LSW',
   },
@@ -57,21 +57,21 @@ const WAITLIST: WaitlistEntry[] = [
     referralSource: 'Physician referral — Dr. Sarah Kim, Cool Springs Family Medicine',
     primaryDx: 'Alcohol Use Disorder, Moderate / MDD',
     requestedLOC: 'PHP', priority: 'P2 — High',
-    addedDate: '2026-07-13', daysWaiting: 6, status: 'Offered — Pending Response',
+    addedDate: '2026-07-13', daysWaiting: 9, status: 'Offered — Pending Response',
     insuranceVerified: true, payer: 'United HealthCare (in-network)',
-    lastContactDate: '2026-07-19', lastContactOutcome: 'Left voicemail about PHP opening — awaiting callback.',
-    notes: 'PHP bed available 7/21. Offer made by phone 7/19 — patient requested 24 hours to discuss with family. Follow up 7/20 morning.',
-    assignedTo: 'David Odom, LMFT', preferredAdmitDate: '2026-07-21',
+    lastContactDate: '2026-07-22', lastContactOutcome: 'Left voicemail about PHP opening — awaiting callback.',
+    notes: 'PHP bed available 7/22. Offer made by phone 7/22 — patient requested 24 hours to discuss with family. Follow up 7/23 morning.',
+    assignedTo: 'David Odom, LMFT', preferredAdmitDate: '2026-07-23',
   },
   {
     id: 'WL-004', name: 'James Worthington III', dob: '1965-02-08', phone: '(615) 555-3310',
     referralSource: 'Maryland Bar Association LAP referral',
     primaryDx: 'Alcohol Use Disorder, Severe',
     requestedLOC: 'Residential', priority: 'P1 — Urgent',
-    addedDate: '2026-07-16', daysWaiting: 3, status: 'Active',
+    addedDate: '2026-07-16', daysWaiting: 6, status: 'Active',
     insuranceVerified: false, payer: 'Aetna (verification in progress)',
-    lastContactDate: '2026-07-18', lastContactOutcome: 'Spoke with attorney — patient in court proceedings. Needs admission before 7/22 hearing.',
-    notes: 'Attorney client — BAC of 0.31 at arrest. Court ordered treatment as diversion condition. Must admit before 7/22 hearing or faces incarceration. LAP case manager: Marcus Hall (301-555-2002). Insurance verification urgent.',
+    lastContactDate: '2026-07-22', lastContactOutcome: 'Spoke with attorney — patient in court proceedings. Hearing today 7/22; admission confirmed for tomorrow.',
+    notes: 'Attorney client — BAC of 0.31 at arrest. Court ordered treatment as diversion condition. 7/22 hearing attended — judge granted 48-hour admission window. Must admit by 7/24 or faces incarceration. LAP case manager: Marcus Hall (301-555-2002). Insurance verification urgent.',
     assignedTo: 'Sarah Jenkins, LPC',
   },
   {
@@ -79,20 +79,20 @@ const WAITLIST: WaitlistEntry[] = [
     referralSource: 'Recovery coach outreach — Rockville Interfaith Recovery House',
     primaryDx: 'Opioid Use Disorder, Severe / Homelessness',
     requestedLOC: 'Residential', priority: 'P1 — Urgent',
-    addedDate: '2026-07-15', daysWaiting: 4, status: 'Active',
+    addedDate: '2026-07-15', daysWaiting: 7, status: 'Active',
     insuranceVerified: true, payer: 'Maryland Medicaid / BlueCare (authorized)',
-    lastContactDate: '2026-07-18', lastContactOutcome: 'Spoke via Rockville Interfaith Recovery House staff — patient eager for help. Transportation needed.',
+    lastContactDate: '2026-07-22', lastContactOutcome: 'Spoke via Rockville Interfaith Recovery House staff — patient eager for help. Transportation needed.',
     notes: 'Maryland Medicaid auth approved — 21 days residential covered. Transportation barrier: no car, currently sheltered. Will arrange transport on admission day. 26-year-old with 4-year fentanyl history. High priority given housing instability and OD risk.',
-    assignedTo: 'Maria Gonzalez, LSW', preferredAdmitDate: '2026-07-21',
+    assignedTo: 'Maria Gonzalez, LSW', preferredAdmitDate: '2026-07-23',
   },
   {
     id: 'WL-006', name: 'Kevin Ostrowski', dob: '1987-09-01', phone: '(615) 555-6641',
     referralSource: 'Employer EAP — Vanderbilt University HR',
     primaryDx: 'Alcohol Use Disorder, Moderate',
     requestedLOC: 'IOP', priority: 'P3 — Routine',
-    addedDate: '2026-07-10', daysWaiting: 9, status: 'Active',
+    addedDate: '2026-07-10', daysWaiting: 12, status: 'Active',
     insuranceVerified: true, payer: 'Vanderbilt Faculty Benefits (BCBS)',
-    lastContactDate: '2026-07-17', lastContactOutcome: 'Confirmed IOP schedule preferences — evenings preferred.',
+    lastContactDate: '2026-07-22', lastContactOutcome: 'Confirmed IOP schedule preferences — evenings preferred.',
     notes: 'Faculty member. Functional drinker — employer-mandated evaluation after incident. Prefers evening IOP to maintain work schedule. FMLA paperwork in progress with HR.',
     assignedTo: 'David Odom, LMFT',
   },
@@ -101,9 +101,9 @@ const WAITLIST: WaitlistEntry[] = [
     referralSource: 'Family referral — husband called',
     primaryDx: 'Stimulant Use Disorder (Methamphetamine), Severe',
     requestedLOC: 'Residential', priority: 'P2 — High',
-    addedDate: '2026-07-11', daysWaiting: 8, status: 'Active',
+    addedDate: '2026-07-11', daysWaiting: 11, status: 'Active',
     insuranceVerified: false, payer: 'Self-pay (sliding fee application pending)',
-    lastContactDate: '2026-07-16', lastContactOutcome: 'Spoke with husband — patient not yet willing to engage. Family meeting recommended.',
+    lastContactDate: '2026-07-22', lastContactOutcome: 'Spoke with husband — patient not yet willing to engage. Family meeting recommended.',
     notes: 'Husband reached out. Patient currently using daily and not fully motivated. Will need motivational outreach call from peer specialist before formal intake. Sliding fee application submitted by husband.',
     assignedTo: 'Maria Gonzalez, LSW',
   },
@@ -114,7 +114,7 @@ const WAITLIST: WaitlistEntry[] = [
     requestedLOC: 'IOP', priority: 'P3 — Routine',
     addedDate: '2026-07-08', daysWaiting: 11, status: 'Offered — Pending Response',
     insuranceVerified: true, payer: 'Medicare + Medigap Plan G',
-    lastContactDate: '2026-07-19', lastContactOutcome: 'Offer made for IOP starting 7/22. Considering — will call back today.',
+    lastContactDate: '2026-07-22', lastContactOutcome: 'Offer made for IOP starting 7/23. Considering — will call back today.',
     notes: '71-year-old retired physician. Chronic pain + opioid dependence on Oxycodone 120mg/day (prescribed). Very motivated — embarrassed by situation. Dr. Park providing co-management. Medicare approved.',
     assignedTo: 'David Odom, LMFT', preferredAdmitDate: '2026-07-22',
   },
@@ -246,10 +246,10 @@ export function WaitlistManager({ navigate: _navigate, readOnly }: Props) {
                     <div className="text-xs text-slate mt-0.5">{entry.primaryDx} · {entry.referralSource.split('—')[0].trim()} · Assigned: {entry.assignedTo}</div>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                    <button className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 flex items-center gap-1" onClick={e => { e.stopPropagation(); setShowAddModal(true); }}>
                       <ArrowRight className="w-3 h-3" /> Offer Bed
                     </button>
-                    <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50 flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                    <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50 flex items-center gap-1" onClick={e => { e.stopPropagation(); setExpandedEntry(expandedEntry === entry.id ? null : entry.id); }}>
                       <Phone className="w-3 h-3" /> Log Contact
                     </button>
                   </div>
@@ -468,7 +468,7 @@ export function WaitlistManager({ navigate: _navigate, readOnly }: Props) {
               <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none" />
             </div>
           </div>
-          <LockedButton locked={readOnly} className="btn-primary text-sm px-5 py-2">Add to Waitlist</LockedButton>
+          <LockedButton locked={readOnly} onClick={() => { setShowAddModal(false); setTab('Active'); }} className="btn-primary text-sm px-5 py-2">Add to Waitlist</LockedButton>
         </div>
       )}
 

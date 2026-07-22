@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-
+import { ExternalLink, X, Link } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
+
+// #148: Intake/referral booking URL — buyers preview this before sending to prospects
+const INTAKE_BOOKING_URL = 'https://sunrise-recovery.com/intake';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -33,12 +36,12 @@ interface OutreachActivity {
 const CONTACTS: BDContact[] = [
   { id: 'bd1', name: 'Dr. Michelle Park', organization: 'Vanderbilt University Medical Center', type: 'Hospital / ER', relationship: 'Strong', lastContact: '2026-07-10', nextFollowUp: '2026-07-25', referralsLTD: 34, referrals30d: 4, admissions30d: 3, owner: 'James S. Collins III', notes: 'Primary ER liaison. Monthly lunch meetings. Accepts our clinical brochures at triage desk. Strong referral relationship.' },
   { id: 'bd2', name: 'Judge Harold Wallace', organization: 'Davidson County Drug Court', type: 'Drug Court', relationship: 'Strong', lastContact: '2026-07-08', nextFollowUp: '2026-07-30', referralsLTD: 22, referrals30d: 2, admissions30d: 2, owner: 'James S. Collins III', notes: 'Court-mandated referrals. Requires Level 3.7 placement documentation. Biweekly status reports required.' },
-  { id: 'bd3', name: 'Dr. Lisa Nguyen', organization: 'Northside Family Practice', type: 'Primary Care', relationship: 'Developing', lastContact: '2026-07-01', nextFollowUp: '2026-07-20', referralsLTD: 8, referrals30d: 1, admissions30d: 1, owner: 'James S. Collins III', notes: 'SBIRT-trained. Very interested in warm handoff protocols. Scheduled CE presentation 7/22.' },
-  { id: 'bd4', name: 'Mark Sullivan', organization: 'Johns Hopkins Health System EAP', type: 'Corporate EAP', relationship: 'Strong', lastContact: '2026-06-28', nextFollowUp: '2026-07-21', referralsLTD: 15, referrals30d: 2, admissions30d: 1, owner: 'James S. Collins III', notes: 'Manages EAP for 3,200 hospital employees. Preferred provider status. Quarterly account review next month.' },
+  { id: 'bd3', name: 'Dr. Lisa Nguyen', organization: 'Northside Family Practice', type: 'Primary Care', relationship: 'Developing', lastContact: '2026-07-22', nextFollowUp: '2026-07-29', referralsLTD: 8, referrals30d: 1, admissions30d: 1, owner: 'James S. Collins III', notes: 'SBIRT-trained. CE presentation delivered 7/22 — 8 providers attended. Follow-up with office manager to distribute referral packets.' },
+  { id: 'bd4', name: 'Mark Sullivan', organization: 'Johns Hopkins Health System EAP', type: 'Corporate EAP', relationship: 'Strong', lastContact: '2026-06-28', nextFollowUp: '2026-07-25', referralsLTD: 15, referrals30d: 2, admissions30d: 1, owner: 'James S. Collins III', notes: 'Manages EAP for 3,200 hospital employees. Preferred provider status. Quarterly account review scheduled for Aug.' },
   { id: 'bd5', name: 'Pastor James Reynolds', organization: 'Grace Community Church', type: 'Faith Community', relationship: 'Developing', lastContact: '2026-06-20', nextFollowUp: '2026-07-23', referralsLTD: 5, referrals30d: 0, admissions30d: 0, owner: 'James S. Collins III', notes: 'Hosts AA/NA meetings. Congregation of 800. Recovery ministry leader is a Sunrise alumnus — strong advocate.' },
   { id: 'bd6', name: 'Dr. Anthony Reed', organization: 'Midtown Psychiatry', type: 'Private Practice', relationship: 'Developing', lastContact: '2026-07-05', nextFollowUp: '2026-07-22', referralsLTD: 9, referrals30d: 1, admissions30d: 1, owner: 'James S. Collins III', notes: 'Psychiatrist with large dual-diagnosis caseload. Sends overflow residential cases. Building trust.' },
   { id: 'bd7', name: 'Amanda Torres', organization: 'Serenity Sober Living', type: 'Sober Living', relationship: 'Strong', lastContact: '2026-07-12', nextFollowUp: '2026-07-26', referralsLTD: 12, referrals30d: 3, admissions30d: 2, owner: 'James S. Collins III', notes: 'Bidirectional relationship — we refer to their sober living, they send back to us for PHP/IOP. 12 beds reserved for Sunrise graduates.' },
-  { id: 'bd8', name: 'Kevin Morris', organization: 'Rockville Detox Center', type: 'Detox', relationship: 'Cold', lastContact: '2026-05-15', nextFollowUp: '2026-07-19', referralsLTD: 3, referrals30d: 0, admissions30d: 0, owner: 'James S. Collins III', notes: 'Used to be a strong referral source. New medical director. Relationship needs re-warming. Bringing lunch 7/19.' },
+  { id: 'bd8', name: 'Kevin Morris', organization: 'Rockville Detox Center', type: 'Detox', relationship: 'Cold', lastContact: '2026-05-15', nextFollowUp: '2026-07-28', referralsLTD: 3, referrals30d: 0, admissions30d: 0, owner: 'James S. Collins III', notes: 'Used to be a strong referral source. New medical director. Relationship needs re-warming. Lunch visit scheduled 7/28.' },
 ];
 
 const ACTIVITIES: OutreachActivity[] = [
@@ -60,19 +63,22 @@ const CENSUS_DATA = [
   { month: 'Apr', census: 16, capacity: 22 },
   { month: 'May', census: 19, capacity: 22 },
   { month: 'Jun', census: 20, capacity: 22 },
-  { month: 'Jul', census: 18, capacity: 22 },
+  { month: 'Jul', census: 20, capacity: 22 },
 ];
 
 export function BusinessDevelopment({ navigate, readOnly }: Props) {
   const [activeTab, setActiveTab] = useState<'Contacts' | 'Outreach Activity' | 'Census & Pipeline' | 'Goals & KPIs' | 'Referral Analytics' | 'Market Map'>('Contacts');
   const [selected, setSelected] = useState<BDContact | null>(CONTACTS[0]);
   const [relationshipFilter, setRelationshipFilter] = useState<string>('All');
+  const [bdActionSaved, setBdActionSaved] = useState<string | null>(null);
+  // #148: booking link preview state — lets buyers verify the URL before sending to prospects
+  const [bookingLinkPreview, setBookingLinkPreview] = useState(false);
 
   const filtered = relationshipFilter === 'All' ? CONTACTS : CONTACTS.filter(c => c.relationship === relationshipFilter);
   const totalRefs30d = CONTACTS.reduce((s, c) => s + c.referrals30d, 0);
   const totalAdmits30d = CONTACTS.reduce((s, c) => s + c.admissions30d, 0);
   const conversionRate = Math.round((totalAdmits30d / totalRefs30d) * 100);
-  const overdue = CONTACTS.filter(c => new Date(c.nextFollowUp) <= new Date('2026-07-18')).length;
+  const overdue = CONTACTS.filter(c => new Date(c.nextFollowUp) <= new Date('2026-07-22')).length;
 
   return (
     <div className="space-y-6">
@@ -83,7 +89,7 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
         </div>
         <div className="flex gap-2">
           <button onClick={() => navigate('ReferralTracker')} className="btn-outline text-sm px-4 py-2">Referral Tracker →</button>
-          <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">+ Add Contact</LockedButton>
+          <LockedButton locked={readOnly} onClick={() => { setBdActionSaved('contact added'); setTimeout(() => setBdActionSaved(null), 2500); }} className="btn-primary text-sm px-4 py-2">+ Add Contact</LockedButton>
         </div>
       </div>
 
@@ -126,7 +132,7 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
               ))}
             </div>
             {filtered.map(c => {
-              const followUpOverdue = new Date(c.nextFollowUp) <= new Date('2026-07-18');
+              const followUpOverdue = new Date(c.nextFollowUp) <= new Date('2026-07-22');
               return (
                 <div
                   key={c.id}
@@ -179,7 +185,7 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
 
                 <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
                   <div><span className="text-slate">Last Contact:</span> <span className="font-medium text-navy">{selected.lastContact}</span></div>
-                  <div><span className="text-slate">Next Follow-Up:</span> <span className={`font-medium ${new Date(selected.nextFollowUp) <= new Date('2026-07-18') ? 'text-amber-600' : 'text-navy'}`}>{selected.nextFollowUp}</span></div>
+                  <div><span className="text-slate">Next Follow-Up:</span> <span className={`font-medium ${new Date(selected.nextFollowUp) <= new Date('2026-07-22') ? 'text-amber-600' : 'text-navy'}`}>{selected.nextFollowUp}</span></div>
                   <div className="col-span-2"><span className="text-slate">Account Owner:</span> <span className="font-medium text-navy">{selected.owner}</span></div>
                 </div>
 
@@ -188,14 +194,67 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
                   <p className="text-sm text-navy">{selected.notes}</p>
                 </div>
 
-                <div className="flex gap-2 mt-4">
-                  <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex-1">Log Activity</LockedButton>
-                  <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2">Schedule Visit</LockedButton>
-                  <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2">Send Email</LockedButton>
+                {/* #148: Referral intake link — preview before sending to prospects */}
+                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Link className="w-4 h-4 text-blue-600 flex-none" />
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-blue-900">Intake Referral Link</div>
+                      <div className="text-xs text-blue-700 truncate font-mono">{INTAKE_BOOKING_URL}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setBookingLinkPreview(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors flex-none"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Preview
+                  </button>
                 </div>
+
+                <div className="flex gap-2 mt-4">
+                  <LockedButton locked={readOnly} onClick={() => { setBdActionSaved('logged'); setTimeout(() => setBdActionSaved(null), 2500); }} className="btn-primary text-sm px-4 py-2 flex-1">Log Activity</LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => { setBdActionSaved('scheduled'); setTimeout(() => setBdActionSaved(null), 2500); }} className="btn-outline text-sm px-4 py-2">Schedule Visit</LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => { setBdActionSaved('emailed'); setTimeout(() => setBdActionSaved(null), 2500); }} className="btn-outline text-sm px-4 py-2">Send Email</LockedButton>
+                </div>
+                {bdActionSaved && (
+                  <div className="mt-2 text-xs font-semibold text-green-700 flex items-center gap-1.5">
+                    <span>✓</span>{bdActionSaved === 'logged' ? 'Activity logged' : bdActionSaved === 'scheduled' ? 'Visit scheduled' : 'Email draft opened'}
+                  </div>
+                )}
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* #148: Booking link preview overlay */}
+      {bookingLinkPreview && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setBookingLinkPreview(false)}>
+          <div className="bg-white rounded-2xl p-6 shadow-2xl w-[480px] mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-navy text-lg">Referral Link Preview</h3>
+              <button onClick={() => setBookingLinkPreview(false)} className="text-slate hover:text-navy p-1 rounded"><X className="w-5 h-5" /></button>
+            </div>
+            <p className="text-sm text-slate mb-4">
+              Verify this link before sharing with referral partners. It opens your online intake scheduling page.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+              <div className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">Booking URL</div>
+              <div className="text-sm font-mono text-navy break-all">{INTAKE_BOOKING_URL}</div>
+            </div>
+            <div className="bg-gray-50 border border-border rounded-xl p-3 text-sm text-slate mb-4">
+              <strong className="text-navy">What referrers see:</strong> A HIPAA-secure intake form, bed availability indicator, and contact options. The link is publicly accessible — safe to share via email or printed materials.
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { window.open(INTAKE_BOOKING_URL, '_blank'); }}
+                className="flex-1 flex items-center justify-center gap-2 bg-navy text-white rounded-xl py-2.5 font-semibold text-sm hover:bg-navy-mid transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" /> Open Link
+              </button>
+              <button onClick={() => setBookingLinkPreview(false)} className="flex-1 border border-border rounded-xl py-2.5 text-slate text-sm hover:bg-gray-50 transition-colors">Close</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -203,7 +262,7 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <p className="text-sm text-slate">{ACTIVITIES.length} activities logged this month</p>
-            <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">+ Log Activity</LockedButton>
+            <LockedButton locked={readOnly} onClick={() => { setBdActionSaved('logged'); setTimeout(() => setBdActionSaved(null), 2500); }} className="btn-primary text-sm px-4 py-2">+ Log Activity</LockedButton>
           </div>
           {ACTIVITIES.map(a => (
             <div key={a.id} className="card">
@@ -251,7 +310,7 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
                 ))}
               </div>
               <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                <strong>BD Insight:</strong> Census dipped to 18 in July vs 20 in June. Two cold relationships (Rockville Detox) need re-engagement. Consider targeted outreach to ER and drug court contacts this week.
+                <strong>BD Insight:</strong> Census recovered to 20 in late July after dipping to 18 mid-month. Two cold relationships (Rockville Detox) need sustained re-engagement to maintain occupancy. Continue targeted outreach to ER and drug court contacts this week.
               </div>
             </div>
             <div className="card">

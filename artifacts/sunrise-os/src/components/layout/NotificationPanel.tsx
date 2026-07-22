@@ -163,7 +163,7 @@ export function NotificationPanel({ onClose, navigate }: Props) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button className="text-xs text-orange hover:underline">Mark all read</button>
+          <button onClick={onClose} className="text-xs text-orange hover:underline">Mark all read</button>
           <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded transition-colors">
             <X className="w-4 h-4 text-slate" />
           </button>
@@ -224,7 +224,7 @@ export function NotificationPanel({ onClose, navigate }: Props) {
       </div>
 
       <div className="px-4 py-3 border-t border-border bg-gray-50 text-center">
-        <button className="text-sm text-orange font-medium hover:underline">View All Notifications</button>
+        <button onClick={() => { navigate('CommandCenter'); onClose(); }} className="text-sm text-orange font-medium hover:underline">View All Notifications</button>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
-import { DollarSign, CheckCircle, AlertTriangle, Clock, Plus, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
+import { DollarSign, CheckCircle, AlertTriangle, Clock, Plus, TrendingDown, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { LockedButton } from '../components/common/LockedButton';
 
@@ -132,6 +132,8 @@ const SLIDING_FEE_SCHEDULE = [
 export function FinancialCounseling({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Patients' | 'Analytics' | 'Sliding Fee' | 'Payment Plans' | 'Insurance Resources' | 'Grant Funding'>('Patients');
   const [expandedPatient, setExpandedPatient] = useState<string | null>('p5');
+  const [screenOpen, setScreenOpen] = useState(false);
+  const [screenSaved, setScreenSaved] = useState(false);
 
   const totalAR = FINANCIAL_DATA.reduce((a, f) => a + f.totalBalance, 0);
   const charityPending = FINANCIAL_DATA.filter(f => f.charityCarePending).length;
@@ -144,7 +146,7 @@ export function FinancialCounseling({ navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy">Financial Counseling</h1>
           <p className="text-slate text-sm mt-0.5">Sliding fee scale · Payment plans · Charity care · Insurance gaps · Revenue summary</p>
         </div>
-        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />New Financial Screen</LockedButton>
+        <LockedButton locked={readOnly} onClick={() => setScreenOpen(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />New Financial Screen</LockedButton>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -217,7 +219,7 @@ export function FinancialCounseling({ navigate, readOnly }: Props) {
                           <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full ${STATUS_STYLE[fin.paymentPlan.status]}`}>{fin.paymentPlan.status}</span>
                         </div>
                       ) : (
-                        <div className="text-xs text-slate italic">No payment plan established</div>
+                        <div className="flex items-center gap-1.5 text-xs text-slate italic"><span>💳</span> No payment plan established — self-pay balance due at discharge</div>
                       )}
                     </div>
                     <div>
@@ -478,6 +480,63 @@ export function FinancialCounseling({ navigate, readOnly }: Props) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {screenOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setScreenOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[480px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">New Financial Screening</h2>
+              <button onClick={() => setScreenOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Devon Price — Residential</option><option>Sarah M. — IOP</option><option>Marcus R. — PHP</option><option>Aiden K. — Residential</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Household Size</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {[1,2,3,4,5,6,7,'8+'].map(n => <option key={n}>{n}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Monthly Income ($)</label>
+                  <input type="number" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 2400" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Primary Payer</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Medicaid</option><option>Medicare</option><option>Commercial Insurance</option><option>Self-Pay</option><option>Sliding Fee</option><option>Grant / Scholarship</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">FPL Band</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Below 100% FPL</option><option>100–138% FPL</option><option>139–200% FPL</option><option>201–300% FPL</option><option>Above 300% FPL</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Notes</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[55px] resize-none" placeholder="Employment status, assets, extenuating circumstances..." />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setScreenOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setScreenOpen(false); setScreenSaved(true); setTimeout(() => setScreenSaved(false), 2500); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Save Screening</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {screenSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> Financial screening saved
         </div>
       )}
     </div>

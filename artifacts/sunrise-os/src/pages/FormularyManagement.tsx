@@ -132,6 +132,8 @@ export function FormularyManagement({ navigate: _navigate }: Props) {
   const [filterClass, setFilterClass] = useState<DrugClass | 'All'>('All');
   const [expandedDrug, setExpandedDrug] = useState<string | null>('D-001');
   const [interactionQuery, setInteractionQuery] = useState('');
+  const [formActionSaved, setFormActionSaved] = useState<string | null>(null);
+  const saveFormAction = (msg: string) => { setFormActionSaved(msg); setTimeout(() => setFormActionSaved(null), 2500); };
 
   const filtered = FORMULARY.filter(d =>
     (filterClass === 'All' || d.drugClass === filterClass) &&
@@ -420,7 +422,7 @@ export function FormularyManagement({ navigate: _navigate }: Props) {
             </table>
             <div className="px-5 py-2.5 bg-green-50 border-t border-border text-xs text-green-800 flex items-center justify-between">
               <span>✓ All transactions verified · No discrepancies · Count reconciled at shift change</span>
-              <button className="font-semibold text-green-700 hover:underline">Print Shift Report</button>
+              <button onClick={() => saveFormAction('Shift report sent to printer')} className="font-semibold text-green-700 hover:underline">Print Shift Report</button>
             </div>
           </div>
         </div>
@@ -553,6 +555,12 @@ export function FormularyManagement({ navigate: _navigate }: Props) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {formActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {formActionSaved}
         </div>
       )}
     </div>

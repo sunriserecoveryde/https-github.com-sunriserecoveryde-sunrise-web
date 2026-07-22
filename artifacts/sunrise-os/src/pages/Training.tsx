@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_STAFF } from '../data/mockStaff';
+import { CheckCircle, X, Plus, Calendar } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -83,6 +84,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 export function Training({ navigate, readOnly }: Props) {
   const [activeTab, setActiveTab] = useState<'Compliance Matrix' | 'Scheduled Training' | 'CEU Tracking' | 'Policies & SOPs' | 'Onboarding' | 'Training Library'>('Compliance Matrix');
   const [deptFilter, setDeptFilter] = useState<string>('All');
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [trainingSaved, setTrainingSaved] = useState<string | null>(null);
+  const saveTrainingAction = (msg: string) => { setTrainingSaved(msg); setTimeout(() => setTrainingSaved(null), 2500); };
 
   const departments = Array.from(new Set(MOCK_STAFF.map(s => s.department)));
   const filteredStaff = TRAINING_DATA.filter(t => deptFilter === 'All' || t.department === deptFilter);
@@ -137,7 +141,7 @@ export function Training({ navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy">Training & Certification</h1>
           <p className="text-slate text-sm mt-0.5">Staff training compliance, certifications, and scheduled sessions</p>
         </div>
-        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">+ Schedule Training</LockedButton>
+        <LockedButton locked={readOnly} onClick={() => setScheduleOpen(true)} className="btn-primary text-sm px-4 py-2">+ Schedule Training</LockedButton>
       </div>
 
       {/* KPIs */}
@@ -264,9 +268,9 @@ export function Training({ navigate, readOnly }: Props) {
                 </div>
               </div>
               <div className="flex gap-2 mt-3">
-                <LockedButton locked={readOnly} className="btn-primary text-sm px-3 py-1.5">Register Staff</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveTrainingAction('Staff registered')} className="btn-primary text-sm px-3 py-1.5">Register Staff</LockedButton>
                 <button className="btn-outline text-sm px-3 py-1.5">View Attendees</button>
-                <LockedButton locked={readOnly} className="btn-outline text-sm px-3 py-1.5">Edit Session</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => setScheduleOpen(true)} className="btn-outline text-sm px-3 py-1.5">Edit Session</LockedButton>
               </div>
             </div>
           ))}
@@ -404,7 +408,7 @@ export function Training({ navigate, readOnly }: Props) {
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.status === 'Current' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{item.status}</span>
                       </td>
                       <td className="px-3 py-2.5 text-center">
-                        <button className="text-xs text-orange hover:underline font-medium">View</button>
+                        <button onClick={() => saveTrainingAction('Certificate viewed')} className="text-xs text-orange hover:underline font-medium">View</button>
                       </td>
                     </tr>
                   ))}
@@ -537,6 +541,69 @@ export function Training({ navigate, readOnly }: Props) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {scheduleOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setScheduleOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[500px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Schedule Training Session</h2>
+              <button onClick={() => setScheduleOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Training Topic *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>CPR / First Aid Recertification</option><option>HIPAA Annual Refresher</option><option>Trauma-Informed Care</option><option>Motivational Interviewing</option><option>Medication-Assisted Treatment</option><option>Crisis De-escalation</option><option>Ethics & Boundaries</option><option>Suicide Risk Assessment</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Date *</label>
+                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Time</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['8:00 AM','9:00 AM','10:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Duration</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>1 hour</option><option>2 hours</option><option>Half day (4h)</option><option>Full day (8h)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Location</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Conference Room A</option><option>Skills Lab</option><option>Online / Zoom</option><option>Off-site</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">CEUs Awarded</label>
+                  <input type="number" min={0} step={0.5} className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 1.5" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Departments Required</label>
+                <select multiple className="w-full border border-border rounded-lg px-3 py-2 text-sm h-24">
+                  <option>All Staff</option><option>Clinical</option><option>Nursing</option><option>BHT</option><option>Administration</option>
+                </select>
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setScheduleOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setScheduleOpen(false); saveTrainingAction('Training session scheduled'); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Schedule Session</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {trainingSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> {trainingSaved}
         </div>
       )}
     </div>

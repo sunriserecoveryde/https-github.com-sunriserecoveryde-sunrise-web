@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-import { CheckCircle, AlertTriangle, Clock, XCircle, Plus, Award, Calendar, ExternalLink } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Clock, XCircle, Plus, Award, Calendar, ExternalLink, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { LockedButton } from '../components/common/LockedButton';
 
@@ -38,7 +38,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     ceuRequired: 40, ceuCompleted: 38, ceuCycleEnd: '2026-12-31',
     credentials: [
       { id: 'C-002', name: 'CAC-AD — Certified Associate Counselor, Alcohol & Drug', type: 'Certification', issuingBody: 'Maryland Behavioral Health Administration (MD BHA) / ADAA', issueDate: '2015-03-01', expiryDate: '2027-03-01', status: 'Current', licenseNumber: 'MD-CAC-AD-3891', notes: 'Required for SUD services to MD-funded clients under COMAR 10.63.' },
-      { id: 'C-003', name: 'Board Approved Supervisor (BAS)', type: 'Certification', issuingBody: 'Maryland Behavioral Health Administration (MD BHA) / ADAA', issueDate: '2018-05-01', expiryDate: '2026-05-01', status: 'Expiring Soon', licenseNumber: 'BAS-MD-441', notes: 'Required to supervise ADT and CSC-AD staff. Must hold CAC-AD or CPC-AD + BAS training. Renewal pending — application submitted 4/15/2026.' },
+      { id: 'C-003', name: 'Board Approved Supervisor (BAS)', type: 'Certification', issuingBody: 'Maryland Behavioral Health Administration (MD BHA) / ADAA', issueDate: '2018-05-01', expiryDate: '2026-05-01', status: 'Expired', licenseNumber: 'BAS-MD-441', notes: 'Expired 5/1/2026 — renewal application submitted 4/15/2026. Awaiting MD BHA processing. Supervision of ADT and CSC-AD staff paused pending renewal.' },
       { id: 'C-004', name: 'CARF Survey Preparation Training', type: 'Training', issuingBody: 'CARF International', issueDate: '2024-09-01', expiryDate: '2026-09-01', status: 'Current' },
     ],
   },
@@ -66,7 +66,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-004', staffName: 'Sarah Jenkins', role: 'Primary Counselor',
     ceuRequired: 30, ceuCompleted: 27, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-013', name: 'Licensed Professional Counselor (LPC)', type: 'License', issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)', issueDate: '2019-07-01', expiryDate: '2025-12-31', status: 'Expiring Soon', licenseNumber: 'LPC-MD-11342', notes: 'Renewal due 12/31/2025. Supervised clinical hours under James S. Collins III, CAC-AD, BAS.' },
+      { id: 'C-013', name: 'Licensed Professional Counselor (LPC)', type: 'License', issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)', issueDate: '2019-07-01', expiryDate: '2025-12-31', status: 'Expired', licenseNumber: 'LPC-MD-11342', notes: 'Expired 12/31/2025 — renewal application submitted 2/1/2026. Awaiting MBPCT processing. Supervised practice only until renewed.' },
       { id: 'C-014', name: 'National Certified Counselor', type: 'Certification', issuingBody: 'NBCC', issueDate: '2024-01-20', expiryDate: '2029-01-20', status: 'Current', licenseNumber: 'NCC 201441' },
       { id: 'C-015', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2025-03-01', expiryDate: '2027-03-01', status: 'Current' },
       { id: 'C-016', name: 'ASAM Foundations of Addiction Medicine', type: 'Training', issuingBody: 'ASAM', issueDate: '2025-06-15', expiryDate: '2028-06-15', status: 'Current' },
@@ -95,7 +95,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-007', staffName: 'Kevin Wright', role: 'Behavioral Health Technician',
     ceuRequired: 12, ceuCompleted: 6, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-024', name: 'CAC-AD — Certified Alcohol and Drug Counselor', type: 'Certification', issuingBody: 'IC&RC — Delaware DSAMH recognized', issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'Expiring Soon', licenseNumber: 'DE-CAC-AD-7831', notes: 'IC&RC CAC-AD recognized by Delaware DSAMH. Renewal pending — 40 CEU hrs required. Working toward CAADC.' },
+      { id: 'C-024', name: 'CAC-AD — Certified Alcohol and Drug Counselor', type: 'Certification', issuingBody: 'IC&RC — Delaware DSAMH recognized', issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'Expired', licenseNumber: 'DE-CAC-AD-7831', notes: 'Expired 3/1/2025 — renewal application submitted 4/2/2025. Awaiting IC&RC processing. 40 CEU hrs completed and submitted. Working toward CAADC upgrade.' },
       { id: 'C-025', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2025-06-01', expiryDate: '2027-06-01', status: 'Current' },
       { id: 'C-026', name: 'Mental Health First Aid', type: 'Training', issuingBody: 'MHFA USA', issueDate: '2025-02-15', expiryDate: '2028-02-15', status: 'Current' },
       { id: 'C-027', name: 'Crisis Prevention Institute (CPI) Nonviolent Crisis Intervention', type: 'Training', issuingBody: 'CPI', issueDate: '2025-08-01', expiryDate: '2026-08-01', status: 'Expiring Soon' },
@@ -120,7 +120,7 @@ const STATUS_ICON = {
 };
 
 const daysUntilExpiry = (dateStr: string) => {
-  return Math.floor((new Date(dateStr).getTime() - new Date('2026-07-19').getTime()) / (1000 * 60 * 60 * 24));
+  return Math.floor((new Date(dateStr).getTime() - new Date('2026-07-22').getTime()) / (1000 * 60 * 60 * 24));
 };
 
 const getCredentialStatus = (c: Credential): CertStatus => {
@@ -133,6 +133,8 @@ const getCredentialStatus = (c: Credential): CertStatus => {
 export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Dashboard' | 'Staff' | 'Upcoming' | 'CEU Tracker' | 'Licensure Board' | 'Renewal Planner'>('Dashboard');
   const [selectedStaff, setSelectedStaff] = useState<string>('SC-001');
+  const [addCredOpen, setAddCredOpen] = useState(false);
+  const [credSaved, setCredSaved] = useState(false);
 
   const allCreds = STAFF_CREDENTIALS.flatMap(s => s.credentials.map(c => ({ ...c, staff: s })));
   const expiredCreds = allCreds.filter(c => getCredentialStatus(c) === 'Expired');
@@ -155,7 +157,7 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy">Certification Tracker</h1>
           <p className="text-slate text-sm mt-0.5">Staff licenses · Certifications · CEU tracking · CARF credentialing compliance</p>
         </div>
-        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Add Credential</LockedButton>
+        <LockedButton locked={readOnly} onClick={() => setAddCredOpen(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />Add Credential</LockedButton>
       </div>
 
       {(expiredCreds.length > 0 || expiringSoon.length > 0) && (
@@ -411,14 +413,14 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
               <tbody className="divide-y divide-border">
                 {[
                   { name: 'James S. Collins III', license: 'CAC-AD + BAS', num: 'MD-CAC-AD-3891 / BAS-MD-441', state: 'MD', issued: '2015-03-01', expires: '2027-03-01', ce: '40 hrs/2yr (MD BHA)', status: 'Active' },
-                  { name: 'Sarah Jenkins', license: 'LPC + CAC-AD', num: 'LPC-MD-11342 / MD-CAC-AD-2218', state: 'MD', issued: '2019-07-01', expires: '2025-12-31', ce: '40 hrs/2yr (MBPCT)', status: 'Due Q4' },
-                  { name: 'David Odom', license: 'LMFT', num: 'LMFT-MD-4421', state: 'MD', issued: '2020-05-01', expires: '2026-04-30', ce: '40 hrs/2yr (MBPCT)', status: 'Active' },
+                  { name: 'Sarah Jenkins', license: 'LPC + CAC-AD', num: 'LPC-MD-11342 / MD-CAC-AD-2218', state: 'MD', issued: '2019-07-01', expires: '2025-12-31', ce: '40 hrs/2yr (MBPCT)', status: 'Renewal Overdue' },
+                  { name: 'David Odom', license: 'LMFT', num: 'LMFT-MD-4421', state: 'MD', issued: '2020-05-01', expires: '2026-04-30', ce: '40 hrs/2yr (MBPCT)', status: 'Renewal Overdue' },
                   { name: 'Maria Gonzalez', license: 'LCSW-C + CAC-AD', num: 'LCSW-C-MD-4432', state: 'MD', issued: '2016-09-01', expires: '2027-09-30', ce: '30 hrs/2yr (MBSWE)', status: 'Active' },
                   { name: 'Dr. Robert Chen', license: 'MD', num: 'MD-18834', state: 'MD', issued: '2015-07-01', expires: '2027-03-31', ce: '50 CME hrs/2yr (MBP)', status: 'Active' },
                   { name: 'Dr. Allen Hughes', license: 'MD + FASAM', num: 'MD-09921', state: 'MD', issued: '2008-06-01', expires: '2028-12-31', ce: '50 CME hrs/2yr (MBP)', status: 'Active' },
                   { name: 'Jessica Torres', license: 'RN + CARN', num: 'RN-MD-44129', state: 'MD', issued: '2015-11-01', expires: '2026-10-31', ce: '30 hrs/2yr (MBON)', status: 'Active' },
-                  { name: 'Kevin Wright', license: 'CAC-AD + PRS', num: 'DE-CAC-AD-7831 / DSAMH-PRS-1122', state: 'DE', issued: '2021-03-01', expires: '2025-03-01', ce: '40 hrs/2yr (IC&RC)', status: 'Due Q1' },
-                  { name: 'Michael Boyd', license: 'ADT (DSAMH)', num: 'DSAMH-ADT-2023-0447', state: 'DE', issued: '2023-04-15', expires: '2025-04-15', ce: 'Annual renewal (DSAMH)', status: 'Due' },
+                  { name: 'Kevin Wright', license: 'CAC-AD + PRS', num: 'DE-CAC-AD-7831 / DSAMH-PRS-1122', state: 'DE', issued: '2021-03-01', expires: '2025-03-01', ce: '40 hrs/2yr (IC&RC)', status: 'Renewal Overdue' },
+                  { name: 'Michael Boyd', license: 'ADT (DSAMH)', num: 'DSAMH-ADT-2023-0447', state: 'DE', issued: '2023-04-15', expires: '2025-04-15', ce: 'Annual renewal (DSAMH)', status: 'Renewal Overdue' },
                   { name: 'Carlos Rivera', license: 'CAC-AD + CPRS', num: 'DE-CAC-AD-4419 / CPRS-DE-0891', state: 'DE', issued: '2023-05-01', expires: '2027-05-01', ce: '40 hrs/2yr (IC&RC)', status: 'Active' },
                   { name: 'Marcus Thompson (PSS)', license: 'CPRS', num: 'MD-CPRS-5521', state: 'MD', issued: '2023-03-01', expires: '2025-03-01', ce: '20 hrs/2yr', status: 'Renewal Overdue' },
                 ].map(r => (
@@ -539,6 +541,61 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {addCredOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setAddCredOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[500px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Add Credential / Certification</h2>
+              <button onClick={() => setAddCredOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Staff Member *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Sarah Jenkins, LPC</option><option>Maria Gonzales, LCSW</option><option>David Odom, LMFT</option><option>Dr. Allen Hughes</option><option>Jessica Torres, RN</option><option>Kevin Wright, BHT</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Credential Type *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>LPC — Licensed Professional Counselor</option><option>LCSW — Licensed Clinical Social Worker</option><option>LMFT — Marriage & Family Therapist</option><option>RN — Registered Nurse</option><option>CADC — Certified Alcohol & Drug Counselor</option><option>CPR / First Aid</option><option>EMDR Certification</option><option>CPI Non-Violent Crisis Intervention</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">License / Cert #</label>
+                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. LPC-12345" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Issuing State / Body</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Maryland (MD)</option><option>Delaware (DE)</option><option>Virginia (VA)</option><option>IC&RC</option><option>National Board (NBCC)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Issue Date</label>
+                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Expiration Date</label>
+                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setAddCredOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setAddCredOpen(false); setCredSaved(true); setTimeout(() => setCredSaved(false), 2500); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Save Credential</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {credSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> Credential added to staff record
         </div>
       )}
     </div>

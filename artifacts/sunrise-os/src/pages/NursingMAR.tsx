@@ -27,7 +27,7 @@ interface PatientMAR {
   administrations: Record<string, Record<string, { status: AdminStatus; givenBy?: string; givenAt?: string; notes?: string; witnessedBy?: string; }>>;
 }
 
-const TODAY = '2026-07-19';
+const TODAY = '2026-07-22';
 
 const MAR_DATA: PatientMAR[] = [
   {
@@ -155,12 +155,20 @@ const CAT_STYLE: Record<string, string> = {
 
 const SHIFTS = ['0800', '1200', '1400', '1800', '2000', '2100'];
 
+// Module-level UI state — survives tab-switching (component unmount/remount)
+let _marTab: 'MAR' | 'Controlled Log' | 'PRN History' | 'Allergy Registry' | 'Medication Errors' | 'Waste Log' = 'MAR';
+let _expandedPatient: string | null = 'p1';
+
 export function NursingMAR({ navigate, readOnly }: Props) {
   const editRoles = getRolesWithEditAccess('NursingMAR');
   const [date] = useState(TODAY);
-  const [marTab, setMarTab] = useState<'MAR' | 'Controlled Log' | 'PRN History' | 'Allergy Registry' | 'Medication Errors' | 'Waste Log'>('MAR');
-  const [expandedPatient, setExpandedPatient] = useState<string | null>('p1');
+  const [marTab, _setMarTab] = useState<'MAR' | 'Controlled Log' | 'PRN History' | 'Allergy Registry' | 'Medication Errors' | 'Waste Log'>(_marTab);
+  const [expandedPatient, _setExpandedPatient] = useState<string | null>(_expandedPatient);
   const [administering, setAdministering] = useState<{ patientId: string; med: string; time: string } | null>(null);
+  const [countVerified, setCountVerified] = useState(false);
+
+  const setMarTab = (v: typeof marTab) => { _marTab = v; _setMarTab(v); };
+  const setExpandedPatient = (v: string | null) => { _expandedPatient = v; _setExpandedPatient(v); };
 
   const pendingCount = MAR_DATA.reduce((acc, mar) => {
     return acc + mar.meds.filter(m => {
@@ -189,7 +197,7 @@ export function NursingMAR({ navigate, readOnly }: Props) {
             <div className="text-xs text-slate">Charge Nurse</div>
             <div className="text-sm font-semibold text-navy">Jessica Torres, RN</div>
           </div>
-          <button className="btn-primary text-sm px-4 py-2">Print MAR</button>
+          <button onClick={() => { setCountVerified(true); setTimeout(() => setCountVerified(false), 2500); }} className="btn-primary text-sm px-4 py-2">Print MAR</button>
         </div>
       </div>
 
@@ -255,9 +263,23 @@ export function NursingMAR({ navigate, readOnly }: Props) {
                     {hasPending && !hasMissed && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Pending</span>}
                     {!hasPending && !hasMissed && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Up to Date</span>}
                   </div>
-                  <div className="flex items-center gap-4 mt-0.5 text-[10px] text-slate">
+                  <div className="flex items-center gap-4 mt-0.5 text-[10px] text-slate flex-wrap">
                     <span>Allergies: <span className="font-medium text-red-600">{mar.allergies}</span></span>
                     <span>{mar.meds.length} medications · {mar.meds.filter(m => m.controlled).length} controlled</span>
+                    {(() => {
+                      const slots = mar.meds.flatMap(m => m.scheduled.map(t => ({ medName: m.medName, time: t })));
+                      const given   = slots.filter(s => mar.administrations[s.time]?.[s.medName]?.status === 'Given').length;
+                      const missed  = slots.filter(s => mar.administrations[s.time]?.[s.medName]?.status === 'Missed').length;
+                      const pending = slots.length - given - missed;
+                      return (
+                        <span className="flex items-center gap-2">
+                          {given   > 0 && <span className="text-green-700 font-semibold">✓ {given} given</span>}
+                          {pending > 0 && <span className="text-amber-700 font-semibold">⏱ {pending} pending</span>}
+                          {missed  > 0 && <span className="text-red-700 font-semibold">✕ {missed} missed</span>}
+                          {slots.length === 0 && <span className="text-slate-400">PRN only</span>}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
                 {isExpanded ? <ChevronUp className="w-4 h-4 text-slate" /> : <ChevronDown className="w-4 h-4 text-slate" />}
@@ -343,6 +365,44 @@ export function NursingMAR({ navigate, readOnly }: Props) {
           <div className="bg-white rounded-xl p-6 shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-navy mb-1">Document Administration</h3>
             <p className="text-sm text-slate mb-4">{administering.med} — {administering.time} dose</p>
+            {/* PRN interval check — warn if the med's q-interval hasn't elapsed */}
+            {(() => {
+              const patientMAR = MAR_DATA.find(p => p.patientId === administering.patientId);
+              const medEntry = patientMAR?.meds.find(m => m.medName === administering.med);
+              if (!medEntry) return null;
+              // Parse interval hours from frequency string e.g. "PRN q6h" → 6
+              const match = medEntry.frequency.match(/q(\d+)h/i);
+              if (!match) return null;
+              const intervalHrs = parseInt(match[1], 10);
+              // Find the most recent Given administration for this med across all shifts
+              const admins = patientMAR?.administrations ?? {};
+              const givenShifts = Object.entries(admins)
+                .filter(([, slotAdmins]) => slotAdmins[administering.med]?.status === 'Given')
+                .map(([shift]) => shift) // shift keys like "0900", "1400"
+                .sort();
+              if (givenShifts.length === 0) return null;
+              const lastShift = givenShifts[givenShifts.length - 1]; // e.g. "0900"
+              const lh = parseInt(lastShift.slice(0, 2), 10);
+              const lm = parseInt(lastShift.slice(2), 10);
+              // administering.time is a shift key like "1000"
+              const curShift = String(administering.time);
+              const th = parseInt(curShift.slice(0, 2), 10);
+              const tm = parseInt(curShift.slice(2), 10);
+              const elapsedHrs = (th * 60 + tm - (lh * 60 + lm)) / 60;
+              if (elapsedHrs < 0 || elapsedHrs >= intervalHrs) return null;
+              const remainHrs = Math.floor(intervalHrs - elapsedHrs);
+              const remainMins = Math.round((intervalHrs - elapsedHrs - remainHrs) * 60);
+              const lastFmt = `${lh.toString().padStart(2, '0')}:${lm.toString().padStart(2, '0')}`;
+              return (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-2.5 text-xs text-red-800 mb-0">
+                  <span className="text-red-500 flex-none mt-0.5">⚠</span>
+                  <span>
+                    <strong>PRN Interval Warning:</strong> {administering.med} was last given at {lastFmt} ({elapsedHrs.toFixed(1)}h ago).
+                    Order requires q{intervalHrs}h — <strong>{remainHrs}h {remainMins}m remaining</strong>. Requires MD override to proceed.
+                  </span>
+                </div>
+              );
+            })()}
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -393,7 +453,7 @@ export function NursingMAR({ navigate, readOnly }: Props) {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-red-700 font-medium">Shift count required at 07:00, 15:00, 23:00</span>
-            <LockedButton locked={readOnly} className="text-xs bg-red-600 text-white px-3 py-1.5 rounded font-semibold hover:bg-red-700">Verify Count</LockedButton>
+            <LockedButton locked={readOnly} onClick={() => { setCountVerified(true); setTimeout(() => setCountVerified(false), 3000); }} className={`text-xs px-3 py-1.5 rounded font-semibold ${countVerified ? 'bg-green-600 text-white' : 'bg-red-600 text-white hover:bg-red-700'}`}>{countVerified ? '✓ Count Verified' : 'Verify Count'}</LockedButton>
           </div>
         </div>
         <table className="w-full text-sm">
@@ -664,3 +724,4 @@ export function NursingMAR({ navigate, readOnly }: Props) {
     </div>
   );
 }
+

@@ -93,7 +93,7 @@ const MESSAGES: Message[] = [
     patientId: 'p3',
     subject: 'Carlos Rivera — missed peer group again',
     body: 'Sarah — just flagging that Carlos (p3) missed the peer support group again today (3rd time this week). Marcus Thomas (peer specialist) also mentioned Carlos has been sleeping through meals. Thought you should know before your 1:1 with him tomorrow.',
-    timestamp: '2026-07-18 2:30 PM', status: 'Unread',
+    timestamp: '2026-07-18 2:30 PM', status: 'Read',
   },
   {
     id: 'M-006', threadId: 'T-006', type: 'Clinical Notification', urgency: 'Routine',
@@ -102,7 +102,7 @@ const MESSAGES: Message[] = [
     patientId: 'p4',
     subject: '📋 Lab Results Ready — Robert Navarro (p4)',
     body: 'Lab results received and uploaded to chart for Robert Navarro (p4). CMP, CBC, LFTs, UA drug screen, Hepatitis Panel. Notable: AST 68 (H), ALT 81 (H) — mildly elevated LFTs, trending down from admission. Full results available in patient chart → Labs tab.',
-    timestamp: '2026-07-19 7:15 AM', status: 'Unread',
+    timestamp: '2026-07-19 7:15 AM', status: 'Read',
   },
   {
     id: 'M-007', threadId: 'T-007', type: 'Staff-Staff', urgency: 'Routine',
@@ -361,7 +361,7 @@ export function SecureMessaging({ navigate, readOnly }: Props) {
                     placeholder="Reply securely..."
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)} />
-                  <LockedButton locked={readOnly} onClick={() => !readOnly && setNewMessage('')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+                  <LockedButton locked={readOnly} onClick={() => { if (!readOnly && newMessage.trim()) setNewMessage(''); }} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
                     <Send className="w-4 h-4" /> Send
                   </LockedButton>
                 </div>
@@ -468,7 +468,7 @@ export function SecureMessaging({ navigate, readOnly }: Props) {
                   {cat.templates.map((t, i) => (
                     <div key={i} className="group border border-border rounded-lg p-2.5 hover:border-orange/40 hover:bg-orange/5 transition-colors cursor-pointer">
                       <div className="text-xs text-slate leading-relaxed">{t}</div>
-                      <button className="text-[9px] font-bold text-orange mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">Use Template →</button>
+                      <button onClick={() => setNewMessage(t)} className="text-[9px] font-bold text-orange mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">Use Template →</button>
                     </div>
                   ))}
                 </div>

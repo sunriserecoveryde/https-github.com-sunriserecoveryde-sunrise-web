@@ -93,7 +93,7 @@ function BedCard({ patient, navigate }: { patient: Patient; navigate: (s: Screen
               <span className="text-[10px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded">AMA ⚠</span>
             )}
           </div>
-          {hasAlert && <AlertTriangle className="w-3.5 h-3.5 text-critical flex-none" />}
+          {hasAlert && <AlertTriangle className="w-3.5 h-3.5 text-critical flex-none animate-pulse" />}
         </div>
 
         {/* Patient info */}
@@ -318,7 +318,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                   { week: 'Jun 23', res: 13, php: 11, iop: 10 },
                   { week: 'Jun 30', res: 15, php: 10, iop: 12 },
                   { week: 'Jul 7', res: 16, php: 11, iop: 11 },
-                  { week: 'Jul 14', res: totalOccupied, php: phpPatients.length, iop: iopPatients.length },
+                  { week: 'Jul 20', res: totalOccupied, php: phpPatients.length, iop: iopPatients.length },
                 ].map(r => (
                   <div key={r.week} className="flex items-center gap-3 text-xs">
                     <span className="w-14 text-slate shrink-0">{r.week}</span>
@@ -484,7 +484,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
             ? <div className="grid grid-cols-2 gap-3">
                 {phpPatients.map(p => <BedCard key={p.id} patient={p} navigate={navigate} />)}
               </div>
-            : <p className="text-sm text-slate italic">No PHP patients with assigned beds.</p>}
+            : <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate"><Users className="w-8 h-8 text-slate-200" /><span className="text-sm italic">No PHP patients with assigned beds.</span><span className="text-xs text-slate-light">Patients enroll via Admissions once a bed is assigned.</span></div>}
         </div>
 
         {/* IOP */}
@@ -502,7 +502,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
             ? <div className="grid grid-cols-2 gap-3">
                 {iopPatients.map(p => <BedCard key={p.id} patient={p} navigate={navigate} />)}
               </div>
-            : <p className="text-sm text-slate italic">No IOP patients with assigned beds.</p>}
+            : <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate"><Users className="w-8 h-8 text-slate-200" /><span className="text-sm italic">No IOP patients with assigned beds.</span><span className="text-xs text-slate-light">Patients enroll via Admissions once a bed is assigned.</span></div>}
         </div>
       </div>
       </>
@@ -542,8 +542,8 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'Marcus Webb', bed: '1A', prog: 'Residential', date: '2026-07-19', los: 28, dest: 'Sober Living — Oxford House', status: 'Confirmed', statusColor: 'bg-green-100 text-green-700' },
-                  { name: 'Darnell Price', bed: '2B', prog: 'Residential', date: '2026-07-21', los: 31, dest: 'Family Home + IOP step-down', status: 'Planned', statusColor: 'bg-blue-100 text-blue-700' },
+                  { name: 'Marcus Webb', bed: '1A', prog: 'Residential', date: '2026-07-22', los: 31, dest: 'Sober Living — Oxford House', status: 'Confirmed', statusColor: 'bg-green-100 text-green-700' },
+                  { name: 'Darnell Price', bed: '2B', prog: 'Residential', date: '2026-07-23', los: 33, dest: 'Family Home + IOP step-down', status: 'Planned', statusColor: 'bg-blue-100 text-blue-700' },
                   { name: 'Keisha Brown', bed: '3A', prog: 'Residential', date: '2026-07-24', los: 19, dest: 'TBD — Housing coordinator engaged', status: 'At Risk', statusColor: 'bg-amber-100 text-amber-700' },
                   { name: 'Tyler Nguyen', bed: '4B', prog: 'Residential', date: '2026-07-26', los: 35, dest: 'PHP step-down — Sunrise PHP', status: 'Planned', statusColor: 'bg-blue-100 text-blue-700' },
                   { name: 'Angela Morse', bed: '1B', prog: 'Residential', date: '2026-07-28', los: 22, dest: 'Outpatient + PCP follow-up', status: 'Planned', statusColor: 'bg-blue-100 text-blue-700' },
@@ -571,13 +571,13 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
               <h3 className="font-semibold text-navy text-sm mb-3">Bed Turnover Timeline (Next 14 Days)</h3>
               <div className="space-y-2 text-xs">
                 {[
-                  { date: 'Jul 19', beds: ['1A'], opens: 1 },
-                  { date: 'Jul 21', beds: ['2B'], opens: 1 },
-                  { date: 'Jul 24', beds: ['3A'], opens: 1 },
-                  { date: 'Jul 26', beds: ['4B'], opens: 1 },
-                  { date: 'Jul 28', beds: ['1B'], opens: 1 },
-                  { date: 'Jul 31', beds: ['3B'], opens: 1 },
-                  { date: 'Aug 2', beds: ['5A'], opens: 1 },
+                  { date: 'Jul 22', beds: ['1A'], opens: 1 },
+                  { date: 'Jul 24', beds: ['2B'], opens: 1 },
+                  { date: 'Jul 26', beds: ['3A'], opens: 1 },
+                  { date: 'Jul 28', beds: ['4B'], opens: 1 },
+                  { date: 'Jul 30', beds: ['1B'], opens: 1 },
+                  { date: 'Aug 2', beds: ['3B'], opens: 1 },
+                  { date: 'Aug 4', beds: ['5A'], opens: 1 },
                 ].map(d => (
                   <div key={d.date} className="flex items-center gap-3 border border-border rounded p-2">
                     <span className="font-semibold text-navy w-14 shrink-0">{d.date}</span>

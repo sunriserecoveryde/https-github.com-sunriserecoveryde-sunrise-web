@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Platform, StyleSheet, useColorScheme, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { PATIENTS } from '@/data/mockData';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
@@ -50,6 +51,15 @@ function ClassicTabLayout() {
   const alertCount = residentialPatients.filter(
     p => (p.cows != null && p.cows >= 13) || (p.ciwa != null && p.ciwa >= 13)
   ).length;
+
+  // Haptic pulse when alert count rises
+  const prevAlertCount = useRef(alertCount);
+  useEffect(() => {
+    if (alertCount > prevAlertCount.current) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
+    prevAlertCount.current = alertCount;
+  }, [alertCount]);
 
   return (
     <Tabs

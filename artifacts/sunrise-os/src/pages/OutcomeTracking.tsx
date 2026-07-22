@@ -83,7 +83,7 @@ export function OutcomeTracking({ navigate: _navigate }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <RefreshCw className="w-4 h-4 text-slate" />
-          <span className="text-xs text-slate">Updated Jul 19, 2026</span>
+          <span className="text-xs text-slate">Updated Jul 22, 2026</span>
         </div>
       </div>
 

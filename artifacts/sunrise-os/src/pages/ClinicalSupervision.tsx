@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-import { CheckCircle, Clock, AlertTriangle, Plus, ChevronDown, ChevronUp, Star, TrendingUp, Award } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, Plus, ChevronDown, ChevronUp, Star, TrendingUp, Award, X } from 'lucide-react';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { LockedButton } from '../components/common/LockedButton';
 
@@ -90,7 +90,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
   {
     id: 'SV-003', name: 'Aisha Thompson', role: 'CSC-AD (MD)', supervisor: 'James S. Collins III, CAC-AD, BAS',
     hoursRequiredMonthly: 2, hoursCompletedThisMonth: 1, licenseExpiry: '2029-09-01',
-    supervisionType: 'Both', nextSession: '2026-07-20', caseload: 9, pendingCosigns: 1,
+    supervisionType: 'Both', nextSession: '2026-07-27', caseload: 9, pendingCosigns: 1,
     competencyScores: { assessment: 4.6, treatmentPlanning: 4.3, documentation: 4.8, therapeuticAlliance: 4.2, ethicsCompliance: 5.0, culturalHumility: 4.9 },
     notes: [
       {
@@ -121,6 +121,9 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Overview' | 'Individual' | 'Group' | 'Productivity' | 'Supervisor Notes' | 'Competency Eval'>('Overview');
   const [selectedSupervisee, setSelectedSupervisee] = useState<string>('SV-001');
   const [expandedNote, setExpandedNote] = useState<string | null>('SN-001');
+  const [newNoteOpen, setNewNoteOpen] = useState(false);
+  const [noteSaved, setNoteSaved] = useState<string | null>(null);
+  const saveSuperAction = (msg: string) => { setNoteSaved(msg); setTimeout(() => setNoteSaved(null), 2500); };
 
   const supervisee = SUPERVISEES.find(s => s.id === selectedSupervisee)!;
   const overdueSupervision = SUPERVISEES.filter(s => s.hoursCompletedThisMonth < s.hoursRequiredMonthly);
@@ -138,7 +141,7 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy">Clinical Supervision</h1>
           <p className="text-slate text-sm mt-0.5">Supervision notes · Competency tracking · CARF supervision compliance</p>
         </div>
-        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+        <LockedButton locked={readOnly} onClick={() => setNewNoteOpen(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
           <Plus className="w-4 h-4" /> New Supervision Note
         </LockedButton>
       </div>
@@ -292,7 +295,7 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
                       </div>
                     );
                   })}
-                  <button className="w-full py-3 border-2 border-dashed border-border rounded-xl text-sm text-slate hover:border-orange hover:text-orange transition-colors flex items-center justify-center gap-2">
+                  <button onClick={() => setNewNoteOpen(true)} className="w-full py-3 border-2 border-dashed border-border rounded-xl text-sm text-slate hover:border-orange hover:text-orange transition-colors flex items-center justify-center gap-2">
                     <Plus className="w-4 h-4" /> Add Supervision Note
                   </button>
                 </div>
@@ -317,7 +320,7 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
                     {gs.attendees.map(a => <span key={a} className="text-[10px] bg-navy/10 text-navy px-2 py-0.5 rounded-full">{a}</span>)}
                   </div>
                 </div>
-                {gs.status === 'Upcoming' && <LockedButton locked={readOnly} className="btn-primary text-xs px-3 py-1.5">Add to Calendar</LockedButton>}
+                {gs.status === 'Upcoming' && <LockedButton locked={readOnly} onClick={() => saveSuperAction('Session added to calendar')} className="btn-primary text-xs px-3 py-1.5">Add to Calendar</LockedButton>}
               </div>
             </div>
           ))}
@@ -453,8 +456,8 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
                   <span>Total hrs this session: <span className="font-bold text-navy">{note.hours.total}</span></span>
                 </div>
                 <div className="flex gap-2">
-                  <button className="text-xs border border-border text-slate px-3 py-1 rounded hover:bg-gray-50">View History</button>
-                  <LockedButton locked={readOnly} className="text-xs btn-primary px-3 py-1">Add Note</LockedButton>
+                  <button onClick={() => setExpandedNote(expandedNote === note.supervisee ? null : note.supervisee)} className="text-xs border border-border text-slate px-3 py-1 rounded hover:bg-gray-50">View History</button>
+                  <LockedButton locked={readOnly} onClick={() => setNewNoteOpen(true)} className="text-xs btn-primary px-3 py-1">Add Note</LockedButton>
                 </div>
               </div>
             </div>
@@ -539,6 +542,61 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {newNoteOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setNewNoteOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[540px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">New Supervision Note</h2>
+              <button onClick={() => setNewNoteOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Supervisee *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Sarah Jenkins, LPC</option><option>Maria Gonzales, LCSW</option><option>David Odom, LMFT</option><option>Kevin Wright, BHT</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Session Date</label>
+                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Session Type</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Individual Supervision</option><option>Group Supervision</option><option>Crisis Consultation</option><option>Chart Review</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Duration (hours)</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>0.5</option><option>1</option><option>1.5</option><option>2</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Cases Reviewed / Focus Areas</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="Caseload review, clinical challenges, skill-building focus, ethics discussion..." />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Supervisor Observations & Plan</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="Strengths noted, areas for growth, action items, follow-up plan..." />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setNewNoteOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setNewNoteOpen(false); saveSuperAction('Supervision note saved'); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Save Note</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {noteSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> {noteSaved}
         </div>
       )}
     </div>

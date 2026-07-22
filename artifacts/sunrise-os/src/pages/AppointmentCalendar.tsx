@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-import { Calendar as CalendarIcon, Users, User, Plus, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, User, Plus, Clock, ChevronLeft, ChevronRight, CheckCircle, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 
@@ -65,10 +65,10 @@ const DOT_STYLE: Record<Appointment['type'], string> = {
   Family:     'bg-success',
 };
 
-const WEEK_DAYS = ['Mon 7/14', 'Tue 7/15', 'Wed 7/16', 'Thu 7/17', 'Fri 7/18'];
+const WEEK_DAYS = ['Mon 7/20', 'Tue 7/21', 'Wed 7/22', 'Thu 7/23', 'Fri 7/24'];
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16];
 const HOUR_LABELS = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
-const CURRENT_DAY = 4; // Friday (today in the demo)
+const CURRENT_DAY = 2; // Wednesday Jul 22 (today in the demo)
 const CURRENT_HOUR = 14; // 2:00 PM
 
 // ─── Component ────────────────────────────────────────────────────────────
@@ -78,6 +78,16 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
   const [selectedDay, setSelectedDay] = useState(CURRENT_DAY);
   const [typeFilter, setTypeFilter] = useState<Appointment['type'] | 'All'>('All');
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
+  const [newApptOpen, setNewApptOpen] = useState(false);
+  const [apptSaved, setApptSaved] = useState(false);
+  const [newAppt, setNewAppt] = useState({ type: 'Individual' as Appointment['type'], day: CURRENT_DAY, start: '09:00', duration: '1', title: '', staff: '', location: '', patientId: '' });
+
+  function handleSaveAppt() {
+    setNewApptOpen(false);
+    setApptSaved(true);
+    setTimeout(() => setApptSaved(false), 2500);
+    setNewAppt({ type: 'Individual', day: CURRENT_DAY, start: '09:00', duration: '1', title: '', staff: '', location: '', patientId: '' });
+  }
 
   const filteredAppts = typeFilter === 'All' ? APPTS : APPTS.filter(a => a.type === typeFilter);
 
@@ -98,7 +108,7 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
           <h1 className="text-2xl font-bold text-navy flex items-center gap-2">
             <CalendarIcon className="w-6 h-6 text-sunrise-blue" /> Appointment Calendar
           </h1>
-          <p className="text-slate text-sm mt-1">Week of July 14 – 18, 2026</p>
+          <p className="text-slate text-sm mt-1">Week of July 20 – 26, 2026</p>
         </div>
         <div className="flex gap-3">
           <div className="flex bg-white rounded border border-border shadow-sm p-1">
@@ -112,7 +122,7 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
               </button>
             ))}
           </div>
-          <LockedButton locked={readOnly} className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium flex items-center gap-2 hover:bg-sunrise-blue-light shadow-sm transition-colors text-sm">
+          <LockedButton locked={readOnly} onClick={() => setNewApptOpen(true)} className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium flex items-center gap-2 hover:bg-sunrise-blue-light shadow-sm transition-colors text-sm">
             <Plus className="w-4 h-4" /> New Appointment
           </LockedButton>
         </div>
@@ -321,7 +331,7 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
               <h3 className="font-semibold text-navy text-sm mb-3">Utilization by Day — This Week</h3>
               <div className="space-y-2.5">
                 {[
-                  { day: 'Monday (today)', booked: 11, capacity: 14, pct: 79 },
+                  { day: 'Monday', booked: 11, capacity: 14, pct: 79 },
                   { day: 'Tuesday', booked: 13, capacity: 14, pct: 93 },
                   { day: 'Wednesday', booked: 10, capacity: 14, pct: 71 },
                   { day: 'Thursday', booked: 12, capacity: 14, pct: 86 },
@@ -420,15 +430,15 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { patient: 'Marcus Webb', type: 'Psychiatric Eval', provider: 'Dr. Emma Hughes', requested: '2026-07-17', days: 2, priority: 'Urgent', status: 'Pending' },
-                  { patient: 'Elena Vasquez', type: 'Psychiatric Eval', provider: 'Dr. Emma Hughes', requested: '2026-07-16', days: 3, priority: 'Urgent', status: 'Pending' },
-                  { patient: 'James Thornton', type: 'Medical (Pre-DC)', provider: 'Dr. Robert Chen', requested: '2026-07-18', days: 1, priority: 'Urgent', status: 'Scheduling' },
-                  { patient: 'Ava Simmons', type: 'Individual Counseling', provider: 'Sarah Jenkins, LPC', requested: '2026-07-15', days: 4, priority: 'Routine', status: 'Pending' },
-                  { patient: 'Robert Navarro', type: 'Psychiatric Eval', provider: 'Dr. Emma Hughes', requested: '2026-07-14', days: 5, priority: 'High', status: 'Scheduling' },
-                  { patient: 'Patricia Holloway', type: 'Family Therapy', provider: 'David Odom, LMFT', requested: '2026-07-16', days: 3, priority: 'Routine', status: 'Pending' },
-                  { patient: 'Brian Kowalski', type: 'MAT Consult', provider: 'Dr. Robert Chen', requested: '2026-07-13', days: 6, priority: 'High', status: 'Pending' },
-                  { patient: 'Kevin Hughes', type: 'Individual Counseling', provider: 'Maria Gonzales, LCSW', requested: '2026-07-15', days: 4, priority: 'Routine', status: 'Pending' },
-                  { patient: 'Sandra Kim', type: 'Dietitian Consult', provider: 'Dietitian (Ext. Referral)', requested: '2026-07-12', days: 7, priority: 'Routine', status: 'Pending' },
+                  { patient: 'Marcus Webb', type: 'Psychiatric Eval', provider: 'Dr. Emma Hughes', requested: '2026-07-17', days: 5, priority: 'Urgent', status: 'Pending' },
+                  { patient: 'Elena Vasquez', type: 'Psychiatric Eval', provider: 'Dr. Emma Hughes', requested: '2026-07-16', days: 6, priority: 'Urgent', status: 'Pending' },
+                  { patient: 'James Thornton', type: 'Medical (Pre-DC)', provider: 'Dr. Robert Chen', requested: '2026-07-20', days: 2, priority: 'Urgent', status: 'Scheduling' },
+                  { patient: 'Ava Simmons', type: 'Individual Counseling', provider: 'Sarah Jenkins, LPC', requested: '2026-07-15', days: 7, priority: 'Routine', status: 'Pending' },
+                  { patient: 'Robert Navarro', type: 'Psychiatric Eval', provider: 'Dr. Emma Hughes', requested: '2026-07-14', days: 8, priority: 'High', status: 'Scheduling' },
+                  { patient: 'Patricia Holloway', type: 'Family Therapy', provider: 'David Odom, LMFT', requested: '2026-07-16', days: 6, priority: 'Routine', status: 'Pending' },
+                  { patient: 'Brian Kowalski', type: 'MAT Consult', provider: 'Dr. Robert Chen', requested: '2026-07-13', days: 9, priority: 'High', status: 'Pending' },
+                  { patient: 'Kevin Hughes', type: 'Individual Counseling', provider: 'Maria Gonzales, LCSW', requested: '2026-07-15', days: 7, priority: 'Routine', status: 'Pending' },
+                  { patient: 'Sandra Kim', type: 'Dietitian Consult', provider: 'Dietitian (Ext. Referral)', requested: '2026-07-12', days: 10, priority: 'Routine', status: 'Pending' },
                 ].map(r => (
                   <tr key={`${r.patient}-${r.type}`} className={`hover:bg-gray-50 ${r.days >= 5 ? 'bg-amber-50/30' : ''}`}>
                     <td className="px-4 py-2.5 font-medium text-navy">{r.patient}</td>
@@ -568,6 +578,84 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* New Appointment modal */}
+      {newApptOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setNewApptOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[520px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">New Appointment</h2>
+              <button onClick={() => setNewApptOpen(false)} className="text-slate hover:text-navy p-1 rounded"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Type *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newAppt.type} onChange={e => setNewAppt(a => ({ ...a, type: e.target.value as Appointment['type'] }))}>
+                    {(['Individual','Group','Medical','Intake','Discharge','Family'] as const).map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Day</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newAppt.day} onChange={e => setNewAppt(a => ({ ...a, day: Number(e.target.value) }))}>
+                    {WEEK_DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Start Time</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newAppt.start} onChange={e => setNewAppt(a => ({ ...a, start: e.target.value }))}>
+                    {HOUR_LABELS.map((h, i) => <option key={i} value={`${HOURS[i]}:00`}>{h}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Duration</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newAppt.duration} onChange={e => setNewAppt(a => ({ ...a, duration: e.target.value }))}>
+                    {['0.5','1','1.5','2','2.5','3'].map(d => <option key={d} value={d}>{d === '0.5' ? '30 min' : `${d} hr`}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Title / Description *</label>
+                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 1:1 Marcus Webb — AMA follow-up" value={newAppt.title} onChange={e => setNewAppt(a => ({ ...a, title: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Clinician / Staff</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newAppt.staff} onChange={e => setNewAppt(a => ({ ...a, staff: e.target.value }))}>
+                    <option value="">— select staff —</option>
+                    {['Sarah Jenkins, LPC','Maria Gonzales, LCSW','David Odom, LMFT','Dr. Robert Chen','Dr. Emily Stone','Dr. Allen Hughes','Jessica Torres, RN'].map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Location</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newAppt.location} onChange={e => setNewAppt(a => ({ ...a, location: e.target.value }))}>
+                    <option value="">— select room —</option>
+                    {['Room 4','Room 8','Room 10','Room 12','Group Room A','Group Room B','Group Room C','Med Suite','Psych Office','Intake Suite','Conf Room'].map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient (optional)</label>
+                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newAppt.patientId} onChange={e => setNewAppt(a => ({ ...a, patientId: e.target.value }))}>
+                  <option value="">— no specific patient (group/medical) —</option>
+                  {MOCK_PATIENTS.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setNewApptOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={handleSaveAppt} className="flex-1 bg-sunrise-blue text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-blue-700">Schedule Appointment</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saved toast */}
+      {apptSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> Appointment scheduled
         </div>
       )}
     </div>

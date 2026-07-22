@@ -20,7 +20,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
+import Svg, { G, Polyline, Circle, Line, Text as SvgText, Rect } from 'react-native-svg';
 import { useColors } from '@/hooks/useColors';
 import { useSwipeHint } from '@/hooks/useSwipeHint';
 import { useScrollToSection } from '@/hooks/useScrollToSection';
@@ -47,6 +47,7 @@ function Sparkline({
   height = 48,
   label,
   unit = '',
+  timestamps,
 }: {
   data: number[];
   color: string;
@@ -54,7 +55,12 @@ function Sparkline({
   height?: number;
   label?: string;
   unit?: string;
+  /** Optional ISO or formatted time strings, one per data point (oldest→newest). */
+  timestamps?: string[];
 }) {
+  // #49: track which point the nurse tapped so we can show its reading time.
+  const [selectedIdx, setSelectedIdx] = React.useState<number | null>(null);
+
   if (data.length < 2) return null;
 
   const padX = 6;
@@ -71,6 +77,11 @@ function Sparkline({
   const points = data.map((v, i) => `${toX(i)},${toY(v)}`).join(' ');
   const latestX = toX(data.length - 1);
   const latestY = toY(data[data.length - 1]);
+
+  // Callout label for the selected point
+  const callout = selectedIdx !== null
+    ? `${data[selectedIdx]}${unit}${timestamps?.[selectedIdx] ? ' · ' + timestamps[selectedIdx] : ''}`
+    : null;
 
   return (
     <View style={{ alignItems: 'center' }}>
@@ -99,17 +110,41 @@ function Sparkline({
         <SvgText x={latestX + 5} y={latestY + 4} fontSize={10} fontWeight="700" fill={color}>
           {data[data.length - 1]}{unit}
         </SvgText>
+        {/* Tappable hit targets for each data point (#49) */}
+        {data.map((v, i) => {
+          const cx = toX(i);
+          const cy = toY(v);
+          const isSel = selectedIdx === i;
+          return (
+            <G key={i} onPress={() => setSelectedIdx(isSel ? null : i)}>
+              {/* Invisible hit area */}
+              <Rect x={cx - 10} y={cy - 10} width={20} height={20} fill="transparent" />
+              {isSel && <Circle cx={cx} cy={cy} r={5} fill={color} opacity={0.25} />}
+              {isSel && <Circle cx={cx} cy={cy} r={3} fill={color} />}
+            </G>
+          );
+        })}
       </Svg>
+      {/* Callout strip shown below chart when a point is selected */}
+      {callout && (
+        <Text style={[sparkStyles.callout, { color }]}>{callout}</Text>
+      )}
     </View>
   );
 }
 
 const sparkStyles = StyleSheet.create({
-  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 2, fontFamily: 'Inter_700Bold' },
+  label:   { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 2, fontFamily: 'Inter_700Bold' },
+  callout: { fontSize: 10, fontWeight: '600', fontFamily: 'Inter_600SemiBold', marginTop: 2 },
 });
 
 // ─── Withdrawal threshold (must match census board) ───────────────────────────
 const WD_THRESHOLD = 13; // COWS > 12 or CIWA > 12 per facility protocol
+
+// ─── Module-level session caches (survive tab-switches, reset on hard reload) ──
+// #52: note-type breakdown chip filter per patient — avoids filter losing state
+// when the nurse navigates away and returns within the same session.
+const _noteTypeFilters: Record<string, 'incident' | 'med-update' | null> = {};
 
 function isWithdrawalAlert(p: { cows?: number | null; ciwa?: number | null }): boolean {
   return (p.cows != null && p.cows >= WD_THRESHOLD) || (p.ciwa != null && p.ciwa >= WD_THRESHOLD);
@@ -248,6 +283,10 @@ function Card({ children, colors, style }: { children: React.ReactNode; colors: 
 }
 
 // ─── SwipeableNoteRow ─────────────────────────────────────────────────────────
+//
+// Hint key lives here, adjacent to the component, so any future consumer of
+// SwipeableNoteRow can find and wire it without hunting through the file (#168).
+export const SWIPEABLE_NOTE_ROW_HINT_KEY = 'swipeHintShown';
 
 const SWIPE_OPEN_THRESHOLD = 40;
 const DELETE_BTN_WIDTH = 80;
@@ -387,7 +426,8 @@ const sw = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-const SWIPE_HINT_KEY = 'swipeHintShown';
+// Alias for the co-located constant on SwipeableNoteRow (defined above).
+const SWIPE_HINT_KEY = SWIPEABLE_NOTE_ROW_HINT_KEY;
 
 export default function PatientDetailScreen() {
   const { id, scrollTo, noteFilter: noteFilterParam } = useLocalSearchParams<{ id: string; scrollTo?: string; noteFilter?: string }>();
@@ -799,8 +839,18 @@ export default function PatientDetailScreen() {
   const [noteText, setNoteText] = useState('');
   const [noteType, setNoteType] = useState<NoteType>('observation');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  // Active filter set by tapping a breakdown chip in the header
-  const [noteTypeFilter, setNoteTypeFilter] = useState<'incident' | 'med-update' | null>(null);
+  const [originalNoteText, setOriginalNoteText] = useState('');
+  const noteIsDirty = !editingNoteId || noteText !== originalNoteText;
+  // #52: persist the note-type breakdown-chip filter across navigation using a
+  // module-level cache keyed by patient id, so returning to the same patient
+  // restores the filter state without needing a context or AsyncStorage round-trip.
+  const [noteTypeFilter, _setNoteTypeFilter] = useState<'incident' | 'med-update' | null>(
+    _noteTypeFilters[id] ?? null
+  );
+  const setNoteTypeFilter = React.useCallback((v: 'incident' | 'med-update' | null) => {
+    _noteTypeFilters[id] = v;
+    _setNoteTypeFilter(v);
+  }, [id]);
   const slideAnim = useRef(new Animated.Value(400)).current;
 
   // ─── History modal state ───────────────────────────────────────────────────
@@ -834,15 +884,32 @@ export default function PatientDetailScreen() {
     Haptics.selectionAsync();
     setExpandedEditId(prev => (prev === noteId ? null : noteId));
   };
-  const openNoteModal = (prefill?: { id: string; text: string; noteType: NoteType }) => {
+  const DRAFT_KEY = `@sunrise_note_draft_${id}`;
+
+  // Autosave draft for new notes (not edits) so force-quit can't lose typed text
+  useEffect(() => {
+    if (noteModalVisible && !editingNoteId) {
+      AsyncStorage.setItem(DRAFT_KEY, noteText).catch(() => {});
+    }
+  }, [noteText, noteModalVisible, editingNoteId]);
+
+  const openNoteModal = async (prefill?: { id: string; text: string; noteType: NoteType }) => {
     if (prefill) {
       setEditingNoteId(prefill.id);
       setNoteText(prefill.text);
+      setOriginalNoteText(prefill.text);
       setNoteType(prefill.noteType);
     } else {
+      setOriginalNoteText('');
       setEditingNoteId(null);
-      setNoteText('');
       setNoteType('observation');
+      // Restore unsaved draft if one exists
+      try {
+        const saved = await AsyncStorage.getItem(DRAFT_KEY);
+        setNoteText(saved ?? '');
+      } catch {
+        setNoteText('');
+      }
     }
     setNoteModalVisible(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -855,6 +922,10 @@ export default function PatientDetailScreen() {
   };
 
   const closeNoteModal = () => {
+    // Discard draft only if this was a new note (not an edit)
+    if (!editingNoteId) {
+      AsyncStorage.removeItem(DRAFT_KEY).catch(() => {});
+    }
     Animated.timing(slideAnim, {
       toValue: 400,
       duration: 220,
@@ -874,6 +945,7 @@ export default function PatientDetailScreen() {
       updateNote(id, editingNoteId, trimmed, noteType, nurseDisplayName);
     } else {
       addNoteToStore(id, trimmed, noteType);
+      AsyncStorage.removeItem(DRAFT_KEY).catch(() => {});
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     closeNoteModal();
@@ -949,6 +1021,13 @@ export default function PatientDetailScreen() {
 
   const vitals: VitalEntry[] = VITALS[patient.id] ?? [];
   const medications: Medication[] = (MEDICATIONS[patient.id] ?? []).filter(m => m.status === 'Active');
+  // PRN administration logging — local session state; each tap marks the med as
+  // given for this visit and is cleared when the screen unmounts (#mobile-prn).
+  const [prnLogged, setPrnLogged] = React.useState<Set<string>>(new Set());
+  const logPrn = React.useCallback((medId: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setPrnLogged(prev => new Set(prev).add(medId));
+  }, []);
   const ac = acuityColor(patient.acuity);
 
   // ─── Note type breakdown (for header chips) ───────────────────────────────
@@ -977,6 +1056,11 @@ export default function PatientDetailScreen() {
   const tempSeries  = vitalsAsc.map(v => v.temp);
   const o2Series    = vitalsAsc.map(v => v.o2);
   const painSeries  = vitalsAsc.map(v => v.pain);
+  // Timestamps aligned to each reading series (#49). COWS/CIWA are filtered so
+  // need their own aligned arrays; the rest share vitalsTs (all readings present).
+  const vitalsTs    = vitalsAsc.map(v => v.time ?? v.date ?? '');
+  const cowsTs      = vitalsAsc.filter(v => v.cows  != null).map(v => v.time ?? v.date ?? '');
+  const ciwaTs      = vitalsAsc.filter(v => v.ciwa  != null).map(v => v.time ?? v.date ?? '');
 
   const hasSparklines = vitalsAsc.length >= 2;
 
@@ -1105,7 +1189,7 @@ export default function PatientDetailScreen() {
           <Animated.View
             style={[
               s.bottomSheet,
-              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+              { backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom, 16) + 8 },
               { transform: [{ translateY: slideAnim }] },
             ]}
           >
@@ -1187,9 +1271,9 @@ export default function PatientDetailScreen() {
               style={({ pressed }) => [
                 s.submitBtn,
                 { backgroundColor: colors.navy, opacity: pressed ? 0.85 : 1 },
-                !noteText.trim() && { opacity: 0.4 },
+                (!noteText.trim() || !noteIsDirty) && { opacity: 0.4 },
               ]}
-              disabled={!noteText.trim()}
+              disabled={!noteText.trim() || !noteIsDirty}
             >
               <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
               <Text style={s.submitBtnText}>{editingNoteId ? 'Save Changes' : 'Save Note'}</Text>
@@ -1245,22 +1329,22 @@ export default function PatientDetailScreen() {
               <View style={s.sparkRow}>
                 {cowsSeries.length >= 2 && (
                   <View style={s.sparkItem}>
-                    <Sparkline data={cowsSeries} color={withdrawalTrendColor(cowsSeries)} label="COWS" />
+                    <Sparkline data={cowsSeries} color={withdrawalTrendColor(cowsSeries)} label="COWS" timestamps={cowsTs} />
                   </View>
                 )}
                 {ciwaSeries.length >= 2 && (
                   <View style={s.sparkItem}>
-                    <Sparkline data={ciwaSeries} color={withdrawalTrendColor(ciwaSeries)} label="CIWA" />
+                    <Sparkline data={ciwaSeries} color={withdrawalTrendColor(ciwaSeries)} label="CIWA" timestamps={ciwaTs} />
                   </View>
                 )}
                 {bpSeries.length >= 2 && (
                   <View style={s.sparkItem}>
-                    <Sparkline data={bpSeries} color={colors.blue} label="SBP" unit=" mmHg" />
+                    <Sparkline data={bpSeries} color={colors.blue} label="SBP" unit=" mmHg" timestamps={vitalsTs} />
                   </View>
                 )}
                 {hrSeries.length >= 2 && (
                   <View style={s.sparkItem}>
-                    <Sparkline data={hrSeries} color={colors.teal} label="HR" unit=" bpm" />
+                    <Sparkline data={hrSeries} color={colors.teal} label="HR" unit=" bpm" timestamps={vitalsTs} />
                   </View>
                 )}
               </View>
@@ -1335,27 +1419,27 @@ export default function PatientDetailScreen() {
                         <View style={s.sparkPanelGrid}>
                           {hrSeries.length >= 2 && (
                             <View style={s.sparkPanelItem}>
-                              <Sparkline data={hrSeries} color={colors.critical} width={90} height={36} label="HR" unit=" bpm" />
+                              <Sparkline data={hrSeries} color={colors.critical} width={90} height={36} label="HR" unit=" bpm" timestamps={vitalsTs} />
                             </View>
                           )}
                           {bpSeries.length >= 2 && (
                             <View style={s.sparkPanelItem}>
-                              <Sparkline data={bpSeries} color={colors.purple} width={90} height={36} label="SBP" unit=" mmHg" />
+                              <Sparkline data={bpSeries} color={colors.purple} width={90} height={36} label="SBP" unit=" mmHg" timestamps={vitalsTs} />
                             </View>
                           )}
                           {tempSeries.length >= 2 && (
                             <View style={s.sparkPanelItem}>
-                              <Sparkline data={tempSeries} color={colors.moderate} width={90} height={36} label="Temp" unit="°" />
+                              <Sparkline data={tempSeries} color={colors.moderate} width={90} height={36} label="Temp" unit="°" timestamps={vitalsTs} />
                             </View>
                           )}
                           {o2Series.length >= 2 && (
                             <View style={s.sparkPanelItem}>
-                              <Sparkline data={o2Series} color={colors.teal} width={90} height={36} label="O₂ Sat" unit="%" />
+                              <Sparkline data={o2Series} color={colors.teal} width={90} height={36} label="O₂ Sat" unit="%" timestamps={vitalsTs} />
                             </View>
                           )}
                           {painSeries.length >= 2 && (
                             <View style={s.sparkPanelItem}>
-                              <Sparkline data={painSeries} color={colors.high} width={90} height={36} label="Pain" unit="/10" />
+                              <Sparkline data={painSeries} color={colors.high} width={90} height={36} label="Pain" unit="/10" timestamps={vitalsTs} />
                             </View>
                           )}
                           {cowsSeries.length >= 2 && (
@@ -1409,6 +1493,26 @@ export default function PatientDetailScreen() {
                               </View>
                             ))}
                           </View>
+                        )}
+                        {/* PRN: show "Log PRN" tap-to-log button or "Given" badge */}
+                        {med.class === 'PRN' && (
+                          prnLogged.has(med.id)
+                            ? (
+                              <View style={[s.prnGivenBadge, { backgroundColor: colors.successBg, borderColor: colors.success }]}>
+                                <Ionicons name="checkmark-circle" size={12} color={colors.success} />
+                                <Text style={[s.prnGivenText, { color: colors.success }]}>
+                                  Given · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </Text>
+                              </View>
+                            ) : (
+                              <Pressable
+                                onPress={() => logPrn(med.id)}
+                                style={[s.prnLogBtn, { borderColor: colors.moderate, backgroundColor: colors.moderateBg }]}
+                              >
+                                <Ionicons name="add-circle-outline" size={12} color={colors.moderate} />
+                                <Text style={[s.prnLogBtnText, { color: colors.moderate }]}>Log PRN</Text>
+                              </Pressable>
+                            )
                         )}
                       </View>
                     </View>
@@ -1502,12 +1606,24 @@ export default function PatientDetailScreen() {
             {/* Title + count badge */}
             <View style={s.handoffTitleRow}>
               <SectionTitle title="NURSING HANDOFF NOTE" colors={colors} />
+              {/* #188: when a filter is active show "X of Y" so nurses
+                  know they are seeing a subset, not all notes. */}
               {(() => {
-                const totalNotes = getNotesForPatient(patient.id).length + (patient.handoffNote ? 1 : 0);
+                const allNotes = getNotesForPatient(patient.id);
+                const totalNotes = allNotes.length + (patient.handoffNote ? 1 : 0);
                 if (totalNotes === 0) return null;
+                const isFiltered = noteTypeFilter != null || activeNoteTypeFilter != null;
+                const filteredCount = isFiltered
+                  ? allNotes.filter(n =>
+                      (noteTypeFilter == null || n.noteType === noteTypeFilter) &&
+                      (activeNoteTypeFilter == null || n.noteType === activeNoteTypeFilter)
+                    ).length
+                  : totalNotes;
                 return (
-                  <View style={[s.noteCountBadge, { backgroundColor: colors.navy }]}>
-                    <Text style={s.noteCountBadgeText}>{totalNotes}</Text>
+                  <View style={[s.noteCountBadge, { backgroundColor: isFiltered ? colors.moderate : colors.navy }]}>
+                    <Text style={s.noteCountBadgeText}>
+                      {isFiltered ? `${filteredCount} of ${totalNotes}` : totalNotes}
+                    </Text>
                   </View>
                 );
               })()}
@@ -1889,9 +2005,16 @@ export default function PatientDetailScreen() {
                         <View style={[s.noteTypeBadge, { backgroundColor: tc.bg, borderColor: tc.text }]}>
                           <Text style={[s.noteTypeBadgeText, { color: tc.text }]}>{entry.noteType}</Text>
                         </View>
-                        <Text style={[s.historyTimestamp, { color: colors.mutedForeground }]}>
-                          {isOldest ? 'Original · ' : 'Version · '}{formatHistoryTimestamp(entry.savedAt)}
-                        </Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={[s.historyTimestamp, { color: colors.mutedForeground }]}>
+                            {isOldest ? 'Original · ' : 'Edited · '}{formatHistoryTimestamp(entry.savedAt)}
+                          </Text>
+                          {entry.editedBy ? (
+                            <Text style={[s.historyTimestamp, { color: colors.blue, fontFamily: 'Inter_600SemiBold', marginTop: 1 }]}>
+                              {entry.editedBy}
+                            </Text>
+                          ) : null}
+                        </View>
                       </View>
                       {hasDiff ? (
                         <DiffText
@@ -2108,6 +2231,10 @@ const s = StyleSheet.create({
   timesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   timeBadge: { borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3 },
   timeText: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  prnGivenBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, marginTop: 6, alignSelf: 'flex-start' },
+  prnGivenText: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  prnLogBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, marginTop: 6, alignSelf: 'flex-start' },
+  prnLogBtnText: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   // Flags
   flagsList: { gap: 6 },
   flagRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth },

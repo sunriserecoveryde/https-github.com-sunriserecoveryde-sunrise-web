@@ -46,7 +46,7 @@ const AUTHS: Authorization[] = [
     authNumber: 'PHP2026-0412', levelOfCare: 'PHP', approvedUnits: 30, usedUnits: 20,
     unitType: 'days', startDate: '2026-06-15', endDate: '2026-07-22', status: 'Approved',
     caseManager: 'Marcus Webb', caseManagerPhone: '(800) 555-3300',
-    nextReviewDate: '2026-07-19',
+    nextReviewDate: '2026-07-24',
     clinicalJustification: 'Patient with Severe AUD and co-occurring BED requiring structured daily programming with psychiatric oversight. Naltrexone injection initiated. Motivational enhancement therapy ongoing. Family systems work indicated — stepwise reintegration needed.',
     asamJustification: 'ASAM D3:3, D5:2 — PHP level. Partial hospitalization provides psychiatric access, medical monitoring, and daily therapeutic community without 24-hour confinement that is clinically unnecessary.',
   },
@@ -73,7 +73,7 @@ const AUTHS: Authorization[] = [
     authNumber: 'PHP2026-0501', levelOfCare: 'PHP', approvedUnits: 10, usedUnits: 6,
     unitType: 'days', startDate: '2026-07-13', endDate: '2026-07-23', status: 'Approved',
     caseManager: 'Steve Abrams', caseManagerPhone: '(800) 555-6800',
-    nextReviewDate: '2026-07-20',
+    nextReviewDate: '2026-07-23',
     clinicalJustification: 'Step-up from IOP after relapse event on 7/10. Disulfiram initiated. Daily medical oversight required for medication compliance monitoring. Motivational interviewing intensive needed.',
     asamJustification: 'ASAM D5:3 (continued relapse risk), D4:2 (motivational fluctuation) — PHP warranted as step-up level following relapse.',
   },
@@ -82,7 +82,7 @@ const AUTHS: Authorization[] = [
     authNumber: 'RC2026-0712', levelOfCare: 'Residential', approvedUnits: 14, usedUnits: 8,
     unitType: 'days', startDate: '2026-07-11', endDate: '2026-07-25', status: 'Approved',
     caseManager: 'Greg Simmons', caseManagerPhone: '(615) 555-9000',
-    nextReviewDate: '2026-07-20',
+    nextReviewDate: '2026-07-23',
     clinicalJustification: 'Substance-induced psychosis requiring 30-minute safety checks. Active psychiatric monitoring by Dr. Hughes. Daily functioning severely impaired. Community supports absent — recent homelessness.',
     asamJustification: 'ASAM D3:4 (severe psychiatric instability), D6:4 (homeless, no recovery environment) — Residential medically necessary.',
   },
@@ -108,8 +108,8 @@ const AUTHS: Authorization[] = [
     authNumber: 'RC2026-0680', levelOfCare: 'Residential', approvedUnits: 30, usedUnits: 19,
     unitType: 'days', startDate: '2026-06-30', endDate: '2026-07-30', status: 'Pending',
     caseManager: 'Theresa Holt', caseManagerPhone: '(800) 555-7700',
-    nextReviewDate: '2026-07-19',
-    denialReason: 'Concurrent review request submitted 7/18. Awaiting Medicare response. Extension needed — patient has COPD and fall risk requiring continued medical monitoring.',
+    nextReviewDate: '2026-07-24',
+    denialReason: 'Concurrent review request submitted 7/21. Awaiting Medicare response. Extension needed — patient has COPD and fall risk requiring continued medical monitoring.',
     clinicalJustification: 'Continued medical monitoring required for COPD, fall risk, and polypharmacy management. Geriatric patient with complex medical/substance use presentation. PT initiated post-fall. Family not available for immediate discharge support.',
     asamJustification: 'ASAM D2:3 (COPD, fall risk, complex medical), D6:2 (limited family support for discharge) — continued Residential warranted.',
   },
@@ -158,7 +158,7 @@ const STATUS_ICON = {
   'Appealing': <AlertTriangle className="w-3.5 h-3.5" />,
 };
 
-const TODAY = '2026-07-19';
+const TODAY = '2026-07-22';
 
 function daysUntil(dateStr: string) {
   const d = new Date(dateStr).getTime() - new Date(TODAY).getTime();
@@ -170,6 +170,8 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
   const [expandedAuth, setExpandedAuth] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<AuthStatus | 'All'>('All');
   const [letterModal, setLetterModal] = useState<Authorization | null>(null);
+  const [authActionSaved, setAuthActionSaved] = useState<string | null>(null);
+  const saveAuthAction = (msg: string) => { setAuthActionSaved(msg); setTimeout(() => setAuthActionSaved(null), 2500); };
 
   const expiring = AUTHS.filter(a => a.status === 'Approved' && a.nextReviewDate && daysUntil(a.nextReviewDate) <= 7);
   const filtered = filterStatus === 'All' ? AUTHS : AUTHS.filter(a => a.status === filterStatus);
@@ -469,7 +471,7 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setTab('Active')} className="border border-border rounded-lg px-5 py-2 text-sm text-slate">Cancel</button>
-              <button className="btn-primary text-sm px-5 py-2">Submit Auth Request</button>
+              <button onClick={() => { saveAuthAction('Auth request submitted'); setTab('Active'); }} className="btn-primary text-sm px-5 py-2">Submit Auth Request</button>
             </div>
           </div>
         </div>
@@ -511,8 +513,8 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
             </div>
             <div className="flex gap-3 mt-4">
               <button onClick={() => setLetterModal(null)} className="flex-1 border border-border rounded-lg py-2 text-sm text-slate">Close</button>
-              <button className="flex-1 btn-primary text-sm py-2">Copy to Clipboard</button>
-              <button className="flex-1 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg py-2 text-sm font-medium hover:bg-blue-100">Download PDF</button>
+              <button onClick={() => saveAuthAction('Letter copied to clipboard')} className="flex-1 btn-primary text-sm py-2">Copy to Clipboard</button>
+              <button onClick={() => saveAuthAction('PDF downloaded')} className="flex-1 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg py-2 text-sm font-medium hover:bg-blue-100">Download PDF</button>
             </div>
           </div>
         </div>
@@ -624,6 +626,12 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {authActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {authActionSaved}
         </div>
       )}
     </div>

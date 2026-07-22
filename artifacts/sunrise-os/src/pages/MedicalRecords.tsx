@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
-import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, Plus, Eye, Download, Lock, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Clock, AlertTriangle, Plus, Eye, Download, Lock, Shield, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -124,6 +124,7 @@ const STATUS_STYLE: Record<ROIStatus, string> = {
 };
 
 export function MedicalRecords({ navigate, readOnly }: Props) {
+  const [roiSubmitted, setRoiSubmitted] = useState(false);
   const [tab, setTab] = useState<'ROI Queue' | 'New Request' | 'Audit Log' | '42 CFR Guide' | 'Record Stats' | 'HIPAA Reference'>('ROI Queue');
   const [expandedROI, setExpandedROI] = useState<string | null>('ROI-001');
   const [filterStatus, setFilterStatus] = useState<ROIStatus | 'All'>('All');
@@ -281,7 +282,7 @@ export function MedicalRecords({ navigate, readOnly }: Props) {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate mb-1">Request Date</label>
-                <input type="date" defaultValue="2026-07-19" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                <input type="date" defaultValue="2026-07-22" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate mb-1">Expiry Date</label>
@@ -303,7 +304,13 @@ export function MedicalRecords({ navigate, readOnly }: Props) {
               <Lock className="w-4 h-4 shrink-0 mt-0.5" />
               <span>If "Substance Abuse Records (42 CFR)" is selected, a 42 CFR-compliant Notice to Accompany will be automatically generated with the records. Consent must specify this is an addiction treatment record per 42 CFR Part 2.</span>
             </div>
-            <LockedButton locked={readOnly} onClick={() => {}} className="btn-primary text-sm px-5 py-2">Create ROI Request</LockedButton>
+            {roiSubmitted ? (
+              <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5 text-sm font-semibold">
+                <CheckCircle className="w-4 h-4" /> ROI request created and queued for processing
+              </div>
+            ) : (
+              <LockedButton locked={readOnly} onClick={() => setRoiSubmitted(true)} className="btn-primary text-sm px-5 py-2">Create ROI Request</LockedButton>
+            )}
           </div>
         </div>
       )}

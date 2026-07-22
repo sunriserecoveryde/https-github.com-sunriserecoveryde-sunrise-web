@@ -8,6 +8,8 @@ interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: 
 export function Settings({ navigate, readOnly }: Props) {
   const [activeTab, setActiveTab] = useState<'Facility' | 'Clinical' | 'Users & Roles' | 'Notifications' | 'System' | 'Integrations'>('Facility');
   const [saved, setSaved] = useState(false);
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [userSaved, setUserSaved] = useState(false);
 
   const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
@@ -222,7 +224,7 @@ export function Settings({ navigate, readOnly }: Props) {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-slate">Manage system users, roles, and permissions.</p>
-            <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">+ Add User</LockedButton>
+            <LockedButton locked={readOnly} onClick={() => setAddUserOpen(true)} className="btn-primary text-sm px-4 py-2">+ Add User</LockedButton>
           </div>
           <div className="card p-0 overflow-hidden">
             <table className="w-full text-sm">
@@ -258,8 +260,8 @@ export function Settings({ navigate, readOnly }: Props) {
                     <td className="px-4 py-3"><span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{u.access}</span></td>
                     <td className="px-4 py-3"><span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span></td>
                     <td className="px-4 py-3 flex gap-2">
-                      <button className="text-xs text-orange hover:underline">Edit</button>
-                      <button className="text-xs text-slate hover:text-red-600">Deactivate</button>
+                      <button onClick={() => { setUserSaved(true); setTimeout(() => setUserSaved(false), 2500); }} className="text-xs text-orange hover:underline">Edit</button>
+                      <button onClick={() => { setUserSaved(true); setTimeout(() => setUserSaved(false), 2500); }} className="text-xs text-slate hover:text-red-600">Deactivate</button>
                     </td>
                   </tr>
                 ))}
@@ -366,7 +368,7 @@ export function Settings({ navigate, readOnly }: Props) {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs bg-gray-100 text-slate px-2 py-0.5 rounded-full">{int.status}</span>
-                    <button className="text-xs text-orange hover:underline font-medium">Configure</button>
+                    <button onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2500); }} className="text-xs text-orange hover:underline font-medium">Configure</button>
                   </div>
                 </div>
               ))}
@@ -491,6 +493,53 @@ export function Settings({ navigate, readOnly }: Props) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {addUserOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setAddUserOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Add User</h2>
+              <button onClick={() => setAddUserOpen(false)} className="text-slate hover:text-navy text-xl">×</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">First Name *</label>
+                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="First name" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Last Name *</label>
+                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Last name" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Email *</label>
+                  <input type="email" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="user@facilityname.com" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Role *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Clinician</option><option>Nurse</option><option>BHT</option><option>Physician / MD</option><option>Clinical Supervisor</option><option>Administrator</option><option>Billing</option><option>Read-Only</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Credential</label>
+                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. LCSW, RN, MD" />
+                </div>
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setAddUserOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setAddUserOpen(false); setUserSaved(true); setTimeout(() => setUserSaved(false), 2500); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Create User</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {userSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> Changes saved
         </div>
       )}
     </div>

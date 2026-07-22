@@ -3,7 +3,7 @@ import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import {
   Activity, AlertTriangle, CheckCircle, Clock, TrendingDown, TrendingUp, Minus,
-  ChevronDown, ChevronUp, Bell, RefreshCw,
+  ChevronDown, ChevronUp, Bell, RefreshCw, X,
 } from 'lucide-react';
 
 import { LockedButton } from '../components/common/LockedButton';
@@ -53,7 +53,7 @@ const CIWA_ASSESSMENTS: PatientProtocol[] = [
       { timestamp: '2026-07-18 18:00', score: 24, assessedBy: 'J. Torres, RN' },
       { timestamp: '2026-07-18 14:00', score: 26, assessedBy: 'J. Torres, RN' },
     ],
-    nextDue: '2026-07-19 18:00', orderedBy: 'Dr. Emily Stone, MD',
+    nextDue: '2026-07-22 18:00', orderedBy: 'Dr. Emily Stone, MD',
     frequency: 'Q4H', alertThreshold: 15,
     notes: 'Librium PRN protocol active. BP elevated (158/96 at 0600). Hypertension co-morbidity increases seizure risk. MD notified of all scores > 18.',
   },
@@ -67,7 +67,7 @@ const CIWA_ASSESSMENTS: PatientProtocol[] = [
       { timestamp: '2026-07-18 22:00', score: 14, assessedBy: 'M. Boyd, RN' },
       { timestamp: '2026-07-18 18:00', score: 17, assessedBy: 'J. Torres, RN' },
     ],
-    nextDue: '2026-07-19 18:00', orderedBy: 'Dr. Emily Stone, MD',
+    nextDue: '2026-07-22 18:00', orderedBy: 'Dr. Emily Stone, MD',
     frequency: 'Q4H', alertThreshold: 15,
     notes: 'Trending down. Gabapentin helpful. Denies tremors or visual disturbances at 1400 assessment. Continue Q4H monitoring.',
   },
@@ -79,7 +79,7 @@ const CIWA_ASSESSMENTS: PatientProtocol[] = [
       { timestamp: '2026-07-19 08:00', score: 4, assessedBy: 'M. Boyd, RN' },
       { timestamp: '2026-07-18 20:00', score: 6, assessedBy: 'J. Torres, RN' },
     ],
-    nextDue: '2026-07-19 18:00', orderedBy: 'Dr. Emily Stone, MD',
+    nextDue: '2026-07-22 18:00', orderedBy: 'Dr. Emily Stone, MD',
     frequency: 'Q6H', alertThreshold: 10,
     notes: 'Day 4. Stable CIWA. High fall risk (score upgraded after incident 7/14). Bed alarm active.',
   },
@@ -97,7 +97,7 @@ const COWS_ASSESSMENTS: PatientProtocol[] = [
       { timestamp: '2026-07-18 18:00', score: 14, assessedBy: 'J. Torres, RN' },
       { timestamp: '2026-07-18 06:00', score: 19, assessedBy: 'J. Torres, RN' },
     ],
-    nextDue: '2026-07-19 18:00', orderedBy: 'Dr. Robert Chen, MD',
+    nextDue: '2026-07-22 18:00', orderedBy: 'Dr. Robert Chen, MD',
     frequency: 'Q4H', alertThreshold: 13,
     notes: 'Suboxone 16mg BID — good response. COWS trending down significantly from peak of 19 at induction. AMA risk high — monitor closely. Next dose review at afternoon rounds.',
   },
@@ -109,7 +109,7 @@ const COWS_ASSESSMENTS: PatientProtocol[] = [
       { timestamp: '2026-07-19 06:00', score: 3, assessedBy: 'M. Boyd, RN' },
       { timestamp: '2026-07-18 22:00', score: 5, assessedBy: 'M. Boyd, RN' },
     ],
-    nextDue: '2026-07-19 18:00', orderedBy: 'Dr. Robert Chen, MD',
+    nextDue: '2026-07-22 18:00', orderedBy: 'Dr. Robert Chen, MD',
     frequency: 'Q6H', alertThreshold: 13,
     notes: 'METH withdrawal — COWS minimally elevated (stimulant WD not primarily captured by COWS). Monitoring for depressive crash / hypersomnia. Psychiatry consult at 1600.',
   },
@@ -122,7 +122,7 @@ const COWS_ASSESSMENTS: PatientProtocol[] = [
       { timestamp: '2026-07-19 06:00', score: 16, assessedBy: 'M. Boyd, RN' },
       { timestamp: '2026-07-18 22:00', score: 18, assessedBy: 'M. Boyd, RN' },
     ],
-    nextDue: '2026-07-19 18:00', orderedBy: 'Dr. Robert Chen, MD',
+    nextDue: '2026-07-22 18:00', orderedBy: 'Dr. Robert Chen, MD',
     frequency: 'Q4H', alertThreshold: 13,
     notes: 'Polysubstance — dual withdrawal protocol (COWS + CIWA). Both scores improving. Wound care to left arm at 1400 concurrent with assessment.',
   },
@@ -134,7 +134,7 @@ const COWS_ASSESSMENTS: PatientProtocol[] = [
       { timestamp: '2026-07-19 06:00', score: 2, assessedBy: 'M. Boyd, RN' },
       { timestamp: '2026-07-18 22:00', score: 3, assessedBy: 'M. Boyd, RN' },
     ],
-    nextDue: '2026-07-19 18:00', orderedBy: 'Dr. Robert Chen, MD',
+    nextDue: '2026-07-22 18:00', orderedBy: 'Dr. Robert Chen, MD',
     frequency: 'Q8H', alertThreshold: 13,
     notes: 'Day 10 — near-complete resolution. Suboxone dose stable at 8mg BID. PTSD group at 1500.',
   },
@@ -354,6 +354,10 @@ function PatientRow({
 export function WithdrawalMonitor({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'CIWA-Ar' | 'COWS' | 'All' | 'Trend' | 'Protocol Library' | 'Medication Reference'>('All');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [newAssessOpen, setNewAssessOpen] = useState(false);
+  const [assessSaved, setAssessSaved] = useState(false);
+  const [wdActionSaved, setWdActionSaved] = useState<string | null>(null);
+  const saveAssessAction = (msg: string) => { setWdActionSaved(msg); setTimeout(() => setWdActionSaved(null), 2500); };
 
   const allProtocols = [...COWS_ASSESSMENTS, ...CIWA_ASSESSMENTS];
   const displayed = tab === 'All' ? allProtocols
@@ -392,10 +396,10 @@ export function WithdrawalMonitor({ navigate, readOnly }: Props) {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 flex items-center gap-1.5">
+          <button onClick={() => saveAssessAction('Scores refreshed')} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 flex items-center gap-1.5">
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </button>
-          <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">
+          <LockedButton locked={readOnly} onClick={() => setNewAssessOpen(true)} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">
             + New Assessment
           </LockedButton>
         </div>
@@ -782,6 +786,65 @@ export function WithdrawalMonitor({ navigate, readOnly }: Props) {
         </div>
       )}
 
+      {newAssessOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setNewAssessOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[500px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">New Withdrawal Assessment</h2>
+              <button onClick={() => setNewAssessOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {MOCK_PATIENTS.map(p => <option key={p.id}>{p.firstName} {p.lastName}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Protocol *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>COWS (Opioid Withdrawal)</option><option>CIWA-Ar (Alcohol Withdrawal)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Assessment Time</label>
+                  <input type="time" defaultValue="14:00" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Clinician</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Jessica Torres, RN</option><option>Michael Boyd, RN</option><option>Dr. Robert Chen</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Score (0–67 COWS · 0–67 CIWA)</label>
+                <input type="number" min={0} max={67} className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Enter total score" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Clinical Notes</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="VS, symptoms, interventions, physician notification..." />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setNewAssessOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setNewAssessOpen(false); setAssessSaved(true); setTimeout(() => setAssessSaved(false), 2500); }} className="flex-1 bg-sunrise-blue text-white rounded-xl py-2.5 text-sm font-semibold">Save Assessment</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {assessSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> Assessment documented
+        </div>
+      )}
+      {wdActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {wdActionSaved}
+        </div>
+      )}
     </div>
   );
 }

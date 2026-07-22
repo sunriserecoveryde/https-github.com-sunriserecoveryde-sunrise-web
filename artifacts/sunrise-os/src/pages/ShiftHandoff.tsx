@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
-import { AlertTriangle, CheckCircle, Clock, ChevronDown, ChevronUp, Flag, Pill, Activity } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, ChevronDown, ChevronUp, Flag, Pill, Activity, Copy, Download, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -20,13 +20,13 @@ interface HandoffNote {
 
 const HANDOFF_NOTES: HandoffNote[] = [
   { patientId: 'p1', acuity: 'High', vitalsSummary: 'BP 148/92, HR 88, T 98.6°F. Stable.', mood: 4, craving: 8, pendingOrders: ['Co-sign pending (BIRP 7/18)', 'Suboxone 0800 — given'], flags: ['AMA Risk HIGH — verbalized leaving after lunch', 'Counselor 1:1 check-in due before 3PM'], watchFor: 'AMA behavior — patient has been asking about pass policy. Staff to complete safety check q2h. Notify on-call MD if patient requests to leave.', lastContact: '10:45 AM — Sarah Jenkins' },
-  { patientId: 'p2', acuity: 'High', vitalsSummary: 'BP 110/70, HR 74, T 98.4°F. Stable.', mood: 5, craving: 2, pendingOrders: ['Vivitrol injection due 7/20 — confirm pharmacy order', 'Lamictal 0800 — given, 2000 — pending'], flags: ['Psych flag: restricting food per Dr. Stone', 'Dietary notified — ensure meal observation at dinner'], watchFor: 'Eating disorder behaviors: observe meal completion, no bathroom access 30 min post-meal per protocol. Family session 7/22 — confirm with David Odom.', lastContact: '11:00 AM — David Odom' },
+  { patientId: 'p2', acuity: 'High', vitalsSummary: 'BP 110/70, HR 74, T 98.4°F. Stable.', mood: 5, craving: 2, pendingOrders: ['Vivitrol injection due 7/22 — confirm pharmacy order', 'Lamictal 0800 — given, 2000 — pending'], flags: ['Psych flag: restricting food per Dr. Stone', 'Dietary notified — ensure meal observation at dinner'], watchFor: 'Eating disorder behaviors: observe meal completion, no bathroom access 30 min post-meal per protocol. Family session 7/22 — confirm with David Odom.', lastContact: '11:00 AM — David Odom' },
   { patientId: 'p3', acuity: 'Critical', vitalsSummary: 'BP 138/88, HR 96, T 99.1°F. COWS 9 this morning.', mood: 3, craving: 6, pendingOrders: ['COWS Q4H — 1400 dose due', 'Clonidine 1400 — pending administration', 'Hepatitis panel pending physician signature (ORD-015)'], flags: ['Active withdrawal — COWS up from 6 to 9', 'Notify MD if COWS ≥13'], watchFor: 'Withdrawal escalation. COWS at 10:00 was 7. If score ≥13 notify Dr. Chen immediately. Patient is asking about leaving — document all conversations. Hydration: pushing oral fluids.', lastContact: '10:00 AM — Michael Boyd, RN' },
   { patientId: 'p9', acuity: 'Critical', vitalsSummary: 'BP 122/78, HR 82, T 98.8°F. Stable.', mood: 4, craving: 7, pendingOrders: ['30-min safety check ongoing', 'Risperdal PRN — NOT given today', 'Seroquel 2100 — pending'], flags: ['Substance-induced psychosis — active', 'Behavioral escalation 7/16 — incident documented'], watchFor: 'Paranoid ideation. Patient was quiet during group but made statements about "people following him." Ensure 1:1 during medication administration. Do NOT leave patient alone during Q30min checks — full visual contact required.', lastContact: '11:30 AM — Kevin Wright, BHT' },
   { patientId: 'p13', acuity: 'Moderate', vitalsSummary: 'BP 162/94 — elevated! HR 78, T 98.2°F.', mood: 6, craving: 3, pendingOrders: ['Librium CIWA protocol — HELD (score 4)', 'Acamprosate 1300 — pending', 'Metformin 1800 — pending', 'BP recheck at 1500 per Dr. Stone'], flags: ['Hypertension alert — BP 162/94 at 0800'], watchFor: 'BP monitoring q4h. If SBP >180 notify Dr. Stone. Patient declines to discuss discharge but is compliant with treatment. Son called this morning — 42 CFR consent limits disclosure. Patient aware.', lastContact: '0800 — Jessica Torres, RN' },
   { patientId: 'p17', acuity: 'High', vitalsSummary: 'BP 128/80, HR 88, T 98.9°F. Stable.', mood: 5, craving: 6, pendingOrders: ['Suboxone 0800 — given (witnessed)', 'Trazodone 2100 PRN — pending'], flags: ['AMA Risk HIGH — early induction day 7', 'Patient stated "I could leave right now and be fine"'], watchFor: 'AMA risk. Patient is on day 7 of induction and medically stable, which increases AMA risk. Therapeutic rapport fragile. Night staff to conduct gentle check-in at bedtime. Notify counselor of any AMA statements.', lastContact: '09:30 AM — Sarah Jenkins' },
   { patientId: 'p18', acuity: 'Moderate', vitalsSummary: 'BP 136/88, HR 72, O2 Sat 96%, T 98.1°F.', mood: 6, craving: 2, pendingOrders: ['O2 sat monitoring QD — completed', 'PT gait training session — 2:00 PM today'], flags: ['Fall risk — recent fall incident 7/14', 'Non-slip footwear required at all times'], watchFor: 'Ambulation assistance. Patient is independent but slow-moving. Confirm PT session at 2PM. Granddaughter called — 42 CFR consent confirmed. Can confirm patient is in treatment.', lastContact: '09:00 AM — Michael Boyd, RN' },
-  { patientId: 'p4', acuity: 'Stable', vitalsSummary: 'BP 118/76, HR 68, T 98.5°F.', mood: 8, craving: 2, pendingOrders: ['Naltrexone 0800 — given', 'Treatment plan review due 7/21'], flags: ['Legal flag: pretrial diversion — court report due 7/30'], watchFor: 'Excellent engagement today. Completed trauma group. Treatment plan update needed by 7/21 per court requirements. Attorney called — no disclosures without patient authorization (42 CFR signed).', lastContact: '11:00 AM — Maria Gonzales, LCSW' },
+  { patientId: 'p4', acuity: 'Stable', vitalsSummary: 'BP 118/76, HR 68, T 98.5°F.', mood: 8, craving: 2, pendingOrders: ['Naltrexone 0800 — given', 'Treatment plan review due 7/23'], flags: ['Legal flag: pretrial diversion — court report due 7/30'], watchFor: 'Excellent engagement today. Completed trauma group. Treatment plan update needed by 7/23 per court requirements. Attorney called — no disclosures without patient authorization (42 CFR signed).', lastContact: '11:00 AM — Maria Gonzales, LCSW' },
 ];
 
 const CONTROLLED_SUBSTANCES = [
@@ -52,10 +52,74 @@ const ACUITY_STYLE: Record<string, string> = {
 const MOOD_COLOR = (n: number) => n >= 7 ? 'text-green-600' : n >= 5 ? 'text-amber-600' : 'text-red-600';
 const CRAVING_COLOR = (n: number) => n <= 3 ? 'text-green-600' : n <= 6 ? 'text-amber-600' : 'text-red-600';
 
+// ── Generate plain-text export content ──────────────────────────────────────
+function buildExportText(notes: HandoffNote[], patients: typeof MOCK_PATIENTS): string {
+  const acuityCounts = {
+    Critical: notes.filter(n => n.acuity === 'Critical').length,
+    High:     notes.filter(n => n.acuity === 'High').length,
+    Moderate: notes.filter(n => n.acuity === 'Moderate').length,
+    Stable:   notes.filter(n => n.acuity === 'Stable').length,
+  };
+
+  const lines: string[] = [
+    '══════════════════════════════════════════════════',
+    '  SUNRISE RECOVERY CENTER — SHIFT HANDOFF REPORT',
+    '══════════════════════════════════════════════════',
+    `  Date:       July 22, 2026`,
+    `  Shift:      Day (07:00) → Evening (15:00)`,
+    `  Generated:  ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+    '',
+    `  CENSUS:  ${notes.length} patients on shift`,
+    `  ┌─ Critical: ${acuityCounts.Critical}  │  High: ${acuityCounts.High}  │  Moderate: ${acuityCounts.Moderate}  │  Stable: ${acuityCounts.Stable}`,
+    '',
+    '  Outgoing Nurse:  Jessica Torres, RN',
+    '  Incoming Nurse:  Amanda Kirk, RN',
+    '══════════════════════════════════════════════════',
+    '',
+  ];
+
+  notes.forEach((note, i) => {
+    const p = patients.find(pt => pt.id === note.patientId);
+    const name = p ? `${p.firstName} ${p.lastName}` : note.patientId;
+    const mrn  = p?.mrn ?? '';
+    lines.push(`${'─'.repeat(50)}`);
+    lines.push(`  [${note.acuity.toUpperCase()}]  ${name}  ${mrn}`);
+    lines.push(`  Bed: ${p?.bed ?? '—'}  |  Program: ${p?.program ?? '—'}`);
+    lines.push('');
+    lines.push(`  Vitals:     ${note.vitalsSummary}`);
+    lines.push(`  Mood: ${note.mood}/10   Cravings: ${note.craving}/10`);
+    if (note.flags.length) {
+      lines.push('');
+      lines.push('  ⚑ Flags:');
+      note.flags.forEach(f => lines.push(`    • ${f}`));
+    }
+    if (note.pendingOrders.length) {
+      lines.push('');
+      lines.push('  ⏱ Pending:');
+      note.pendingOrders.forEach(o => lines.push(`    • ${o}`));
+    }
+    lines.push('');
+    lines.push(`  Watch for:  ${note.watchFor}`);
+    lines.push(`  Last contact: ${note.lastContact}`);
+    if (i < notes.length - 1) lines.push('');
+  });
+
+  lines.push('');
+  lines.push('══════════════════════════════════════════════════');
+  lines.push('  END OF HANDOFF REPORT');
+  lines.push('══════════════════════════════════════════════════');
+  return lines.join('\n');
+}
+
 export function ShiftHandoff({ navigate, readOnly }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['p3', 'p9']));
   const [handoffSigned, setHandoffSigned] = useState(false);
   const [tab, setTab] = useState<'Patients' | 'Controlled' | 'Incidents' | 'Comms Log' | 'Action Items' | 'Staffing' | 'Handoff Metrics'>('Patients');
+  const [showExport, setShowExport] = useState(false);
+  const [exportCopied, setExportCopied] = useState(false);
+  const [closeBlocked, setCloseBlocked] = useState(false);
+  const [handoffActionSaved, setHandoffActionSaved] = useState<string | null>(null);
+  const saveHandoffAction = (msg: string) => { setHandoffActionSaved(msg); setTimeout(() => setHandoffActionSaved(null), 2500); };
 
   const toggle = (id: string) => {
     setExpanded(prev => {
@@ -69,12 +133,31 @@ export function ShiftHandoff({ navigate, readOnly }: Props) {
   const highCount = HANDOFF_NOTES.filter(n => n.acuity === 'High').length;
   const pendingOrdersTotal = HANDOFF_NOTES.reduce((a, n) => a + n.pendingOrders.length, 0);
 
+  const exportText = showExport ? buildExportText(HANDOFF_NOTES, MOCK_PATIENTS) : '';
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(exportText).then(() => {
+      setExportCopied(true);
+      setCloseBlocked(false);
+    });
+  };
+
+  const handleCloseExport = () => {
+    if (!exportCopied) {
+      setCloseBlocked(true);
+      return;
+    }
+    setShowExport(false);
+    setExportCopied(false);
+    setCloseBlocked(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy">Shift Handoff Report</h1>
-          <p className="text-slate text-sm mt-0.5">Day Shift → Evening Shift · July 19, 2026 · 15:00 Handoff</p>
+          <p className="text-slate text-sm mt-0.5">Day Shift → Evening Shift · July 22, 2026 · 15:00 Handoff</p>
         </div>
         <div className="flex items-center gap-3">
           {!handoffSigned ? (
@@ -85,7 +168,13 @@ export function ShiftHandoff({ navigate, readOnly }: Props) {
               Handoff Signed — 15:02
             </div>
           )}
-          <button className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50">Print Report</button>
+          <button
+            onClick={() => { setShowExport(true); setExportCopied(false); setCloseBlocked(false); }}
+            className="flex items-center gap-2 border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50"
+          >
+            <Download className="w-4 h-4" /> Export Handoff
+          </button>
+          <button onClick={() => saveHandoffAction('Report sent to printer')} className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50">Print Report</button>
         </div>
       </div>
 
@@ -213,7 +302,7 @@ export function ShiftHandoff({ navigate, readOnly }: Props) {
                               <span className="text-xs text-navy">{o}</span>
                             </div>
                           ))}
-                          {note.pendingOrders.length === 0 && <span className="text-xs text-slate italic">No pending actions.</span>}
+                          {note.pendingOrders.length === 0 && <span className="text-xs text-slate italic flex items-center gap-1">✓ No pending actions — clear for handoff</span>}
                         </div>
                         <div className="text-xs font-semibold text-slate uppercase mt-3 mb-2 flex items-center gap-1.5"><Flag className="w-3.5 h-3.5" />Active Flags</div>
                         <div className="space-y-1.5">
@@ -319,7 +408,7 @@ export function ShiftHandoff({ navigate, readOnly }: Props) {
               defaultValue="Day shift proceeded without major incident. AMA risk patient (Webb) stabilized after counselor intervention. Withdrawal patient (Thornton) being closely monitored — COWS trending up. BP alert (Calhoun) reported to Dr. Stone. Controlled substance count verified at 14:55."
             />
             <div className="flex justify-end mt-3">
-              <button className="btn-primary text-sm px-4 py-2">Save Summary</button>
+              <button onClick={() => saveHandoffAction('Summary saved')} className="btn-primary text-sm px-4 py-2">Save Summary</button>
             </div>
           </div>
         </div>
@@ -405,7 +494,7 @@ export function ShiftHandoff({ navigate, readOnly }: Props) {
               { id: 'ai4', priority: 'High', title: 'Elena Vasquez — safety plan review with family (wife). 42 CFR consent on file?', patient: 'Elena Vasquez', assignedTo: 'Maria Gonzales, LCSW', due: '09:00 (tomorrow)', status: 'Open', source: 'Risk Protocol' },
               { id: 'ai5', priority: 'Medium', title: 'Bed 4A — housekeeping notified for morning discharge deep-clean', patient: '', assignedTo: 'Charge RN', due: '07:00 (tomorrow)', status: 'Open', source: 'Discharge Planning' },
               { id: 'ai6', priority: 'Medium', title: 'Pharmacy: Suboxone refill order for Webb, Marcus — confirm with Dr. Chen', patient: 'Marcus Webb', assignedTo: 'Dr. Robert Chen, MD', due: '08:00 (tomorrow)', status: 'Open', source: 'MAT Protocol' },
-              { id: 'ai7', priority: 'Medium', title: 'Patricia Holloway — family meeting rescheduled to 7/21 3PM. Update calendar.', patient: 'Patricia Holloway', assignedTo: 'David Odom, LMFT', due: 'Tomorrow', status: 'In Progress', source: 'Family Engagement' },
+              { id: 'ai7', priority: 'Medium', title: 'Patricia Holloway — family meeting rescheduled to 7/24 3PM. Update calendar.', patient: 'Patricia Holloway', assignedTo: 'David Odom, LMFT', due: 'Tomorrow', status: 'In Progress', source: 'Family Engagement' },
               { id: 'ai8', priority: 'Routine', title: 'Morning group therapy roster — confirm attendance for 8 AM Relapse Prevention group', patient: '', assignedTo: 'Day Shift RN', due: '07:30 (tomorrow)', status: 'Open', source: 'Group Schedule' },
             ].map(item => (
               <div key={item.id} className={`card flex items-start gap-3 ${item.status === 'Overdue' ? 'border-red-300 bg-red-50/30' : item.priority === 'Critical' ? 'border-orange/40' : ''}`}>
@@ -561,6 +650,83 @@ export function ShiftHandoff({ navigate, readOnly }: Props) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+      {/* ── Export Handoff Modal ── */}
+      {showExport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-navy/60 backdrop-blur-sm" onClick={handleCloseExport} />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150" style={{ maxHeight: '90vh' }}>
+
+            {/* Header */}
+            <div className="bg-gradient-to-r from-navy to-navy-mid px-6 py-4 flex items-center gap-3 shrink-0">
+              <Download className="w-5 h-5 text-sunrise-orange shrink-0" />
+              <div className="flex-1">
+                <div className="text-white font-bold">Export Handoff Report</div>
+                <div className="text-slate-300 text-xs">
+                  {HANDOFF_NOTES.length} patients · Critical: {criticalCount} · High: {highCount} · Moderate: {HANDOFF_NOTES.filter(n => n.acuity === 'Moderate').length} · Stable: {HANDOFF_NOTES.filter(n => n.acuity === 'Stable').length}
+                </div>
+              </div>
+              <button
+                onClick={handleCloseExport}
+                className={`transition-colors ${exportCopied ? 'text-slate-300 hover:text-white' : 'text-slate-500 cursor-not-allowed'}`}
+                title={exportCopied ? 'Close' : 'Copy the report text before closing'}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Copy-first warning */}
+            {closeBlocked && (
+              <div className="bg-amber-50 border-b border-amber-200 px-5 py-2.5 text-sm text-amber-800 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                Copy the text to your clipboard before closing so the receiving team gets the full report.
+              </div>
+            )}
+
+            {/* Report text */}
+            <div className="flex-1 overflow-y-auto p-5">
+              <pre className="text-xs font-mono text-navy bg-slate-50 border border-slate-200 rounded-lg p-4 whitespace-pre-wrap leading-relaxed select-all">
+                {exportText}
+              </pre>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-4 bg-slate-50 border-t border-border flex items-center justify-between shrink-0">
+              <span className="text-xs text-slate-400">
+                {exportCopied
+                  ? '✓ Copied — you can now close this window'
+                  : 'Copy the text before closing'}
+              </span>
+              <div className="flex gap-2">
+                {exportCopied && (
+                  <button
+                    onClick={handleCloseExport}
+                    className="px-4 py-2 text-sm font-semibold text-slate rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
+                  >
+                    Close
+                  </button>
+                )}
+                <button
+                  onClick={handleCopy}
+                  className={`flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                    exportCopied
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-navy text-white hover:bg-navy-mid'
+                  }`}
+                >
+                  <Copy className="w-4 h-4" />
+                  {exportCopied ? '✓ Copied!' : 'Copy to Clipboard'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {handoffActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {handoffActionSaved}
         </div>
       )}
     </div>

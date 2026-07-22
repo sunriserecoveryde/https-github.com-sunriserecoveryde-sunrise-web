@@ -7,6 +7,7 @@ const OrderEntry: React.FC<{ patientId?: string | null }> = ({ patientId }) => {
   const [showModal, setShowModal] = useState(false);
   const [success, setSuccess] = useState(false);
   const [oeTab, setOeTab] = useState<'New Order' | 'Active Orders' | 'Order History' | 'Order Sets' | 'Drug Reference' | 'Pending Co-sign'>('New Order');
+  const [selectedCategory, setSelectedCategory] = useState(0);
 
   const categories = [
     { name: "Medications", count: 142 },
@@ -37,7 +38,7 @@ const OrderEntry: React.FC<{ patientId?: string | null }> = ({ patientId }) => {
             Placing orders for <strong className="text-navy">{patient.name}</strong> ({patient.room})
           </p>
         </div>
-        <button className="bg-white border border-border text-navy px-4 py-2 rounded-lg text-[12px] font-bold shadow-sm hover:bg-slate-50 transition-colors">
+        <button onClick={() => setOeTab('Active Orders')} className="bg-white border border-border text-navy px-4 py-2 rounded-lg text-[12px] font-bold shadow-sm hover:bg-slate-50 transition-colors">
           View Active Orders
         </button>
       </div>
@@ -71,7 +72,7 @@ const OrderEntry: React.FC<{ patientId?: string | null }> = ({ patientId }) => {
                   { order: 'Vitals Q Shift + Weight Daily', cat: 'Nursing/Protocol', freq: 'Q8H + QAM', route: 'N/A', by: 'Dr. R. Chen', start: '2026-07-14', status: 'Active' },
                   { order: 'CIWA-Ar Q4H', cat: 'Nursing/Protocol', freq: 'Q4H', route: 'N/A', by: 'Dr. R. Chen', start: '2026-07-14', status: 'Active' },
                   { order: 'Fall Risk — Standard Precautions', cat: 'Nursing/Protocol', freq: 'Continuous', route: 'N/A', by: 'Dr. R. Chen', start: '2026-07-14', status: 'Active' },
-                  { order: 'Psychiatry Consult — Co-occurring Assessment', cat: 'Consults', freq: 'Once', route: 'N/A', by: 'Dr. R. Chen', start: '2026-07-16', status: 'Pending' },
+                  { order: 'Psychiatry Consult — Co-occurring Assessment', cat: 'Consults', freq: 'Once', route: 'N/A', by: 'Dr. R. Chen', start: '2026-07-22', status: 'Pending' },
                 ].map(o => (
                   <tr key={o.order} className="hover:bg-gray-50">
                     <td className="px-4 py-2.5 font-medium text-navy">{o.order}</td>
@@ -150,11 +151,11 @@ const OrderEntry: React.FC<{ patientId?: string | null }> = ({ patientId }) => {
         <div className="md:col-span-1 flex flex-col gap-2">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-light mb-2 px-1">Order Sets & Categories</div>
           {categories.map((c, i) => (
-            <button key={i} className={`flex items-center justify-between px-4 py-3 rounded-lg text-[13px] font-bold transition-colors ${
-              i === 0 ? 'bg-sunrise-blue text-white shadow-md' : 'bg-white border border-border text-slate hover:border-sunrise-blue/50 hover:text-navy'
+            <button key={i} onClick={() => setSelectedCategory(i)} className={`flex items-center justify-between px-4 py-3 rounded-lg text-[13px] font-bold transition-colors ${
+              i === selectedCategory ? 'bg-sunrise-blue text-white shadow-md' : 'bg-white border border-border text-slate hover:border-sunrise-blue/50 hover:text-navy'
             }`}>
               {c.name}
-              <span className={`text-[10px] px-2 py-0.5 rounded-full ${i === 0 ? 'bg-white/20' : 'bg-bg text-slate-light'}`}>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full ${i === selectedCategory ? 'bg-white/20' : 'bg-bg text-slate-light'}`}>
                 {c.count}
               </span>
             </button>

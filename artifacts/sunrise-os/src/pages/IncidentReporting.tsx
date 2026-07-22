@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
-import { AlertTriangle, AlertCircle, CheckCircle, Clock, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle, Clock, Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -113,6 +113,10 @@ export function IncidentReporting({ navigate, readOnly }: Props) {
   const [filterSeverity, setFilterSeverity] = useState<Severity | 'All'>('All');
   const [filterType, setFilterType] = useState<string>('All');
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [followUpFor, setFollowUpFor] = useState<string | null>(null);
+  const [followUpText, setFollowUpText] = useState('');
+  const [followUpSaved, setFollowUpSaved] = useState<string | null>(null);
+  const [updateStatusFor, setUpdateStatusFor] = useState<string | null>(null);
 
   const open = INCIDENTS.filter(i => i.status === 'Open' || i.status === 'Under Review');
   const all = INCIDENTS;
@@ -248,11 +252,35 @@ export function IncidentReporting({ navigate, readOnly }: Props) {
                           </ul>
                         </div>
                       </div>
-                      <div className="flex gap-2 pt-2">
-                        <LockedButton locked={readOnly} className="text-xs border border-orange text-orange px-3 py-1.5 rounded-lg hover:bg-orange/5">Add Follow-up</LockedButton>
-                        <LockedButton locked={readOnly} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Update Status</LockedButton>
-                        <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Print Report</button>
+                      <div className="flex gap-2 pt-2 flex-wrap">
+                        <LockedButton locked={readOnly} onClick={() => { setFollowUpFor(inc.id); setFollowUpText(''); setUpdateStatusFor(null); }} className="text-xs border border-orange text-orange px-3 py-1.5 rounded-lg hover:bg-orange/5">Add Follow-up</LockedButton>
+                        <LockedButton locked={readOnly} onClick={() => { setUpdateStatusFor(updateStatusFor === inc.id ? null : inc.id); setFollowUpFor(null); }} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Update Status</LockedButton>
+                        <button onClick={() => { setFollowUpSaved('Report sent to printer'); setTimeout(() => setFollowUpSaved(null), 2500); }} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Print Report</button>
                       </div>
+                      {followUpFor === inc.id && (
+                        <div className="mt-3 p-3 bg-orange/5 border border-orange/20 rounded-lg space-y-2">
+                          <textarea value={followUpText} onChange={e => setFollowUpText(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-xs min-h-[60px] resize-none" placeholder="Describe the follow-up action taken or planned..." />
+                          <div className="flex gap-2">
+                            <button onClick={() => { setFollowUpSaved(inc.id); setFollowUpFor(null); setFollowUpText(''); setTimeout(() => setFollowUpSaved(null), 2500); }} className="text-xs bg-orange text-white px-3 py-1.5 rounded-lg">Save Follow-up</button>
+                            <button onClick={() => setFollowUpFor(null)} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg">Cancel</button>
+                          </div>
+                        </div>
+                      )}
+                      {followUpSaved === inc.id && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-green-700 font-semibold">
+                          <CheckCircle className="w-3.5 h-3.5" /> Follow-up added
+                        </div>
+                      )}
+                      {updateStatusFor === inc.id && (
+                        <div className="mt-3 p-3 bg-gray-50 border border-border rounded-lg">
+                          <div className="text-xs font-semibold text-slate mb-2">Change status to:</div>
+                          <div className="flex gap-2 flex-wrap">
+                            {(['Open', 'Under Review', 'Documented', 'Closed'] as IncidentStatus[]).map(s => (
+                              <button key={s} onClick={() => setUpdateStatusFor(null)} className={`text-xs px-3 py-1.5 rounded-lg border font-medium ${STATUS_CONFIG[s]}`}>{s}</button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

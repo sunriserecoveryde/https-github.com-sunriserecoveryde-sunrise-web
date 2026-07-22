@@ -251,7 +251,7 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
                 </div>
               </div>
             ))}
-            <button className="text-sm text-orange hover:underline">+ Add Goal</button>
+            <button onClick={() => setSaved(true)} className="text-sm text-orange hover:underline">+ Add Goal</button>
           </div>
 
           {/* Medications */}
@@ -293,7 +293,7 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
                         <span className="text-xs text-green-700">{s.val}</span>
                       </div>
                     ) : (
-                      <button className="text-xs text-orange hover:underline w-full text-center">Click to sign</button>
+                      <button onClick={() => setSaved(true)} className="text-xs text-orange hover:underline w-full text-center">Click to sign</button>
                     )}
                   </div>
                 </div>

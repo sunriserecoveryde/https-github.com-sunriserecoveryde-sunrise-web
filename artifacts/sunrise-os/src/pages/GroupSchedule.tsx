@@ -48,10 +48,12 @@ function RosterPanel({
   group,
   onClose,
   readOnly,
+  onSave,
 }: {
   group: (typeof MOCK_GROUPS)[0] & { day?: string };
   onClose: () => void;
   readOnly?: boolean;
+  onSave: (msg: string) => void;
 }) {
   const rawRoster = MOCK_ROSTER[group.id] ?? getDefaultRoster(group.id, group.enrolled);
   const [roster, setRoster] = useState(rawRoster);
@@ -135,10 +137,10 @@ function RosterPanel({
 
       {/* Footer actions */}
       <div className="border-t border-border p-3 flex gap-2 flex-none">
-        <LockedButton locked={readOnly} className="flex-1 bg-sunrise-blue text-white text-xs font-semibold py-2 rounded hover:bg-sunrise-blue-light transition-colors">
+        <LockedButton locked={readOnly} onClick={() => onSave('Attendance saved')} className="flex-1 bg-sunrise-blue text-white text-xs font-semibold py-2 rounded hover:bg-sunrise-blue-light transition-colors">
           Save Attendance
         </LockedButton>
-        <LockedButton locked={readOnly} className="px-3 text-xs font-semibold text-slate border border-border rounded hover:bg-slate-50 transition-colors">
+        <LockedButton locked={readOnly} onClick={() => onSave('Session note saved')} className="px-3 text-xs font-semibold text-slate border border-border rounded hover:bg-slate-50 transition-colors">
           Note
         </LockedButton>
       </div>
@@ -199,7 +201,7 @@ function GroupCard({
 
 function ScheduleSummary() {
   const total = MOCK_GROUPS.length;
-  const today = MOCK_GROUPS.filter(g => g.days.includes('Mon')).length;
+  const today = MOCK_GROUPS.filter(g => g.days.includes('Wed')).length;
   const allRosters = MOCK_GROUPS.map(g => MOCK_ROSTER[g.id] ?? getDefaultRoster(g.id, g.enrolled));
   const totalMembers = allRosters.reduce((s, r) => s + r.length, 0);
   const totalAttended = allRosters.reduce((s, r) => s + r.filter(m => m.attended).length, 0);
@@ -226,10 +228,13 @@ function ScheduleSummary() {
 
 export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) => void; readOnly?: boolean }) {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-  const dayLabels = ['Mon 7/14', 'Tue 7/15', 'Wed 7/16', 'Thu 7/17', 'Fri 7/18'];
+  const dayLabels = ['Mon 7/20', 'Tue 7/21', 'Wed 7/22', 'Thu 7/23', 'Fri 7/24'];
   const timeSlots = ['08:00 AM', '09:30 AM', '11:00 AM', '01:00 PM', '02:30 PM', '04:00 PM', '07:00 PM'];
   const [selectedGroup, setSelectedGroup] = useState<GroupWithDay | null>(null);
   const [tab, setTab] = useState<'Schedule' | 'Analytics' | 'Curriculum Map' | 'Room Assignments' | 'Attendance Trends' | 'Facilitator Load'>('Schedule');
+  const [newSessionOpen, setNewSessionOpen] = useState(false);
+  const [sessionSaved, setSessionSaved] = useState<string | null>(null);
+  const saveSessionAction = (msg: string) => { setSessionSaved(msg); setTimeout(() => setSessionSaved(null), 2500); };
 
   const getGroupsForSlot = (day: string, time: string) =>
     MOCK_GROUPS.filter(g => g.days.includes(day) && g.time === time);
@@ -242,7 +247,7 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
           <h1 className="text-2xl font-bold text-navy">Master Group Schedule</h1>
           <p className="text-slate text-sm mt-1">Weekly therapy and psychoeducation — click any group to take attendance</p>
         </div>
-        <LockedButton locked={readOnly} className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium shadow-sm hover:bg-sunrise-blue-light transition-colors text-sm">
+        <LockedButton locked={readOnly} onClick={() => setNewSessionOpen(true)} className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium shadow-sm hover:bg-sunrise-blue-light transition-colors text-sm">
           + Add Group
         </LockedButton>
       </div>
@@ -412,7 +417,7 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
       {selectedGroup && (
         <div>
           <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setSelectedGroup(null)} />
-          <RosterPanel group={selectedGroup} onClose={() => setSelectedGroup(null)} readOnly={readOnly} />
+          <RosterPanel group={selectedGroup} onClose={() => setSelectedGroup(null)} readOnly={readOnly} onSave={saveSessionAction} />
         </div>
       )}
       </>
@@ -659,6 +664,65 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {newSessionOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setNewSessionOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[480px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Add Group Session</h2>
+              <button onClick={() => setNewSessionOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Group Name *</label>
+                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Morning Meditation" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Day of Week *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d => <option key={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Start Time</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Duration</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>30 min</option><option>45 min</option><option>60 min</option><option>90 min</option><option>120 min</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Room</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Group Room A</option><option>Group Room B</option><option>Multipurpose Hall</option><option>Outdoor Pavilion</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Facilitator</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Sarah Jenkins, LPC</option><option>Maria Gonzales, LCSW</option><option>David Odom, LMFT</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setNewSessionOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setNewSessionOpen(false); saveSessionAction('Group session added to schedule'); }} className="flex-1 bg-sunrise-blue text-white rounded-xl py-2.5 text-sm font-semibold">Add to Schedule</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sessionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckSquare className="w-4 h-4" /> {sessionSaved}
         </div>
       )}
     </div>

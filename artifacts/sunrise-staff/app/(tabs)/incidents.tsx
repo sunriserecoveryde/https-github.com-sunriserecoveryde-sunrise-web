@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
+  Animated,
   FlatList,
   Modal,
   Platform,
@@ -13,9 +14,22 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { PATIENTS } from '@/data/mockData';
+
+// Date-scoped keys keep each calendar day's incident/UA data isolated.
+const today = new Date();
+const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+const INCIDENTS_KEY = `@sunrise_incidents_${dateKey}`;
+const UA_LOG_KEY    = `@sunrise_ua_log_${dateKey}`;
+
+// Role-to-name lookup for the reporter field.
+const ROLE_NAMES: Record<string, string> = {
+  nursing: 'J. Torres, RN',
+  bht:     'M. Boyd, BHT',
+};
 
 // NOTE: This tab does NOT render a "Discharging…" indicator.
 // It manages its own local `incidents` and `uaLog` state and does not consume
@@ -37,6 +51,8 @@ const INCIDENT_TYPES: IncidentType[] = [
 ];
 const UA_RESULTS: UAResult[] = ['Negative', 'Positive', 'Refused', 'Invalid'];
 
+type IncidentStatus = 'Open' | 'Reviewed' | 'Resolved';
+
 interface IncidentReport {
   id: string;
   type: IncidentType;
@@ -45,6 +61,9 @@ interface IncidentReport {
   description: string;
   reportedBy: string;
   time: string;
+  status: IncidentStatus;
+  acknowledgedBy?: string;
+  acknowledgedAt?: string;
 }
 
 interface UAEntry {
@@ -58,8 +77,8 @@ interface UAEntry {
 }
 
 const SEED_INCIDENTS: IncidentReport[] = [
-  { id: 'i1', type: 'AMA Attempt', patientName: 'Marcus Webb', location: 'Main Hallway', description: 'Patient verbalized intent to leave AMA after lunch. Counselor engaged and patient agreed to remain. Clinical team notified.', reportedBy: 'K. Wright (BHT)', time: '11:42 AM' },
-  { id: 'i2', type: 'Physical Altercation', patientName: 'Devon Patel', location: 'Common Room', description: 'Patient became agitated during group, raised voice at peer. Redirected by BHT. No physical contact. De-escalated successfully.', reportedBy: 'K. Wright (BHT)', time: '09:15 AM' },
+  { id: 'i1', type: 'AMA Attempt', patientName: 'Marcus Webb', location: 'Main Hallway', description: 'Patient verbalized intent to leave AMA after lunch. Counselor engaged and patient agreed to remain. Clinical team notified.', reportedBy: 'K. Wright (BHT)', time: '11:42 AM', status: 'Reviewed', acknowledgedBy: 'J. Torres, RN', acknowledgedAt: '12:05 PM' },
+  { id: 'i2', type: 'Physical Altercation', patientName: 'Devon Patel', location: 'Common Room', description: 'Patient became agitated during group, raised voice at peer. Redirected by BHT. No physical contact. De-escalated successfully.', reportedBy: 'K. Wright (BHT)', time: '09:15 AM', status: 'Open' },
 ];
 
 const SEED_UA: UAEntry[] = [
@@ -88,14 +107,39 @@ function uaResultColor(result: UAResult, colors: ReturnType<typeof useColors>) {
   }
 }
 
-function IncidentCard({ item }: { item: IncidentReport }) {
+function statusBadgeStyle(status: IncidentStatus, colors: ReturnType<typeof useColors>) {
+  switch (status) {
+    case 'Open':     return { bg: colors.criticalBg, text: colors.critical };
+    case 'Reviewed': return { bg: colors.moderateBg, text: colors.moderate };
+    case 'Resolved': return { bg: colors.successBg,  text: colors.success };
+  }
+}
+
+function IncidentCard({ item, role, onStatusChange }: {
+  item: IncidentReport;
+  role: string;
+  onStatusChange: (id: string, next: IncidentStatus, by: string) => void;
+}) {
   const colors = useColors();
   const tc = incidentTypeColor(item.type, colors);
+  const sc = statusBadgeStyle(item.status, colors);
+  const reporterName = ROLE_NAMES[role] ?? 'Staff';
+
+  function handleAcknowledge() {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (item.status === 'Open') onStatusChange(item.id, 'Reviewed', `${reporterName} · ${now}`);
+    else if (item.status === 'Reviewed') onStatusChange(item.id, 'Resolved', `${reporterName} · ${now}`);
+  }
+
   return (
-    <View style={[styles.reportCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={[styles.reportCard, { backgroundColor: colors.card, borderColor: item.status === 'Open' ? colors.critical : colors.border, borderWidth: item.status === 'Open' ? 1.5 : 1 }]}>
       <View style={styles.reportCardHeader}>
         <View style={[styles.typeBadge, { backgroundColor: tc.bg }]}>
           <Text style={[styles.typeText, { color: tc.text }]}>{item.type}</Text>
+        </View>
+        <View style={[styles.typeBadge, { backgroundColor: sc.bg, marginLeft: 0 }]}>
+          <Text style={[styles.typeText, { color: sc.text }]}>{item.status}</Text>
         </View>
         <Text style={[styles.reportTime, { color: colors.mutedForeground }]}>{item.time}</Text>
       </View>
@@ -103,6 +147,30 @@ function IncidentCard({ item }: { item: IncidentReport }) {
       <Text style={[styles.reportLocation, { color: colors.mutedForeground }]}>{item.location}</Text>
       <Text style={[styles.reportDesc, { color: colors.navyLight }]} numberOfLines={3}>{item.description}</Text>
       <Text style={[styles.reportedBy, { color: colors.mutedForeground }]}>Reported by {item.reportedBy}</Text>
+
+      {item.status === 'Resolved' && item.acknowledgedBy ? (
+        <View style={[styles.ackRow, { backgroundColor: colors.successBg }]}>
+          <Ionicons name="checkmark-done-circle" size={14} color={colors.success} />
+          <Text style={[styles.ackText, { color: colors.success }]}>Resolved by {item.acknowledgedBy}</Text>
+        </View>
+      ) : item.status === 'Reviewed' && item.acknowledgedBy ? (
+        <View style={[styles.ackRow, { backgroundColor: colors.moderateBg }]}>
+          <Ionicons name="eye" size={14} color={colors.moderate} />
+          <Text style={[styles.ackText, { color: colors.moderate }]}>Reviewed by {item.acknowledgedBy}</Text>
+        </View>
+      ) : null}
+
+      {item.status !== 'Resolved' && (
+        <Pressable
+          style={[styles.ackBtn, { backgroundColor: item.status === 'Open' ? colors.moderate : colors.success }]}
+          onPress={handleAcknowledge}
+        >
+          <Ionicons name={item.status === 'Open' ? 'eye-outline' : 'checkmark-done-outline'} size={14} color="#fff" />
+          <Text style={styles.ackBtnText}>
+            {item.status === 'Open' ? 'Mark Reviewed' : 'Mark Resolved'}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -132,10 +200,11 @@ function UACard({ item }: { item: UAEntry }) {
 
 // ── New Incident Modal ───────────────────────────────────────────────────────
 
-function NewIncidentModal({ visible, onClose, onSave }: {
+function NewIncidentModal({ visible, onClose, onSave, reporterName }: {
   visible: boolean;
   onClose: () => void;
   onSave: (r: IncidentReport) => void;
+  reporterName: string;
 }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -155,7 +224,7 @@ function NewIncidentModal({ visible, onClose, onSave }: {
       patientName: `${selectedPatient?.firstName} ${selectedPatient?.lastName}`,
       location: location || 'Unspecified',
       description,
-      reportedBy: 'Staff',
+      reportedBy: reporterName,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
     setDescription('');
@@ -239,10 +308,11 @@ function NewIncidentModal({ visible, onClose, onSave }: {
 
 // ── New UA Modal ─────────────────────────────────────────────────────────────
 
-function NewUAModal({ visible, onClose, onSave }: {
+function NewUAModal({ visible, onClose, onSave, reporterName }: {
   visible: boolean;
   onClose: () => void;
   onSave: (e: UAEntry) => void;
+  reporterName: string;
 }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -260,7 +330,7 @@ function NewUAModal({ visible, onClose, onSave }: {
       bed: selectedPatient?.bed ?? '—',
       result,
       substances: substances || (result === 'Negative' ? '—' : 'See notes'),
-      collectedBy: 'Staff',
+      collectedBy: reporterName,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
     setSubstances('');
@@ -347,6 +417,61 @@ export default function IncidentsScreen() {
   const [showUAModal, setShowUAModal] = useState(false);
   const [incidents, setIncidents] = useState<IncidentReport[]>(SEED_INCIDENTS);
   const [uaLog, setUALog] = useState<UAEntry[]>(SEED_UA);
+  const [loaded, setLoaded] = useState(false);
+
+  // ── Toast ────────────────────────────────────────────────────────────────────
+  const [toastMsg, setToastMsg] = useState('');
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  function showToast(msg: string) {
+    setToastMsg(msg);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(1800),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start();
+  }
+
+  // ── Persist to / load from AsyncStorage ──────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const [storedIncidents, storedUA] = await Promise.all([
+          AsyncStorage.getItem(INCIDENTS_KEY),
+          AsyncStorage.getItem(UA_LOG_KEY),
+        ]);
+        if (storedIncidents) setIncidents(JSON.parse(storedIncidents));
+        if (storedUA) setUALog(JSON.parse(storedUA));
+      } catch { /* storage unavailable — fall back to seed data */ }
+      setLoaded(true);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem(INCIDENTS_KEY, JSON.stringify(incidents)).catch(() => {});
+  }, [incidents, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem(UA_LOG_KEY, JSON.stringify(uaLog)).catch(() => {});
+  }, [uaLog, loaded]);
+
+  function handleSaveIncident(r: IncidentReport) {
+    setIncidents(prev => [{ ...r, status: 'Open' }, ...prev]);
+    showToast('Incident report filed');
+  }
+
+  function handleStatusChange(id: string, next: IncidentStatus, by: string) {
+    setIncidents(prev => prev.map(inc =>
+      inc.id === id ? { ...inc, status: next, acknowledgedBy: by } : inc
+    ));
+    showToast(next === 'Reviewed' ? 'Incident marked reviewed' : 'Incident resolved');
+  }
+
+  function handleSaveUA(e: UAEntry) {
+    setUALog(prev => [e, ...prev]);
+    showToast('UA specimen logged');
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -409,7 +534,7 @@ export default function IncidentsScreen() {
         <FlatList
           data={incidents}
           keyExtractor={i => i.id}
-          renderItem={({ item }) => <IncidentCard item={item} />}
+          renderItem={({ item }) => <IncidentCard item={item} role={role} onStatusChange={handleStatusChange} />}
           contentContainerStyle={[styles.listContent, { paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }]}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
@@ -438,13 +563,24 @@ export default function IncidentsScreen() {
       <NewIncidentModal
         visible={showIncidentModal}
         onClose={() => setShowIncidentModal(false)}
-        onSave={r => setIncidents(prev => [r, ...prev])}
+        onSave={handleSaveIncident}
+        reporterName={ROLE_NAMES[role] ?? 'Staff'}
       />
       <NewUAModal
         visible={showUAModal}
         onClose={() => setShowUAModal(false)}
-        onSave={e => setUALog(prev => [e, ...prev])}
+        onSave={handleSaveUA}
+        reporterName={ROLE_NAMES[role] ?? 'Staff'}
       />
+
+      {/* Success toast */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.toast, { backgroundColor: colors.navy, opacity: toastOpacity }]}
+      >
+        <Ionicons name="checkmark-circle" size={16} color="#fff" />
+        <Text style={styles.toastText}>{toastMsg}</Text>
+      </Animated.View>
     </View>
   );
 }
@@ -497,4 +633,10 @@ const styles = StyleSheet.create({
   textArea: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 14, minHeight: 120, textAlignVertical: 'top', fontFamily: 'Inter_400Regular' },
   saveBtn: { borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 24 },
   saveBtnText: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  toast: { position: 'absolute', bottom: 100, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 10, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, elevation: 6 },
+  toastText: { fontSize: 14, fontWeight: '600', color: '#fff', fontFamily: 'Inter_600SemiBold' },
+  ackRow: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 },
+  ackText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  ackBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginTop: 10, alignSelf: 'flex-start' },
+  ackBtnText: { fontSize: 13, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
 });

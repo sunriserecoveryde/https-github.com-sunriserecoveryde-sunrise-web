@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -221,19 +222,41 @@ function WithdrawalAlertBanner({
 function RoleToggle() {
   const colors = useColors();
   const { role, setRole } = useRole();
+  const [hintReset, setHintReset] = useState(false);
+
+  const resetSwipeHint = async () => {
+    try {
+      await AsyncStorage.removeItem('swipe_hint_shown_swipeHintShown');
+      setHintReset(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => setHintReset(false), 2000);
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
+
   return (
-    <View style={[styles.roleToggle, { backgroundColor: colors.navyLight, borderColor: colors.navy }]}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <View style={[styles.roleToggle, { backgroundColor: colors.navyLight, borderColor: colors.navy }]}>
+        <Pressable
+          style={[styles.roleBtn, role === 'nursing' && { backgroundColor: colors.orange }]}
+          onPress={() => { Haptics.selectionAsync(); setRole('nursing'); }}
+        >
+          <Text style={[styles.roleBtnText, { color: role === 'nursing' ? '#fff' : colors.slateLight }]}>RN</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.roleBtn, role === 'bht' && { backgroundColor: colors.orange }]}
+          onPress={() => { Haptics.selectionAsync(); setRole('bht'); }}
+        >
+          <Text style={[styles.roleBtnText, { color: role === 'bht' ? '#fff' : colors.slateLight }]}>BHT</Text>
+        </Pressable>
+      </View>
+      {/* Dev-only: reset swipe hint so testers can replay onboarding */}
       <Pressable
-        style={[styles.roleBtn, role === 'nursing' && { backgroundColor: colors.orange }]}
-        onPress={() => { Haptics.selectionAsync(); setRole('nursing'); }}
+        onPress={resetSwipeHint}
+        style={[styles.roleToggle, { backgroundColor: colors.navyLight, borderColor: colors.navy, paddingHorizontal: 8, paddingVertical: 4 }]}
       >
-        <Text style={[styles.roleBtnText, { color: role === 'nursing' ? '#fff' : colors.slateLight }]}>RN</Text>
-      </Pressable>
-      <Pressable
-        style={[styles.roleBtn, role === 'bht' && { backgroundColor: colors.orange }]}
-        onPress={() => { Haptics.selectionAsync(); setRole('bht'); }}
-      >
-        <Text style={[styles.roleBtnText, { color: role === 'bht' ? '#fff' : colors.slateLight }]}>BHT</Text>
+        <Ionicons name={hintReset ? 'checkmark' : 'refresh-outline'} size={13} color={hintReset ? colors.success : colors.slateLight} />
       </Pressable>
     </View>
   );
@@ -296,6 +319,20 @@ function BedCard({
   const showCows = patient.cows != null && patient.cows > 0;
   const showCiwa = patient.ciwa != null && patient.ciwa > 0;
   const isAlert = isWithdrawalAlert(patient);
+
+  // #177: pulse the score pill whenever the patient's score crosses its threshold.
+  const scorePillAnim = useRef(new Animated.Value(1)).current;
+  const prevIsAlert = useRef(isAlert);
+  useEffect(() => {
+    if (isAlert && !prevIsAlert.current) {
+      // Rising edge — score just crossed threshold
+      Animated.sequence([
+        Animated.spring(scorePillAnim, { toValue: 1.18, useNativeDriver: true, speed: 80, bounciness: 10 }),
+        Animated.spring(scorePillAnim, { toValue: 1,    useNativeDriver: true, speed: 30, bounciness: 4  }),
+      ]).start();
+    }
+    prevIsAlert.current = isAlert;
+  }, [isAlert]);
   const notes = getNotesForPatient(patient.id);
   const noteCount = notes.length;
   // Count non-Observation note types separately
@@ -409,37 +446,43 @@ function BedCard({
           {showCows && (() => {
             const c = getScoreStyle(patient.cows!, 13, colors);
             const trend = getScoreTrend(patient.id, 'cows');
+            const atThreshold = patient.cows! >= 13;
             return (
-              <Pressable
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onScorePillPress?.(); }}
-                hitSlop={6}
-                style={({ pressed }) => [styles.scorePill, { backgroundColor: c.bg, opacity: pressed ? 0.75 : 1 }]}
-              >
-                <Text style={[styles.scoreText, { color: c.text }]}>
-                  {'COWS ' + patient.cows}
-                  {trend != null && (
-                    <Text style={{ color: trendColor(trend, colors) }}>{trendArrow(trend)}</Text>
-                  )}
-                </Text>
-              </Pressable>
+              <Animated.View style={atThreshold ? { transform: [{ scale: scorePillAnim }] } : undefined}>
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onScorePillPress?.(); }}
+                  hitSlop={6}
+                  style={({ pressed }) => [styles.scorePill, { backgroundColor: c.bg, opacity: pressed ? 0.75 : 1 }]}
+                >
+                  <Text style={[styles.scoreText, { color: c.text }]}>
+                    {'COWS ' + patient.cows}
+                    {trend != null && (
+                      <Text style={{ color: trendColor(trend, colors) }}>{trendArrow(trend)}</Text>
+                    )}
+                  </Text>
+                </Pressable>
+              </Animated.View>
             );
           })()}
           {showCiwa && (() => {
             const c = getScoreStyle(patient.ciwa!, 15, colors);
             const trend = getScoreTrend(patient.id, 'ciwa');
+            const atThreshold = patient.ciwa! >= 15;
             return (
-              <Pressable
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onScorePillPress?.(); }}
-                hitSlop={6}
-                style={({ pressed }) => [styles.scorePill, { backgroundColor: c.bg, opacity: pressed ? 0.75 : 1 }]}
-              >
-                <Text style={[styles.scoreText, { color: c.text }]}>
-                  {'CIWA ' + patient.ciwa}
-                  {trend != null && (
-                    <Text style={{ color: trendColor(trend, colors) }}>{trendArrow(trend)}</Text>
-                  )}
-                </Text>
-              </Pressable>
+              <Animated.View style={atThreshold ? { transform: [{ scale: scorePillAnim }] } : undefined}>
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onScorePillPress?.(); }}
+                  hitSlop={6}
+                  style={({ pressed }) => [styles.scorePill, { backgroundColor: c.bg, opacity: pressed ? 0.75 : 1 }]}
+                >
+                  <Text style={[styles.scoreText, { color: c.text }]}>
+                    {'CIWA ' + patient.ciwa}
+                    {trend != null && (
+                      <Text style={{ color: trendColor(trend, colors) }}>{trendArrow(trend)}</Text>
+                    )}
+                  </Text>
+                </Pressable>
+              </Animated.View>
             );
           })()}
         </View>
@@ -483,6 +526,9 @@ function AvailableBedCard({ bedId, status }: { bedId: string; status: string }) 
 
 const ACUITY_OPTIONS: Acuity[] = ['Routine', 'Moderate', 'High', 'Critical'];
 const PROGRAM_OPTIONS = ['Residential', 'PHP', 'IOP', 'OP'] as const;
+const GENDER_OPTIONS = ['M', 'F', 'NB', 'Other'] as const;
+// #43: quick-pick counselor list so charge nurses don't have to type a name
+const COUNSELOR_OPTIONS = ['J. Rivera', 'M. Thompson', 'K. Patel', 'D. Williams', 'S. Okafor', 'TBD'] as const;
 
 function AdmitModal({
   visible,
@@ -502,6 +548,10 @@ function AdmitModal({
   const [diagnosis, setDiagnosis] = useState('');
   const [acuity, setAcuity] = useState<Acuity>('Routine');
   const [program, setProgram] = useState<typeof PROGRAM_OPTIONS[number]>('Residential');
+  // #43: auto-fill fields
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState<typeof GENDER_OPTIONS[number]>('M');
+  const [counselor, setCounselor] = useState<typeof COUNSELOR_OPTIONS[number]>('TBD');
 
   function resetForm() {
     setFirstName('');
@@ -510,6 +560,9 @@ function AdmitModal({
     setDiagnosis('');
     setAcuity('Routine');
     setProgram('Residential');
+    setAge('');
+    setGender('M');
+    setCounselor('TBD');
   }
 
   function handleAdmit() {
@@ -536,8 +589,8 @@ function AdmitModal({
       mrn: `MRN-${Math.floor(10000 + Math.random() * 90000)}`,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      age: 0,
-      gender: 'M',
+      age: age.trim() ? parseInt(age.trim(), 10) : 0,
+      gender,
       program,
       primaryDiagnosis: diagnosis.trim() || 'Pending assessment',
       acuity,
@@ -546,7 +599,7 @@ function AdmitModal({
       flags: [],
       admitDate,
       los: 0,
-      counselor: 'TBD',
+      counselor,
       mood: 5,
       cravings: 5,
       lastUa: 'Pending',
@@ -669,6 +722,49 @@ function AdmitModal({
               })}
             </View>
           </View>
+
+          {/* Age + Gender (#43) */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={[modalStyles.label, { color: colors.mutedForeground }]}>AGE &amp; GENDER</Text>
+            <View style={modalStyles.nameRow}>
+              <TextInput
+                style={[modalStyles.input, { width: 72, backgroundColor: colors.card, color: colors.navy, borderColor: colors.border }]}
+                placeholder="Age"
+                placeholderTextColor={colors.mutedForeground}
+                value={age}
+                onChangeText={v => setAge(v.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
+                maxLength={3}
+              />
+              <View style={[modalStyles.chipRow, { flex: 1 }]}>
+                {GENDER_OPTIONS.map(g => (
+                  <Pressable
+                    key={g}
+                    onPress={() => { Haptics.selectionAsync(); setGender(g); }}
+                    style={[modalStyles.optionChip, { backgroundColor: gender === g ? colors.navy : colors.muted, borderColor: gender === g ? colors.navy : colors.border }]}
+                  >
+                    <Text style={[modalStyles.optionChipText, { color: gender === g ? '#fff' : colors.navy }]}>{g}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          {/* Counselor (#43) */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={[modalStyles.label, { color: colors.mutedForeground }]}>ASSIGNED COUNSELOR</Text>
+            <View style={[modalStyles.chipRow, { flexWrap: 'wrap' }]}>
+              {COUNSELOR_OPTIONS.map(c => (
+                <Pressable
+                  key={c}
+                  onPress={() => { Haptics.selectionAsync(); setCounselor(c); }}
+                  style={[modalStyles.optionChip, { backgroundColor: counselor === c ? colors.navyMid : colors.muted, borderColor: counselor === c ? colors.navy : colors.border }]}
+                >
+                  <Text style={[modalStyles.optionChipText, { color: counselor === c ? '#fff' : colors.navy }]}>{c}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
         </ScrollView>
       </View>
     </Modal>
@@ -689,7 +785,10 @@ export default function CensusScreen() {
   const [shiftEndedToast, setShiftEndedToast] = useState(false);
   const shiftEndedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
-  const hasFiredHaptic = useRef(false);
+  // #176: track previous alertCount so the haptic fires each time the count
+  // rises (not just once), giving nurses a physical cue when a new patient
+  // crosses the withdrawal threshold.
+  const prevAlertCount = useRef(0);
 
   // ─── Live census data from context ────────────────────────────────────────
   // Must be declared before the discharge toast refs so we can seed their
@@ -789,11 +888,13 @@ export default function CensusScreen() {
     }, [refreshFromApi]),
   );
 
+  // #176: fire a warning haptic each time alertCount increases so nurses
+  // feel a new threshold breach even with the screen partially off-center.
   useEffect(() => {
-    if (alertCount > 0 && !hasFiredHaptic.current) {
-      hasFiredHaptic.current = true;
+    if (alertCount > prevAlertCount.current) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     }
+    prevAlertCount.current = alertCount;
   }, [alertCount]);
 
   // Reset the notice dismiss flag whenever a new pending discharge starts

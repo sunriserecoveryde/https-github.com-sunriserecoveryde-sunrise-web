@@ -77,7 +77,7 @@ const STATUS_CERT: Record<string, { label: string; cls: string }> = {
 
 function daysUntil(dateStr: string): number {
   const exp = new Date(dateStr);
-  const now = new Date('2026-07-19');
+  const now = new Date('2026-07-22');
   return Math.ceil((exp.getTime() - now.getTime()) / 86400000);
 }
 
@@ -469,7 +469,7 @@ export function StaffAdmin({ navigate: _navigate }: Props) {
                 <div>
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Certifications & Credentials</h3>
                   {selected.certifications.length === 0 ? (
-                    <div className="text-sm text-slate-400 italic">No certifications on file</div>
+                    <div className="flex items-center gap-2 text-sm text-slate-400 italic py-2"><span>📋</span> No certifications on file — add credentials via the Certification Tracker</div>
                   ) : (
                     <div className="border border-border rounded-lg overflow-hidden">
                       <table className="w-full text-sm">

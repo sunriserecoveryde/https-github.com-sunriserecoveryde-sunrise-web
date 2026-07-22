@@ -447,7 +447,11 @@ export function DemoPatientDetail({ patientId, navigate, returnTo = 'Dashboard' 
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center p-8 bg-bg rounded-lg border border-dashed border-border text-slate">No recent notes.</div>
+                  <div className="text-center p-8 bg-bg rounded-lg border border-dashed border-border">
+                    <div className="text-2xl mb-2">📋</div>
+                    <div className="text-sm font-medium text-slate">No recent notes</div>
+                    <div className="text-xs text-slate-light mt-1">Progress notes authored by the clinical team appear here once signed.</div>
+                  </div>
                 )}
               </div>
             </div>

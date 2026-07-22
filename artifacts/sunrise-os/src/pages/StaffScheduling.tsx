@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Clock, User, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Clock, User, Plus, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -113,6 +113,9 @@ const ROLE_ORDER: StaffRole[] = ['Physician', 'Psychiatrist', 'Nurse', 'Counselo
 export function StaffScheduling({ navigate, readOnly }: Props) {
   const [view, setView] = useState<'Weekly' | 'Staff' | 'Coverage' | 'PTO Requests' | 'Overtime & Fatigue' | 'Labor Analytics'>('Weekly');
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
+  const [addShiftOpen, setAddShiftOpen] = useState(false);
+  const [shiftSaved, setShiftSaved] = useState<string | null>(null);
+  const saveShiftAction = (msg: string) => { setShiftSaved(msg); setTimeout(() => setShiftSaved(null), 2500); };
 
   const totalHours = STAFF.length * DAYS.length * 8; // rough
   const ptoCount = STAFF.reduce((acc, s) => acc + DAYS.filter(d => {
@@ -128,6 +131,20 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
     return shifts && Object.values(shifts).some(sh => sh?.status === 'Overtime');
   }).length, 0);
 
+  // Detect overlapping-shift conflicts: same staff member has 2+ shift types
+  // assigned on the same day with status "Scheduled" or "Overtime"
+  const ACTIVE_STATUSES = new Set(['Scheduled', 'Overtime', 'On Call']);
+  const conflictCells: Set<string> = new Set(); // "staffId|day"
+  STAFF.forEach(s => {
+    DAYS.forEach(d => {
+      const dayShifts = SCHEDULE[s.id]?.[d];
+      if (!dayShifts) return;
+      const activeShifts = Object.values(dayShifts).filter(sh => sh && ACTIVE_STATUSES.has(sh.status));
+      if (activeShifts.length > 1) conflictCells.add(`${s.id}|${d}`);
+    });
+  });
+  const conflictCount = conflictCells.size;
+
   const groupedStaff = ROLE_ORDER.map(role => ({
     role,
     members: STAFF.filter(s => s.role === role),
@@ -141,10 +158,10 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
           <p className="text-slate text-sm mt-0.5">Shift assignments, coverage requirements, and PTO management</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="p-1.5 hover:bg-gray-100 rounded"><ChevronLeft className="w-4 h-4 text-slate" /></button>
-          <span className="text-sm font-semibold text-navy px-2">Week of July 14–20, 2026</span>
-          <button className="p-1.5 hover:bg-gray-100 rounded"><ChevronRight className="w-4 h-4 text-slate" /></button>
-          <LockedButton locked={readOnly} className="ml-2 btn-primary text-sm px-4 py-2">+ Add Shift</LockedButton>
+          <button onClick={() => {}} className="p-1.5 hover:bg-gray-100 rounded" title="Previous week"><ChevronLeft className="w-4 h-4 text-slate" /></button>
+          <span className="text-sm font-semibold text-navy px-2">Week of July 20–26, 2026</span>
+          <button onClick={() => {}} className="p-1.5 hover:bg-gray-100 rounded" title="Next week"><ChevronRight className="w-4 h-4 text-slate" /></button>
+          <LockedButton locked={readOnly} onClick={() => setAddShiftOpen(true)} className="ml-2 btn-primary text-sm px-4 py-2">+ Add Shift</LockedButton>
         </div>
       </div>
 
@@ -155,6 +172,7 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
           { label: 'PTO / Approved Leave', value: String(ptoCount), sub: 'Shifts', color: 'text-purple-600' },
           { label: 'Call-offs', value: String(calloffCount), sub: 'Unplanned absences', color: 'text-red-600' },
           { label: 'Overtime Shifts', value: String(overtimeCount), sub: 'Requiring payroll approval', color: 'text-amber-600' },
+          { label: 'Scheduling Conflicts', value: String(conflictCount), sub: 'Overlapping shifts', color: conflictCount > 0 ? 'text-red-600' : 'text-green-600' },
         ].map(s => (
           <div key={s.label} className="card">
             <div className="text-xs text-slate font-semibold uppercase tracking-wide">{s.label}</div>
@@ -208,8 +226,12 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
                       {DAYS.map(day => {
                         const shifts = SCHEDULE[s.id]?.[day];
                         const activeShifts = shifts ? Object.entries(shifts).filter(([, v]) => v !== null) : [];
+                        const isConflict = conflictCells.has(`${s.id}|${day}`);
                         return (
-                          <td key={day} className={`px-1 py-1.5 ${day.includes('7/19') || day.includes('7/20') ? 'bg-blue-50/50' : ''}`}>
+                          <td key={day} className={`px-1 py-1.5 relative ${day.includes('7/19') || day.includes('7/20') ? 'bg-blue-50/50' : ''} ${isConflict ? 'bg-red-50 ring-1 ring-inset ring-red-200' : ''}`}>
+                            {isConflict && (
+                              <span className="absolute top-0.5 right-0.5 text-red-500 text-[9px] leading-none">⚠</span>
+                            )}
                             {activeShifts.length === 0
                               ? <div className="text-center text-gray-300 text-[10px]">—</div>
                               : activeShifts.map(([shift, assignment]) => assignment && (
@@ -352,7 +374,7 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
           <div className="card p-0 overflow-hidden">
             <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm flex items-center justify-between">
               <span>PTO & Leave Requests</span>
-              <LockedButton locked={readOnly} className="text-xs btn-primary px-3 py-1.5 flex items-center gap-1"><Plus className="w-3 h-3" />Submit Request</LockedButton>
+              <LockedButton locked={readOnly} onClick={() => saveShiftAction('Request submitted')} className="text-xs btn-primary px-3 py-1.5 flex items-center gap-1"><Plus className="w-3 h-3" />Submit Request</LockedButton>
             </div>
             <table className="w-full text-xs">
               <thead>
@@ -371,7 +393,7 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
                 {[
                   { name: 'Jessica Torres, RN', role: 'Nurse', type: 'Vacation', dates: 'Jul 28 – Aug 1', days: 5, coverage: 'A. Patel covers Day / Per diem hired for Eve', status: 'Pending' },
                   { name: 'David Odom, LMFT', role: 'Counselor', type: 'Personal', dates: 'Jul 25', days: 1, coverage: 'Group re-assigned to Sarah Jenkins', status: 'Pending' },
-                  { name: 'Marcus Davis, BHT', role: 'BHT', type: 'Sick Leave', dates: 'Jul 19 – 20', days: 2, coverage: 'Kevin Smith covers both days', status: 'Pending' },
+                  { name: 'Marcus Davis, BHT', role: 'BHT', type: 'Sick Leave', dates: 'Jul 24 – 25', days: 2, coverage: 'Kevin Smith covers both days', status: 'Pending' },
                   { name: 'Sarah Jenkins, LPC', role: 'Counselor', type: 'Vacation', dates: 'Aug 4 – 8', days: 5, coverage: 'Temp counselor scheduled. Caseload split 3-way.', status: 'Approved' },
                   { name: 'Anita Patel, RN', role: 'Nurse', type: 'FMLA', dates: 'Jul 21 – Aug 15', days: 18, coverage: 'Per diem staff + agency coverage approved', status: 'Approved' },
                   { name: 'Kevin Smith, BHT', role: 'BHT', type: 'Vacation', dates: 'Aug 11 – 12', days: 2, coverage: 'Marcus Davis / per diem', status: 'Approved' },
@@ -390,8 +412,8 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
                     <td className="px-4 py-3 text-center">
                       {r.status === 'Pending' && (
                         <div className="flex gap-1 justify-center">
-                          <LockedButton locked={readOnly} className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">✓ Approve</LockedButton>
-                          <LockedButton locked={readOnly} className="text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">✕ Deny</LockedButton>
+                          <LockedButton locked={readOnly} onClick={() => saveShiftAction('Request approved')} className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">✓ Approve</LockedButton>
+                          <LockedButton locked={readOnly} onClick={() => saveShiftAction('Request denied')} className="text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">✕ Deny</LockedButton>
                         </div>
                       )}
                     </td>
@@ -422,7 +444,7 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
           </div>
 
           <div className="card p-0 overflow-hidden">
-            <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm">Staff Hours — Current Week (Jul 14–20, 2026)</div>
+            <div className="px-5 py-3 bg-gray-50 border-b border-border font-semibold text-navy text-sm">Staff Hours — Current Week (Jul 20–26, 2026)</div>
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-bg text-slate">
@@ -553,6 +575,69 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {addShiftOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setAddShiftOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[480px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Add Shift</h2>
+              <button onClick={() => setAddShiftOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Staff Member *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Jessica Torres, RN</option><option>Michael Boyd, RN</option><option>Kevin Wright, BHT</option><option>Sarah Jenkins, LPC</option><option>Maria Gonzales, LCSW</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Shift Date *</label>
+                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Start Time *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['6:00 AM','7:00 AM','8:00 AM','10:00 AM','12:00 PM','2:00 PM','3:00 PM','6:00 PM','10:00 PM','11:00 PM'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">End Time *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['2:00 PM','3:00 PM','4:00 PM','6:00 PM','8:00 PM','10:00 PM','11:00 PM','6:00 AM (next day)','7:00 AM (next day)'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Role / Unit</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Nursing — Residential</option><option>BHT — Residential</option><option>Clinical — IOP</option><option>Clinical — PHP</option><option>Float / On-call</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Shift Type</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Regular</option><option>Overtime (pre-approved)</option><option>On-call</option><option>Mandatory coverage</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Notes</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[50px] resize-none" placeholder="Coverage reason, special instructions, callout context..." />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setAddShiftOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setAddShiftOpen(false); saveShiftAction('Shift added to schedule'); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Add Shift</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {shiftSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> {shiftSaved}
         </div>
       )}
     </div>

@@ -246,6 +246,31 @@ export const MEDICATIONS: Record<string, Medication[]> = {
     { id: 'm8-3', name: 'Metoprolol', genericName: 'Toprol', class: 'Medical', dose: '25mg', route: 'PO', frequency: 'BID', times: ['08:00', '20:00'], status: 'Active' },
     { id: 'm8-4', name: 'Chlordiazepoxide', genericName: 'Librium', class: 'PRN', dose: '25mg', route: 'PO', frequency: 'Q6H PRN CIWA', times: ['06:00', '12:00', '18:00', '22:00'], status: 'Active' },
   ],
+  // ── PHP / IOP / OP patients (#35) ─────────────────────────────────────────
+  // p9: Christine O'Brien — PHP, Alcohol Use Disorder, Bipolar I (Stable on Lithium)
+  p9: [
+    { id: 'm9-1', name: 'Lithium Carbonate', class: 'Psychiatric', dose: '600mg', route: 'PO', frequency: 'BID', times: ['08:00', '20:00'], status: 'Active' },
+    { id: 'm9-2', name: 'Naltrexone', genericName: 'ReVia', class: 'MAT', dose: '50mg', route: 'PO', frequency: 'Daily', times: ['08:00'], status: 'Active' },
+    { id: 'm9-3', name: 'Quetiapine', genericName: 'Seroquel', class: 'Psychiatric', dose: '25mg', route: 'PO', frequency: 'QHS', times: ['22:00'], status: 'Active' },
+    { id: 'm9-4', name: 'Thiamine (B1)', class: 'Medical', dose: '100mg', route: 'PO', frequency: 'Daily', times: ['08:00'], status: 'Active' },
+  ],
+  // p10: James Fletcher — IOP, Alcohol Use Disorder, stepping down to OP
+  p10: [
+    { id: 'm10-1', name: 'Acamprosate', genericName: 'Campral', class: 'MAT', dose: '666mg', route: 'PO', frequency: 'TID', times: ['08:00', '14:00', '20:00'], status: 'Active' },
+    { id: 'm10-2', name: 'Lisinopril', class: 'Medical', dose: '10mg', route: 'PO', frequency: 'Daily', times: ['08:00'], status: 'Active' },
+    { id: 'm10-3', name: 'Multivitamin', class: 'Medical', dose: '1 tab', route: 'PO', frequency: 'Daily', times: ['08:00'], status: 'Active' },
+  ],
+  // p11: Sofia Martinez — PHP, Cocaine Use Disorder, Depression co-occurring
+  p11: [
+    { id: 'm11-1', name: 'Bupropion', genericName: 'Wellbutrin XL', class: 'Psychiatric', dose: '300mg', route: 'PO', frequency: 'Daily AM', times: ['08:00'], status: 'Active' },
+    { id: 'm11-2', name: 'Hydroxyzine', genericName: 'Vistaril', class: 'PRN', dose: '25mg', route: 'PO', frequency: 'Q8H PRN anxiety', times: ['08:00', '16:00', '22:00'], status: 'Active' },
+    { id: 'm11-3', name: 'Melatonin', class: 'Medical', dose: '5mg', route: 'PO', frequency: 'QHS', times: ['22:00'], status: 'Active' },
+  ],
+  // p12: Noah Thompson — OP, Cannabis Use Disorder (anxiety managed outpatient)
+  p12: [
+    { id: 'm12-1', name: 'Escitalopram', genericName: 'Lexapro', class: 'Psychiatric', dose: '10mg', route: 'PO', frequency: 'Daily', times: ['08:00'], status: 'Active' },
+    { id: 'm12-2', name: 'Hydroxyzine', genericName: 'Vistaril', class: 'PRN', dose: '25mg', route: 'PO', frequency: 'PRN anxiety', times: [], status: 'Active' },
+  ],
 };
 
 export const VITALS: Record<string, VitalEntry[]> = {

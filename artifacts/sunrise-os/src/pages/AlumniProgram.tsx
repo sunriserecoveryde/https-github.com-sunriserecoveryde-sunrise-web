@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-import { CheckCircle, Phone, Calendar, TrendingUp, Heart, Star, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Phone, Calendar, TrendingUp, Heart, Star, AlertTriangle, X } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { LockedButton } from '../components/common/LockedButton';
 
@@ -33,7 +33,7 @@ const ALUMNI: AlumniRecord[] = [
     contacts: [
       { type: '30-Day', date: '2026-05-15', outcome: 'Sober', notes: 'Doing well. Suboxone maintained. Working part-time.' },
       { type: '60-Day', date: '2026-06-15', outcome: 'Sober', notes: 'Full-time employment resumed. Attending NA 3x/week.' },
-      { type: '90-Day', date: '2026-07-15', outcome: 'Sober', notes: 'Celebrated 90-day chip at NA. Sponsor relationship strong. Volunterring at church.' },
+      { type: '90-Day', date: '2026-07-15', outcome: 'Sober', notes: 'Celebrated 90-day chip at NA. Sponsor relationship strong. Volunteering at church.' },
       { type: '6-Month', outcome: 'Pending' },
     ],
     currentStatus: 'Sober', alumniEvents: ['July 4th Cookout', 'Monthly Alumni Meeting 6/7'],
@@ -145,6 +145,9 @@ const UPCOMING_EVENTS = [
 
 export function AlumniProgram({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Alumni' | 'Outcomes' | 'Events' | 'Testimonials' | 'Re-admission' | 'Engagement Analytics'>('Alumni');
+  const [callLogOpen, setCallLogOpen] = useState(false);
+  const [callSaved, setCallSaved] = useState<string | null>(null);
+  const saveAlumniAction = (msg: string) => { setCallSaved(msg); setTimeout(() => setCallSaved(null), 2500); };
 
   const soberCount = ALUMNI.filter(a => a.currentStatus === 'Sober').length;
   const pendingCalls = ALUMNI.flatMap(a => a.contacts).filter(c => c.outcome === 'Pending').length;
@@ -157,7 +160,7 @@ export function AlumniProgram({ navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy">Alumni Program</h1>
           <p className="text-slate text-sm mt-0.5">Post-discharge outcomes, 30/60/90 day follow-up, alumni events, and recovery success stories</p>
         </div>
-        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Phone className="w-4 h-4" /> Log Follow-up Call</LockedButton>
+        <LockedButton locked={readOnly} onClick={() => setCallLogOpen(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Phone className="w-4 h-4" /> Log Follow-up Call</LockedButton>
       </div>
 
       {/* KPIs */}
@@ -216,7 +219,7 @@ export function AlumniProgram({ navigate, readOnly }: Props) {
                     <div className="text-[10px] text-slate font-semibold">{c.type}</div>
                     <div className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium mt-1 ${OUTCOME_COLOR[c.outcome]}`}>{c.outcome}</div>
                     {c.date && <div className="text-[10px] text-slate mt-0.5">{c.date.slice(5)}</div>}
-                    {c.outcome === 'Pending' && <button className="text-[10px] text-orange hover:underline mt-1 block">Log Call</button>}
+                    {c.outcome === 'Pending' && <button onClick={() => saveAlumniAction('Call logged')} className="text-[10px] text-orange hover:underline mt-1 block">Log Call</button>}
                   </div>
                 ))}
               </div>
@@ -310,7 +313,7 @@ export function AlumniProgram({ navigate, readOnly }: Props) {
                   <div className="font-semibold text-navy">{ev.event}</div>
                   <div className="text-xs text-slate mt-0.5">{ev.location} · {ev.time}</div>
                 </div>
-                <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Invite Alumni</button>
+                <button onClick={() => saveAlumniAction('Invitation sent')} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Invite Alumni</button>
               </div>
             ))}
           </div>
@@ -342,8 +345,8 @@ export function AlumniProgram({ navigate, readOnly }: Props) {
                 {alum.onMat && <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">On MAT</span>}
                 <span className="text-xs text-slate ml-1">Consent to share: on file</span>
                 <div className="flex gap-2 ml-auto">
-                  <button className="text-xs border border-border text-slate px-3 py-1 rounded-lg hover:bg-gray-50">Edit</button>
-                  <LockedButton locked={readOnly} className="text-xs btn-primary px-3 py-1">Use in Marketing</LockedButton>
+                  <button onClick={() => saveAlumniAction('Testimonial updated')} className="text-xs border border-border text-slate px-3 py-1 rounded-lg hover:bg-gray-50">Edit</button>
+                  <LockedButton locked={readOnly} onClick={() => saveAlumniAction('Added to marketing library')} className="text-xs btn-primary px-3 py-1">Use in Marketing</LockedButton>
                 </div>
               </div>
             </div>
@@ -519,6 +522,59 @@ export function AlumniProgram({ navigate, readOnly }: Props) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {callLogOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setCallLogOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy flex items-center gap-2"><Phone className="w-5 h-5 text-orange-500" /> Log Follow-up Call</h2>
+              <button onClick={() => setCallLogOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Alumni *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Aiden K. — 90-day follow-up</option><option>Priya R. — 60-day follow-up</option><option>Devon Price — 30-day follow-up</option><option>Marcus T. — 90-day follow-up</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Follow-up Milestone</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>30-day post-discharge</option><option>60-day post-discharge</option><option>90-day post-discharge</option><option>6-month check-in</option><option>1-year anniversary</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Contact Outcome</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Reached — maintaining sobriety</option><option>Reached — relapse disclosed</option><option>Reached — re-admission requested</option><option>Voicemail left</option><option>Disconnected / wrong number</option><option>No answer — no VM</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Mood / Stability (1–5)</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>5 — Thriving, stable</option><option>4 — Doing well</option><option>3 — Managing</option><option>2 — Struggling</option><option>1 — Crisis / urgent concern</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Notes</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[70px] resize-none" placeholder="What did the alumni share? Any safety concerns, referrals made, next steps..." />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setCallLogOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setCallLogOpen(false); saveAlumniAction('Follow-up call logged'); }} className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold">Save Call Log</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {callSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> {callSaved}
         </div>
       )}
     </div>

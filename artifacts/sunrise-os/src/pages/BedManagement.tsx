@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-import { Bed, CheckCircle, AlertTriangle, Clock, Wrench, Plus, Filter, RefreshCw } from 'lucide-react';
+import { Bed, CheckCircle, AlertTriangle, Clock, Wrench, Plus, Filter, RefreshCw, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -97,6 +97,9 @@ export function BedManagement({ navigate, readOnly }: Props) {
   const [statusFilter, setStatusFilter] = useState<BedStatus | 'All'>('All');
   const [selected, setSelected] = useState<BedRecord | null>(null);
   const [bedTab, setBedTab] = useState<'Board' | 'Housekeeping Queue' | 'Capacity Forecast' | 'Maintenance Log' | 'Occupancy Trends' | 'Vendor Contacts'>('Board');
+  const [workOrderOpen, setWorkOrderOpen] = useState(false);
+  const [workOrderSaved, setWorkOrderSaved] = useState<string | null>(null);
+  const saveBedAction = (msg: string) => { setWorkOrderSaved(msg); setTimeout(() => setWorkOrderSaved(null), 2500); };
 
   const UNITS: Unit[] = ['All', 'Detox', 'Residential A', 'Residential B', 'Flex'];
   const STATUSES: (BedStatus | 'All')[] = ['All', 'Occupied', 'Available', 'Housekeeping', 'Maintenance', 'Blocked'];
@@ -122,8 +125,8 @@ export function BedManagement({ navigate, readOnly }: Props) {
           <p className="text-slate text-sm mt-0.5">Room-level occupancy, housekeeping, and maintenance · Updated 2:45 PM</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-outline text-xs flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button>
-          <LockedButton locked={readOnly} className="btn-primary text-xs flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" /> New Work Order</LockedButton>
+          <button onClick={() => saveBedAction('Bed status refreshed')} className="btn-outline text-xs flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button>
+          <LockedButton locked={readOnly} onClick={() => setWorkOrderOpen(true)} className="btn-primary text-xs flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" /> New Work Order</LockedButton>
         </div>
       </div>
 
@@ -157,7 +160,7 @@ export function BedManagement({ navigate, readOnly }: Props) {
           <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
             <div className="px-5 py-3 bg-gray-50 border-b border-border flex items-center justify-between">
               <h3 className="font-semibold text-navy text-sm">Open Tasks</h3>
-              <LockedButton locked={readOnly} className="text-xs px-3 py-1.5 bg-navy text-white rounded font-medium hover:bg-navy/90">+ Add Task</LockedButton>
+              <LockedButton locked={readOnly} onClick={() => saveBedAction('Task added')} className="text-xs px-3 py-1.5 bg-navy text-white rounded font-medium hover:bg-navy/90">+ Add Task</LockedButton>
             </div>
             <table className="w-full text-xs">
               <thead>
@@ -174,10 +177,10 @@ export function BedManagement({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { room: '1C', unit: 'Detox', type: 'Maintenance', desc: 'Plumbing repair — contractor scheduled', assignee: 'Facilities (Contractor)', priority: 'High', ready: 'Jul 20 AM', status: 'In Progress' },
+                  { room: '1C', unit: 'Detox', type: 'Maintenance', desc: 'Plumbing repair — contractor scheduled', assignee: 'Facilities (Contractor)', priority: 'High', ready: 'Jul 23 AM', status: 'In Progress' },
                   { room: '2C', unit: 'Res. A', type: 'Deep Clean', desc: 'Post-discharge deep clean — anticipated ready 4 PM', assignee: 'Maria L.', priority: 'Normal', ready: 'Today 4 PM', status: 'In Progress' },
                   { room: '4D', unit: 'Flex', type: 'Turnover Clean', desc: 'Standard turnover — linens changed, surfaces wiped', assignee: 'John K.', priority: 'Normal', ready: 'Today 2 PM', status: 'Pending' },
-                  { room: '5A', unit: 'Flex', type: 'Inspection', desc: 'HVAC filter replacement — facilities inspection required', assignee: 'Facilities', priority: 'Low', ready: 'Jul 21', status: 'Scheduled' },
+                  { room: '5A', unit: 'Flex', type: 'Inspection', desc: 'HVAC filter replacement — facilities inspection required', assignee: 'Facilities', priority: 'Low', ready: 'Jul 23', status: 'Scheduled' },
                   { room: '3C', unit: 'Res. B', type: 'Biohazard', desc: 'Bodily fluid cleanup — specialized cleaning protocol required', assignee: 'BioCleanse Co.', priority: 'Urgent', ready: 'Today 6 PM', status: 'Pending' },
                 ].map(t => (
                   <tr key={t.room + t.type} className={`hover:bg-gray-50 ${t.priority === 'Urgent' ? 'bg-red-50/20' : ''}`}>
@@ -225,8 +228,8 @@ export function BedManagement({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { date: 'Jul 21', patient: 'James Thornton', room: '1B', unit: 'Detox', type: 'Planned', stepDown: 'Residential', avail: 'Jul 21 PM' },
-                  { date: 'Jul 21', patient: 'Thomas Reilly', room: '3C', unit: 'Res. B', type: 'Planned', stepDown: 'PHP', avail: 'Jul 21 PM' },
+                  { date: 'Jul 22', patient: 'James Thornton', room: '1B', unit: 'Detox', type: 'Planned', stepDown: 'Residential', avail: 'Jul 22 PM' },
+                  { date: 'Jul 23', patient: 'Thomas Reilly', room: '3C', unit: 'Res. B', type: 'Planned', stepDown: 'PHP', avail: 'Jul 23 PM' },
                   { date: 'Jul 22', patient: 'Marcus Webb', room: '1A', unit: 'Detox', type: 'Planned', stepDown: 'Residential', avail: 'Jul 22 PM' },
                   { date: 'Jul 24', patient: 'Elena Vasquez', room: '4A', unit: 'Flex', type: 'Planned', stepDown: 'IOP', avail: 'Jul 24 PM' },
                   { date: 'Jul 25', patient: 'Destiny Williams', room: '3B', unit: 'Res. B', type: 'Planned', stepDown: 'Home w/ Aftercare', avail: 'Jul 25 PM' },
@@ -328,20 +331,20 @@ export function BedManagement({ navigate, readOnly }: Props) {
             {selected.status === 'Occupied' && (
               <>
                 <button onClick={() => selected.mrn && navigate('PatientDetail', selected.mrn)} className="btn-primary text-xs px-3 py-1.5">View Patient Chart</button>
-                <LockedButton locked={readOnly} className="btn-outline text-xs px-3 py-1.5">Schedule Discharge</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveBedAction('Discharge scheduled')} className="btn-outline text-xs px-3 py-1.5">Schedule Discharge</LockedButton>
               </>
             )}
             {selected.status === 'Available' && (
-              <LockedButton locked={readOnly} className="btn-primary text-xs px-3 py-1.5">Assign to Patient</LockedButton>
+              <LockedButton locked={readOnly} onClick={() => saveBedAction('Bed assigned to patient')} className="btn-primary text-xs px-3 py-1.5">Assign to Patient</LockedButton>
             )}
             {(selected.status === 'Housekeeping' || selected.status === 'Maintenance') && (
               <>
-                <LockedButton locked={readOnly} className="btn-primary text-xs px-3 py-1.5">Mark Ready</LockedButton>
-                <LockedButton locked={readOnly} className="btn-outline text-xs px-3 py-1.5">Update Note</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveBedAction('Bed marked ready')} className="btn-primary text-xs px-3 py-1.5">Mark Ready</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveBedAction('Note updated')} className="btn-outline text-xs px-3 py-1.5">Update Note</LockedButton>
               </>
             )}
             {selected.status === 'Blocked' && (
-              <LockedButton locked={readOnly} className="btn-outline text-xs px-3 py-1.5">Release Block</LockedButton>
+              <LockedButton locked={readOnly} onClick={() => saveBedAction('Bed block released')} className="btn-outline text-xs px-3 py-1.5">Release Block</LockedButton>
             )}
           </div>
         </div>
@@ -433,7 +436,7 @@ export function BedManagement({ navigate, readOnly }: Props) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-gray-50 text-slate">
-                  {['Unit', 'Beds', 'Jun 15', 'Jun 22', 'Jun 29', 'Jul 6', 'Jul 13', 'Trend'].map(h => (
+                  {['Unit', 'Beds', 'Jun 22', 'Jun 29', 'Jul 6', 'Jul 13', 'Jul 20', 'Trend'].map(h => (
                     <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -520,6 +523,59 @@ export function BedManagement({ navigate, readOnly }: Props) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {workOrderOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setWorkOrderOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">New Maintenance Work Order</h2>
+              <button onClick={() => setWorkOrderOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Room / Bed *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Room 101A</option><option>Room 101B</option><option>Room 102A</option><option>Room 102B</option><option>Common Area</option><option>Bathroom Hall A</option><option>Group Room B</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Issue Type *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Plumbing</option><option>HVAC / Heating</option><option>Electrical</option><option>Pest Control</option><option>Deep Clean</option><option>Furniture / Fixtures</option><option>Safety / Fire Equipment</option><option>Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Priority</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Urgent — bed out of service</option><option>High — impacts patient comfort</option><option>Normal — scheduled maintenance</option><option>Low — cosmetic</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Reported By</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Jessica Torres, RN</option><option>Kevin Wright, BHT</option><option>Michael Boyd, RN</option><option>Administration</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Description *</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[70px] resize-none" placeholder="Describe the issue in detail — what, where, how long, any safety concern..." />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setWorkOrderOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setWorkOrderOpen(false); saveBedAction('Work order submitted to maintenance'); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Submit Work Order</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {workOrderSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> {workOrderSaved}
         </div>
       )}
     </div>

@@ -25,7 +25,7 @@ interface MATRecord {
 
 const MAT_DATA: MATRecord[] = [
   { patientId: 'p1', medication: 'Suboxone (Buprenorphine/Naloxone)', dose: '16mg/day', frequency: 'Once daily', prescriber: 'Dr. Robert Chen', startDate: '2026-07-01', inductionStatus: 'Maintenance', lastDose: 'Today 8:00 AM', nextDose: 'Tomorrow 8:00 AM', bupLevel: '3.2 ng/mL', compliance: 100, notes: 'Stable. Discussed Vivitrol transition at 90 days.' },
-  { patientId: 'p2', medication: 'Naltrexone (Vivitrol injection)', dose: '380mg IM monthly', frequency: 'Monthly', prescriber: 'Dr. Emily Stone', startDate: '2026-06-20', inductionStatus: 'Maintenance', lastDose: '2026-06-20', nextDose: '2026-07-20', bupLevel: undefined, compliance: 100, notes: 'Monthly injection. Due 7/20. No cravings reported.' },
+  { patientId: 'p2', medication: 'Naltrexone (Vivitrol injection)', dose: '380mg IM monthly', frequency: 'Monthly', prescriber: 'Dr. Emily Stone', startDate: '2026-06-20', inductionStatus: 'Maintenance', lastDose: '2026-06-20', nextDose: '2026-07-22', bupLevel: undefined, compliance: 100, notes: 'Monthly injection. Due today (7/22). No cravings reported.' },
   { patientId: 'p3', medication: 'Suboxone (Buprenorphine/Naloxone)', dose: '24mg/day', frequency: 'Once daily', prescriber: 'Dr. Robert Chen', startDate: '2026-06-27', inductionStatus: 'Stabilization', lastDose: 'Today 8:00 AM', nextDose: 'Tomorrow 8:00 AM', bupLevel: '4.1 ng/mL', compliance: 95, notes: 'COWS 9 at last check — dose may need adjustment. Monitoring q4h.' },
   { patientId: 'p4', medication: 'Naltrexone (Oral)', dose: '50mg daily', frequency: 'Once daily', prescriber: 'Dr. Emily Stone', startDate: '2026-07-05', inductionStatus: 'Maintenance', lastDose: 'Today 8:00 AM', nextDose: 'Tomorrow 8:00 AM', bupLevel: undefined, compliance: 88, notes: 'Missed 1 dose (7/13). Counseled on adherence importance.' },
   { patientId: 'p11', medication: 'Suboxone (Buprenorphine/Naloxone)', dose: '16mg/day', frequency: 'Once daily', prescriber: 'Dr. Robert Chen', startDate: '2026-07-07', inductionStatus: 'Stabilization', lastDose: 'Today 8:00 AM', nextDose: 'Tomorrow 8:00 AM', bupLevel: '2.8 ng/mL', compliance: 100, notes: 'Induction complete. Stable on 16mg. Hep C treatment pending GI consult.' },
@@ -58,6 +58,7 @@ const COMPLIANCE_DATA = [
   { week: 'W1 Jul', rate: 95 },
   { week: 'W2 Jul', rate: 96 },
   { week: 'W3 Jul', rate: 97 },
+  { week: 'W4 Jul', rate: 96 },
 ];
 
 const INDUCTION_COLORS: Record<string, string> = {
@@ -72,6 +73,8 @@ export function MATManagement({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Active' | 'Pending' | 'Analytics' | 'Protocols' | 'Education' | 'PDMP Alerts' | 'Outcome Data'>('Active');
   const [filter, setFilter] = useState('All');
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [matActionSaved, setMatActionSaved] = useState<string | null>(null);
+  const saveMatAction = (msg: string) => { setMatActionSaved(msg); setTimeout(() => setMatActionSaved(null), 2500); };
 
   const onMAT = MAT_DATA.length;
   const avgCompliance = Math.round(MAT_DATA.reduce((a, r) => a + r.compliance, 0) / MAT_DATA.length);
@@ -182,7 +185,7 @@ export function MATManagement({ navigate, readOnly }: Props) {
                       <td className="px-4 py-3 max-w-[180px]">
                         <div className="text-[10px] text-slate line-clamp-2">{r.notes}</div>
                         <div className="flex gap-1 mt-1.5">
-                          <LockedButton locked={readOnly} editRoles={editRoles} className="text-[10px] text-orange hover:underline">Adjust</LockedButton>
+                          <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => saveMatAction('Dose adjustment submitted')} className="text-[10px] text-orange hover:underline">Adjust</LockedButton>
                           <span className="text-gray-300">·</span>
                           <button className="text-[10px] text-slate hover:text-navy" onClick={() => navigate('PatientDetail', r.patientId)}>Chart</button>
                         </div>
@@ -225,8 +228,8 @@ export function MATManagement({ navigate, readOnly }: Props) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg font-medium">Start MAT Order</LockedButton>
-                    <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Defer / Decline</LockedButton>
+                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => saveMatAction('MAT order initiated')} className="text-xs border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg font-medium">Start MAT Order</LockedButton>
+                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => saveMatAction('Evaluation deferred')} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50">Defer / Decline</LockedButton>
                   </div>
                 </div>
               </div>
@@ -244,7 +247,7 @@ export function MATManagement({ navigate, readOnly }: Props) {
                     </div>
                     <div className="text-xs text-slate">{p.program} · {p.primaryDiagnosis.split(' ').slice(0,4).join(' ')}</div>
                   </div>
-                  <LockedButton locked={readOnly} editRoles={editRoles} className="text-xs text-orange hover:underline">Evaluate for MAT</LockedButton>
+                  <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => saveMatAction('MAT evaluation requested')} className="text-xs text-orange hover:underline">Evaluate for MAT</LockedButton>
                 </div>
               ))}
             </div>
@@ -663,10 +666,16 @@ export function MATManagement({ navigate, readOnly }: Props) {
                 ))}
               </div>
               <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded text-[10px] text-green-800">
-                Sunrise MAT outcomes consistent with SAMHSA TIP-63 evidence base. Source: internal 2024–2025 cohort data (n=32).
+                Sunrise MAT outcomes consistent with SAMHSA TIP-63 evidence base. Source: internal 2025–2026 cohort data (n=38).
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {matActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {matActionSaved}
         </div>
       )}
     </div>

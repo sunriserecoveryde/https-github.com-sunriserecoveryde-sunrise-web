@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-
+import { X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -117,6 +117,10 @@ export function Admissions({ navigate, readOnly }: Props) {
   const [activeTab, setActiveTab] = useState<'Pipeline' | 'Recent Admits' | 'Intake Checklist' | 'Analytics' | 'VOB Queue' | 'LOC Criteria'>('Pipeline');
   const [selected, setSelected] = useState<PendingAdmission | null>(PENDING[0]);
   const [filterStatus, setFilterStatus] = useState<AdmitStatus | 'All'>('All');
+  const [admitActionSaved, setAdmitActionSaved] = useState<string | null>(null);
+  // New Referral form state
+  const [newReferralOpen, setNewReferralOpen] = useState(false);
+  const [newRef, setNewRef] = useState({ name: '', age: '', gender: 'M', phone: '', referralSource: '', primaryDx: '', program: 'Residential', insurance: '', notes: '' });
   // Interactive checklist state — pre-check all items for Jonny Quest (demo patient)
   const [checklistState, setChecklistState] = useState<Record<string, boolean[]>>(() => ({
     pa_demo: IOP_CHECKLIST_ITEMS.map(() => true),
@@ -155,7 +159,7 @@ export function Admissions({ navigate, readOnly }: Props) {
           <h1 className="text-2xl font-bold text-navy">Admissions / Intake</h1>
           <p className="text-slate text-sm mt-0.5">Pending referrals and intake pipeline</p>
         </div>
-        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">+ New Referral</LockedButton>
+        <LockedButton locked={readOnly} onClick={() => !readOnly && setNewReferralOpen(true)} className="btn-primary text-sm px-4 py-2">+ New Referral</LockedButton>
       </div>
 
       {/* Pipeline Kanban Summary */}
@@ -260,10 +264,15 @@ export function Admissions({ navigate, readOnly }: Props) {
                 </div>
 
                 <div className="flex gap-2 mt-4">
-                  <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex-1">Advance Status</LockedButton>
-                  <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2">Add Note</LockedButton>
-                  <LockedButton locked={readOnly} className="btn-outline text-sm px-4 py-2 text-red-600 border-red-200 hover:bg-red-50">Decline</LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => { setAdmitActionSaved('advanced'); setTimeout(() => setAdmitActionSaved(null), 2500); }} className="btn-primary text-sm px-4 py-2 flex-1">Advance Status</LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => { setAdmitActionSaved('noted'); setTimeout(() => setAdmitActionSaved(null), 2500); }} className="btn-outline text-sm px-4 py-2">Add Note</LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => { setAdmitActionSaved('declined'); setTimeout(() => setAdmitActionSaved(null), 2500); }} className="btn-outline text-sm px-4 py-2 text-red-600 border-red-200 hover:bg-red-50">Decline</LockedButton>
                 </div>
+                {admitActionSaved && (
+                  <div className="mt-2 text-xs font-semibold flex items-center gap-1.5 text-green-700">
+                    <X className="w-3.5 h-3.5 text-green-700" />{admitActionSaved === 'advanced' ? 'Status advanced' : admitActionSaved === 'noted' ? 'Note added' : 'Referral declined'}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -293,7 +302,7 @@ export function Admissions({ navigate, readOnly }: Props) {
                   <td className="px-4 py-3"><span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{a.program}</span></td>
                   <td className="px-4 py-3 text-slate">{a.counselor}</td>
                   <td className="px-4 py-3 font-mono text-navy">{a.bed}</td>
-                  <td className="px-4 py-3"><button className="text-xs text-orange hover:underline">View Chart</button></td>
+                  <td className="px-4 py-3"><button onClick={() => navigate('PatientList')} className="text-xs text-orange hover:underline">View Chart</button></td>
                 </tr>
               ))}
             </tbody>
@@ -527,6 +536,72 @@ export function Admissions({ navigate, readOnly }: Props) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* New Referral form modal */}
+      {newReferralOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setNewReferralOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[560px] max-h-[90vh] overflow-y-auto mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">New Referral</h2>
+              <button onClick={() => setNewReferralOpen(false)} className="text-slate hover:text-navy p-1 rounded"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Full Name *</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue" placeholder="First Last" value={newRef.name} onChange={e => setNewRef(r => ({ ...r, name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Age</label>
+                  <input type="number" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 34" value={newRef.age} onChange={e => setNewRef(r => ({ ...r, age: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Gender</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newRef.gender} onChange={e => setNewRef(r => ({ ...r, gender: e.target.value }))}>
+                    <option value="M">Male</option><option value="F">Female</option><option value="NB">Non-binary</option><option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Phone</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="(555) 000-0000" value={newRef.phone} onChange={e => setNewRef(r => ({ ...r, phone: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Referral Source</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Vanderbilt ER, Self" value={newRef.referralSource} onChange={e => setNewRef(r => ({ ...r, referralSource: e.target.value }))} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Primary Diagnosis</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Alcohol Use Disorder (Moderate)" value={newRef.primaryDx} onChange={e => setNewRef(r => ({ ...r, primaryDx: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Program</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newRef.program} onChange={e => setNewRef(r => ({ ...r, program: e.target.value }))}>
+                    <option>Residential</option><option>PHP</option><option>IOP</option><option>OP</option><option>Detox</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Insurance</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Aetna, Self-Pay" value={newRef.insurance} onChange={e => setNewRef(r => ({ ...r, insurance: e.target.value }))} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Notes</label>
+                  <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none" placeholder="Initial call notes, clinical urgency, any flags…" value={newRef.notes} onChange={e => setNewRef(r => ({ ...r, notes: e.target.value }))} />
+                </div>
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setNewReferralOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50 transition-colors">Cancel</button>
+              <button
+                disabled={!newRef.name}
+                onClick={() => { setNewReferralOpen(false); setNewRef({ name: '', age: '', gender: 'M', phone: '', referralSource: '', primaryDx: '', program: 'Residential', insurance: '', notes: '' }); }}
+                className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-navy-mid transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Create Referral
+              </button>
+            </div>
           </div>
         </div>
       )}

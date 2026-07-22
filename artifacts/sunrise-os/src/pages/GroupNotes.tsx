@@ -102,6 +102,8 @@ export function GroupNotes({ navigate, readOnly }: Props) {
   const [noteText, setNoteText] = useState('');
   const [showNoteEditor, setShowNoteEditor] = useState(false);
   const [view, setView] = useState<'Sessions' | 'Attendance' | 'Group Analytics' | 'Facilitator Stats' | 'Curriculum Map' | 'Documentation Standards'>('Sessions');
+  const [groupNoteSaved, setGroupNoteSaved] = useState<string | null>(null);
+  const saveGroupNote = (msg: string) => { setGroupNoteSaved(msg); setTimeout(() => setGroupNoteSaved(null), 2500); };
   // Per-patient participation map, keyed by sessionId → patientId → { level, note }
   const [participationMap, setParticipationMap] = useState<Record<string, Record<string, { level: PartLevel; note: string }>>>({});
 
@@ -212,7 +214,7 @@ export function GroupNotes({ navigate, readOnly }: Props) {
           </table>
           <div className="px-5 py-2.5 bg-gray-50 border-t border-border flex justify-between text-xs text-slate">
             <span>Required attendance: ≥80% of scheduled groups per program policy</span>
-            <LockedButton locked={readOnly} className="text-xs text-orange font-medium hover:underline">Export Attendance Report</LockedButton>
+            <LockedButton locked={readOnly} onClick={() => saveGroupNote('Attendance report exported')} className="text-xs text-orange font-medium hover:underline">Export Attendance Report</LockedButton>
           </div>
         </div>
       )}
@@ -378,8 +380,8 @@ export function GroupNotes({ navigate, readOnly }: Props) {
                     />
                   </div>
                   <div className="flex gap-2 mt-2">
-                    <LockedButton locked={readOnly} editRoles={editRoles} className="btn-primary text-sm px-4 py-2">Sign Note</LockedButton>
-                    <LockedButton locked={readOnly} editRoles={editRoles} className="btn-outline text-sm px-4 py-2">Save Draft</LockedButton>
+                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => { setShowNoteEditor(false); saveGroupNote('Group note signed and locked'); }} className="btn-primary text-sm px-4 py-2">Sign Note</LockedButton>
+                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => { setShowNoteEditor(false); saveGroupNote('Draft saved'); }} className="btn-outline text-sm px-4 py-2">Save Draft</LockedButton>
                     <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && navigate('CosignQueue')} className="btn-outline text-sm px-4 py-2">Send for Co-sign</LockedButton>
                     {showNoteEditor && <button onClick={() => setShowNoteEditor(false)} className="btn-outline text-sm px-4 py-2 text-slate">Cancel</button>}
                   </div>
@@ -574,7 +576,7 @@ export function GroupNotes({ navigate, readOnly }: Props) {
         <div className="space-y-5">
           <div className="text-sm text-slate">Weekly group therapy curriculum map — ensures topic variety, evidence-based coverage, and ASAM compliance across all programs.</div>
           <div className="card">
-            <h3 className="font-semibold text-navy text-sm mb-3">This Week's Group Curriculum — July 14–20, 2026</h3>
+            <h3 className="font-semibold text-navy text-sm mb-3">This Week's Group Curriculum — July 20–26, 2026</h3>
             <div className="overflow-x-auto text-xs">
               <table className="w-full">
                 <thead>
@@ -723,6 +725,12 @@ export function GroupNotes({ navigate, readOnly }: Props) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {groupNoteSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {groupNoteSaved}
         </div>
       )}
     </div>

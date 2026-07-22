@@ -33,6 +33,11 @@ const sudOutcomes = [
 
 const Outcomes: React.FC = () => {
   const [tab, setTab] = useState<'Overview' | 'Treatment Outcomes' | 'Patient Satisfaction' | 'Quality Measures' | 'Benchmarks' | 'Report Builder'>('Overview');
+  const [outcomeActionSaved, setOutcomeActionSaved] = useState<string | null>(null);
+  const [reportDateRange, setReportDateRange] = useState('Last 90 days');
+  const [reportProgram, setReportProgram] = useState('All');
+  const [reportFormat, setReportFormat] = useState('PDF');
+  const saveOutcomeAction = (msg: string) => { setOutcomeActionSaved(msg); setTimeout(() => setOutcomeActionSaved(null), 2500); };
 
   return (
     <div className="flex flex-col gap-6 max-w-[1400px] mx-auto">
@@ -455,7 +460,7 @@ const Outcomes: React.FC = () => {
                       <div className="text-[10px] text-slate mt-0.5">Metrics: {r.metrics}</div>
                       <div className="text-[10px] text-slate">Format: {r.format} · Last generated: {r.last}</div>
                     </div>
-                    <button className="shrink-0 text-[10px] font-bold bg-navy text-white px-2 py-1 rounded-lg">Run</button>
+                    <button onClick={() => saveOutcomeAction('Report generated')} className="shrink-0 text-[10px] font-bold bg-navy text-white px-2 py-1 rounded-lg">Run</button>
                   </div>
                 ))}
               </div>
@@ -468,7 +473,7 @@ const Outcomes: React.FC = () => {
                     <div className="text-slate font-semibold mb-1 uppercase text-[10px] tracking-wide">Date Range</div>
                     <div className="flex gap-2">
                       {['Last 30 days', 'Last 90 days', 'YTD', 'Custom'].map(r => (
-                        <button key={r} className={`px-3 py-1.5 rounded-lg border text-[10px] font-semibold ${r === 'Last 90 days' ? 'bg-navy text-white border-navy' : 'border-border text-slate'}`}>{r}</button>
+                        <button key={r} onClick={() => setReportDateRange(r)} className={`px-3 py-1.5 rounded-lg border text-[10px] font-semibold ${reportDateRange === r ? 'bg-navy text-white border-navy' : 'border-border text-slate'}`}>{r}</button>
                       ))}
                     </div>
                   </div>
@@ -476,7 +481,7 @@ const Outcomes: React.FC = () => {
                     <div className="text-slate font-semibold mb-1 uppercase text-[10px] tracking-wide">Program Filter</div>
                     <div className="flex gap-2 flex-wrap">
                       {['All', 'Detox', 'Residential', 'PHP', 'IOP', 'OP'].map(p => (
-                        <button key={p} className={`px-3 py-1.5 rounded-lg border text-[10px] font-semibold ${p === 'All' ? 'bg-teal-600 text-white border-teal-600' : 'border-border text-slate'}`}>{p}</button>
+                        <button key={p} onClick={() => setReportProgram(p)} className={`px-3 py-1.5 rounded-lg border text-[10px] font-semibold ${reportProgram === p ? 'bg-teal-600 text-white border-teal-600' : 'border-border text-slate'}`}>{p}</button>
                       ))}
                     </div>
                   </div>
@@ -500,11 +505,11 @@ const Outcomes: React.FC = () => {
                     <div className="text-slate font-semibold mb-1 uppercase text-[10px] tracking-wide">Export Format</div>
                     <div className="flex gap-2">
                       {['PDF', 'Excel', 'CSV', 'Word'].map(f => (
-                        <button key={f} className={`px-3 py-1.5 rounded-lg border text-[10px] font-semibold ${f === 'PDF' ? 'bg-blue-600 text-white border-blue-600' : 'border-border text-slate'}`}>{f}</button>
+                        <button key={f} onClick={() => setReportFormat(f)} className={`px-3 py-1.5 rounded-lg border text-[10px] font-semibold ${reportFormat === f ? 'bg-blue-600 text-white border-blue-600' : 'border-border text-slate'}`}>{f}</button>
                       ))}
                     </div>
                   </div>
-                  <button className="w-full bg-navy text-white text-xs font-bold py-2 rounded-xl mt-1">Generate Report</button>
+                  <button onClick={() => saveOutcomeAction('Custom report generated')} className="w-full bg-navy text-white text-xs font-bold py-2 rounded-xl mt-1">Generate Report</button>
                 </div>
               </div>
               <div className="card">
@@ -524,6 +529,12 @@ const Outcomes: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {outcomeActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {outcomeActionSaved}
         </div>
       )}
     </div>

@@ -30,7 +30,7 @@ interface TelehealthSession {
 
 const SESSIONS: TelehealthSession[] = [
   {
-    id: 'TH-001', patientId: 'p5', date: '2026-07-19', time: '9:00 AM', duration: 50,
+    id: 'TH-001', patientId: 'p5', date: '2026-07-22', time: '9:00 AM', duration: 50,
     modality: 'Individual Therapy', provider: 'David Odom, LMFT',
     status: 'Completed', platform: 'Doxy.me',
     joinUrl: 'https://doxy.me/davidodom', techCheckDone: true, insuranceAuth: true, consentOnFile: true,
@@ -38,28 +38,28 @@ const SESSIONS: TelehealthSession[] = [
     billingCode: '90837-GT', location: 'Home (Rockville, MD)',
   },
   {
-    id: 'TH-002', patientId: 'p12', date: '2026-07-19', time: '10:30 AM', duration: 50,
+    id: 'TH-002', patientId: 'p12', date: '2026-07-22', time: '10:30 AM', duration: 50,
     modality: 'Medication Management', provider: 'Dr. Emma Hughes, MD',
     status: 'In Progress', platform: 'Zoom for Healthcare',
     joinUrl: 'https://zoom.us/j/sunrise-hughes', techCheckDone: true, insuranceAuth: true, consentOnFile: true,
     billingCode: '99213-GT', location: 'Home (Brentwood, MD)',
   },
   {
-    id: 'TH-003', patientId: 'p7', date: '2026-07-19', time: '1:00 PM', duration: 50,
+    id: 'TH-003', patientId: 'p7', date: '2026-07-22', time: '1:00 PM', duration: 50,
     modality: 'Individual Therapy', provider: 'Sarah Jenkins, LPC',
     status: 'Scheduled', platform: 'Doxy.me',
     joinUrl: 'https://doxy.me/sarahjenkins', techCheckDone: true, insuranceAuth: true, consentOnFile: true,
     billingCode: '90837-GT', location: 'Home (Franklin, MD)',
   },
   {
-    id: 'TH-004', patientId: 'p3', date: '2026-07-19', time: '2:30 PM', duration: 50,
+    id: 'TH-004', patientId: 'p3', date: '2026-07-22', time: '2:30 PM', duration: 50,
     modality: 'Psychiatric Evaluation', provider: 'Dr. Emma Hughes, MD',
     status: 'Scheduled', platform: 'Zoom for Healthcare',
     joinUrl: 'https://zoom.us/j/sunrise-hughes', techCheckDone: false, insuranceAuth: true, consentOnFile: true,
     billingCode: '90792-GT', location: 'Home (Rockville, MD)',
   },
   {
-    id: 'TH-005', patientId: 'p15', date: '2026-07-19', time: '4:00 PM', duration: 30,
+    id: 'TH-005', patientId: 'p15', date: '2026-07-22', time: '4:00 PM', duration: 30,
     modality: 'Case Management', provider: 'Maria Gonzalez, LSW',
     status: 'Scheduled', platform: 'Doxy.me',
     joinUrl: 'https://doxy.me/mariagonzalez', techCheckDone: true, insuranceAuth: false, consentOnFile: true,
@@ -112,9 +112,10 @@ export function TelehealthConsults({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Today' | 'Upcoming' | 'History' | 'TechCheck' | 'Settings' | 'Analytics' | 'Platform Guide'>('Today');
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
+  const [techCheckSaved, setTechCheckSaved] = useState(false);
 
-  const todaySessions = SESSIONS.filter(s => s.date === '2026-07-19');
-  const historySessions = SESSIONS.filter(s => s.date < '2026-07-19');
+  const todaySessions = SESSIONS.filter(s => s.date === '2026-07-22');
+  const historySessions = SESSIONS.filter(s => s.date < '2026-07-22');
   const inProgressSession = SESSIONS.find(s => s.status === 'In Progress');
 
   const completedToday = todaySessions.filter(s => s.status === 'Completed').length;
@@ -172,10 +173,16 @@ export function TelehealthConsults({ navigate, readOnly }: Props) {
       </div>
 
       {(tab === 'Today' || tab === 'Upcoming') && (() => {
-        const sessions = tab === 'Today' ? todaySessions : SESSIONS.filter(s => s.date >= '2026-07-19' && s.status === 'Scheduled');
+        const sessions = tab === 'Today' ? todaySessions : SESSIONS.filter(s => s.date >= '2026-07-22' && s.status === 'Scheduled');
         return (
           <div className="space-y-3">
-            {sessions.length === 0 && <div className="text-center text-slate py-8">No sessions for this view.</div>}
+            {sessions.length === 0 && (
+              <div className="text-center py-12">
+                <div className="text-3xl mb-2">📅</div>
+                <div className="text-sm font-semibold text-navy">No telehealth sessions scheduled</div>
+                <div className="text-xs text-slate mt-1">Use "Schedule Session" above to add a new appointment.</div>
+              </div>
+            )}
             {sessions.map(session => {
               const p = MOCK_PATIENTS.find(pt => pt.id === session.patientId);
               const isSelected = selectedSession === session.id;
@@ -302,7 +309,13 @@ export function TelehealthConsults({ navigate, readOnly }: Props) {
                 <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Home — 123 Main St, Rockville, MD 37201" />
               </div>
             </div>
-            <LockedButton locked={readOnly} className="btn-primary text-sm px-5 py-2">Save Tech Check</LockedButton>
+            {techCheckSaved ? (
+              <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5 text-sm font-semibold">
+                <CheckCircle className="w-4 h-4" /> Tech check saved — documented in patient record
+              </div>
+            ) : (
+              <LockedButton locked={readOnly} onClick={() => { setTechCheckSaved(true); setTimeout(() => setTechCheckSaved(false), 3000); }} className="btn-primary text-sm px-5 py-2">Save Tech Check</LockedButton>
+            )}
           </div>
           <div className="card">
             <h3 className="font-semibold text-navy mb-3">No-Show Protocol</h3>
@@ -540,6 +553,12 @@ export function TelehealthConsults({ navigate, readOnly }: Props) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {techCheckSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> Tech check documented in patient record
         </div>
       )}
     </div>

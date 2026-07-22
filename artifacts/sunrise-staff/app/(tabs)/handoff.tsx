@@ -2,9 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Animated,
   AppState,
+  Clipboard,
   FlatList,
+  Modal,
   Platform,
   Pressable,
+  ScrollView,
   Share,
   StyleSheet,
   Text,
@@ -18,7 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadHandoffState, saveJsonToStorage, pruneStaleStorageKeys, makeHandoffNotesKey, makeHandoffShiftKey, formatDateKey, isPersistSafe, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
-import { useNursingNotes } from '@/context/NursingNotesContext';
+import { useNursingNotes, type NoteType } from '@/context/NursingNotesContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
 import { useWithdrawalFilters } from '@/context/WithdrawalFiltersContext';
 import { RESIDENTIAL_PATIENTS, Patient, acuityColor, acuitySortOrder } from '@/data/mockData';
@@ -187,6 +190,7 @@ export default function HandoffScreen() {
   const topPadding = insets.top + (Platform.OS === 'web' ? 67 : 0);
   const { role, setRole } = useRole();
   const { clearNotes, getNotesForPatient } = useNursingNotes();
+  const [noteTypeFilter, setNoteTypeFilter] = useState<'all' | NoteType>('all');
   const { clearAcknowledgments } = useMdAcknowledgment();
   const { clearFilters } = useWithdrawalFilters();
   const [shift, setShift] = useState<Shift>('day');
@@ -218,6 +222,11 @@ export default function HandoffScreen() {
   // stored dateStr against `new Date()` and calls setToday only when the day
   // has actually advanced, making repeated calls idempotent.
   const [today, setToday] = useState(() => new Date());
+  // #175: show a preview modal so nurses can copy the text before sharing —
+  // prevents accidental data loss if the native share sheet is dismissed early.
+  const [exportText, setExportText] = useState('');
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportCopied, setExportCopied] = useState(false);
   const todayKeyRef = useRef(formatDateKey(new Date())); // tracks last-seen date string
 
   function checkRollover() {
@@ -263,8 +272,14 @@ export default function HandoffScreen() {
   // Storage keys are derived from `today` so they update automatically after
   // midnight without requiring an app restart.  The load effect depends on both
   // keys, so it re-runs whenever the day rolls over.
-  const storageKeyNotes = makeHandoffNotesKey(today);
-  const storageKeyShift = makeHandoffShiftKey(today);
+  const storageKeyNotes     = makeHandoffNotesKey(today);
+  const storageKeyShift     = makeHandoffShiftKey(today);
+  const storageKeyCompleted = `@sunrise_handoff_completed_${formatDateKey(today)}`;
+
+  // Ref keeps the latest shift key available in write-through callbacks without
+  // stale-closure issues (storageKeyShift changes on midnight rollover).
+  const storageKeyShiftRef = useRef(storageKeyShift);
+  useEffect(() => { storageKeyShiftRef.current = storageKeyShift; }, [storageKeyShift]);
 
   // Tracks which notes key the current in-memory state was loaded from.
   // Used by persist effects via isPersistSafe() to prevent writing yesterday's
@@ -350,24 +365,30 @@ export default function HandoffScreen() {
       settled = true;
       setNotes(defaultNotes);
       setShift('day');
+      setCompleted(false);
       // loadedForKeyRef.current stays null — persist effects remain blocked.
       setLoaded(true);
     }, 4000);
 
     pruneStaleStorageKeys(AsyncStorage, [
-      { prefix: '@sunrise_handoff_notes_', currentKey: storageKeyNotes },
-      { prefix: '@sunrise_handoff_shift_', currentKey: storageKeyShift },
+      { prefix: '@sunrise_handoff_notes_',     currentKey: storageKeyNotes },
+      { prefix: '@sunrise_handoff_shift_',     currentKey: storageKeyShift },
+      { prefix: '@sunrise_handoff_completed_', currentKey: storageKeyCompleted },
     ]).catch(() => {});
-    loadHandoffState(
-      AsyncStorage,
-      { notes: storageKeyNotes, shift: storageKeyShift },
-      { notes: defaultNotes, shift: 'day' },
-    ).then(({ notes: savedNotes, shift: savedShift }) => {
+    Promise.all([
+      loadHandoffState(
+        AsyncStorage,
+        { notes: storageKeyNotes, shift: storageKeyShift },
+        { notes: defaultNotes, shift: 'day' },
+      ),
+      AsyncStorage.getItem(storageKeyCompleted),
+    ]).then(([{ notes: savedNotes, shift: savedShift }, completedRaw]) => {
       clearTimeout(timeoutId);
       if (!mountedRef.current || settled) return;
       settled = true;
       setNotes(savedNotes);
       setShift(savedShift);
+      setCompleted(completedRaw === 'true');
       loadedForKeyRef.current = storageKeyNotes;
       setLoaded(true);
     }).catch(() => {
@@ -396,15 +417,40 @@ export default function HandoffScreen() {
     saveJsonToStorage(AsyncStorage, storageKeyNotes, notes);
   }, [notes, loaded, storageKeyNotes]);
 
-  // Persist shift selection
+  // Persist shift selection (effect-level backup; write-through in handleShiftChange covers
+  // the force-quit window between state update and this effect firing).
   React.useEffect(() => {
     if (!isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) return;
     AsyncStorage.setItem(storageKeyShift, shift).catch(() => {});
   }, [shift, loaded, storageKeyShift, storageKeyNotes]);
 
+  /** Write-through shift setter — persists immediately so a force-quit in the
+   *  React render/effect gap can't silently revert the selection (#330). */
+  function handleShiftChange(s: Shift) {
+    setShift(s);
+    if (isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) {
+      AsyncStorage.setItem(storageKeyShiftRef.current, s).catch(() => {});
+    }
+  }
+
+  // ── Note-type filter (#51) ─────────────────────────────────────────────────
+  const NOTE_TYPE_CHIPS: { key: 'all' | NoteType; label: string }[] = [
+    { key: 'all',         label: 'All' },
+    { key: 'observation', label: 'Observation' },
+    { key: 'med-update',  label: 'Med Update' },
+    { key: 'incident',    label: 'Incident' },
+  ];
+
   const sortedPatients = [...RESIDENTIAL_PATIENTS].sort(
     (a, b) => acuitySortOrder(a.acuity) - acuitySortOrder(b.acuity)
   );
+
+  // Patients shown in the FlatList — filtered by noteTypeFilter (#51).
+  const filteredPatients = noteTypeFilter === 'all'
+    ? sortedPatients
+    : sortedPatients.filter(p =>
+        getNotesForPatient(p.id).some(n => n.noteType === noteTypeFilter)
+      );
 
   function formatEditedTime(isoString: string): string {
     try {
@@ -419,8 +465,15 @@ export default function HandoffScreen() {
     const date = today.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
     const shiftLabel = SHIFTS.find(s => s.id === shift)!;
     const lines: string[] = [];
+
+    // ── Census summary header (#151) ─────────────────────────────────────────
+    const acuityCounts = { Critical: 0, High: 0, Moderate: 0, Stable: 0 };
+    sortedPatients.forEach(p => {
+      if (p.acuity in acuityCounts) acuityCounts[p.acuity as keyof typeof acuityCounts]++;
+    });
     lines.push(`SHIFT HANDOFF — ${shiftLabel.label} Shift (${shiftLabel.time})`);
     lines.push(date);
+    lines.push(`Census: ${sortedPatients.length} patients  ·  Critical: ${acuityCounts.Critical}  ·  High: ${acuityCounts.High}  ·  Moderate: ${acuityCounts.Moderate}  ·  Stable: ${acuityCounts.Stable}`);
     lines.push('');
 
     sortedPatients.forEach(patient => {
@@ -469,7 +522,20 @@ export default function HandoffScreen() {
     });
 
     const message = lines.join('\n').trim();
-    Share.share({ message });
+    // #175: show preview modal first so nurses can copy before sharing
+    setExportText(message);
+    setExportCopied(false);
+    setExportModalVisible(true);
+  }
+
+  function handleExportCopy() {
+    Clipboard.setString(exportText);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setExportCopied(true);
+  }
+
+  function handleExportShare() {
+    Share.share({ message: exportText });
   }
 
   function handleComplete() {
@@ -478,6 +544,10 @@ export default function HandoffScreen() {
     clearAcknowledgments();
     clearFilters();
     setCompleted(true);
+    // Write-through: persist completed flag immediately so a force-quit while
+    // the Share sheet is open can't reset the screen to the pre-complete state
+    // on relaunch (#331).
+    AsyncStorage.setItem(storageKeyCompleted, 'true').catch(() => {});
   }
 
   return (
@@ -529,7 +599,7 @@ export default function HandoffScreen() {
         </View>
       ) : (
         <Animated.View style={{ opacity: shiftBarOpacity }}>
-          <ShiftSelector current={shift} onChange={setShift} />
+          <ShiftSelector current={shift} onChange={handleShiftChange} />
         </Animated.View>
       )}
 
@@ -554,37 +624,113 @@ export default function HandoffScreen() {
             </View>
           </View>
         ) : (
-          <FlatList
-            data={sortedPatients}
-            keyExtractor={p => p.id}
-            renderItem={({ item }) => (
-              <HandoffCard
-                patient={item}
-                note={notes[item.id] ?? ''}
-                onNoteChange={n => {
-                  // Task #312: write-through — persist immediately so a force-quit
-                  // between the state update and the async persist effect can't
-                  // drop the nurse's in-progress note.
-                  const next = { ...notesRef.current, [item.id]: n };
-                  notesRef.current = next;
-                  setNotes(next);
-                  if (isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) {
-                    saveJsonToStorage(AsyncStorage, storageKeyNotes, next);
-                  }
-                }}
-              />
+          <>
+            {/* Filter chips bar (#51) */}
+            <View style={[styles.noteFilterBar, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+              {NOTE_TYPE_CHIPS.map(chip => {
+                const active = noteTypeFilter === chip.key;
+                return (
+                  <Pressable
+                    key={chip.key}
+                    onPress={() => { Haptics.selectionAsync(); setNoteTypeFilter(chip.key); }}
+                    style={[
+                      styles.noteFilterChip,
+                      { borderColor: active ? colors.orange : colors.border },
+                      active && { backgroundColor: colors.orange },
+                    ]}
+                  >
+                    <Text style={[styles.noteFilterChipText, { color: active ? '#fff' : colors.mutedForeground }]}>
+                      {chip.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {/* Filtered-count notice */}
+            {noteTypeFilter !== 'all' && (
+              <View style={[styles.filterCountRow, { backgroundColor: colors.muted }]}>
+                <Text style={[styles.filterCountText, { color: colors.mutedForeground }]}>
+                  {filteredPatients.length} of {sortedPatients.length} patient{sortedPatients.length !== 1 ? 's' : ''} · {NOTE_TYPE_CHIPS.find(c => c.key === noteTypeFilter)?.label} notes
+                </Text>
+              </View>
             )}
-            contentContainerStyle={[styles.listContent, { paddingBottom: 120 + (Platform.OS === 'web' ? 34 : 0) }]}
-            showsVerticalScrollIndicator={false}
-            ListFooterComponent={
-              <Pressable style={[styles.completeBtn, { backgroundColor: colors.orange }]} onPress={handleComplete}>
-                <Ionicons name="swap-horizontal" size={20} color="#fff" />
-                <Text style={styles.completeBtnText}>Complete Handoff to {shift === 'day' ? 'Eve' : shift === 'eve' ? 'Night' : 'Day'} Shift</Text>
-              </Pressable>
-            }
-          />
+            <FlatList
+              data={filteredPatients}
+              keyExtractor={p => p.id}
+              renderItem={({ item }) => (
+                <HandoffCard
+                  patient={item}
+                  note={notes[item.id] ?? ''}
+                  onNoteChange={n => {
+                    // Task #312: write-through — persist immediately so a force-quit
+                    // between the state update and the async persist effect can't
+                    // drop the nurse's in-progress note.
+                    const next = { ...notesRef.current, [item.id]: n };
+                    notesRef.current = next;
+                    setNotes(next);
+                    if (isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) {
+                      saveJsonToStorage(AsyncStorage, storageKeyNotes, next);
+                    }
+                  }}
+                />
+              )}
+              contentContainerStyle={[styles.listContent, { paddingBottom: 120 + (Platform.OS === 'web' ? 34 : 0) }]}
+              showsVerticalScrollIndicator={false}
+              ListFooterComponent={
+                <Pressable style={[styles.completeBtn, { backgroundColor: colors.orange }]} onPress={handleComplete}>
+                  <Ionicons name="swap-horizontal" size={20} color="#fff" />
+                  <Text style={styles.completeBtnText}>Complete Handoff to {shift === 'day' ? 'Eve' : shift === 'eve' ? 'Night' : 'Day'} Shift</Text>
+                </Pressable>
+              }
+            />
+          </>
         )}
       </Animated.View>
+
+      {/* #175: Export preview modal — nurses can copy before sharing; cannot be
+          dismissed by tapping outside so text is never lost before copying. */}
+      <Modal
+        visible={exportModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {
+          if (exportCopied) setExportModalVisible(false);
+        }}
+      >
+        <View style={styles.exportOverlay}>
+          <View style={[styles.exportModal, { backgroundColor: colors.card }]}>
+            <View style={styles.exportModalHeader}>
+              <Text style={[styles.exportModalTitle, { color: colors.navy }]}>Handoff Preview</Text>
+              {exportCopied ? (
+                <Pressable onPress={() => setExportModalVisible(false)} style={styles.exportModalClose}>
+                  <Ionicons name="close" size={22} color={colors.slate} />
+                </Pressable>
+              ) : (
+                <Text style={{ fontSize: 11, color: colors.mutedForeground }}>Copy text before closing</Text>
+              )}
+            </View>
+            <ScrollView style={{ maxHeight: 320 }}>
+              <Text style={[styles.exportPreviewText, { color: colors.navy }]}>{exportText}</Text>
+            </ScrollView>
+            <View style={styles.exportModalActions}>
+              <Pressable
+                style={[styles.exportCopyBtn, { backgroundColor: exportCopied ? colors.successBg : colors.navy }]}
+                onPress={handleExportCopy}
+              >
+                <Text style={[styles.exportBtnLabel, { color: '#fff' }]}>
+                  {exportCopied ? '✓ Copied!' : 'Copy All'}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.exportShareBtn, { borderColor: colors.border }]}
+                onPress={handleExportShare}
+              >
+                <Text style={[styles.exportBtnLabel, { color: colors.navy }]}>Share…</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -596,6 +742,17 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
   headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2, fontFamily: 'Inter_400Regular' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  /* #175 export preview modal */
+  exportOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  exportModal: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' },
+  exportModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  exportModalTitle: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  exportModalClose: { padding: 4 },
+  exportPreviewText: { fontSize: 12, lineHeight: 18, fontFamily: 'Inter_400Regular', flex: 1 },
+  exportModalActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  exportCopyBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+  exportShareBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  exportBtnLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   exportBtnText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   roleToggle: { flexDirection: 'row', borderRadius: 8, overflow: 'hidden', padding: 2 },
@@ -627,6 +784,11 @@ const styles = StyleSheet.create({
   noteInput: { borderRadius: 8, borderWidth: 2, padding: 10, fontSize: 13, lineHeight: 19, minHeight: 80, fontFamily: 'Inter_400Regular' },
   completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, margin: 12, borderRadius: 14, paddingVertical: 16 },
   completeBtnText: { fontSize: 16, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
+  noteFilterBar: { flexDirection: 'row', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1 },
+  noteFilterChip: { borderRadius: 20, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 5 },
+  noteFilterChipText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  filterCountRow: { paddingHorizontal: 14, paddingVertical: 6 },
+  filterCountText: { fontSize: 11, fontFamily: 'Inter_400Regular' },
   completedBanner: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   completedCard: { alignItems: 'center', gap: 12, padding: 32, borderRadius: 20, borderWidth: 2, width: '100%' },
   completedTitle: { fontSize: 24, fontWeight: '700', fontFamily: 'Inter_700Bold' },

@@ -107,6 +107,7 @@ const PatientTable: React.FC<PatientTableProps> = ({ patients, onPatientClick })
                   <button 
                     className="p-1.5 text-slate-light hover:text-sunrise-blue hover:bg-sunrise-blue/10 rounded transition-colors"
                     title="View Chart"
+                    onClick={(e) => { e.stopPropagation(); onPatientClick(p.id); }}
                   >
                     <FileText size={14} />
                   </button>

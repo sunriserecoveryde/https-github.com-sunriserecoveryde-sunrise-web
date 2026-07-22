@@ -114,12 +114,14 @@ function parseDAP(content: string) {
 // ─── Note Row ─────────────────────────────────────────────────────────────────
 
 function NoteRow({
-  note, readOnly
+  note, readOnly, navigate
 }: {
   note: ReturnType<typeof getAllNotes>[0];
   readOnly?: boolean;
+  navigate: (s: Screen) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [localSigned, setLocalSigned] = useState(false);
   const badge = STATUS_BADGE[note.status];
   const parsed = note.format === 'BIRP' ? parseBIRP(note.content) : parseDAP(note.content);
 
@@ -168,7 +170,7 @@ function NoteRow({
           <LockedButton
             locked={readOnly && note.status === 'Awaiting Co-sign'}
             className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-2 py-1 rounded whitespace-nowrap"
-            onClick={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); if (note.status === 'Awaiting Co-sign') navigate('CosignQueue'); }}
           >
             {note.status === 'Awaiting Co-sign' ? 'Review & Sign' : 'View Note'}
           </LockedButton>
@@ -190,13 +192,17 @@ function NoteRow({
             <p className="text-sm text-navy leading-relaxed">{note.content}</p>
           )}
           <div className="flex gap-2 pt-2 border-t border-border">
-            <LockedButton locked={readOnly && note.status === 'Awaiting Co-sign'} className="px-3 py-1.5 bg-success text-white text-xs font-semibold rounded hover:opacity-90">
-              {note.status === 'Awaiting Co-sign' ? 'Sign & Approve' : 'Signed'}
+            <LockedButton
+              locked={readOnly && note.status === 'Awaiting Co-sign'}
+              onClick={() => { if (!localSigned) { setLocalSigned(true); } }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded hover:opacity-90 ${localSigned || note.status !== 'Awaiting Co-sign' ? 'bg-green-100 text-green-700' : 'bg-success text-white'}`}
+            >
+              {localSigned || note.status !== 'Awaiting Co-sign' ? '✓ Signed' : 'Sign & Approve'}
             </LockedButton>
-            <button className="px-3 py-1.5 border border-border text-xs font-semibold rounded hover:bg-white text-slate flex items-center gap-1">
+            <button onClick={() => { setExpanded(false); }} className="px-3 py-1.5 border border-border text-xs font-semibold rounded hover:bg-white text-slate flex items-center gap-1">
               <Eye className="w-3 h-3" /> Print Note
             </button>
-            <button className="px-3 py-1.5 border border-border text-xs font-semibold rounded hover:bg-white text-slate flex items-center gap-1">
+            <button onClick={() => { setExpanded(false); }} className="px-3 py-1.5 border border-border text-xs font-semibold rounded hover:bg-white text-slate flex items-center gap-1">
               <Download className="w-3 h-3" /> Export PDF
             </button>
           </div>
@@ -445,7 +451,7 @@ export function ProgressNotes({ navigate, readOnly }: { navigate: (s: Screen) =>
               <div className="font-semibold text-navy">No notes match your criteria.</div>
             </div>
           ) : (
-            filtered.map(n => <NoteRow key={n.id} note={n} readOnly={readOnly} />)
+            filtered.map(n => <NoteRow key={n.id} note={n} readOnly={readOnly} navigate={navigate} />)
           )}
         </div>
       </div>

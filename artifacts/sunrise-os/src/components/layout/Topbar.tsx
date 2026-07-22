@@ -93,11 +93,11 @@ export function Topbar({ navigate, currentScreen }: Props) {
           </div>
 
           <div className="hidden md:flex items-center gap-4 ml-8 border-l border-white/10 pl-6">
-            <button className="flex items-center gap-2 hover:bg-white/5 px-3 py-1.5 rounded transition-colors">
+            <button onClick={() => navigate('Settings')} className="flex items-center gap-2 hover:bg-white/5 px-3 py-1.5 rounded transition-colors">
               <span className="text-sm font-medium">Sunrise Recovery Center</span>
               <ChevronDown className="w-4 h-4 text-slate-300" />
             </button>
-            <button className="flex items-center gap-2 hover:bg-white/5 px-3 py-1.5 rounded transition-colors">
+            <button onClick={() => navigate('Settings')} className="flex items-center gap-2 hover:bg-white/5 px-3 py-1.5 rounded transition-colors">
               <span className="text-sm font-medium text-slate-300">Residential PHP IOP</span>
               <ChevronDown className="w-4 h-4 text-slate-300" />
             </button>

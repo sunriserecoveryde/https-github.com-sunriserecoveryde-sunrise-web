@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-import { CheckCircle, XCircle, AlertTriangle, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, TrendingUp, TrendingDown, BarChart3, X, Plus } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts';
 import { LockedButton } from '../components/common/LockedButton';
 
@@ -98,6 +98,10 @@ const CATEGORY_COLORS: Record<string, string> = {
 export function QualityImprovement({ navigate, readOnly }: Props) {
   const [category, setCategory] = useState<Category>('All');
   const [tab, setTab] = useState<'Indicators' | 'Trends' | 'Action Plan' | 'PDSA Cycles' | 'Staff Feedback' | 'Accreditation Prep'>('Indicators');
+  const [qiMeetingOpen, setQiMeetingOpen] = useState(false);
+  const [qiMeetingSaved, setQiMeetingSaved] = useState(false);
+  const [qiActionSaved, setQiActionSaved] = useState<string | null>(null);
+  const saveQiAction = (msg: string) => { setQiActionSaved(msg); setTimeout(() => setQiActionSaved(null), 2500); };
 
   const filtered = category === 'All' ? QI_INDICATORS : QI_INDICATORS.filter(i => i.category === category);
   const met = QI_INDICATORS.filter(i => i.status === 'Met').length;
@@ -124,8 +128,8 @@ export function QualityImprovement({ navigate, readOnly }: Props) {
           <p className="text-slate text-sm mt-0.5">CARF / Joint Commission compliance indicators · Q3 2026 reporting period</p>
         </div>
         <div className="flex gap-2">
-          <button className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50">Export Report</button>
-          <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">Schedule QI Meeting</LockedButton>
+          <button onClick={() => saveQiAction('Report exported')} className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50">Export Report</button>
+          <LockedButton locked={readOnly} onClick={() => setQiMeetingOpen(true)} className="btn-primary text-sm px-4 py-2">Schedule QI Meeting</LockedButton>
         </div>
       </div>
 
@@ -305,7 +309,7 @@ export function QualityImprovement({ navigate, readOnly }: Props) {
                     <option>QI Committee</option>
                   </select>
                   <input type="date" className="border border-border rounded-lg px-2 py-1.5 text-xs text-slate" defaultValue="2026-08-19" />
-                  <button className="text-xs bg-navy text-white px-3 py-1.5 rounded-lg hover:bg-navy/90">Assign</button>
+                  <button onClick={() => saveQiAction('Owner assigned')} className="text-xs bg-navy text-white px-3 py-1.5 rounded-lg hover:bg-navy/90">Assign</button>
                 </div>
               </div>
             </div>
@@ -471,7 +475,7 @@ export function QualityImprovement({ navigate, readOnly }: Props) {
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: 'Standards Met', value: '94%', color: 'text-green-600', sub: 'Of applicable CARF standards' },
-              { label: 'Findings Under Remediation', value: 3, color: 'text-amber-600', sub: 'From 2024 survey cycle' },
+              { label: 'Findings Under Remediation', value: 3, color: 'text-amber-600', sub: 'From 2025 survey cycle' },
               { label: 'Documents Ready', value: '89%', color: 'text-blue-600', sub: '142 of 160 required docs' },
               { label: 'Next Survey Window', value: '2027', color: 'text-navy', sub: '3-Year cycle · ~18 months out' },
             ].map(k => (
@@ -515,12 +519,12 @@ export function QualityImprovement({ navigate, readOnly }: Props) {
 
             <div className="space-y-4">
               <div className="card">
-                <h3 className="font-semibold text-navy text-sm mb-3">Open 2024 Survey Findings</h3>
+                <h3 className="font-semibold text-navy text-sm mb-3">Open 2025 Survey Findings</h3>
                 <div className="space-y-2 text-xs">
                   {[
                     { finding: 'F.1 — Person-Centered Planning documentation format not consistently individualized', remediation: 'New treatment plan template deployed July 2026; staff training completed', due: '2026-09-01', status: 'On Track' },
                     { finding: 'F.2 — Satisfaction survey frequency below CARF minimum (quarterly required)', remediation: 'Automated quarterly survey schedule implemented; first cycle Aug 2026', due: '2026-08-15', status: 'On Track' },
-                    { finding: 'F.3 — Emergency drill documentation missing for Q2 2024', remediation: 'Retroactive documentation submitted; ongoing drill log system now in place', due: '2026-07-31', status: 'At Risk' },
+                    { finding: 'F.3 — Emergency drill documentation missing for Q2 2025', remediation: 'Retroactive documentation submitted; ongoing drill log system now in place', due: '2026-07-31', status: 'At Risk' },
                   ].map(f => (
                     <div key={f.finding} className={`border rounded-lg p-2.5 ${f.status === 'At Risk' ? 'border-amber-300 bg-amber-50' : 'border-border'}`}>
                       <div className="flex items-start justify-between mb-1">
@@ -535,6 +539,63 @@ export function QualityImprovement({ navigate, readOnly }: Props) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {qiMeetingOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setQiMeetingOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[480px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Schedule QI Meeting</h2>
+              <button onClick={() => setQiMeetingOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Meeting Type</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Monthly QI Review</option><option>Quarterly CARF Prep</option><option>Incident Debriefing</option><option>Action Plan Review</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Date</label>
+                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Time</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['8:00 AM','9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Location</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Conference Room A</option><option>Board Room</option><option>Telehealth (Zoom)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Agenda Focus</label>
+                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[70px] resize-none" placeholder="Key indicators to review, action items to close, guest presenters..." />
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setQiMeetingOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setQiMeetingOpen(false); setQiMeetingSaved(true); setTimeout(() => setQiMeetingSaved(false), 2500); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-navy-mid">Schedule Meeting</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {qiMeetingSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> QI meeting scheduled
+        </div>
+      )}
+
+      {qiActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {qiActionSaved}
         </div>
       )}
     </div>

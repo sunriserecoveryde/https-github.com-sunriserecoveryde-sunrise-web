@@ -24,14 +24,14 @@ interface Deficiency {
 }
 
 const DEFICIENCIES: Deficiency[] = [
-  { id: 'd1', patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential', counselor: 'Sarah Jenkins, LPC', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 1, detail: 'BIRP note 7/17 — Awaiting co-sign from James S. Collins III, Clinical Director.', priority: 'Critical' },
-  { id: 'd2', patientId: 'p2', patientName: 'Samantha Choi', mrn: 'MRN-74563', program: 'Residential', counselor: 'David Odom, LMFT', type: 'Missing Co-sign', dueDate: '2026-07-16', daysOverdue: 2, detail: 'Psychiatric evaluation 7/15 — awaiting co-sign from Dr. Allen Hughes.', priority: 'Critical' },
-  { id: 'd3', patientId: 'p3', patientName: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', counselor: 'Maria Gonzales, LCSW', type: 'Overdue Note', dueDate: '2026-07-16', daysOverdue: 2, detail: 'Daily progress note missing for 7/16. Required within 24 hours per policy.', priority: 'High' },
-  { id: 'd4', patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', counselor: 'Maria Gonzales, LCSW', type: 'Incomplete ASAM', dueDate: '2026-07-15', daysOverdue: 3, detail: 'Dimension 4 (Readiness to Change) and Dimension 5 (Relapse Potential) not scored.', priority: 'High' },
-  { id: 'd5', patientId: 'p6', patientName: 'Destiny Williams', mrn: 'MRN-55129', program: 'PHP', counselor: 'Sarah Jenkins, LPC', type: 'Missing UA', dueDate: '2026-07-14', daysOverdue: 4, detail: 'Chain of custody form missing for UA collected 7/13. Re-collection scheduled.', priority: 'High' },
-  { id: 'd6', patientId: 'p4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', counselor: 'Sarah Jenkins, LPC', type: 'Unsigned Treatment Plan', dueDate: '2026-07-14', daysOverdue: 4, detail: 'Treatment plan updated 7/12 — patient signature still pending.', priority: 'Moderate' },
-  { id: 'd7', patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', counselor: 'David Odom, LMFT', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 1, detail: 'DAP group note 7/17 — awaiting James S. Collins III co-sign.', priority: 'Critical' },
-  { id: 'd8', patientId: 'p8', patientName: 'Linda Farris', mrn: 'MRN-39018', program: 'IOP', counselor: 'Maria Gonzales, LCSW', type: 'Expired Auth', dueDate: '2026-07-12', daysOverdue: 6, detail: 'Aetna authorization expired 7/12. Continued stay request not yet submitted.', priority: 'Critical' },
+  { id: 'd1', patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential', counselor: 'Sarah Jenkins, LPC', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 5, detail: 'BIRP note 7/17 — Awaiting co-sign from James S. Collins III, Clinical Director.', priority: 'Critical' },
+  { id: 'd2', patientId: 'p2', patientName: 'Samantha Choi', mrn: 'MRN-74563', program: 'Residential', counselor: 'David Odom, LMFT', type: 'Missing Co-sign', dueDate: '2026-07-16', daysOverdue: 6, detail: 'Psychiatric evaluation 7/15 — awaiting co-sign from Dr. Allen Hughes.', priority: 'Critical' },
+  { id: 'd3', patientId: 'p3', patientName: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', counselor: 'Maria Gonzales, LCSW', type: 'Overdue Note', dueDate: '2026-07-16', daysOverdue: 6, detail: 'Daily progress note missing for 7/16. Required within 24 hours per policy.', priority: 'High' },
+  { id: 'd4', patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', counselor: 'Maria Gonzales, LCSW', type: 'Incomplete ASAM', dueDate: '2026-07-15', daysOverdue: 7, detail: 'Dimension 4 (Readiness to Change) and Dimension 5 (Relapse Potential) not scored.', priority: 'High' },
+  { id: 'd5', patientId: 'p6', patientName: 'Destiny Williams', mrn: 'MRN-55129', program: 'PHP', counselor: 'Sarah Jenkins, LPC', type: 'Missing UA', dueDate: '2026-07-14', daysOverdue: 8, detail: 'Chain of custody form missing for UA collected 7/13. Re-collection scheduled.', priority: 'High' },
+  { id: 'd6', patientId: 'p4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', counselor: 'Sarah Jenkins, LPC', type: 'Unsigned Treatment Plan', dueDate: '2026-07-14', daysOverdue: 8, detail: 'Treatment plan updated 7/12 — patient signature still pending.', priority: 'Moderate' },
+  { id: 'd7', patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', counselor: 'David Odom, LMFT', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 5, detail: 'DAP group note 7/17 — awaiting James S. Collins III co-sign.', priority: 'Critical' },
+  { id: 'd8', patientId: 'p8', patientName: 'Linda Farris', mrn: 'MRN-39018', program: 'IOP', counselor: 'Maria Gonzales, LCSW', type: 'Expired Auth', dueDate: '2026-07-12', daysOverdue: 10, detail: 'Aetna authorization expired 7/12. Continued stay request not yet submitted.', priority: 'Critical' },
 ];
 
 const CHART_COMPLETENESS = MOCK_PATIENTS.slice(0, 8).map((p, i) => {
@@ -88,6 +88,9 @@ export function ChartReview({ navigate, readOnly }: Props) {
   const [typeFilter, setTypeFilter] = useState<DefType | 'All'>('All');
   const [priorityFilter, setPriorityFilter] = useState<'Critical' | 'High' | 'Moderate' | 'All'>('All');
   const [counselorFilter, setCounselorFilter] = useState<string>('All');
+  const [reminderSent, setReminderSent] = useState<string | null>(null);
+  const [codingFlagged, setCodingFlagged] = useState<string | null>(null);
+  const [auditExported, setAuditExported] = useState<string | null>(null);
 
   const counselors = Array.from(new Set(DEFICIENCIES.map(d => d.counselor)));
 
@@ -202,7 +205,7 @@ export function ChartReview({ navigate, readOnly }: Props) {
                     </td>
                     <td className="px-4 py-3 text-slate font-medium">{c.notes_month}</td>
                     <td className="px-4 py-3">
-                      <LockedButton locked={readOnly} className="text-xs text-orange hover:underline">Send Reminder</LockedButton>
+                      <LockedButton locked={readOnly} onClick={() => { setReminderSent(c.name); setTimeout(() => setReminderSent(null), 2500); }} className="text-xs text-orange hover:underline">Send Reminder</LockedButton>
                     </td>
                   </tr>
                 ))}
@@ -400,7 +403,12 @@ export function ChartReview({ navigate, readOnly }: Props) {
 
       {activeTab === 'Coding Audit' && (
         <div className="space-y-5">
-          <div className="text-sm text-slate">ICD-10-CM / CPT coding accuracy audit — validates diagnosis coding, service codes, and modifier usage across clinical documentation for billing compliance.</div>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-slate">ICD-10-CM / CPT coding accuracy audit — validates diagnosis coding, service codes, and modifier usage across clinical documentation for billing compliance.</div>
+            <button onClick={() => { setAuditExported('Coding audit exported'); setTimeout(() => setAuditExported(null), 2500); }} className="flex items-center gap-1.5 text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-gray-50 shrink-0 ml-4">
+              ↓ Export Audit
+            </button>
+          </div>
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: 'Charts Audited (30d)', value: 48, color: 'text-navy', sub: 'Random sample + targeted review' },
@@ -420,7 +428,7 @@ export function ChartReview({ navigate, readOnly }: Props) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-gray-50 text-slate">
-                  {['Code', 'Description', 'Uses (30d)', 'Accurate', 'Accuracy %', 'Common Error'].map(h => (
+                  {['Code', 'Description', 'Uses (30d)', 'Accurate', 'Accuracy %', 'Common Error', ''].map(h => (
                     <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -441,6 +449,16 @@ export function ChartReview({ navigate, readOnly }: Props) {
                     <td className="px-3 py-2 text-center text-navy">{r.acc}</td>
                     <td className="px-3 py-2 text-center"><span className={`font-bold ${r.pct === 100 ? 'text-green-600' : r.pct >= 90 ? 'text-blue-600' : 'text-amber-600'}`}>{r.pct}%</span></td>
                     <td className="px-3 py-2 text-slate italic">{r.err}</td>
+                    <td className="px-3 py-2">
+                      {r.pct < 100 && (
+                        <button
+                          onClick={() => { setCodingFlagged(r.code); setTimeout(() => setCodingFlagged(null), 2500); }}
+                          className="text-[10px] border border-amber-300 text-amber-700 bg-amber-50 px-2 py-0.5 rounded hover:bg-amber-100 transition-colors whitespace-nowrap"
+                        >
+                          Flag
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -487,6 +505,22 @@ export function ChartReview({ navigate, readOnly }: Props) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {reminderSent && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> Reminder sent to {reminderSent}
+        </div>
+      )}
+      {codingFlagged && (
+        <div className="fixed bottom-6 right-6 bg-amber-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>⚑</span> {codingFlagged} flagged for Medical Director review
+        </div>
+      )}
+      {auditExported && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {auditExported}
         </div>
       )}
     </div>

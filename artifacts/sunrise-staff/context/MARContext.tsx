@@ -68,6 +68,18 @@ async function saveToStorage<T>(key: string, value: T): Promise<void> {
   try { await AsyncStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Slot-level deep merge: overlay patient entries on top of base without losing
+ *  slots that only exist in base (e.g. slots tapped before load completed). */
+function mergeDeepAdminMap(base: AdminMap, overlay: AdminMap): AdminMap {
+  const result: AdminMap = { ...base };
+  for (const patientId of Object.keys(overlay)) {
+    result[patientId] = { ...(base[patientId] ?? {}), ...overlay[patientId] };
+  }
+  return result;
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type AdminMap = Record<string, Record<string, boolean>>;
@@ -139,6 +151,11 @@ export function MARProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { adminMapRef.current = adminMap; }, [adminMap]);
   useEffect(() => { checksRef.current   = checks;   }, [checks]);
 
+  // Pre-load edit queues — capture writes that arrive before storage has loaded
+  // so they can be merged on top of the loaded value rather than silently dropped.
+  const marPreLoadEditsRef    = useRef<AdminMap>({});
+  const checksPreLoadEditsRef = useRef<Record<string, CheckEntry>>({});
+
   // ── Midnight rollover detection — two complementary mechanisms ────────────
   //
   // 1. AppState 'active' listener — fires whenever the app foregrounds:
@@ -183,10 +200,17 @@ export function MARProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMarLoaded(false);
     marLoadedKeyRef.current = null;           // invalidate the persist gate immediately
+    marPreLoadEditsRef.current = {};          // fresh queue for this key
     loadFromStorage<AdminMap>(marKey, {}).then(saved => {
       if (!mountedRef.current) return;
       marLoadedKeyRef.current = marKey;       // now safe to persist for this key
-      setAdminMap(saved);
+      // Merge any edits that arrived during the load window on top of persisted data
+      const pending = marPreLoadEditsRef.current;
+      const merged  = Object.keys(pending).length > 0
+        ? mergeDeepAdminMap(saved, pending)
+        : saved;
+      marPreLoadEditsRef.current = {};
+      setAdminMap(merged);
       setMarLoaded(true);
     });
   }, [marKey]);
@@ -205,10 +229,17 @@ export function MARProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setChecksLoaded(false);
     checksLoadedKeyRef.current = null;
+    checksPreLoadEditsRef.current = {};
     loadFromStorage<Record<string, CheckEntry>>(checksKey, {}).then(saved => {
       if (!mountedRef.current) return;
       checksLoadedKeyRef.current = checksKey;
-      setChecks(saved);
+      // Merge any edits that arrived during the load window
+      const pending = checksPreLoadEditsRef.current;
+      const merged  = Object.keys(pending).length > 0
+        ? { ...saved, ...pending }
+        : saved;
+      checksPreLoadEditsRef.current = {};
+      setChecks(merged);
       setChecksLoaded(true);
     });
   }, [checksKey]);
@@ -234,10 +265,14 @@ export function MARProvider({ children }: { children: React.ReactNode }) {
     };
     adminMapRef.current = newMap;
     setAdminMap(newMap);
-    // Write-through: persist immediately so a force-quit between state update
-    // and the async persist effect cannot drop the toggle.
     if (isPersistSafe(marLoaded, marLoadedKeyRef.current, marKey)) {
+      // Write-through: persist immediately so a force-quit between state update
+      // and the async persist effect cannot drop the toggle.
       saveToStorage(marKey, newMap);
+    } else {
+      // Storage hasn't loaded yet — queue the full map so the load callback
+      // can merge it on top of the persisted value instead of overwriting it.
+      marPreLoadEditsRef.current = newMap;
     }
   }, [marLoaded, marKey]);
 
@@ -245,9 +280,12 @@ export function MARProvider({ children }: { children: React.ReactNode }) {
     const newChecks = { ...checksRef.current, [patientId]: check };
     checksRef.current = newChecks;
     setChecks(newChecks);
-    // Write-through: same force-quit guard as toggleAdmin.
     if (isPersistSafe(checksLoaded, checksLoadedKeyRef.current, checksKey)) {
+      // Write-through: same force-quit guard as toggleAdmin.
       saveToStorage(checksKey, newChecks);
+    } else {
+      // Queue pre-load edits for merge on load completion.
+      checksPreLoadEditsRef.current = newChecks;
     }
   }, [checksLoaded, checksKey]);
 

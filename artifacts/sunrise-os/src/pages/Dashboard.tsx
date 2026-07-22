@@ -31,6 +31,7 @@ const CENSUS_TREND = [
   { date: 'Jul 16', census: 21, capacity: 22 },
   { date: 'Jul 18', census: 20, capacity: 22 },
   { date: 'Jul 19', census: 18, capacity: 22 },
+  { date: 'Jul 22', census: 20, capacity: 22 },
 ];
 
 const ADMISSIONS_TREND = [
@@ -41,6 +42,7 @@ const ADMISSIONS_TREND = [
   { week: 'W1 Jul', admissions: 4, discharges: 4 },
   { week: 'W2 Jul', admissions: 5, discharges: 3 },
   { week: 'W3 Jul', admissions: 2, discharges: 3 },
+  { week: 'W4 Jul', admissions: 2, discharges: 1 },
 ];
 
 const REVENUE_TREND = [
@@ -293,7 +295,7 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
                             <td className="p-3"><AcuityBadge acuity={p.amaRisk === 'High' ? 'Critical' : 'High'} /></td>
                             <td className="p-3"><RecoveryScoreBadge score={p.recoveryScore} /></td>
                             <td className="p-3">
-                              <button className="text-sunrise-blue text-xs font-medium hover:underline">Review Chart</button>
+                              <button onClick={() => navigate('PatientDetail', p.id)} className="text-sunrise-blue text-xs font-medium hover:underline">Review Chart</button>
                             </td>
                           </tr>
                         ))}
@@ -713,7 +715,7 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
               <h3 className="font-bold text-navy text-sm mb-3">Upcoming Alumni Appointments</h3>
               <div className="space-y-2 text-sm">
                 {[
-                  { name: 'Marcus Webb', date: 'Jul 21 — 2:00 PM', type: '30-day check-in' },
+                  { name: 'Marcus Webb', date: 'Jul 23 — 2:00 PM', type: '30-day check-in' },
                   { name: 'Devon Patel', date: 'Jul 22 — 10:00 AM', type: '60-day follow-up' },
                   { name: 'Ashley Monroe', date: 'Jul 23 — 1:00 PM', type: '90-day review' },
                 ].map(a => (

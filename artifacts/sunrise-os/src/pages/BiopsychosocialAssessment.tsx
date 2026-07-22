@@ -121,7 +121,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
           <p className="text-slate text-sm mt-0.5">Comprehensive intake assessment — addiction-specific with ASAM, trauma, and DSM-5 integration</p>
         </div>
         <div className="flex gap-2">
-          <button className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><Printer className="w-4 h-4" /> Print / PDF</button>
+          <button onClick={() => setSavedByPatient(prev => ({ ...prev, [selectedPatient + '_printed']: true }))} className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><Printer className="w-4 h-4" /> Print / PDF</button>
           <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && setSavedByPatient(prev => ({ ...prev, [selectedPatient]: true }))} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Save className="w-4 h-4" />{saved ? 'Saved ✓' : 'Save Assessment'}</LockedButton>
         </div>
       </div>
@@ -137,7 +137,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
         <div className="space-y-5">
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: 'Assessments Completed', value: 18, sub: 'Current census', color: 'text-navy' },
+              { label: 'Assessments Completed', value: 20, sub: 'Current census', color: 'text-navy' },
               { label: 'Completed Within 72h', value: 16, sub: '89% compliance rate', color: 'text-green-600' },
               { label: 'Awaiting Co-sign', value: 2, sub: 'Clinical director review', color: 'text-amber-600' },
               { label: 'Next Scheduled', value: 'Today 3PM', sub: 'Thomas Reilly — intake', color: 'text-blue-600' },
@@ -358,7 +358,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
           </div>
           <div className="ml-auto flex gap-2">
             <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && navigate('CosignQueue')} className="text-sm border border-green-300 text-green-700 bg-white px-4 py-2 rounded-lg hover:bg-green-50">Send to Co-sign Queue</LockedButton>
-            <button className="btn-primary text-sm px-4 py-2">Print Assessment</button>
+            <button onClick={() => setSavedByPatient(prev => ({ ...prev, [selectedPatient + '_printed']: true }))} className="btn-primary text-sm px-4 py-2">Print Assessment</button>
           </div>
         </div>
       )}
@@ -503,7 +503,7 @@ function MedicalSection({ data }: { data: Record<string, string> }) {
       <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="block text-xs font-semibold text-slate uppercase mb-1">HIV Status</label>
-          <select className="w-full border border-border rounded-lg px-3 py-2 text-sm"><option>Negative (2024)</option><option>Positive</option><option>Unknown / Declined</option></select>
+          <select className="w-full border border-border rounded-lg px-3 py-2 text-sm"><option>Negative (2026)</option><option>Positive</option><option>Unknown / Declined</option></select>
         </div>
         <div>
           <label className="block text-xs font-semibold text-slate uppercase mb-1">HCV Status</label>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { ROLES, ROLE_CATEGORIES, RoleCategory, Permission } from '../data/mockRoles';
 import { useRole } from '../context/RoleContext';
-import { Search, Shield, Eye, Minus } from 'lucide-react';
+import { Search, Shield, Eye, Minus, Download } from 'lucide-react';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; }
 
@@ -75,10 +75,16 @@ export function RoleExplorer({ navigate: _navigate }: Props) {
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState<RoleCategory | 'All'>('All');
   const [filterSection, setFilterSection] = useState<string>('All');
+  // #31: "Focus on this role" — hides all other role columns to isolate the
+  // selected role's screen permissions without visual clutter from other roles.
+  const [focusOnRole, setFocusOnRole] = useState(false);
 
   const sections = Array.from(new Set(ALL_SCREENS.map(s => s.section)));
 
-  const visibleRoles = ROLES.filter(r => filterCat === 'All' || r.category === filterCat);
+  const visibleRoles = ROLES.filter(r =>
+    (filterCat === 'All' || r.category === filterCat) &&
+    (!focusOnRole || r.id === roleId)
+  );
   const visibleScreens = ALL_SCREENS.filter(s =>
     (filterSection === 'All' || s.section === filterSection) &&
     (search === '' || s.label.toLowerCase().includes(search.toLowerCase()) || s.section.toLowerCase().includes(search.toLowerCase()))
@@ -86,6 +92,27 @@ export function RoleExplorer({ navigate: _navigate }: Props) {
 
   const fullCount  = (roleId: string) => ALL_SCREENS.filter(s => (ROLES.find(r => r.id === roleId)?.permissions[s.screen] ?? 'none') === 'full').length;
   const readCount  = (roleId: string) => ALL_SCREENS.filter(s => (ROLES.find(r => r.id === roleId)?.permissions[s.screen] ?? 'none') === 'read').length;
+
+  // #30: CSV export of the full permission matrix for sharing with buyers/teams
+  function exportPermissionCSV() {
+    const allRoles = ROLES;
+    const header = ['Screen', 'Section', ...allRoles.map(r => r.label)].join(',');
+    const rows = ALL_SCREENS.map(s => {
+      const cells = allRoles.map(r => {
+        const perm = r.permissions[s.screen] ?? 'none';
+        return perm === 'full' ? 'Full' : perm === 'read' ? 'Read' : '—';
+      });
+      return [`"${s.label}"`, `"${s.section}"`, ...cells].join(',');
+    });
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sunrise-os-permissions.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="space-y-5">
@@ -98,6 +125,14 @@ export function RoleExplorer({ navigate: _navigate }: Props) {
           <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-green-600" />Full access</span>
           <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-blue-600" />Read only</span>
           <span className="flex items-center gap-1"><Minus className="w-3 h-3 text-gray-400" />No access</span>
+          {/* #30: buyers can export the matrix for offline sharing / team review */}
+          <button
+            onClick={exportPermissionCSV}
+            title="Export permission matrix as CSV"
+            className="ml-2 flex items-center gap-1.5 px-3 py-1.5 bg-navy text-white text-[11px] font-semibold rounded-lg hover:bg-navy-mid transition-colors"
+          >
+            <Download className="w-3 h-3" /> Export CSV
+          </button>
         </div>
       </div>
 
@@ -224,7 +259,21 @@ export function RoleExplorer({ navigate: _navigate }: Props) {
           <option value="All">All Screen Sections</option>
           {sections.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <span className="text-xs text-slate ml-auto">{visibleScreens.length} screens · {visibleRoles.length} roles shown</span>
+        {/* #31: Focus toggle — show only the selected role's column */}
+        {roleId && (
+          <button
+            onClick={() => setFocusOnRole(f => !f)}
+            title={focusOnRole ? 'Show all roles' : `Show only ${ROLES.find(r => r.id === roleId)?.label ?? 'selected role'}`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors ${
+              focusOnRole
+                ? 'bg-sunrise-blue text-white border-sunrise-blue'
+                : 'bg-white text-slate border-border hover:border-navy/40 hover:text-navy'
+            }`}
+          >
+            <Eye className="w-3 h-3" /> {focusOnRole ? 'All roles' : 'Focus role'}
+          </button>
+        )}
+        <span className="text-xs text-slate">{visibleScreens.length} screens · {visibleRoles.length} roles shown</span>
       </div>
 
       {/* Matrix table */}

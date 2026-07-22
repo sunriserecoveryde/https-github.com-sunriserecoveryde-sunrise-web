@@ -512,7 +512,11 @@ export function RecoveryEngagementScore({ navigate }: { navigate: (s: Screen, pa
             </tbody>
           </table>
           {sortedPatients.length === 0 && (
-            <div className="text-center py-12 text-slate">No patients match your filter.</div>
+            <div className="text-center py-12">
+              <div className="text-3xl mb-2">🔍</div>
+              <div className="text-sm font-semibold text-navy">No patients match your filter</div>
+              <div className="text-xs text-slate mt-1">Try adjusting the program filter or clearing the search.</div>
+            </div>
           )}
         </div>
 

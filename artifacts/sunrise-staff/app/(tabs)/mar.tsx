@@ -141,9 +141,19 @@ function PatientMARCard({ patient, adminMap, onToggle, expanded, onExpand, isPen
       </Pressable>
       {expanded && (
         <View style={[styles.medList, { borderTopColor: colors.border }]}>
-          {activeMeds.map(med => (
-            <MedRow key={med.id} med={med} patientId={patient.id} adminMap={adminMap} onToggle={onToggle} />
-          ))}
+          {activeMeds.length === 0 ? (
+            /* #44: newly admitted patients won't have meds until intake assessment. */
+            <View style={[styles.noMedsRow, { borderTopColor: colors.border }]}>
+              <Ionicons name="document-text-outline" size={16} color={colors.mutedForeground} />
+              <Text style={[styles.noMedsText, { color: colors.mutedForeground }]}>
+                No medications yet — intake assessment pending
+              </Text>
+            </View>
+          ) : (
+            activeMeds.map(med => (
+              <MedRow key={med.id} med={med} patientId={patient.id} adminMap={adminMap} onToggle={onToggle} />
+            ))
+          )}
         </View>
       )}
     </View>
@@ -496,6 +506,8 @@ const styles = StyleSheet.create({
   pendingBadge: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   pendingText: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   medList: { borderTopWidth: 1 },
+  noMedsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14, borderTopWidth: 1 },
+  noMedsText: { fontSize: 13, fontStyle: 'italic', fontFamily: 'Inter_400Regular' },
   medRow: { padding: 12, borderBottomWidth: 1 },
   medInfo: { marginBottom: 8 },
   medNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },

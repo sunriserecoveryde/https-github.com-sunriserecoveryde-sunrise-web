@@ -64,6 +64,7 @@ const CENSUS_30DAY = [
   { date: 'Jul 13', total: 20, residential: 9, php: 5, iop: 6 },
   { date: 'Jul 16', total: 21, residential: 9, php: 6, iop: 6 },
   { date: 'Jul 19', total: 18, residential: 8, php: 5, iop: 5 },
+  { date: 'Jul 22', total: 20, residential: 9, php: 5, iop: 6 },
 ];
 
 const OUTCOME_TREND = [
@@ -665,7 +666,7 @@ export function PopulationAnalytics({ navigate }: Props) {
               </BarChart>
             </ResponsiveContainer>
             <div className="text-xs text-slate mt-2 text-center">
-              Dual diagnosis rate: <span className="font-bold text-navy">{Math.round((17/24)*100)}% of census</span>
+              Dual diagnosis rate: <span className="font-bold text-navy">{Math.round((17/20)*100)}% of census</span>
             </div>
           </div>
         </div>
@@ -817,7 +818,7 @@ export function PopulationAnalytics({ navigate }: Props) {
             {[
               { label: 'High AMA Risk (≥70%)', value: 5, color: 'text-red-600', sub: 'Active monitoring flags' },
               { label: 'High Relapse Risk (≥65%)', value: 8, color: 'text-amber-600', sub: '12-month post-discharge model' },
-              { label: 'Model Accuracy (Backtest)', value: '81%', color: 'text-navy', sub: 'AMA model, 2024–2025 cohort' },
+              { label: 'Model Accuracy (Backtest)', value: '81%', color: 'text-navy', sub: 'AMA model, 2025–2026 cohort' },
               { label: 'Interventions Triggered', value: 12, color: 'text-blue-600', sub: 'This month by risk flags' },
             ].map(k => (
               <div key={k.label} className="card">

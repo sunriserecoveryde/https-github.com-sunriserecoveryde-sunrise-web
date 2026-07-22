@@ -81,7 +81,7 @@ const INTERVENTIONS: Record<string, string[]> = {
   p2:  ['Seroquel increased 7/15', 'DBT distress tolerance session added', 'Nutritional consult ordered'],
   p3:  ['COWS monitoring q4h', 'Suboxone titrated to 24mg', 'Peer mentor assigned'],
   p5:  ['HALT worksheet assigned', 'Group attendance plan written', 'Motivational interview 7/16'],
-  p6:  ['UA chain of custody re-collected', 'Psychiatric consult 7/18', 'Family session scheduled'],
+  p6:  ['UA chain of custody re-collected', 'Psychiatric consult 7/23', 'Family session scheduled'],
   p7:  ['Discharge planning initiated', 'AA sponsor confirmed', 'Vivitrol scheduled for DC day'],
   p9:  ['30-min safety checks ordered', 'Risperdal 0.5mg PRN ordered', 'Daily psych eval ongoing'],
   p13: ['AMA risk flagged in huddle', 'Employer letter drafted via EAP', 'Craving management plan updated'],
@@ -92,6 +92,8 @@ const INTERVENTIONS: Record<string, string[]> = {
 export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: string) => void }) {
   const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
   const [tab, setTab] = useState<'Risk Matrix' | 'Factor Analysis' | 'Interventions' | 'Peer Benchmarks' | 'Trend Analysis' | 'Risk Definitions'>('Risk Matrix');
+  const [riskActionSaved, setRiskActionSaved] = useState<string | null>(null);
+  const saveRiskAction = (msg: string) => { setRiskActionSaved(msg); setTimeout(() => setRiskActionSaved(null), 2500); };
 
   const highRisk = MOCK_PATIENTS.filter(p => RISK_LEVEL(p.id) === 'High');
   const medRisk  = MOCK_PATIENTS.filter(p => RISK_LEVEL(p.id) === 'Med');
@@ -113,11 +115,11 @@ export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: 
           <h1 className="text-2xl font-bold text-navy flex items-center gap-2">
             <AlertTriangle className="w-6 h-6 text-critical" /> Risk & AMA Dashboard
           </h1>
-          <p className="text-slate text-sm mt-1">Predictive risk analysis and early intervention tracking — as of July 19, 2026</p>
+          <p className="text-slate text-sm mt-1">Predictive risk analysis and early intervention tracking — as of July 22, 2026</p>
         </div>
         <div className="flex gap-2">
-          <button className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Export Risk Report</button>
-          <button className="px-3 py-1.5 bg-critical text-white rounded text-sm font-medium hover:bg-critical/90">Trigger Huddle</button>
+          <button onClick={() => saveRiskAction('Risk report exported')} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Export Risk Report</button>
+          <button onClick={() => saveRiskAction('Clinical huddle triggered')} className="px-3 py-1.5 bg-critical text-white rounded text-sm font-medium hover:bg-critical/90">Trigger Huddle</button>
         </div>
       </div>
 
@@ -322,7 +324,7 @@ export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: 
                           >
                             View Chart
                           </button>
-                          <button className="text-xs bg-critical text-white px-3 py-1.5 rounded font-medium hover:bg-critical/90">
+                          <button onClick={() => saveRiskAction('Intervention logged')} className="text-xs bg-critical text-white px-3 py-1.5 rounded font-medium hover:bg-critical/90">
                             Add Intervention
                           </button>
                         </div>
@@ -553,7 +555,7 @@ export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: 
                 { week: 'Jun 29–Jul 5', avg: 4.9, high: 5, color: 'bg-orange-400' },
                 { week: 'Jul 6–12', avg: 4.8, high: 5, color: 'bg-amber-400' },
                 { week: 'Jul 13–19', avg: 4.1, high: 4, color: 'bg-yellow-400' },
-                { week: 'Today (Jul 19)', avg: 4.1, high: 4, color: 'bg-teal-400' },
+                { week: 'Today (Jul 22)', avg: 4.1, high: 4, color: 'bg-teal-400' },
               ].map(w => (
                 <div key={w.week} className="text-center">
                   <div className="text-slate text-[10px] mb-1">{w.week}</div>
@@ -681,6 +683,12 @@ export function RiskDashboard({ navigate }: { navigate: (s: Screen, patientId?: 
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {riskActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {riskActionSaved}
         </div>
       )}
     </div>

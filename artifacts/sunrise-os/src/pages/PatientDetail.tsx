@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MOCK_PATIENTS, Flag } from '../data/mockPatients';
-import { getPatientMedications } from '../data/mockMedications';
+import { getPatientMedications, getMARStatus } from '../data/mockMedications';
 import { getPatientVitals } from '../data/mockVitals';
 import { getPatientLabs, LAB_PANEL_ORDER } from '../data/mockLabs';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
@@ -13,7 +13,7 @@ import { CustomButtons } from '../components/ui/CustomButtons';
 import {
   ArrowLeft, Activity, FileText, Pill, Users, HeartPulse,
   FlaskConical, BookOpen, FolderOpen, CheckCircle2, XCircle,
-  AlertCircle, Clock, Upload, Download, ClipboardList, Plus
+  AlertCircle, Clock, Upload, Download, ClipboardList, Plus, Eye
 } from 'lucide-react';
 import { Screen } from '../App';
 import { LockedButton } from '../components/common/LockedButton';
@@ -24,11 +24,45 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   const [isComposingNote, setIsComposingNote] = useState(false);
   const [noteFormat, setNoteFormat] = useState('BIRP');
   const [noteContent, setNoteContent] = useState('');
+  const [noteTypeFilter, setNoteTypeFilter] = useState<string>('All');
+  const [noteIsDirty, setNoteIsDirty] = useState(false);
 
   // ── Flags — local state so edits survive tab-switches within a chart session
   const [localFlags, setLocalFlags] = useState<Flag[]>(patient.flags);
   const [showFlagAlert, setShowFlagAlert] = useState(true); // auto-shown on chart open
   const [showFlagEditor, setShowFlagEditor] = useState(false);
+
+  // ── PRN medication administration logging ─────────────────────────────────
+  const [prnLogged, setPrnLogged] = useState<Set<string>>(new Set());
+  function logPrn(medId: string) {
+    setPrnLogged(prev => new Set(prev).add(medId));
+  }
+
+  // ── Record Vitals inline form ─────────────────────────────────────────────
+  const [showVitalsForm, setShowVitalsForm] = useState(false);
+  const [vitalsForm, setVitalsForm] = useState({ bp: '', hr: '', temp: '', o2: '', rr: '', pain: '' });
+  const [localVitals, setLocalVitals] = useState(() => getPatientVitals(patient.id));
+  const [chartActionSaved, setChartActionSaved] = useState<string | null>(null);
+  const saveChartAction = (msg: string) => { setChartActionSaved(msg); setTimeout(() => setChartActionSaved(null), 2500); };
+  function submitVitals() {
+    if (!vitalsForm.bp || !vitalsForm.hr || !vitalsForm.temp) return;
+    const now = new Date();
+    const newEntry = {
+      id: `v-new-${Date.now()}`,
+      date: now.toISOString().slice(0, 10),
+      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      bp: vitalsForm.bp,
+      hr: parseInt(vitalsForm.hr) || 72,
+      temp: parseFloat(vitalsForm.temp) || 98.6,
+      o2: parseInt(vitalsForm.o2) || 98,
+      rr: parseInt(vitalsForm.rr) || 16,
+      pain: parseInt(vitalsForm.pain) || 0,
+      recordedBy: 'Jessica Torres, RN',
+    };
+    setLocalVitals(prev => [newEntry, ...prev]);
+    setVitalsForm({ bp: '', hr: '', temp: '', o2: '', rr: '', pain: '' });
+    setShowVitalsForm(false);
+  }
 
   const meds = getPatientMedications(patient.id);
   const vitals = getPatientVitals(patient.id);
@@ -260,7 +294,11 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center p-8 bg-bg rounded-lg border border-dashed border-border text-slate">No recent notes.</div>
+                  <div className="text-center p-8 bg-bg rounded-lg border border-dashed border-border">
+                    <div className="text-2xl mb-2">📋</div>
+                    <div className="text-sm font-medium text-slate">No recent notes</div>
+                    <div className="text-xs text-slate-light mt-1">Progress notes authored by the clinical team appear here once signed.</div>
+                  </div>
                 )}
               </div>
             </div>
@@ -297,15 +335,20 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                   </div>
                 </div>
                 <div className="p-4">
-                  <textarea className="w-full text-sm text-slate border border-border rounded p-3 focus:outline-none focus:border-sunrise-blue min-h-[100px]" defaultValue={dim.text} />
+                  <textarea
+                    className={`w-full text-sm text-slate border border-border rounded p-3 focus:outline-none focus:border-sunrise-blue min-h-[100px] ${readOnly ? 'bg-gray-50 cursor-not-allowed opacity-70' : ''}`}
+                    defaultValue={dim.text}
+                    disabled={readOnly}
+                  />
                   <div className="flex gap-4 mt-3">
-                    <label className="flex items-center gap-2 text-sm text-slate">
-                      <input type="checkbox" checked={dim.score >= 3} readOnly className="rounded" /> Immediate Risk
+                    <label className={`flex items-center gap-2 text-sm text-slate ${readOnly ? 'cursor-not-allowed opacity-70' : ''}`}>
+                      <input type="checkbox" checked={dim.score >= 3} readOnly disabled={readOnly} className="rounded" /> Immediate Risk
                     </label>
-                    <label className="flex items-center gap-2 text-sm text-slate">
-                      <input type="checkbox" checked={dim.score > 0} readOnly className="rounded" /> Service Required
+                    <label className={`flex items-center gap-2 text-sm text-slate ${readOnly ? 'cursor-not-allowed opacity-70' : ''}`}>
+                      <input type="checkbox" checked={dim.score > 0} readOnly disabled={readOnly} className="rounded" /> Service Required
                     </label>
                   </div>
+                  {readOnly && <p className="text-[11px] text-slate-400 mt-2 flex items-center gap-1"><Eye className="w-3 h-3" /> View only — switch to a clinician role to edit assessments.</p>}
                 </div>
               </div>
             ))}
@@ -316,16 +359,47 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
         {activeTab === 'Progress Notes' && (
           <div className="flex h-full gap-6">
             <div className={`flex-col h-full ${isComposingNote ? 'w-1/3' : 'w-full'}`}>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-navy">Progress Notes</h2>
+              {/* Title row + New Note button */}
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-navy">
+                  Progress Notes
+                  {noteTypeFilter !== 'All' && (
+                    <span className="ml-2 text-sm font-normal text-slate-400">
+                      ({patient.notes.filter(n => n.type === noteTypeFilter).length} of {patient.notes.length})
+                    </span>
+                  )}
+                </h2>
                 {!isComposingNote && (
-                  <LockedButton locked={readOnly} onClick={() => setIsComposingNote(true)} className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">
+                  <LockedButton locked={readOnly} onClick={() => { setIsComposingNote(true); setNoteIsDirty(false); }} className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">
                     + New Note
                   </LockedButton>
                 )}
               </div>
+
+              {/* Filter pills */}
+              {!isComposingNote && (() => {
+                const types = Array.from(new Set(patient.notes.map(n => n.type)));
+                return types.length > 1 ? (
+                  <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+                    {(['All', ...types] as string[]).map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setNoteTypeFilter(t)}
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${
+                          noteTypeFilter === t
+                            ? 'bg-navy text-white border-navy'
+                            : 'bg-white text-slate border-slate-200 hover:border-navy/40 hover:text-navy'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+
               <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                {patient.notes.map(note => (
+                {patient.notes.filter(n => noteTypeFilter === 'All' || n.type === noteTypeFilter).map(note => (
                   <div key={note.id} className="border border-border rounded-lg p-4 hover:border-sunrise-blue transition-colors cursor-pointer group">
                     <div className="flex justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -338,8 +412,10 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                     <p className="text-sm text-navy line-clamp-3">{note.content}</p>
                   </div>
                 ))}
-                {patient.notes.length === 0 && (
-                  <div className="text-center p-12 border border-dashed border-border rounded-lg bg-bg text-slate">No notes yet. Click "+ New Note" to begin.</div>
+                {patient.notes.filter(n => noteTypeFilter === 'All' || n.type === noteTypeFilter).length === 0 && (
+                  <div className="text-center p-12 border border-dashed border-border rounded-lg bg-bg text-slate">
+                    {noteTypeFilter === 'All' ? 'No notes yet. Click "+ New Note" to begin.' : `No "${noteTypeFilter}" notes for this patient.`}
+                  </div>
                 )}
               </div>
             </div>
@@ -358,7 +434,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                   </div>
                 </div>
                 <div className="flex-1 flex overflow-hidden">
-                  <div className="flex-1 p-4 overflow-y-auto space-y-4">
+                  <div className="flex-1 p-4 overflow-y-auto space-y-4" onInput={() => setNoteIsDirty(true)}>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate mb-1">Note Type</label>
@@ -413,9 +489,26 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 <div className="bg-bg border-t border-border p-4 flex justify-between items-center">
                   <div className="text-xs text-slate">Auto-saved at {new Date().toLocaleTimeString()}</div>
                   <div className="flex gap-2">
-                    <LockedButton locked={readOnly} className="px-4 py-2 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 transition-colors">Save Draft</LockedButton>
-                    <LockedButton locked={readOnly} className="px-4 py-2 border border-sunrise-orange text-sunrise-orange bg-sunrise-orange/10 rounded text-sm font-medium hover:bg-sunrise-orange/20 transition-colors">Send for Co-sign</LockedButton>
-                    <LockedButton locked={readOnly} className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">Sign & Lock</LockedButton>
+                    <LockedButton
+                      locked={!!readOnly}
+                      onClick={() => noteIsDirty && saveChartAction('Draft saved')}
+                      className={`px-4 py-2 border rounded text-sm font-medium transition-colors ${noteIsDirty ? 'border-border text-slate hover:bg-slate-50' : 'border-border text-slate opacity-40 cursor-not-allowed pointer-events-none'}`}
+                      title={noteIsDirty ? undefined : 'Write a note before saving'}
+                    >Save Draft</LockedButton>
+                    <LockedButton
+                      locked={!!readOnly}
+                      onClick={() => noteIsDirty && saveChartAction('Note sent for co-sign')}
+                      className={`px-4 py-2 border rounded text-sm font-medium transition-colors ${noteIsDirty ? 'border-sunrise-orange text-sunrise-orange bg-sunrise-orange/10 hover:bg-sunrise-orange/20' : 'border-border text-slate opacity-40 cursor-not-allowed pointer-events-none'}`}
+                      title={noteIsDirty ? undefined : 'Write a note before sending for co-sign'}
+                    >Send for Co-sign</LockedButton>
+                    <LockedButton
+                      locked={readOnly}
+                      onClick={() => noteIsDirty && saveChartAction('Note signed and locked')}
+                      className={`px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium transition-colors ${noteIsDirty ? 'hover:bg-sunrise-blue-light' : 'opacity-40 cursor-not-allowed pointer-events-none'}`}
+                      title={noteIsDirty ? undefined : 'Add note content before signing'}
+                    >
+                      Sign & Lock
+                    </LockedButton>
                   </div>
                 </div>
               </div>
@@ -429,8 +522,8 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-navy">Master Treatment Plan</h2>
               <div className="flex gap-2">
-                <LockedButton locked={readOnly} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Review Plan</LockedButton>
-                <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Add Goal</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveChartAction('Treatment plan reviewed')} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Review Plan</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveChartAction('Goal added to treatment plan')} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Add Goal</LockedButton>
               </div>
             </div>
             {patient.goals.length > 0 ? (
@@ -465,7 +558,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
               <div className="text-center p-12 border border-dashed border-border rounded-lg bg-bg">
                 <h3 className="font-semibold text-slate mb-2">No Active Goals</h3>
                 <p className="text-sm text-slate-light mb-4">Create a treatment plan to track client progress.</p>
-                <LockedButton locked={readOnly} className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">Initialize Master Treatment Plan</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveChartAction('Treatment plan initialized')} className="px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">Initialize Master Treatment Plan</LockedButton>
               </div>
             )}
           </div>
@@ -478,7 +571,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
               <h2 className="text-lg font-bold text-navy flex items-center gap-2"><Pill className="w-5 h-5 text-sunrise-blue" /> Medication Administration Record</h2>
               <div className="flex gap-2">
                 <button className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Print MAR</button>
-                <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Order Medication</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveChartAction('Medication order submitted')} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Order Medication</LockedButton>
               </div>
             </div>
 
@@ -502,7 +595,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-bg border-b border-border">
-                      {['Medication', 'Class', 'Dose / Route', 'Frequency', 'Indication', 'Prescriber', 'Start Date', ''].map(h => (
+                      {['Medication', 'Class', 'Dose / Route', 'Frequency', 'Today', 'Indication', 'Prescriber', 'Start Date', ''].map(h => (
                         <th key={h} className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-slate">{h}</th>
                       ))}
                     </tr>
@@ -519,6 +612,22 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                           <td className="px-3 py-3"><span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${clsCls}`}>{med.class}</span></td>
                           <td className="px-3 py-3 text-slate">{med.dose} <span className="text-slate-light">/ {med.route}</span></td>
                           <td className="px-3 py-3 text-slate">{med.frequency}</td>
+                          <td className="px-3 py-3">
+                            {(() => {
+                              const s = getMARStatus(med);
+                              if (!s) return <span className="text-slate-300 text-xs">—</span>;
+                              const cls = s.label === 'Given'
+                                ? 'bg-green-100 text-green-700 border-green-200'
+                                : s.label === 'Overdue'
+                                  ? 'bg-red-100 text-red-700 border-red-200 animate-pulse'
+                                  : 'bg-amber-100 text-amber-700 border-amber-200';
+                              return (
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${cls}`}>
+                                  {s.label}{s.time ? ` · ${s.time}` : ''}
+                                </span>
+                              );
+                            })()}
+                          </td>
                           <td className="px-3 py-3 text-slate text-xs max-w-[200px]">{med.indication}</td>
                           <td className="px-3 py-3 text-slate text-xs">{med.prescriber.split(' ').slice(0, 2).join(' ')}</td>
                           <td className="px-3 py-3 text-slate text-xs">{med.startDate}</td>
@@ -576,7 +685,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-navy flex items-center gap-2"><Users className="w-5 h-5 text-sunrise-blue" /> Group Therapy Attendance</h2>
-              <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Group Note</LockedButton>
+              <LockedButton locked={readOnly} onClick={() => saveChartAction('Group note created')} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Group Note</LockedButton>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
@@ -629,12 +738,44 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-navy flex items-center gap-2"><HeartPulse className="w-5 h-5 text-sunrise-blue" /> Vital Signs</h2>
-              <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Record Vitals</LockedButton>
+              <LockedButton locked={!!readOnly} onClick={() => setShowVitalsForm(v => !v)} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Record Vitals</LockedButton>
             </div>
 
+            {/* Record Vitals inline form */}
+            {showVitalsForm && (
+              <div className="border border-sunrise-blue/30 rounded-lg p-4 bg-sunrise-blue/5 space-y-4">
+                <h3 className="font-bold text-navy text-sm">New Vitals Entry</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[
+                    { key: 'bp',   label: 'Blood Pressure',  placeholder: '120/80', type: 'text'   },
+                    { key: 'hr',   label: 'Heart Rate (bpm)', placeholder: '72',    type: 'number' },
+                    { key: 'temp', label: 'Temp (°F)',        placeholder: '98.6',   type: 'number' },
+                    { key: 'o2',   label: 'O₂ Sat (%)',       placeholder: '98',    type: 'number' },
+                    { key: 'rr',   label: 'Resp. Rate',       placeholder: '16',    type: 'number' },
+                    { key: 'pain', label: 'Pain (0–10)',       placeholder: '0',     type: 'number' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-semibold text-slate mb-1">{f.label}</label>
+                      <input
+                        type={f.type}
+                        placeholder={f.placeholder}
+                        value={vitalsForm[f.key as keyof typeof vitalsForm]}
+                        onChange={e => setVitalsForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        className="w-full border border-border rounded px-2 py-1.5 text-sm text-navy focus:outline-none focus:border-sunrise-blue"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setShowVitalsForm(false)} className="px-3 py-1.5 text-sm text-slate border border-border rounded hover:bg-slate-50">Cancel</button>
+                  <button onClick={submitVitals} className="px-3 py-1.5 text-sm font-semibold text-white bg-sunrise-blue rounded hover:bg-sunrise-blue-light">Save Vitals</button>
+                </div>
+              </div>
+            )}
+
             {/* Latest vitals */}
-            {vitals.length > 0 && (() => {
-              const latest = vitals[0];
+            {localVitals.length > 0 && (() => {
+              const latest = localVitals[0];
               const cards = [
                 { label: 'Blood Pressure', value: latest.bp, unit: 'mmHg', warn: parseInt(latest.bp) > 140 },
                 { label: 'Heart Rate', value: String(latest.hr), unit: 'bpm', warn: latest.hr > 100 },
@@ -675,7 +816,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {vitals.map(v => (
+                    {localVitals.map(v => (
                       <tr key={v.id} className="hover:bg-bg transition-colors">
                         <td className="px-3 py-2 text-xs text-slate font-medium">{v.date} {v.time}</td>
                         <td className={`px-3 py-2 text-xs font-semibold ${parseInt(v.bp) > 140 ? 'text-sunrise-amber' : 'text-navy'}`}>{v.bp}</td>
@@ -705,7 +846,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-navy flex items-center gap-2"><FlaskConical className="w-5 h-5 text-sunrise-blue" /> Laboratory Results</h2>
-              <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Order Labs</LockedButton>
+              <LockedButton locked={readOnly} onClick={() => saveChartAction('Lab order submitted')} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">+ Order Labs</LockedButton>
             </div>
 
             {/* Critical alerts */}
@@ -868,8 +1009,8 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 <ClipboardList className="w-5 h-5 text-sunrise-blue" /> Discharge Planning
               </h2>
               <div className="flex gap-2">
-                <LockedButton locked={readOnly} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Update Plan</LockedButton>
-                <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">Finalize &amp; Sign</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveChartAction('Discharge plan updated')} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50">Update Plan</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveChartAction('Discharge plan signed')} className="px-3 py-1.5 bg-sunrise-blue text-white rounded text-sm font-medium hover:bg-sunrise-blue-light">Finalize &amp; Sign</LockedButton>
               </div>
             </div>
 
@@ -1034,7 +1175,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-navy flex items-center gap-2"><FolderOpen className="w-5 h-5 text-sunrise-blue" /> Document Vault</h2>
               <div className="flex gap-2">
-                <LockedButton locked={readOnly} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 flex items-center gap-1.5"><Upload className="w-3.5 h-3.5" /> Upload</LockedButton>
+                <LockedButton locked={readOnly} onClick={() => saveChartAction('Document uploaded')} className="px-3 py-1.5 border border-border rounded text-sm font-medium text-slate hover:bg-slate-50 flex items-center gap-1.5"><Upload className="w-3.5 h-3.5" /> Upload</LockedButton>
               </div>
             </div>
 
@@ -1083,6 +1224,12 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
         )}
 
       </div>
+
+      {chartActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {chartActionSaved}
+        </div>
+      )}
     </div>
     </>
   );

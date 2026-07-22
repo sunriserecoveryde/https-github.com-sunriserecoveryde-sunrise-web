@@ -483,11 +483,11 @@ export function CosignQueue({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { status: 'Past Deadline', doc: 'Individual Progress Note', clin: 'M. Gonzales, LCSW', pt: 'R. Coleman', written: 'Jul 18 09:00', deadline: 'Jul 19 09:00', over: '3h 14min', sup: 'D. Reyes, LPC-S' },
-                  { status: 'Past Deadline', doc: 'Group Note (AM Session)', clin: 'T. Osei, CAC-AD', pt: 'Group — 7 pts', written: 'Jul 18 11:00', deadline: 'Jul 19 11:00', over: '1h 22min', sup: 'S. Jenkins, LPC-S' },
-                  { status: 'Past Deadline', doc: 'BPS Assessment — New Admit', clin: 'R. Patel, CAADC', pt: 'M. Torres', written: 'Jul 17 16:00', deadline: 'Jul 18 16:00', over: '19h 36min', sup: 'D. Reyes, LPC-S' },
-                  { status: 'Due in 2h', doc: 'Individual Progress Note', clin: 'L. Washington, LCAS', pt: 'K. Walsh', written: 'Jul 19 10:15', deadline: 'Jul 20 10:15', over: '—', sup: 'S. Jenkins, LPC-S' },
-                  { status: 'Due in 3h', doc: 'Discharge Summary Draft', clin: 'M. Gonzales, LCSW', pt: 'A. Santos', written: 'Jul 19 09:30', deadline: 'Jul 20 09:30', over: '—', sup: 'D. Reyes, LPC-S' },
+                  { status: 'Past Deadline', doc: 'Individual Progress Note', clin: 'M. Gonzales, LCSW', pt: 'R. Coleman', written: 'Jul 18 09:00', deadline: 'Jul 19 09:00', over: '3d 14h', sup: 'D. Reyes, LPC-S' },
+                  { status: 'Past Deadline', doc: 'Group Note (AM Session)', clin: 'T. Osei, CAC-AD', pt: 'Group — 7 pts', written: 'Jul 18 11:00', deadline: 'Jul 19 11:00', over: '3d 12h', sup: 'S. Jenkins, LPC-S' },
+                  { status: 'Past Deadline', doc: 'BPS Assessment — New Admit', clin: 'R. Patel, CAADC', pt: 'M. Torres', written: 'Jul 17 16:00', deadline: 'Jul 18 16:00', over: '4d 7h', sup: 'D. Reyes, LPC-S' },
+                  { status: 'Due in 2h', doc: 'Individual Progress Note', clin: 'L. Washington, LCAS', pt: 'K. Walsh', written: 'Jul 22 10:15', deadline: 'Jul 23 10:15', over: '—', sup: 'S. Jenkins, LPC-S' },
+                  { status: 'Due in 3h', doc: 'Discharge Summary Draft', clin: 'M. Gonzales, LCSW', pt: 'A. Santos', written: 'Jul 22 09:30', deadline: 'Jul 23 09:30', over: '—', sup: 'D. Reyes, LPC-S' },
                 ].map(r => (
                   <tr key={r.doc + r.clin} className="hover:bg-gray-50">
                     <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.status === 'Past Deadline' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{r.status}</span></td>

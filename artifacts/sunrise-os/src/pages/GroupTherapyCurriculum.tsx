@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-import { BookOpen, CheckCircle, Clock, Star, Plus, ChevronDown, ChevronUp, Download, Users } from 'lucide-react';
+import { BookOpen, CheckCircle, Clock, Star, Plus, ChevronDown, ChevronUp, Download, Users, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -139,6 +139,9 @@ export function GroupTherapyCurriculum({ navigate: _navigate, readOnly }: Props)
   const [tab, setTab] = useState<'Library' | 'Schedule' | 'Assignments' | 'Enrollment' | 'Evidence Base' | 'Facilitator Guide'>('Library');
   const [expandedCurriculum, setExpandedCurriculum] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<CurriculumStatus | 'All'>('All');
+  const [newGroupOpen, setNewGroupOpen] = useState(false);
+  const [groupSaved, setGroupSaved] = useState<string | null>(null);
+  const saveGroupAction = (msg: string) => { setGroupSaved(msg); setTimeout(() => setGroupSaved(null), 2500); };
 
   const filtered = filterStatus === 'All' ? CURRICULA : CURRICULA.filter(c => c.status === filterStatus);
 
@@ -149,7 +152,7 @@ export function GroupTherapyCurriculum({ navigate: _navigate, readOnly }: Props)
           <h1 className="text-2xl font-bold text-navy">Group Therapy Curriculum</h1>
           <p className="text-slate text-sm mt-0.5">Evidence-based curricula library · Weekly schedule · Session assignments</p>
         </div>
-        <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />New Group</LockedButton>
+        <LockedButton locked={readOnly} onClick={() => setNewGroupOpen(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Plus className="w-4 h-4" />New Group</LockedButton>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -229,8 +232,8 @@ export function GroupTherapyCurriculum({ navigate: _navigate, readOnly }: Props)
                         <p className="text-xs text-navy">{cur.facilitatorRequired}</p>
                       </div>
                       <div className="flex gap-3">
-                        <button className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-white flex items-center gap-1"><Download className="w-3 h-3" />Materials</button>
-                        <LockedButton locked={readOnly} className="text-xs btn-primary px-3 py-1.5 flex items-center gap-1"><Plus className="w-3 h-3" />Schedule Group</LockedButton>
+                        <button onClick={() => saveGroupAction('Materials downloaded')} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-white flex items-center gap-1"><Download className="w-3 h-3" />Materials</button>
+                        <LockedButton locked={readOnly} onClick={() => saveGroupAction('Group scheduled')} className="text-xs btn-primary px-3 py-1.5 flex items-center gap-1"><Plus className="w-3 h-3" />Schedule Group</LockedButton>
                       </div>
                     </div>
                   </div>
@@ -376,7 +379,7 @@ export function GroupTherapyCurriculum({ navigate: _navigate, readOnly }: Props)
             </table>
             <div className="px-5 py-2 bg-gray-50 border-t border-border text-xs text-slate flex justify-between items-center">
               <span>Recommended: ≥2 curricula for residential patients, ≥1 for PHP/IOP</span>
-              <LockedButton locked={readOnly} className="text-xs text-orange font-medium hover:underline">Export Enrollment Report</LockedButton>
+              <LockedButton locked={readOnly} onClick={() => saveGroupAction('Enrollment report exported')} className="text-xs text-orange font-medium hover:underline">Export Enrollment Report</LockedButton>
             </div>
           </div>
         </div>
@@ -495,6 +498,61 @@ export function GroupTherapyCurriculum({ navigate: _navigate, readOnly }: Props)
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {newGroupOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setNewGroupOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[500px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Create New Group</h2>
+              <button onClick={() => setNewGroupOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Group Title *</label>
+                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Relapse Prevention — Advanced" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Curriculum Type</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Relapse Prevention (MATRIX)</option><option>CBT for Substance Use</option><option>DBT Skills</option><option>Seeking Safety</option><option>Mindfulness-Based</option><option>Psychoeducation</option><option>Family Systems</option><option>Custom</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Level of Care</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Residential</option><option>PHP</option><option>IOP</option><option>OP</option><option>All Levels</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Max Enrollment</label>
+                  <input type="number" min={2} max={30} className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 12" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Evidence Base</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>SAMHSA Evidence-Based</option><option>NREPP Registered</option><option>CARF Best Practice</option><option>Emerging / Adapted</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Description</label>
+                  <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="Goals, clinical focus, who this group serves..." />
+                </div>
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setNewGroupOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setNewGroupOpen(false); saveGroupAction('Group added to curriculum library'); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Create Group</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {groupSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> {groupSaved}
         </div>
       )}
     </div>

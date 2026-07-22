@@ -53,12 +53,12 @@ function getGoals(p: Patient): TreatmentGoal[] {
 // ─── Derived data ─────────────────────────────────────────────────────────────
 
 const REVIEW_INTERVALS: Record<string, string> = {
-  p1: '2026-07-21', p3: '2026-07-22', p4: '2026-07-23',
+  p1: '2026-07-25', p3: '2026-07-22', p4: '2026-07-23',
   p5: '2026-07-25', p6: '2026-07-26', p7: '2026-07-28',
   p8: '2026-07-24', p9: '2026-07-27', p2: '2026-08-01',
 };
 
-const TODAY = '2026-07-19';
+const TODAY = '2026-07-22';
 
 function isOverdue(date: string) { return date < TODAY; }
 function isDueWithin7(date: string) { return date >= TODAY && date <= '2026-07-26'; }
@@ -374,6 +374,8 @@ type FilterTab = 'All' | 'Due for Review' | 'Overdue' | 'Needs Goals';
 export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) => void; readOnly?: boolean }) {
   const editRoles = getRolesWithEditAccess('TreatmentPlans');
   const [activeTab, setActiveTab] = useState<FilterTab>('All');
+  const [planSaved, setPlanSaved] = useState<string | null>(null);
+  const savePlan = (msg: string) => { setPlanSaved(msg); setTimeout(() => setPlanSaved(null), 2500); };
   const [planView, setPlanView] = useState<'Plans' | 'Goal Analytics' | 'Plan Templates' | 'Outcomes' | 'Evidence Base' | 'Compliance Checklist'>('Plans');
   const [search, setSearch] = useState('');
   const [goalStatuses, setGoalStatuses] = useState<Record<string, TreatmentGoal['status']>>({});
@@ -428,6 +430,7 @@ export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) =
         </div>
         <LockedButton
           locked={readOnly}
+          onClick={() => savePlan('Batch update applied')}
           className="flex items-center gap-2 bg-sunrise-blue text-white px-4 py-2 rounded font-medium shadow-sm hover:bg-sunrise-blue-light transition-colors text-sm"
         >
           <PenTool className="w-4 h-4" /> Batch Update Plans
@@ -649,7 +652,7 @@ export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) =
                     <div className="font-semibold text-navy">{t.name}</div>
                     <div className="text-[10px] text-slate mt-0.5">Dx: {t.dx} · LOC: {t.loc}</div>
                   </div>
-                  <button className="shrink-0 ml-3 text-[10px] bg-navy text-white px-2.5 py-1 rounded font-medium hover:bg-opacity-90">Use Template</button>
+                  <button onClick={() => setPlanView('Plans')} className="shrink-0 ml-3 text-[10px] bg-navy text-white px-2.5 py-1 rounded font-medium hover:bg-opacity-90">Use Template</button>
                 </div>
                 <div className="text-xs">
                   <div className="font-semibold text-slate mb-1">Goals:</div>
@@ -794,6 +797,12 @@ export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) =
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {planSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {planSaved}
         </div>
       )}
     </div>

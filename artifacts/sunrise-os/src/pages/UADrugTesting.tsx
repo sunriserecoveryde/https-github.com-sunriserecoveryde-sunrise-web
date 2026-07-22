@@ -81,6 +81,7 @@ const COMPLIANCE_TREND = [
   { week: 'W1 Jul', compliance: 95, positivity: 5 },
   { week: 'W2 Jul', compliance: 93, positivity: 7 },
   { week: 'W3 Jul', compliance: 94, positivity: 6 },
+  { week: 'W4 Jul', compliance: 96, positivity: 4 },
 ];
 
 const SUBSTANCE_BREAKDOWN = [
@@ -152,7 +153,7 @@ export function UADrugTesting({ navigate, readOnly }: Props) {
       {tab === 'Schedule' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-slate">Week of July 14–20, 2026 · Residential (daily) and PHP (M/W/F)</div>
+            <div className="text-sm text-slate">Week of July 20–26, 2026 · Residential (daily) and PHP (M/W/F)</div>
             <div className="flex items-center gap-3 text-xs">
               {Object.entries(STATUS_STYLE).map(([s, cls]) => s !== 'N/A' && (
                 <div key={s} className="flex items-center gap-1">
@@ -605,7 +606,7 @@ export function UADrugTesting({ navigate, readOnly }: Props) {
                 {[
                   { lab: 'LabCorp (Rockville hub)', type: 'Reference Lab — Confirmations', panels: 'GC-MS 12-panel, EtG/EtS, Bup level, fentanyl analogs', tat: '24–36h', contact: '800-555-0144', exp: 'Dec 2027' },
                   { lab: 'Quest Diagnostics (backup)', type: 'Reference Lab — Backup', panels: 'Full confirmatory menu', tat: '24–48h', contact: '800-555-0244', exp: 'Mar 2027' },
-                  { lab: 'Abbott (Alere) — POCT', type: 'Point-of-Care Testing', panels: 'iCup 12-panel, fentanyl strip', tat: '5 min (POC)', contact: '800-555-0344', exp: 'Jun 2026' },
+                  { lab: 'Abbott (Alere) — POCT', type: 'Point-of-Care Testing', panels: 'iCup 12-panel, fentanyl strip', tat: '5 min (POC)', contact: '800-555-0344', exp: 'Jun 2027' },
                   { lab: 'National Toxicology (urine EtG)', type: 'Send-out Specialty', panels: 'EtG/EtS (80-hour alcohol marker)', tat: '48–72h', contact: '800-555-0444', exp: 'Sep 2027' },
                   { lab: 'DTI Labs (hair follicle)', type: 'Specialty — Hair', panels: 'Hair follicle 90-day history panel', tat: '7–10 days', contact: '800-555-0544', exp: 'Jan 2028' },
                 ].map(r => (

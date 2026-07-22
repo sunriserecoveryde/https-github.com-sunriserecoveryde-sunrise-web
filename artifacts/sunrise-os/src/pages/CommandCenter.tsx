@@ -63,6 +63,7 @@ export function CommandCenter({ navigate, readOnly }: Props) {
   const [activeShift, setActiveShift] = useState<'Day' | 'Evening' | 'Night'>('Day');
   const [alertFilter, setAlertFilter] = useState<'All' | 'critical' | 'warning' | 'info'>('All');
   const [showHandoff, setShowHandoff] = useState(false);
+  const [ccActionSaved, setCcActionSaved] = useState<string | null>(null);
 
   const resCount = MOCK_PATIENTS.filter(p => p.program === 'Residential').length;
   const phpCount = MOCK_PATIENTS.filter(p => p.program === 'PHP').length;
@@ -97,7 +98,7 @@ export function CommandCenter({ navigate, readOnly }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy">Command Center</h1>
-          <p className="text-slate text-sm mt-0.5">Shift Overview — Saturday, July 19, 2026</p>
+          <p className="text-slate text-sm mt-0.5">Shift Overview — Wednesday, July 22, 2026</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex rounded-lg border border-border overflow-hidden text-sm">
@@ -114,7 +115,7 @@ export function CommandCenter({ navigate, readOnly }: Props) {
           <button onClick={() => setShowHandoff(v => !v)} className={`text-sm px-4 py-2 rounded font-medium border transition-colors ${showHandoff ? 'bg-navy text-white border-navy' : 'border-border text-slate hover:bg-slate-50'}`}>
             📋 Shift Handoff
           </button>
-          <LockedButton locked={readOnly} className="btn-primary text-sm px-4 py-2">+ Incident Report</LockedButton>
+          <LockedButton locked={readOnly} onClick={() => navigate('IncidentReporting')} className="btn-primary text-sm px-4 py-2">+ Incident Report</LockedButton>
         </div>
       </div>
 
@@ -147,12 +148,12 @@ export function CommandCenter({ navigate, readOnly }: Props) {
               <h3 className="font-semibold text-navy text-sm mb-3">Treatment Plan Compliance — This Week</h3>
               <div className="space-y-2.5">
                 {[
-                  { label: 'Group Attendance ≥ 80%', value: 14, total: 18, pct: 78 },
-                  { label: 'Counselor 1:1 Scheduled', value: 18, total: 18, pct: 100 },
-                  { label: 'Weekly UA Completed', value: 16, total: 18, pct: 89 },
-                  { label: 'Treatment Plans Current', value: 17, total: 18, pct: 94 },
-                  { label: 'Vitals Documented Daily', value: 18, total: 18, pct: 100 },
-                  { label: 'ASAM Reviews On Schedule', value: 15, total: 18, pct: 83 },
+                  { label: 'Group Attendance ≥ 80%', value: 16, total: 20, pct: 80 },
+                  { label: 'Counselor 1:1 Scheduled', value: 20, total: 20, pct: 100 },
+                  { label: 'Weekly UA Completed', value: 18, total: 20, pct: 90 },
+                  { label: 'Treatment Plans Current', value: 19, total: 20, pct: 95 },
+                  { label: 'Vitals Documented Daily', value: 20, total: 20, pct: 100 },
+                  { label: 'ASAM Reviews On Schedule', value: 17, total: 20, pct: 85 },
                 ].map(r => (
                   <div key={r.label}>
                     <div className="flex justify-between text-xs mb-1">
@@ -195,7 +196,7 @@ export function CommandCenter({ navigate, readOnly }: Props) {
           </div>
 
           <div className="card">
-            <h3 className="font-semibold text-navy text-sm mb-3">Shift Metrics Scorecard — Week of July 14–19, 2026</h3>
+            <h3 className="font-semibold text-navy text-sm mb-3">Shift Metrics Scorecard — Week of July 20–24, 2026</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -264,7 +265,7 @@ export function CommandCenter({ navigate, readOnly }: Props) {
           <div className="flex items-center justify-between">
             <div>
               <div className="font-bold text-lg">Shift Handoff Report — Day → Evening</div>
-              <div className="text-white/70 text-sm">Generated July 19, 2026 · 2:58 PM · Handoff to Evening Team at 3:00 PM</div>
+              <div className="text-white/70 text-sm">Generated July 22, 2026 · 2:58 PM · Handoff to Evening Team at 3:00 PM</div>
             </div>
             <button onClick={() => setShowHandoff(false)} className="text-white/60 hover:text-white text-sm px-3 py-1.5 border border-white/20 rounded hover:border-white/40 transition-colors">✕ Close</button>
           </div>
@@ -311,7 +312,7 @@ export function CommandCenter({ navigate, readOnly }: Props) {
           {/* Sign-off line */}
           <div className="border-t border-white/20 pt-3 flex items-center justify-between">
             <div className="text-sm text-white/60">Outgoing Shift Lead: <span className="text-white font-medium">Sarah Jenkins, LPC</span> · Day Team</div>
-            <LockedButton locked={readOnly} className="bg-white text-navy text-sm font-semibold px-4 py-2 rounded hover:bg-white/90 transition-colors">Sign & Hand Off</LockedButton>
+            <LockedButton locked={readOnly} onClick={() => { setCcActionSaved('handoff'); setTimeout(() => setCcActionSaved(null), 2500); }} className="bg-white text-navy text-sm font-semibold px-4 py-2 rounded hover:bg-white/90 transition-colors">Sign & Hand Off</LockedButton>
           </div>
         </div>
       )}
@@ -717,6 +718,12 @@ export function CommandCenter({ navigate, readOnly }: Props) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {ccActionSaved === 'handoff' && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> Shift handoff signed and transmitted
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { MOCK_PATIENTS } from '../data/mockPatients';
+import { getPatientVitals } from '../data/mockVitals';
 import { FlagBadge } from '../components/ui/FlagBadge';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
@@ -7,6 +8,37 @@ import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 import { Screen } from '../App';
 import { Search, Plus, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle, TrendingUp, Users, Lock, CalendarDays } from 'lucide-react';
 import { useRole } from '../context/RoleContext';
+
+// Latest COWS/CIWA scores per patient (from most recent vitals entry)
+const WITHDRAWAL_SCORES: Record<string, { cows?: number; ciwa?: number }> = {};
+MOCK_PATIENTS.forEach(p => {
+  const vitals = getPatientVitals(p.id);
+  if (vitals.length > 0) {
+    const latest = vitals[0];
+    if (latest.cows != null || latest.ciwa != null) {
+      WITHDRAWAL_SCORES[p.id] = { cows: latest.cows ?? undefined, ciwa: latest.ciwa ?? undefined };
+    }
+  }
+});
+
+function WdBadge({ cows, ciwa }: { cows?: number; ciwa?: number }) {
+  const score = cows ?? ciwa;
+  const label = cows != null ? `COWS ${cows}` : ciwa != null ? `CIWA ${ciwa}` : null;
+  if (score == null || label == null) return <span className="text-slate-300 text-xs">—</span>;
+  const isCiwa = ciwa != null;
+  const severe  = isCiwa ? score >= 15 : score >= 13;
+  const moderate = !severe && (isCiwa ? score >= 8 : score >= 5);
+  const cls = severe
+    ? 'bg-red-100 text-red-700 border border-red-300'
+    : moderate
+      ? 'bg-amber-100 text-amber-700 border border-amber-300'
+      : 'bg-green-100 text-green-700 border border-green-200';
+  return (
+    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${cls} ${severe ? 'animate-pulse' : ''}`}>
+      {label}
+    </span>
+  );
+}
 
 const DEMO_BOOKING_URL =
   import.meta.env.VITE_DEMO_BOOKING_URL ||
@@ -50,6 +82,10 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
   const [risk, setRisk]             = useState<RiskLevel>('All');
   const [sort, setSort]             = useState<{ field: SortField; dir: SortDir }>({ field: 'name', dir: 'asc' });
   const [plTab, setPlTab]           = useState<'Census' | 'Risk Summary' | 'LOC Distribution' | 'Flags Overview' | 'Payer Mix' | 'Discharge Pipeline'>('Census');
+  const [showBookingPreview, setShowBookingPreview] = useState(false);
+  const [plActionSaved, setPlActionSaved] = useState<string | null>(null);
+  const savePlAction = (msg: string) => { setPlActionSaved(msg); setTimeout(() => setPlActionSaved(null), 2500); };
+  const bookingRef = useRef<HTMLAnchorElement>(null);
   const { canAccessScreen, getPermissionForScreen } = useRole();
   const canViewDetail  = canAccessScreen('PatientDetail');
   const listPermission = getPermissionForScreen('PatientList');
@@ -100,7 +136,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
           <p className="text-slate text-sm mt-1">Active Census: {MOCK_PATIENTS.length} patients · {filtered.length} shown</p>
         </div>
         {canAdmit && (
-          <button className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium flex items-center gap-2 hover:bg-sunrise-blue-light transition-colors shadow-sm text-sm">
+          <button onClick={() => savePlAction('Admission intake opened')} className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium flex items-center gap-2 hover:bg-sunrise-blue-light transition-colors shadow-sm text-sm">
             <Plus className="w-4 h-4" /> Admit Patient
           </button>
         )}
@@ -305,6 +341,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
                 <SortHeader label="LOS"      field="los"      sort={sort} onSort={handleSort} />
                 <SortHeader label="Acuity"   field="acuity"   sort={sort} onSort={handleSort} />
                 <SortHeader label="Cravings" field="craving"  sort={sort} onSort={handleSort} />
+                <th className="p-4 text-[10px] font-bold uppercase tracking-wider text-slate text-center">W/D Score</th>
                 <SortHeader label="RES"      field="recovery" sort={sort} onSort={handleSort} />
                 <th className="p-4 text-[10px] font-bold uppercase tracking-wider text-slate">Counselor</th>
                 <th className="p-4 text-[10px] font-bold uppercase tracking-wider text-slate">Actions</th>
@@ -358,6 +395,9 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
                       </div>
                     </td>
                     <td className="p-4 text-center">
+                      <WdBadge cows={WITHDRAWAL_SCORES[p.id]?.cows} ciwa={WITHDRAWAL_SCORES[p.id]?.ciwa} />
+                    </td>
+                    <td className="p-4 text-center">
                       <RecoveryScoreBadge score={p.recoveryScore} />
                     </td>
                     <td className="p-4 text-slate text-xs">
@@ -385,7 +425,8 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
           {filtered.length === 0 && (
             <div className="text-center py-12 text-slate">
               <AlertTriangle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              No patients match your filters.
+              <div className="text-sm font-semibold text-navy">No patients match your filters</div>
+              <div className="text-xs text-slate mt-1">Try clearing a filter or adjusting your search.</div>
             </div>
           )}
         </div>
@@ -494,15 +535,49 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
           <CalendarDays className="w-4 h-4 shrink-0 opacity-80" />
           <span>Exploring Sunrise? Talk to our team and see it live in your environment.</span>
         </div>
-        <a
-          href={DEMO_BOOKING_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-shrink-0 flex items-center gap-2 bg-white text-violet-700 hover:bg-violet-50 transition-colors text-sm font-semibold px-4 py-1.5 rounded shadow-sm"
-        >
-          <CalendarDays className="w-3.5 h-3.5" />
-          Schedule a live demo →
-        </a>
+        <div className="relative flex-shrink-0">
+          <a
+            ref={bookingRef}
+            href={showBookingPreview ? undefined : DEMO_BOOKING_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => {
+              if (!showBookingPreview) {
+                e.preventDefault();
+                setShowBookingPreview(true);
+              }
+            }}
+            className="flex items-center gap-2 bg-white text-violet-700 hover:bg-violet-50 transition-colors text-sm font-semibold px-4 py-1.5 rounded shadow-sm cursor-pointer"
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            Schedule a live demo →
+          </a>
+          {showBookingPreview && (
+            <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-violet-200 rounded-xl shadow-xl p-4 w-80 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="text-xs font-bold text-slate uppercase tracking-wider mb-2">Booking Link Preview</div>
+              <div className="bg-slate-50 border border-border rounded-lg px-3 py-2 font-mono text-[11px] text-slate break-all mb-3">
+                {DEMO_BOOKING_URL}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowBookingPreview(false)}
+                  className="flex-1 text-sm text-slate border border-border rounded-lg py-1.5 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <a
+                  href={DEMO_BOOKING_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShowBookingPreview(false)}
+                  className="flex-1 text-center text-sm font-semibold bg-violet-600 text-white rounded-lg py-1.5 hover:bg-violet-700"
+                >
+                  Open link →
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {plTab === 'Payer Mix' && (
@@ -588,9 +663,9 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'J. B.', loc: 'Residential', los: '28d', dc: 'Jul 21', auth: 'Jul 21', after: 'PHP', housing: 'Sober living', mat: 'Suboxone 16mg', ready: 'Ready' },
+                  { name: 'J. B.', loc: 'Residential', los: '31d', dc: 'Jul 24', auth: 'Jul 24', after: 'PHP', housing: 'Sober living', mat: 'Suboxone 16mg', ready: 'Ready' },
                   { name: 'A. C.', loc: 'Residential', los: '21d', dc: 'Jul 22', auth: 'Jul 24', after: 'IOP', housing: 'Home (family)', mat: 'None', ready: 'Ready' },
-                  { name: 'M. D.', loc: 'Detox', los: '7d', dc: 'Jul 20', auth: 'Jul 20', after: 'Residential', housing: 'Pending', mat: 'Vivitrol pending', ready: 'Needs Work' },
+                  { name: 'M. D.', loc: 'Detox', los: '9d', dc: 'Jul 23', auth: 'Jul 23', after: 'Residential', housing: 'Pending', mat: 'Vivitrol pending', ready: 'Needs Work' },
                   { name: 'T. R.', loc: 'Residential', los: '30d', dc: 'Jul 24', auth: 'Jul 28', after: 'IOP', housing: 'Not secured', mat: 'Naltrexone oral', ready: 'Needs Work' },
                 ].map(r => (
                   <tr key={r.name} className="hover:bg-gray-50">
@@ -610,6 +685,12 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {plActionSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <span>✓</span> {plActionSaved}
         </div>
       )}
     </div>

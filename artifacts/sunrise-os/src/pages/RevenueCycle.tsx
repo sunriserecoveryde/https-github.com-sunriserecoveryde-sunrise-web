@@ -3,7 +3,7 @@ import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import {
   DollarSign, AlertTriangle, TrendingUp, TrendingDown,
-  Clock, CheckCircle2, XCircle, FileText, Plus
+  Clock, CheckCircle2, XCircle, FileText, Plus, X, CheckCircle
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -32,10 +32,10 @@ interface Claim {
 
 const AUTHS: AuthRecord[] = [
   { patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential', insurance: 'BlueCross', authNumber: 'BCB-2026-44821', authorizedDays: 30, usedDays: 22, authStart: '2026-06-26', authEnd: '2026-07-25', status: 'Active', dailyRate: 850, urContact: 'Linda Vance' },
-  { patientId: 'p2', patientName: 'Samantha Choi', mrn: 'MRN-74563', program: 'Residential', insurance: 'Aetna', authNumber: 'AET-2026-19034', authorizedDays: 14, usedDays: 13, authStart: '2026-07-05', authEnd: '2026-07-19', status: 'Expiring Soon', dailyRate: 920, urContact: 'Linda Vance' },
+  { patientId: 'p2', patientName: 'Samantha Choi', mrn: 'MRN-74563', program: 'Residential', insurance: 'Aetna', authNumber: 'AET-2026-19034', authorizedDays: 14, usedDays: 14, authStart: '2026-07-05', authEnd: '2026-07-22', status: 'Expiring Soon', dailyRate: 920, urContact: 'Linda Vance' },
   { patientId: 'p3', patientName: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', insurance: 'United', authNumber: 'UHC-2026-88201', authorizedDays: 28, usedDays: 28, authStart: '2026-06-20', authEnd: '2026-07-17', status: 'Expired', dailyRate: 780, urContact: 'Linda Vance' },
   { patientId: 'p4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', insurance: 'Humana', authNumber: 'HUM-2026-33012', authorizedDays: 35, usedDays: 35, authStart: '2026-06-13', authEnd: '2026-07-17', status: 'Expired', dailyRate: 810, urContact: 'Linda Vance' },
-  { patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', insurance: 'Maryland Medicaid', authNumber: 'TCR-2026-55810', authorizedDays: 45, usedDays: 42, authStart: '2026-06-06', authEnd: '2026-07-20', status: 'Expiring Soon', dailyRate: 620, urContact: 'Linda Vance' },
+  { patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', insurance: 'Maryland Medicaid', authNumber: 'TCR-2026-55810', authorizedDays: 50, usedDays: 46, authStart: '2026-06-06', authEnd: '2026-07-25', status: 'Expiring Soon', dailyRate: 620, urContact: 'Linda Vance' },
   { patientId: 'p6', patientName: 'Destiny Williams', mrn: 'MRN-55129', program: 'PHP', insurance: 'Cigna', authNumber: 'CGN-2026-77441', authorizedDays: 20, usedDays: 11, authStart: '2026-07-07', authEnd: '2026-07-26', status: 'Active', dailyRate: 480, urContact: 'Linda Vance' },
   { patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', insurance: 'BlueCross', authNumber: 'BCB-2026-50291', authorizedDays: 21, usedDays: 21, authStart: '2026-06-27', authEnd: '2026-07-17', status: 'Expired', dailyRate: 490, urContact: 'Linda Vance' },
   { patientId: 'p8', patientName: 'Linda Farris', mrn: 'MRN-39018', program: 'IOP', insurance: 'Aetna', authNumber: 'Pending Review', authorizedDays: 0, usedDays: 14, authStart: '2026-07-04', authEnd: '—', status: 'Pending', dailyRate: 310, urContact: 'Linda Vance' },
@@ -111,6 +111,9 @@ type TabType = 'Analytics' | 'Authorizations' | 'Claims' | 'Denied & Appeals' | 
 
 export function RevenueCycle({ navigate, readOnly }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('Analytics');
+  const [submitClaimOpen, setSubmitClaimOpen] = useState(false);
+  const [claimSaved, setClaimSaved] = useState<string | null>(null);
+  const saveRevAction = (msg: string) => { setClaimSaved(msg); setTimeout(() => setClaimSaved(null), 2500); };
 
   const totalRevMonth = CLAIMS.filter(c => c.status === 'Paid').reduce((s, c) => s + c.amount, 0);
   const pendingRevenue = CLAIMS.filter(c => c.status !== 'Paid' && c.status !== 'Denied').reduce((s, c) => s + c.amount, 0);
@@ -131,7 +134,7 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
           </h1>
           <p className="text-slate text-sm mt-0.5">Insurance authorizations, claims, AR analytics, and denial management</p>
         </div>
-        <LockedButton locked={readOnly} className="flex items-center gap-2 bg-sunrise-blue text-white px-4 py-2 rounded font-medium shadow-sm hover:bg-sunrise-blue-light transition-colors text-sm">
+        <LockedButton locked={readOnly} onClick={() => setSubmitClaimOpen(true)} className="flex items-center gap-2 bg-sunrise-blue text-white px-4 py-2 rounded font-medium shadow-sm hover:bg-sunrise-blue-light transition-colors text-sm">
           <Plus className="w-4 h-4" /> Submit Claim
         </LockedButton>
       </div>
@@ -363,13 +366,13 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                       </td>
                       <td className="px-4 py-3">
                         {(a.status === 'Expiring Soon' || a.status === 'Expired') && (
-                          <button className="text-xs bg-amber-100 text-amber-700 border border-amber-200 px-2 py-1 rounded font-medium hover:bg-amber-200">Request Extension</button>
+                          <button onClick={() => saveRevAction('Extension request submitted')} className="text-xs bg-amber-100 text-amber-700 border border-amber-200 px-2 py-1 rounded font-medium hover:bg-amber-200">Request Extension</button>
                         )}
                         {a.status === 'Pending' && (
-                          <button className="text-xs bg-blue-100 text-blue-700 border border-blue-200 px-2 py-1 rounded font-medium hover:bg-blue-200">Follow Up</button>
+                          <button onClick={() => saveRevAction('Follow-up logged')} className="text-xs bg-blue-100 text-blue-700 border border-blue-200 px-2 py-1 rounded font-medium hover:bg-blue-200">Follow Up</button>
                         )}
                         {a.status === 'Active' && (
-                          <button className="text-xs text-slate hover:text-navy">View</button>
+                          <button onClick={() => setActiveTab('Concurrent Review')} className="text-xs text-slate hover:text-navy">View</button>
                         )}
                       </td>
                     </tr>
@@ -447,8 +450,8 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
               {[
                 { patientId: 'p3', patient: 'James Thornton', mrn: 'MRN-62841', insurance: 'Aetna Behavioral', level: 'Residential (3.7)', los: 7, authDays: 14, authEnd: '2026-07-26', nextReview: '2026-07-24', status: 'Due in 5 days', asam: { dim1: '3 – Severe', dim2: '3 – Moderate', dim3: '3 – Moderate', dim4: '2 – Low', dim5: '3 – Moderate', dim6: '2 – Low' }, criteria: 'Patient meets medical necessity for continued 3.7 residential LOC. COWS 9 at admission, now 4. MAT initiated (Suboxone 8mg). Continuing medical withdrawal management required due to complex polysubstance history and co-occurring GAD.', reviewer: 'David Odom, LMFT', lastSubmitted: '2026-07-17' },
                 { patientId: 'p1', patient: 'Marcus Webb', mrn: 'MRN-83921', insurance: 'BCBS Commercial', level: 'Residential (3.5)', los: 34, authDays: 30, authEnd: '2026-08-01', nextReview: '2026-07-29', status: 'Due in 10 days', asam: { dim1: '2 – Moderate', dim2: '2 – Low', dim3: '3 – Moderate', dim4: '1 – Minimal', dim5: '3 – Moderate', dim6: '3 – Moderate' }, criteria: 'Day 34. Patient stabilized on medication. High AMA risk remains — verbalized intent to leave 7/18 following family conflict. Treatment plan updated with AMA prevention goals. Continued residential justified by imminent AMA risk and insufficient coping skills for lower LOC.', reviewer: 'Sarah Jenkins, LPC', lastSubmitted: '2026-07-09' },
-                { patientId: 'p5', patient: 'Robert Navarro', mrn: 'MRN-44782', insurance: 'Medicaid MCO', level: 'Residential (3.5)', los: 22, authDays: 21, authEnd: '2026-07-20', nextReview: '2026-07-19', status: 'Due TOMORROW', asam: { dim1: '2 – Low', dim2: '2 – Low', dim3: '3 – Moderate', dim4: '2 – Low', dim5: '3 – Moderate', dim6: '3 – Moderate' }, criteria: 'Court-ordered treatment (pretrial diversion). Legal obligations and incomplete treatment goals require continued residential. CJS involvement increases relapse risk substantially. TP goals at 60% completion.', reviewer: 'Maria Gonzales, LCSW', lastSubmitted: '2026-06-29' },
-                { patientId: 'p8', patient: 'Patricia Nguyen', mrn: 'MRN-55129', insurance: 'Cigna EAP', level: 'Residential (3.7)', los: 12, authDays: 14, authEnd: '2026-07-23', nextReview: '2026-07-21', status: 'Due in 2 days', asam: { dim1: '3 – Severe', dim2: '3 – Moderate', dim3: '3 – Moderate', dim4: '2 – Low', dim5: '3 – Moderate', dim6: '2 – Low' }, criteria: 'Trauma-focused EMDR ongoing — session 3 of 8 completed. Active PTSD symptoms with nightmares and hypervigilance. Residential level necessary to maintain safety and support trauma processing work. Discharge to lower LOC would be premature.', reviewer: 'Sarah Jenkins, LPC', lastSubmitted: '2026-07-09' },
+                { patientId: 'p5', patient: 'Robert Navarro', mrn: 'MRN-44782', insurance: 'Medicaid MCO', level: 'Residential (3.5)', los: 46, authDays: 50, authEnd: '2026-07-25', nextReview: '2026-07-23', status: 'Due in 1 Day', asam: { dim1: '2 – Low', dim2: '2 – Low', dim3: '3 – Moderate', dim4: '2 – Low', dim5: '3 – Moderate', dim6: '3 – Moderate' }, criteria: 'Court-ordered treatment (pretrial diversion). Legal obligations and incomplete treatment goals require continued residential. CJS involvement increases relapse risk substantially. TP goals at 60% completion.', reviewer: 'Maria Gonzales, LCSW', lastSubmitted: '2026-06-29' },
+                { patientId: 'p8', patient: 'Patricia Nguyen', mrn: 'MRN-55129', insurance: 'Cigna EAP', level: 'Residential (3.7)', los: 12, authDays: 14, authEnd: '2026-07-23', nextReview: '2026-07-23', status: 'Due in 1 Day', asam: { dim1: '3 – Severe', dim2: '3 – Moderate', dim3: '3 – Moderate', dim4: '2 – Low', dim5: '3 – Moderate', dim6: '2 – Low' }, criteria: 'Trauma-focused EMDR ongoing — session 3 of 8 completed. Active PTSD symptoms with nightmares and hypervigilance. Residential level necessary to maintain safety and support trauma processing work. Discharge to lower LOC would be premature.', reviewer: 'Sarah Jenkins, LPC', lastSubmitted: '2026-07-09' },
               ].map(r => (
                 <div key={r.patientId} className={`bg-white border rounded-xl p-4 shadow-sm ${r.status.includes('TOMORROW') ? 'border-critical/50' : r.status.includes('Overdue') ? 'border-critical' : 'border-border'}`}>
                   <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -462,8 +465,8 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                       <div className="text-xs text-slate mt-1">{r.insurance} · LOS {r.los}d · Auth ends {r.authEnd} · Reviewer: {r.reviewer}</div>
                     </div>
                     <div className="flex gap-2">
-                      <LockedButton locked={readOnly} className="px-3 py-1.5 bg-sunrise-blue text-white text-xs font-semibold rounded hover:bg-sunrise-blue-light">Submit Review</LockedButton>
-                      <LockedButton locked={readOnly} className="px-3 py-1.5 border border-border text-slate text-xs font-semibold rounded hover:bg-slate-50">Edit Criteria</LockedButton>
+                      <LockedButton locked={readOnly} onClick={() => saveRevAction('Review submitted to payer')} className="px-3 py-1.5 bg-sunrise-blue text-white text-xs font-semibold rounded hover:bg-sunrise-blue-light">Submit Review</LockedButton>
+                      <LockedButton locked={readOnly} onClick={() => saveRevAction('Criteria updated')} className="px-3 py-1.5 border border-border text-slate text-xs font-semibold rounded hover:bg-slate-50">Edit Criteria</LockedButton>
                     </div>
                   </div>
 
@@ -519,9 +522,9 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                   </div>
                 )}
                 <div className="flex gap-2 mt-3">
-                  <LockedButton locked={readOnly} className="px-4 py-2 bg-sunrise-blue text-white text-xs font-semibold rounded hover:bg-sunrise-blue-light">File Appeal</LockedButton>
-                  <LockedButton locked={readOnly} className="px-4 py-2 border border-border text-slate text-xs font-semibold rounded hover:bg-slate-50">Request Peer-to-Peer</LockedButton>
-                  <LockedButton locked={readOnly} className="px-4 py-2 border border-red-200 text-red-600 text-xs font-semibold rounded hover:bg-red-50">Write Off</LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => saveRevAction('Appeal filed with payer')} className="px-4 py-2 bg-sunrise-blue text-white text-xs font-semibold rounded hover:bg-sunrise-blue-light">File Appeal</LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => saveRevAction('Peer-to-peer review requested')} className="px-4 py-2 border border-border text-slate text-xs font-semibold rounded hover:bg-slate-50">Request Peer-to-Peer</LockedButton>
+                  <LockedButton locked={readOnly} onClick={() => saveRevAction('Claim written off')} className="px-4 py-2 border border-red-200 text-red-600 text-xs font-semibold rounded hover:bg-red-50">Write Off</LockedButton>
                 </div>
               </div>
             ))}
@@ -697,6 +700,61 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
           </div>
         )}
       </div>
+
+      {submitClaimOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSubmitClaimOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[520px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Submit Insurance Claim</h2>
+              <button onClick={() => setSubmitClaimOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {MOCK_PATIENTS.map(p => <option key={p.id}>{p.firstName} {p.lastName}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Payer *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Aetna</option><option>BlueCross BlueShield</option><option>Cigna</option><option>United Healthcare</option><option>Medicaid</option><option>Medicare</option><option>Self-Pay</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Service Date(s)</label>
+                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Claim Amount ($)</label>
+                  <input type="number" min={0} step={0.01} className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Level of Care</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Residential (ASAM 3.5)</option><option>PHP (ASAM 2.5)</option><option>IOP (ASAM 2.1)</option><option>OP (ASAM 1)</option><option>Detox (ASAM 3.7)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Authorization #</label>
+                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="AUTH-XXXXXXX" />
+                </div>
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setSubmitClaimOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setSubmitClaimOpen(false); saveRevAction('Claim submitted to payer'); }} className="flex-1 bg-sunrise-blue text-white rounded-xl py-2.5 text-sm font-semibold">Submit Claim</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {claimSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> {claimSaved}
+        </div>
+      )}
     </div>
   );
 }
