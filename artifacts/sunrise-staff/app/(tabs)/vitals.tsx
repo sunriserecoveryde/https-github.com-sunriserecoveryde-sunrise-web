@@ -127,7 +127,7 @@ function ScoreHistoryModal({
       const score = scoreType === 'COWS' ? patient.cows! : patient.ciwa!;
       await postVitalsAlert({
         patientName:   `${patient.firstName} ${patient.lastName}`,
-        patientBed:    patient.bed,
+        patientBed:    patient.bed ?? '',
         scoreType,
         score,
         severity:      getSeverityLabel(score, scoreType === 'CIWA'),
@@ -186,17 +186,17 @@ function ScoreHistoryModal({
               <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>SCORE TREND — TODAY</Text>
               <View style={[styles.trendCard, { backgroundColor: colors.card }]}>
                 {/* Header row */}
-                <View style={[styles.trendRow, { borderBottomColor: colors.border, borderBottomWidth: 1, paddingBottom: 6, marginBottom: 6 }]}>
+                <View style={[styles.modalTrendRow, { borderBottomColor: colors.border, borderBottomWidth: 1, paddingBottom: 6, marginBottom: 6 }]}>
                   <Text style={[styles.trendTime, { color: colors.mutedForeground, fontWeight: '700' }]}>Time</Text>
-                  {hasCows && <Text style={[styles.trendScore, { color: colors.mutedForeground, fontWeight: '700' }]}>COWS</Text>}
-                  {hasCiwa && <Text style={[styles.trendScore, { color: colors.mutedForeground, fontWeight: '700' }]}>CIWA</Text>}
+                  {hasCows && <Text style={[styles.modalTrendScore, { color: colors.mutedForeground, fontWeight: '700' }]}>COWS</Text>}
+                  {hasCiwa && <Text style={[styles.modalTrendScore, { color: colors.mutedForeground, fontWeight: '700' }]}>CIWA</Text>}
                   <Text style={[styles.trendBy, { color: colors.mutedForeground, fontWeight: '700' }]}>By</Text>
                 </View>
                 {history.map((h, i) => {
                   const cowsC = h.cows != null ? getScoreColor(h.cows, 13, colors) : null;
                   const ciwaC = h.ciwa != null ? getScoreColor(h.ciwa, 15, colors) : null;
                   return (
-                    <View key={i} style={[styles.trendRow, i < history.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
+                    <View key={i} style={[styles.modalTrendRow, i < history.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
                       <Text style={[styles.trendTime, { color: colors.navy }]}>{h.time}</Text>
                       {hasCows && (
                         <View style={[styles.scoreBubble, cowsC ? { backgroundColor: cowsC.bg } : { backgroundColor: colors.muted }]}>
@@ -845,9 +845,9 @@ const styles = StyleSheet.create({
   currentScoreValue: { fontSize: 48, fontWeight: '700', fontFamily: 'Inter_700Bold', lineHeight: 56 },
   currentScoreSeverity: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   trendCard: { borderRadius: 10, padding: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' },
-  trendRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 8 },
+  modalTrendRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 8 },
   trendTime: { width: 50, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  trendScore: { flex: 1, textAlign: 'center', fontSize: 13, fontFamily: 'Inter_500Medium' },
+  modalTrendScore: { flex: 1, textAlign: 'center', fontSize: 13, fontFamily: 'Inter_500Medium' },
   trendBy: { flex: 1.5, fontSize: 11, fontFamily: 'Inter_400Regular', textAlign: 'right' },
   scoreBubble: { flex: 1, alignItems: 'center', borderRadius: 6, paddingVertical: 3 },
   scoreBubbleText: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold' },

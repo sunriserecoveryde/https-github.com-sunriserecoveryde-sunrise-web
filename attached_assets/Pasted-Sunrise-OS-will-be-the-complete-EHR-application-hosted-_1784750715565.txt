@@ -1,0 +1,301 @@
+Sunrise OS will be the complete EHR application hosted on Replit.
+
+The public marketing website will be built separately in Webflow.
+
+Architecture:
+
+- Webflow marketing website: https://www.sunriseos.com
+- Sunrise OS application: https://app.sunriseos.com
+- Webflow Log In button should open the Sunrise OS application
+- Do not embed the full EHR inside Webflow using an iframe
+
+Build Sunrise OS as a complete responsive behavioral-health EHR with secure role-based access and an AI-assisted clinical documentation system.
+
+IMPORTANT:
+
+The AI must assist clinicians with documentation, but it must never independently diagnose, finalize, sign, submit, or place a note into the permanent medical record without clinician review and approval.
+
+CREATE THE FOLLOWING APPLICATION MODULES:
+
+1. Secure Login and Authentication
+2. User and Role Management
+3. Client Records
+4. Admissions and Intake
+5. Assessments
+6. Treatment Plans
+7. Individual Progress Notes
+8. Group Notes
+9. Case Management Notes
+10. Nursing Notes
+11. Discharge Summaries
+12. Medication Management
+13. Scheduling
+14. Attendance
+15. Bed and Census Tracking
+16. Authorizations
+17. Billing Workflows
+18. Compliance Tracking
+19. Incident Reporting
+20. Outcomes Measurement
+21. Executive KPI Dashboard
+22. Reports
+23. Audit Logs
+24. Secure Internal Messaging
+25. Document Uploads
+26. Electronic Signatures
+27. AI Clinical Documentation Assistant
+
+AI CLINICAL DOCUMENTATION ASSISTANT
+
+Create an AI documentation assistant that can help authorized clinical users draft notes using structured information entered by the clinician.
+
+The AI assistant must support:
+
+- DAP notes
+- SOAP notes
+- BIRP notes
+- GIRP notes
+- Individual counseling notes
+- Group counseling notes
+- Case management notes
+- Treatment-plan reviews
+- Continued-stay reviews
+- Discharge summaries
+- Risk-assessment summaries
+- ASAM dimension summaries
+- Authorization-support narratives
+
+The clinician should be able to enter:
+
+- Service date
+- Start and end time
+- Location or delivery method
+- Level of care
+- Type of service
+- Participants
+- Presenting issue
+- Interventions used
+- Client response
+- Progress toward goals
+- Barriers
+- Risk factors
+- Protective factors
+- Clinical observations
+- Homework or next steps
+- Follow-up plan
+
+The AI should then create a draft note based only on the information provided.
+
+AI SAFETY RULES
+
+The AI must:
+
+1. Clearly label all generated content as “AI Draft — Clinician Review Required.”
+2. Never automatically sign or finalize a note.
+3. Never invent symptoms, quotes, diagnoses, interventions, attendance, risk factors, medications, or clinical observations.
+4. Never add information that the clinician did not provide.
+5. Identify missing required information instead of guessing.
+6. Flag contradictory information.
+7. Highlight unsupported conclusions.
+8. Require the clinician to review and edit every draft.
+9. Require electronic signature before finalization.
+10. Record who generated, edited, approved, and signed the note.
+11. Preserve the original AI draft and all later revisions in the audit history.
+12. Never allow AI-generated content to overwrite an existing signed note.
+13. Never make treatment decisions independently.
+14. Never replace clinical judgment.
+15. Never produce stigmatizing or judgmental language.
+16. Use person-first, objective, clinically appropriate language.
+17. Avoid copying identical language across multiple client notes.
+18. Warn users when a note appears too similar to another note.
+19. Prevent documentation from being created for a client the user is not authorized to access.
+20. Never send protected health information to an AI service unless the service, contract, configuration, and data-processing arrangement have been approved for PHI.
+
+AI NOTE WORKFLOW
+
+Create this workflow:
+
+1. Clinician opens the correct client record.
+2. Clinician selects the note type.
+3. The system loads the client’s active treatment-plan goals.
+4. Clinician selects the goal or objective addressed.
+5. Clinician enters structured session information.
+6. Clinician clicks “Generate Draft.”
+7. AI creates a draft using only the entered information.
+8. The system highlights missing fields and possible inconsistencies.
+9. Clinician edits the draft.
+10. Clinician confirms the note is accurate.
+11. Clinician signs the note.
+12. The system locks the signed version.
+13. Any later correction must use an amendment process.
+14. The full process must be recorded in the audit log.
+
+GROUP NOTE WORKFLOW
+
+For group documentation:
+
+- Create one master group-session record
+- Record topic, curriculum, interventions, start time, end time, facilitator, and attendance
+- Create a separate individualized note for each participant
+- Require individualized client response, participation, progress, and plan
+- Do not create identical individualized notes
+- Do not assume every participant had the same response
+- Allow the clinician to review and edit each participant’s note separately
+- Require individual approval before signing each client note
+
+TREATMENT-PLAN CONNECTION
+
+Every clinical note should allow the user to connect the service to:
+
+- Active problem
+- Treatment goal
+- Measurable objective
+- Intervention
+- Progress status
+- Continued need for treatment
+
+Progress options should include:
+
+- No progress
+- Minimal progress
+- Moderate progress
+- Significant progress
+- Goal achieved
+- Regression
+- Unable to assess
+
+Require a brief explanation supporting the selected progress status.
+
+CLINICAL LANGUAGE REQUIREMENTS
+
+Use:
+
+- Objective observations
+- Behavioral descriptions
+- Direct client statements only when actually entered
+- Clear interventions
+- Measurable progress
+- Medical-necessity support
+- A clear plan for continued treatment
+
+Avoid:
+
+- Unsupported diagnosis
+- Vague statements
+- Judgmental language
+- Repetitive boilerplate
+- Claims that were not documented
+- Identical notes for different clients
+- Statements written only to justify billing
+
+AI USER INTERFACE
+
+Add an AI assistant panel inside the clinical note screen.
+
+Include buttons for:
+
+- Generate Draft
+- Improve Clarity
+- Make More Objective
+- Connect to Treatment Goal
+- Check Medical Necessity
+- Check for Missing Information
+- Check for Contradictions
+- Check for Duplicate Language
+- Shorten Note
+- Expand Clinical Detail
+- Review Before Signing
+
+The AI panel must show:
+
+- Information used to create the draft
+- Missing information
+- Warnings
+- AI-generated text
+- Clinician edits
+- Final clinician-approved version
+
+Do not allow a one-click “Generate and Sign” feature.
+
+SECURITY REQUIREMENTS
+
+Build:
+
+- Role-based access control
+- Least-privilege permissions
+- Multi-factor authentication capability
+- Secure session management
+- Automatic timeout
+- Encryption in transit
+- Encryption at rest where supported
+- Detailed audit logging
+- Failed-login protection
+- Secure password reset
+- Production secrets stored outside source code
+- Separate development, demonstration, testing, and production environments
+- No real PHI in development or demonstration environments
+- Secure file uploads
+- Restricted document access
+- No sensitive information in browser logs
+- No PHI in general application-error messages
+- No PHI in analytics or marketing tools
+- No indexing of authenticated pages by search engines
+
+AUDIT LOG
+
+Record:
+
+- User
+- Client record accessed
+- Date and time
+- Action performed
+- Note created
+- AI draft generated
+- Data sent to the AI service
+- AI output received
+- Fields edited
+- Original content
+- Updated content
+- Signature
+- Amendment
+- Export
+- Download
+- Print
+- Failed access attempt
+
+Do not record full PHI inside general technical logs when an event reference can be used instead.
+
+WEBFLOW CONNECTION
+
+Add:
+
+- “Back to Sunrise OS Website” link to https://www.sunriseos.com
+- Privacy link
+- Terms link
+- Support link
+- Contact link
+
+Prepare the application to use:
+
+https://app.sunriseos.com
+
+Do not use localhost or temporary Replit preview links in production.
+
+DEVELOPMENT PROCESS
+
+Before modifying the system:
+
+1. Review the existing project.
+2. List the current frontend framework.
+3. List the current backend framework.
+4. List the database and authentication system.
+5. Identify all existing modules.
+6. Identify what is complete, incomplete, or broken.
+7. Create a checkpoint or backup.
+8. Present a phased implementation plan.
+9. Do not rebuild working modules unnecessarily.
+10. Do not make destructive database changes without approval.
+11. Build and test one module at a time.
+12. Provide a plain-language testing checklist after each phase.
+
+Start by creating the architecture assessment and implementation plan. Do not begin destructive changes until the plan is displayed.

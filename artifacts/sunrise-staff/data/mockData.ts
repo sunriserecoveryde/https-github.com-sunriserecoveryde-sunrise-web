@@ -10,7 +10,7 @@ export interface Patient {
   firstName: string;
   lastName: string;
   age: number;
-  gender: 'M' | 'F';
+  gender: 'M' | 'F' | 'NB' | 'Other';
   program: Program;
   primaryDiagnosis: string;
   acuity: Acuity;

@@ -1039,7 +1039,7 @@ export default function PatientDetailScreen() {
 
   const handleBreakdownChipPress = (type: 'incident' | 'med-update') => {
     Haptics.selectionAsync();
-    setNoteTypeFilter(prev => (prev === type ? null : type));
+    setNoteTypeFilter(noteTypeFilter === type ? null : type);
     setTimeout(() => {
       scrollToNotes();
     }, 50);

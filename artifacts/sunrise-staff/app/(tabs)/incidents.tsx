@@ -226,6 +226,7 @@ function NewIncidentModal({ visible, onClose, onSave, reporterName }: {
       description,
       reportedBy: reporterName,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'Open' as IncidentStatus,
     });
     setDescription('');
     setLocation('');
