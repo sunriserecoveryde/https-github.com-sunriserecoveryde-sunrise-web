@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import sunriseLogo from '@assets/0_SunriseOS_Logo_1784397889924.png';
+import sunriseLogo from '@assets/0_SunriseOS_Logo_transparent.png';
 import { Bell, Search, Settings, MessageSquare, ChevronDown, Flag, LogOut, UserCircle } from 'lucide-react';
 import { Screen } from '../../App';
 import { NotificationPanel } from './NotificationPanel';
@@ -88,8 +88,8 @@ export function Topbar({ navigate, currentScreen }: Props) {
       <div className="h-[var(--topbar-height)] bg-navy w-full fixed top-[var(--banner-height)] left-0 z-40 flex items-center justify-between px-4 shadow-md text-white">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
-            <img src={sunriseLogo} alt="Sunrise OS Logo" className="h-8 w-auto object-contain" />
-            <span className="text-xl font-bold tracking-tight">Sunrise OS</span>
+            <img src={sunriseLogo} alt="Sunrise OS Logo" className="h-11 w-auto object-contain" />
+            <span className="text-sm font-semibold tracking-wide text-slate-300">Sunrise OS</span>
           </div>
 
           <div className="hidden md:flex items-center gap-4 ml-8 border-l border-white/10 pl-6">
