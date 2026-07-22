@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadHandoffState, saveJsonToStorage, pruneStaleStorageKeys, makeHandoffNotesKey, makeHandoffShiftKey, makeHandoffDraftNotesKey, makeHandoffCompletedKey, formatDateKey, isPersistSafe, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
+import { loadHandoffState, saveJsonToStorage, pruneStaleStorageKeys, makeHandoffNotesKey, makeHandoffShiftKey, makeHandoffDraftNotesKey, makeHandoffCompletedKey, makeHandoffCompletedDraftKey, formatDateKey, isPersistSafe, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { useNursingNotes, type NoteType } from '@/context/NursingNotesContext';
@@ -279,6 +279,10 @@ export default function HandoffScreen() {
   // here immediately so they survive a force-quit before the load resolves.
   // The .then() callback reads, merges, and clears this key on startup.
   const storageKeyDraftNotes = makeHandoffDraftNotesKey(today);
+  // Crash-safe draft-completed key: undo tapped while isPersistSafe is false
+  // is written here immediately.  The .then() callback reads this key after the
+  // main completed key and applies it (draft wins), then clears the key.
+  const storageKeyCompletedDraft = makeHandoffCompletedDraftKey(today);
 
   // Ref keeps the latest shift key available in write-through callbacks without
   // stale-closure issues (storageKeyShift changes on midnight rollover).
@@ -384,10 +388,11 @@ export default function HandoffScreen() {
     }, 4000);
 
     pruneStaleStorageKeys(AsyncStorage, [
-      { prefix: '@sunrise_handoff_notes_',      currentKey: storageKeyNotes },
-      { prefix: '@sunrise_handoff_shift_',      currentKey: storageKeyShift },
-      { prefix: '@sunrise_handoff_completed_',  currentKey: storageKeyCompleted },
-      { prefix: '@sunrise_handoff_draft_notes_', currentKey: storageKeyDraftNotes },
+      { prefix: '@sunrise_handoff_notes_',             currentKey: storageKeyNotes },
+      { prefix: '@sunrise_handoff_shift_',             currentKey: storageKeyShift },
+      { prefix: '@sunrise_handoff_undo_draft_',         currentKey: storageKeyCompletedDraft },
+      { prefix: '@sunrise_handoff_completed_',         currentKey: storageKeyCompleted },
+      { prefix: '@sunrise_handoff_draft_notes_',       currentKey: storageKeyDraftNotes },
     ]).catch(() => {});
     Promise.all([
       loadHandoffState(
@@ -401,8 +406,8 @@ export default function HandoffScreen() {
       if (!mountedRef.current || settled) return;
       settled = true;
 
-      // Read the crash-safe draft key — contains notes written during the load
-      // window of a previous session that was force-quit before the load resolved.
+      // Read the crash-safe draft-notes key — contains notes written during the
+      // load window of a previous session that was force-quit before the load resolved.
       let draftNotes: Record<string, string> = {};
       try {
         const draftRaw = await AsyncStorage.getItem(storageKeyDraftNotes);
@@ -413,7 +418,24 @@ export default function HandoffScreen() {
         }
       } catch {}
 
-      // Re-check after the async draft read — component may have unmounted.
+      // Read the crash-safe draft-completed key — written by the Undo handler
+      // when isPersistSafe was false (storage still loading at the time of tap).
+      // Draft wins over the main completed key so the undo intent survives a
+      // force-quit that occurs during the storage-load window.
+      let resolvedCompleted = completedRaw === 'true';
+      try {
+        const completedDraftRaw = await AsyncStorage.getItem(storageKeyCompletedDraft);
+        if (completedDraftRaw !== null) {
+          resolvedCompleted = completedDraftRaw === 'true';
+          // Consume: promote draft → main key first, then delete the draft.
+          // Sequenced (await) so that if a force-quit hits between the two ops
+          // the intent is already in the main key and won't be lost.
+          try { await AsyncStorage.setItem(storageKeyCompleted, completedDraftRaw); } catch {}
+          AsyncStorage.removeItem(storageKeyCompletedDraft).catch(() => {});
+        }
+      } catch {}
+
+      // Re-check after the async draft reads — component may have unmounted.
       if (!mountedRef.current) return;
 
       // Merge: crash-safe draft (prior session) wins over storage, same-session
@@ -435,7 +457,7 @@ export default function HandoffScreen() {
 
       setNotes(mergedNotes);
       setShift(resolvedShift);
-      setCompleted(completedRaw === 'true');
+      setCompleted(resolvedCompleted);
       loadedForKeyRef.current = storageKeyNotes;
       setLoaded(true);
     }).catch(() => {
@@ -701,6 +723,14 @@ export default function HandoffScreen() {
                   // in the render/effect gap can't re-show the banner on relaunch (#331).
                   if (isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) {
                     AsyncStorage.setItem(storageKeyCompleted, 'false').catch(() => {});
+                  } else {
+                    // Storage is still loading — the normal write-through is
+                    // blocked by isPersistSafe.  Write the undo intent to the
+                    // crash-safe draft-completed key so it survives a force-quit
+                    // during the load window.  The cold-start .then() callback
+                    // reads this key, applies it (draft wins over main), then
+                    // deletes it (#335).
+                    AsyncStorage.setItem(storageKeyCompletedDraft, 'false').catch(() => {});
                   }
                 }}
               >

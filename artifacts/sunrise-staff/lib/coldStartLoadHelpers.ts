@@ -103,6 +103,30 @@ export function makeHandoffCompletedKey(date: Date): string {
 }
 
 /**
+ * Return the crash-safe draft-completed key for a given date.
+ * e.g. `@sunrise_handoff_undo_draft_2026-07-20`
+ *
+ * Written by the Undo handler when isPersistSafe is false (storage still
+ * loading).  Because isPersistSafe blocks the normal write-through in that
+ * window, without this key a force-quit before the load resolves would leave
+ * 'true' in the main completed key and show a ghost "Handoff Complete" banner
+ * on relaunch.
+ *
+ * The cold-start .then() callback reads this key after the main completed key
+ * and applies it when present (draft wins over main), then deletes the key so
+ * it is consumed exactly once.  Mirrors the makeHandoffDraftNotesKey pattern.
+ *
+ * IMPORTANT: The prefix `@sunrise_handoff_undo_draft_` is deliberately chosen
+ * to NOT start with `@sunrise_handoff_completed_`.  The completed pruning entry
+ * uses that broader prefix, so if this key started with it the current day's
+ * draft would be misidentified as stale and deleted before the cold-start
+ * callback reads it.
+ */
+export function makeHandoffCompletedDraftKey(date: Date): string {
+  return `@sunrise_handoff_undo_draft_${formatDateKey(date)}`;
+}
+
+/**
  * Guard function for persist effects in MARContext.
  *
  * Returns `true` only when both conditions hold:

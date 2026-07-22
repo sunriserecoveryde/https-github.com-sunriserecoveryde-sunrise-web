@@ -23,6 +23,7 @@ import {
   makeHandoffNotesKey,
   makeHandoffShiftKey,
   makeHandoffCompletedKey,
+  makeHandoffCompletedDraftKey,
   loadHandoffState,
   saveJsonToStorage,
   pruneStaleStorageKeys,
@@ -379,5 +380,229 @@ describe('handoff completed flag — not shown before cold-start Promise.all res
     expect(settled).toBe(true);
     expect(loaded).toBe(true);
     expect(completedRaw === 'true').toBe(true);  // banner shown after load settles ✓
+  });
+});
+
+// ─── Tests: crash-safe draft-completed key (Task #335) ───────────────────────
+//
+// The Undo handler writes to storageKeyCompletedDraft when isPersistSafe is
+// false (storage still loading).  The cold-start .then() callback reads this
+// draft key, applies it (draft wins over main), then deletes it so the intent
+// is consumed exactly once.  These tests confirm the full round-trip.
+
+const COMPLETED_DRAFT_KEY = makeHandoffCompletedDraftKey(TODAY);
+
+describe('makeHandoffCompletedDraftKey', () => {
+  it('produces a date-scoped key with the expected prefix', () => {
+    const key = makeHandoffCompletedDraftKey(new Date('2026-07-22T00:00:00.000Z'));
+    expect(key).toBe('@sunrise_handoff_undo_draft_2026-07-22');
+  });
+
+  it('changes with the calendar date, matching the notes/completed key cadence', () => {
+    const day1 = makeHandoffCompletedDraftKey(new Date('2026-07-21T23:59:00.000Z'));
+    const day2 = makeHandoffCompletedDraftKey(new Date('2026-07-22T00:00:00.000Z'));
+    expect(day1).toBe('@sunrise_handoff_undo_draft_2026-07-21');
+    expect(day2).toBe('@sunrise_handoff_undo_draft_2026-07-22');
+    expect(day1).not.toBe(day2);
+  });
+
+  it('does NOT start with the completed prefix — critical non-overlap safety check', () => {
+    // The completed pruning entry uses prefix '@sunrise_handoff_completed_'.
+    // If the draft key started with that prefix, pruneStaleStorageKeys would
+    // treat the current day's draft key as stale and delete it before the
+    // cold-start callback can read it, silently discarding the undo intent.
+    const key = makeHandoffCompletedDraftKey(new Date('2026-07-22T00:00:00.000Z'));
+    expect(key.startsWith('@sunrise_handoff_completed_')).toBe(false);
+  });
+});
+
+describe('crash-safe draft-completed — undo survives force-quit during load window', () => {
+  /**
+   * Simulates the scenario described in Task #335:
+   *   1. Nurse receives handoff — completed=true is in main storage key.
+   *   2. App relaunches; during the storage-load window (isPersistSafe=false)
+   *      the nurse taps Undo.
+   *   3. Because isPersistSafe is false the normal write-through is blocked;
+   *      the handler writes 'false' to the draft-completed key instead.
+   *   4. App is force-quit before the load resolves (drafted 'false' in storage).
+   *   5. App relaunches; cold-start reads main key ('true') then draft key ('false').
+   *      Draft wins → completed=false, banner is hidden.
+   */
+  it("undo intent written to draft key survives force-quit before load resolves", async () => {
+    const storage = makeMemoryStorage({
+      [NOTES_KEY]:     JSON.stringify({ p1: 'Night check done', p2: '' }),
+      [SHIFT_KEY]:     'night',
+      [COMPLETED_KEY]: 'true',   // main key: handoff was marked complete
+    });
+
+    // ── Load window: nurse taps Undo while isPersistSafe is false ─────────
+    // isPersistSafe is false → write to draft key instead of main key.
+    const persistSafe = isPersistSafe(false, null, NOTES_KEY);
+    expect(persistSafe).toBe(false);
+
+    // Mirrors the Undo handler's else-branch:
+    await storage.setItem(COMPLETED_DRAFT_KEY, 'false');
+
+    // Verify: main key still 'true', draft key is 'false'
+    expect(storage.store[COMPLETED_KEY]).toBe('true');
+    expect(storage.store[COMPLETED_DRAFT_KEY]).toBe('false');
+
+    // ── Force-quit: in-memory state is lost. App relaunches. ──────────────
+    // Cold-start: read main completed key + draft completed key sequentially.
+    const [{ notes, shift, loaded }, completedRaw] = await Promise.all([
+      loadHandoffState(storage, { notes: NOTES_KEY, shift: SHIFT_KEY }, DEFAULTS),
+      storage.getItem(COMPLETED_KEY),
+    ]);
+
+    expect(loaded).toBe(true);
+    expect(notes['p1']).toBe('Night check done');
+    expect(shift).toBe('night');
+
+    // Apply draft: if draft key exists, it wins over main.
+    const completedDraftRaw = await storage.getItem(COMPLETED_DRAFT_KEY);
+
+    let resolvedCompleted = completedRaw === 'true';
+    if (completedDraftRaw !== null) {
+      resolvedCompleted = completedDraftRaw === 'true';
+      // Consume draft: write to main and delete draft (mirrors .then() callback).
+      await storage.setItem(COMPLETED_KEY, completedDraftRaw);
+      await storage.multiRemove([COMPLETED_DRAFT_KEY]);
+    }
+
+    // Undo survives: banner should be hidden (false), not show ghost 'true'.
+    expect(resolvedCompleted).toBe(false);
+    expect(storage.store[COMPLETED_KEY]).toBe('false');   // main key updated
+    expect(storage.store[COMPLETED_DRAFT_KEY]).toBeUndefined(); // draft consumed
+  });
+
+  it("no ghost banner: without draft key the main 'true' value is preserved", async () => {
+    const storage = makeMemoryStorage({
+      [NOTES_KEY]:     JSON.stringify({ p1: 'Note' }),
+      [SHIFT_KEY]:     'day',
+      [COMPLETED_KEY]: 'true',
+      // No draft key — nurse never tapped Undo during the load window
+    });
+
+    const [, completedRaw] = await Promise.all([
+      loadHandoffState(storage, { notes: NOTES_KEY, shift: SHIFT_KEY }, DEFAULTS),
+      storage.getItem(COMPLETED_KEY),
+    ]);
+    const completedDraftRaw = await storage.getItem(COMPLETED_DRAFT_KEY);
+
+    let resolvedCompleted = completedRaw === 'true';
+    if (completedDraftRaw !== null) {
+      resolvedCompleted = completedDraftRaw === 'true';
+    }
+
+    // No draft → main value wins → banner still shows correctly
+    expect(resolvedCompleted).toBe(true);
+    expect(completedDraftRaw).toBeNull();
+  });
+
+  it("draft key is consumed exactly once — second relaunch uses the promoted main key", async () => {
+    const storage = makeMemoryStorage({
+      [NOTES_KEY]:     JSON.stringify({ p1: '' }),
+      [SHIFT_KEY]:     'eve',
+      [COMPLETED_KEY]: 'true',
+      [COMPLETED_DRAFT_KEY]: 'false',  // undo written during prior session's load window
+    });
+
+    // ── First relaunch: draft wins and is consumed ─────────────────────────
+    const [, completedRaw] = await Promise.all([
+      loadHandoffState(storage, { notes: NOTES_KEY, shift: SHIFT_KEY }, DEFAULTS),
+      storage.getItem(COMPLETED_KEY),
+    ]);
+    const completedDraftRaw = await storage.getItem(COMPLETED_DRAFT_KEY);
+
+    let resolvedCompleted = completedRaw === 'true';
+    if (completedDraftRaw !== null) {
+      resolvedCompleted = completedDraftRaw === 'true';
+      await storage.setItem(COMPLETED_KEY, completedDraftRaw);
+      await storage.multiRemove([COMPLETED_DRAFT_KEY]);
+    }
+
+    expect(resolvedCompleted).toBe(false);
+    expect(storage.store[COMPLETED_DRAFT_KEY]).toBeUndefined();  // draft cleared ✓
+
+    // ── Second relaunch: no draft key; main key ('false') used directly ────
+    const [, secondCompletedRaw] = await Promise.all([
+      loadHandoffState(storage, { notes: NOTES_KEY, shift: SHIFT_KEY }, DEFAULTS),
+      storage.getItem(COMPLETED_KEY),
+    ]);
+    const secondDraftRaw = await storage.getItem(COMPLETED_DRAFT_KEY);
+
+    let secondResolved = secondCompletedRaw === 'true';
+    if (secondDraftRaw !== null) {
+      secondResolved = secondDraftRaw === 'true';
+    }
+
+    expect(secondDraftRaw).toBeNull();   // draft still absent on second launch ✓
+    expect(secondResolved).toBe(false);  // undo persists correctly ✓
+  });
+});
+
+describe('crash-safe draft-completed — stale key pruning', () => {
+  it('stale draft-completed key from the previous day is pruned on cold-start', async () => {
+    const yesterday     = new Date('2026-07-21T23:59:00.000Z');
+    const staleKey      = makeHandoffCompletedDraftKey(yesterday);
+    const currentKey    = makeHandoffCompletedDraftKey(TODAY);
+
+    const storage = makeMemoryStorage({
+      [staleKey]:  'false',  // stale undo from yesterday
+      [currentKey]: 'false', // today's entry
+    });
+
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_undo_draft_', currentKey },
+    ]);
+
+    expect(storage.store[staleKey]).toBeUndefined();    // yesterday's draft pruned ✓
+    expect(storage.store[currentKey]).toBe('false');    // today's draft survives ✓
+  });
+
+  it('does not prune the current day draft-completed key', async () => {
+    const storage = makeMemoryStorage({ [COMPLETED_DRAFT_KEY]: 'false' });
+
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_undo_draft_', currentKey: COMPLETED_DRAFT_KEY },
+    ]);
+
+    expect(storage.store[COMPLETED_DRAFT_KEY]).toBe('false');  // untouched ✓
+  });
+
+  it('combined production prune entries — current-day draft key is never deleted as stale', async () => {
+    // Regression test for the overlap bug: the completed prefix
+    // '@sunrise_handoff_completed_' is a prefix of the old draft prefix
+    // '@sunrise_handoff_completed_draft_YYYY-MM-DD'.  With the old naming the
+    // pruning call would delete the current day's draft key because it matched
+    // the broader completed entry even though it is the current draft.
+    //
+    // With the new '@sunrise_handoff_undo_draft_' prefix the two prefixes are
+    // disjoint and this bug cannot occur.  This test uses the exact production
+    // prune entries list from handoff.tsx to confirm.
+    const storage = makeMemoryStorage({
+      [NOTES_KEY]:           JSON.stringify({ p1: '' }),
+      [SHIFT_KEY]:           'day',
+      [COMPLETED_KEY]:       'true',
+      [COMPLETED_DRAFT_KEY]: 'false',  // current-day undo written during load window
+    });
+
+    // Exact production entries list (mirrors pruneStaleStorageKeys call in HandoffScreen)
+    const DRAFT_NOTES_KEY = `@sunrise_handoff_draft_notes_${formatDateKey(TODAY)}`;
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_notes_',      currentKey: NOTES_KEY },
+      { prefix: '@sunrise_handoff_shift_',      currentKey: SHIFT_KEY },
+      { prefix: '@sunrise_handoff_undo_draft_', currentKey: COMPLETED_DRAFT_KEY },
+      { prefix: '@sunrise_handoff_completed_',  currentKey: COMPLETED_KEY },
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: DRAFT_NOTES_KEY },
+    ]);
+
+    // Current-day draft key MUST survive — it has not been consumed yet
+    expect(storage.store[COMPLETED_DRAFT_KEY]).toBe('false');
+    // Current-day completed key also survives
+    expect(storage.store[COMPLETED_KEY]).toBe('true');
+    // Current-day notes and shift keys survive
+    expect(storage.store[NOTES_KEY]).toBeDefined();
+    expect(storage.store[SHIFT_KEY]).toBe('day');
   });
 });
