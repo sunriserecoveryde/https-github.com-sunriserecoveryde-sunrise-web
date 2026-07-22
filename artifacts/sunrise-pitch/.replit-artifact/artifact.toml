@@ -1,0 +1,27 @@
+kind = "slides"
+previewPath = "/sunrise-pitch/"
+title = "Sunrise OS Investor Pitch"
+version = "1.0.0"
+id = "artifacts/sunrise-pitch"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/sunrise-pitch/" ]
+localPort = 21062
+
+[services.development]
+run = "pnpm --filter @workspace/sunrise-pitch run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sunrise-pitch", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sunrise-pitch/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21062"
+BASE_PATH = "/sunrise-pitch/"
