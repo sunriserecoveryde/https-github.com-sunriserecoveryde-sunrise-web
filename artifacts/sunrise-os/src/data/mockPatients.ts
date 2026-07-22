@@ -1,6 +1,6 @@
 export type Acuity = 'Critical' | 'High' | 'Moderate' | 'Routine';
 export type Program = 'Residential' | 'PHP' | 'IOP' | 'OP';
-export type FlagType = 'Medical' | 'Behavioral' | 'Legal' | 'Insurance' | 'Success' | 'Psychiatric' | 'AMA' | 'Medication';
+export type FlagType = 'Medical' | 'Behavioral' | 'Legal' | 'Insurance' | 'Success' | 'Psychiatric' | 'AMA' | 'Medication' | 'Risk';
 
 export interface Flag {
   type: FlagType;
@@ -76,7 +76,7 @@ export const DEMO_PATIENTS: Patient[] = [
     recoveryScore: 42, amaRisk: 'High', los: 12,
     admitDate: '2026-07-14', expectedDischarge: '2026-08-13',
     counselor: 'Counselor (anonymized)', physician: 'Physician (anonymized)',
-    flags: [{ type: 'AMA', note: 'Expressed desire to leave during morning group' }, { type: 'Medication', note: 'MAT induction phase' }],
+    flags: [{ type: 'AMA', note: 'Expressed desire to leave during morning group' }, { type: 'Risk', note: 'Overdose history × 2 — Narcan on hand in room' }, { type: 'Medication', note: 'MAT induction phase — dose not yet stabilized' }],
     lastUa: 'Positive (BUP)', mood: 4, craving: 8,
     notes: [
       { id: 'dn1a', date: '2026-07-25 14:30', type: 'Individual', author: 'Counselor (anonymized)', status: 'Signed', format: 'BIRP', content: 'Patient attended 1:1 session. Expressed high cravings and desire to leave AMA. Processed consequences of leaving. Patient agreed to stay for next 24 hours and commit to morning group. Safety plan reviewed and updated.' },

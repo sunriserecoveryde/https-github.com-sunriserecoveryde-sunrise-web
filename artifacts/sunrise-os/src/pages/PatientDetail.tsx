@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { MOCK_PATIENTS } from '../data/mockPatients';
+import { MOCK_PATIENTS, Flag } from '../data/mockPatients';
 import { getPatientMedications } from '../data/mockMedications';
 import { getPatientVitals } from '../data/mockVitals';
 import { getPatientLabs, LAB_PANEL_ORDER } from '../data/mockLabs';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { FlagBadge } from '../components/ui/FlagBadge';
+import { FlagChartAlert } from '../components/ui/FlagChartAlert';
+import { FlagEditorModal } from '../components/ui/FlagEditorModal';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 import { CustomButtons } from '../components/ui/CustomButtons';
 import {
   ArrowLeft, Activity, FileText, Pill, Users, HeartPulse,
   FlaskConical, BookOpen, FolderOpen, CheckCircle2, XCircle,
-  AlertCircle, Clock, Upload, Download, ClipboardList
+  AlertCircle, Clock, Upload, Download, ClipboardList, Plus
 } from 'lucide-react';
 import { Screen } from '../App';
 import { LockedButton } from '../components/common/LockedButton';
@@ -22,6 +24,11 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   const [isComposingNote, setIsComposingNote] = useState(false);
   const [noteFormat, setNoteFormat] = useState('BIRP');
   const [noteContent, setNoteContent] = useState('');
+
+  // ── Flags — local state so edits survive tab-switches within a chart session
+  const [localFlags, setLocalFlags] = useState<Flag[]>(patient.flags);
+  const [showFlagAlert, setShowFlagAlert] = useState(true); // auto-shown on chart open
+  const [showFlagEditor, setShowFlagEditor] = useState(false);
 
   const meds = getPatientMedications(patient.id);
   const vitals = getPatientVitals(patient.id);
@@ -94,6 +101,28 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   };
 
   return (
+    <>
+      {/* Flag pop-up — shown whenever chart opens and patient has flags or any AMA risk */}
+      {showFlagAlert && (
+        <FlagChartAlert
+          patientName={`${patient.firstName} ${patient.lastName}`}
+          flags={localFlags}
+          amaRisk={patient.amaRisk}
+          onClose={() => setShowFlagAlert(false)}
+          onEdit={() => { setShowFlagAlert(false); setShowFlagEditor(true); }}
+        />
+      )}
+
+      {/* Flag editor modal */}
+      {showFlagEditor && (
+        <FlagEditorModal
+          patientName={`${patient.firstName} ${patient.lastName}`}
+          flags={localFlags}
+          onSave={setLocalFlags}
+          onClose={() => setShowFlagEditor(false)}
+        />
+      )}
+
     <div className="flex flex-col h-[calc(100vh-var(--topbar-height)-var(--banner-height)-48px)]">
       {/* Header */}
       <div className="bg-gradient-to-r from-navy to-navy-mid rounded-t-lg p-6 text-white shadow-sm flex-shrink-0">
@@ -121,8 +150,16 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 <span>•</span>
                 <span>Counselor: {patient.counselor.split(',')[0]}</span>
               </div>
-              <div className="flex gap-2 mt-3">
-                {patient.flags.map((f, i) => <FlagBadge key={i} type={f.type} note={f.note} size="md" />)}
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                {localFlags.map((f, i) => (
+                  <FlagBadge key={i} type={f.type} note={f.note} variant="pill" />
+                ))}
+                <button
+                  onClick={() => setShowFlagEditor(true)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-white/60 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-2.5 py-1 transition-colors"
+                >
+                  <Plus className="w-3 h-3" /> Edit Flags
+                </button>
               </div>
             </div>
           </div>
@@ -1047,5 +1084,6 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
 
       </div>
     </div>
+    </>
   );
 }
