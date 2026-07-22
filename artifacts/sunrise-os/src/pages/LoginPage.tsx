@@ -264,11 +264,9 @@ function BrandPanel({ org }: { org: OrgConfig }) {
         aria-hidden
       />
 
-      {/* Logo — 4 × 4 inch (384 × 384 CSS px at 96 dpi)
-          mix-blend-mode on the wrapper so it composites directly against the
-          aside's gradient background (no z-index stacking context in between). */}
+      {/* Logo — 4 × 4 inch (384 × 384 CSS px at 96 dpi), centred */}
       <div
-        className="shrink-0"
+        className="shrink-0 self-center"
         style={{
           width: '384px',
           height: '384px',
@@ -283,22 +281,17 @@ function BrandPanel({ org }: { org: OrgConfig }) {
             width: '100%',
             height: '100%',
             objectFit: 'contain',
-            objectPosition: 'left center',
-            /*
-             * invert(1): white → black, brand hues shift 180°
-             * hue-rotate(180°): shifts hues back — brand colors are restored
-             * The parent div's mix-blend-mode:screen then makes those blacks transparent.
-             */
+            objectPosition: 'center center',
             filter: 'invert(1) hue-rotate(180deg) saturate(1.25) brightness(1.1)',
           }}
         />
       </div>
 
-      {/* Remaining content fills the rest of the panel */}
-      <div className="relative z-10 flex flex-col flex-1 min-h-0">
+      {/* Remaining content fills the rest of the panel, centred */}
+      <div className="relative z-10 flex flex-col flex-1 min-h-0 items-center text-center">
 
         <h1
-          className="font-bold leading-tight mb-8"
+          className="font-bold leading-tight mb-8 w-full"
           style={{
             color: '#F8FAFC',
             fontSize: 'clamp(24px, 2.2vw, 36px)',
@@ -310,15 +303,15 @@ function BrandPanel({ org }: { org: OrgConfig }) {
         </h1>
 
         {/* Benefits */}
-        <ul className="space-y-5" role="list" aria-label="Platform benefits">
+        <ul className="space-y-5 w-full" role="list" aria-label="Platform benefits">
           {org.benefits.map((b, i) => (
             <li
               key={i}
-              className="flex items-start gap-3"
+              className="flex items-center justify-center gap-3"
               style={{ color: '#B8C4D0' }}
             >
               <div
-                className="mt-0.5 p-1.5 rounded-lg shrink-0"
+                className="p-1.5 rounded-lg shrink-0"
                 style={{ background: 'rgba(242,140,40,0.14)', color: '#F28C28' }}
               >
                 {b.icon}
@@ -329,10 +322,10 @@ function BrandPanel({ org }: { org: OrgConfig }) {
         </ul>
 
         {/* Push tagline to bottom */}
-        <div className="mt-auto pt-6">
+        <div className="mt-auto pt-6 w-full">
           <div
             className="h-px mb-6"
-            style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.12), transparent)' }}
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)' }}
             aria-hidden
           />
           <p
