@@ -18,6 +18,7 @@ import { useRehydratedValue } from '@/hooks/useRehydratedValue';
 import { useWithdrawalFilters } from '@/context/WithdrawalFiltersContext';
 import { usePatients } from '@/context/PatientContext';
 import { VITALS, Patient, VitalEntry, acuityColor } from '@/data/mockData';
+import { postVitalsAlert } from '@/lib/api';
 
 // ── Filter chip options — single source of truth for both the real chip bar
 //    and the shimmer skeleton. Widths are derived here so the skeleton always
@@ -101,11 +102,45 @@ function ScoreHistoryModal({
   onClose: () => void;
   colors: ReturnType<typeof useColors>;
 }) {
+  const [alertSent, setAlertSent] = useState(false);
+  const [alertSending, setAlertSending] = useState(false);
+
+  useEffect(() => { if (!visible) setAlertSent(false); }, [visible]);
+
   if (!patient) return null;
   const history = WITHDRAWAL_HISTORY[patient.id] ?? [];
   const vitals = VITALS[patient.id] ?? [];
   const hasCows = history.some(h => h.cows != null);
   const hasCiwa = history.some(h => h.ciwa != null);
+
+  const isCritical =
+    (patient.cows != null && patient.cows >= 13) ||
+    (patient.ciwa != null && patient.ciwa >= 15);
+
+  const handleNotify = async () => {
+    if (alertSent || alertSending) return;
+    setAlertSending(true);
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      const scoreType: 'COWS' | 'CIWA' =
+        patient.cows != null && patient.cows >= 13 ? 'COWS' : 'CIWA';
+      const score = scoreType === 'COWS' ? patient.cows! : patient.ciwa!;
+      await postVitalsAlert({
+        patientName:   `${patient.firstName} ${patient.lastName}`,
+        patientBed:    patient.bed,
+        scoreType,
+        score,
+        severity:      getSeverityLabel(score, scoreType === 'CIWA'),
+        nurseInitials: 'J. Torres, RN',
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setAlertSent(true);
+    } catch {
+      /* network error — silently ignore for demo */ 
+    } finally {
+      setAlertSending(false);
+    }
+  };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -216,6 +251,45 @@ function ScoreHistoryModal({
               <View style={[styles.noteCard, { backgroundColor: colors.navyMid }]}>
                 <Text style={[styles.noteText, { color: '#fff' }]}>{patient.handoffNote}</Text>
               </View>
+            </View>
+          )}
+
+          {/* Notify Clinical Team — shown for critical scores only */}
+          {isCritical && (
+            <View style={styles.section}>
+              <Pressable
+                onPress={handleNotify}
+                disabled={alertSent || alertSending}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  paddingVertical: 14,
+                  paddingHorizontal: 20,
+                  borderRadius: 12,
+                  backgroundColor: alertSent ? '#16A34A' : '#DC2626',
+                  opacity: alertSending ? 0.7 : 1,
+                }}
+              >
+                <Ionicons
+                  name={alertSent ? 'checkmark-circle' : 'warning'}
+                  size={18}
+                  color="#fff"
+                />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
+                  {alertSent
+                    ? 'Alert sent to clinical dashboard'
+                    : alertSending
+                    ? 'Sending…'
+                    : 'Notify Clinical Team'}
+                </Text>
+              </Pressable>
+              {alertSent && (
+                <Text style={{ color: colors.mutedForeground, fontSize: 12, textAlign: 'center', marginTop: 6 }}>
+                  Visible on the web dashboard for 10 minutes
+                </Text>
+              )}
             </View>
           )}
         </ScrollView>

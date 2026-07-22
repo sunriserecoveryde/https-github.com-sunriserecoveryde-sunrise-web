@@ -53,9 +53,40 @@ const REVENUE_TREND = [
   { month: 'Jul', collected: 310, billed: 380 },
 ];
 
+// ─── Live vitals alert type (mirrors api-server VitalsAlert) ─────────────────
+interface LiveAlert {
+  id: string;
+  patientName: string;
+  patientBed: string;
+  scoreType: string;
+  score: number;
+  severity: string;
+  nurseInitials: string;
+  timestamp: string;
+}
+
 export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => void }) {
   const { role, canAccessScreen } = useRole();
   const highRiskPatients = MOCK_PATIENTS.filter(p => p.amaRisk === 'High').slice(0, 8);
+
+  // ── Live nurse alerts — polled from the API server every 5 s ───────────────
+  const [liveAlerts, setLiveAlerts] = React.useState<LiveAlert[]>([]);
+  const [dismissedIds, setDismissedIds] = React.useState<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch('/api/alerts/vitals');
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        setLiveAlerts(data.alerts ?? []);
+      } catch { /* server not ready or offline — silent */ }
+    };
+    poll();
+    const timer = setInterval(poll, 5000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
 
   // Determine dashboard view — mutually exclusive, priority order
   type DashView = 'clinical' | 'bht' | 'financial' | 'operations' | 'bizdev' | 'hr' | 'aftercare' | 'admin';
@@ -100,7 +131,36 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
       {/* ── CLINICAL VIEW ──────────────────────────────────────────────────── */}
       {isClinical && !isBHT && (
         <>
-          {/* Alerts */}
+          {/* Live nurse alerts from mobile — shown when present */}
+          {liveAlerts.filter(a => !dismissedIds.has(a.id)).length > 0 && (
+            <div className="space-y-1.5">
+              {liveAlerts.filter(a => !dismissedIds.has(a.id)).map(alert => (
+                <div
+                  key={alert.id}
+                  className="bg-red-50 border border-red-400 px-4 py-3 rounded-lg flex items-center gap-3 shadow-sm"
+                >
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold shrink-0">!</span>
+                  <span className="text-sm font-medium text-red-900 flex-1">
+                    <strong>LIVE · Nurse Alert:</strong>{' '}
+                    {alert.patientName} (Bed {alert.patientBed}) —{' '}
+                    {alert.scoreType} {alert.score} · <em>{alert.severity}</em> · logged by {alert.nurseInitials}
+                  </span>
+                  <span className="text-xs text-red-400 shrink-0 mr-2">
+                    {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <button
+                    onClick={() => setDismissedIds(prev => new Set([...prev, alert.id]))}
+                    className="text-red-400 hover:text-red-600 shrink-0"
+                    aria-label="Dismiss alert"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Static alerts */}
           <div className="space-y-2">
             <div className="bg-high-bg border border-high/20 px-4 py-3 rounded-lg flex items-center gap-3 shadow-sm">
               <AlertTriangle className="w-5 h-5 text-high" />

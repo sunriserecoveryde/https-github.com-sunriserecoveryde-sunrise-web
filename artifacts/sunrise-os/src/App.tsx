@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { Topbar } from './components/layout/Topbar';
 import { DemoBanner } from './components/layout/DemoBanner';
@@ -142,6 +142,26 @@ function AppInner() {
   const [lastDemoPatientId, setLastDemoPatientId] = useState<string | null>(null);
   const { getPermissionForScreen } = useRole();
 
+  // ── Browser Back / Forward support ──────────────────────────────────────────
+  useEffect(() => {
+    // Stamp the initial entry so the first Back press has a state to pop to.
+    window.history.replaceState({ screen: 'Dashboard', patientId: null }, '', '#Dashboard');
+
+    const handlePop = (e: PopStateEvent) => {
+      const s = e.state as { screen: Screen; patientId: string | null } | null;
+      const target: Screen = s?.screen ?? 'Dashboard';
+      if (s?.patientId) {
+        setSelectedPatientId(s.patientId);
+        if (target === 'DemoPatientDetail') setLastDemoPatientId(s.patientId);
+      }
+      setActiveScreen(target);
+      window.scrollTo(0, 0);
+    };
+
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const navigateTo = (screen: Screen, patientId?: string) => {
     if (patientId) {
       setSelectedPatientId(patientId);
@@ -151,6 +171,8 @@ function AppInner() {
     }
     setActiveScreen(screen);
     window.scrollTo(0, 0);
+    // Push a new history entry so the browser Back button returns here.
+    window.history.pushState({ screen, patientId: patientId ?? null }, '', `#${screen}`);
   };
 
   /** Wrap page content with access gate */

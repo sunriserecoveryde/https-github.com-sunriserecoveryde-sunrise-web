@@ -29,6 +29,15 @@ export interface CensusResponse {
   };
 }
 
+export interface VitalsAlertPayload {
+  patientName: string;
+  patientBed: string;
+  scoreType: 'COWS' | 'CIWA';
+  score: number;
+  severity: string;
+  nurseInitials: string;
+}
+
 // ─── Fetch census ─────────────────────────────────────────────────────────────
 
 export async function fetchCensus(): Promise<CensusResponse> {
@@ -37,4 +46,19 @@ export async function fetchCensus(): Promise<CensusResponse> {
     throw new Error(`Census fetch failed: ${res.status}`);
   }
   return res.json() as Promise<CensusResponse>;
+}
+
+// ─── Post vitals alert ────────────────────────────────────────────────────────
+// Called by mobile nurses when they tap "Notify Clinical Team" on a patient
+// with a critical withdrawal score. The web dashboard polls for these alerts.
+
+export async function postVitalsAlert(payload: VitalsAlertPayload): Promise<void> {
+  const res = await fetch(`${getApiBase()}/alerts/vitals`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new Error(`Alert post failed: ${res.status}`);
+  }
 }
