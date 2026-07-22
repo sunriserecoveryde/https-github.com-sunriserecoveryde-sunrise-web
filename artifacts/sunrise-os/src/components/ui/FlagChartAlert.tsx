@@ -59,7 +59,10 @@ export function FlagChartAlert({ patientName, flags, amaRisk, onClose, onEdit }:
                 <div>
                   <div className={`text-xs font-bold uppercase tracking-wide ${cfg.textColor}`}>{cfg.label}</div>
                   {flag.note
-                    ? <div className="text-xs text-slate-700 mt-0.5">{flag.note}</div>
+                    ? <div
+                        className="text-xs text-slate-700 mt-0.5 rich-note"
+                        dangerouslySetInnerHTML={{ __html: flag.note }}
+                      />
                     : <div className="text-xs text-slate-400 mt-0.5 italic">No note added</div>}
                 </div>
               </div>

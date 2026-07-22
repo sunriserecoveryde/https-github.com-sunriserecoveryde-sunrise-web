@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Flag, FlagType } from '../../data/mockPatients';
 import { FLAG_CONFIG } from './FlagBadge';
+import { RichTextEditor } from './RichTextEditor';
 import { X, Flag as FlagIcon } from 'lucide-react';
 
 // Ordered for display — risks first, success last
@@ -97,17 +98,13 @@ export function FlagEditorModal({ patientName, flags, onSave, onClose }: Props) 
                   </div>
                 </button>
 
-                {/* Note text area — visible only when flag is active */}
+                {/* Rich-text note editor — visible only when flag is active */}
                 {active && (
                   <div className="px-4 pb-3">
-                    <textarea
+                    <RichTextEditor
                       value={getNote(type)}
-                      onChange={e => setNote(type, e.target.value)}
+                      onChange={html => setNote(type, html)}
                       placeholder="Add a clinical note for this flag (optional)…"
-                      rows={2}
-                      className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none
-                                 focus:outline-none focus:ring-2 focus:ring-navy/25 focus:border-navy/40
-                                 text-navy placeholder:text-slate-400 bg-white"
                     />
                   </div>
                 )}
