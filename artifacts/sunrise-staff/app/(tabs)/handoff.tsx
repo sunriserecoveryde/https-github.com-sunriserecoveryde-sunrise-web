@@ -289,6 +289,13 @@ export default function HandoffScreen() {
   const storageKeyShiftRef = useRef(storageKeyShift);
   useEffect(() => { storageKeyShiftRef.current = storageKeyShift; }, [storageKeyShift]);
 
+  // Track the previous day's notes and draft-notes keys so the load effect can
+  // flush any in-flight pending buffer to the correct (old) storage bucket when
+  // the day rolls over.  Initialised to the current keys so the on-mount run of
+  // the effect (which always has an empty pendingNotesRef) is a no-op.
+  const prevStorageKeyNotesRef      = useRef(storageKeyNotes);
+  const prevStorageKeyDraftNotesRef = useRef(storageKeyDraftNotes);
+
   // Tracks which notes key the current in-memory state was loaded from.
   // Used by persist effects via isPersistSafe() to prevent writing yesterday's
   // data into today's bucket during the rollover transition window (mirrors the
@@ -355,7 +362,49 @@ export default function HandoffScreen() {
     // Reset the guard so persist effects cannot fire with yesterday's state
     // while the fresh load for the new key is in flight.
     setLoaded(false);
+
+    // ── Midnight-rollover flush ──────────────────────────────────────────────
+    // If the nurse was actively typing in the final seconds before midnight,
+    // those edits are in pendingNotesRef and are about to be cleared.  Before
+    // discarding the buffer, flush it to the OLD day's storage so the text is
+    // not silently lost.
+    //
+    // Two paths mirror the write-handler logic (lines 805–819):
+    //
+    //   • isPersistSafe was true (old day's load had resolved): write the full
+    //     merged snapshot directly to the old notes key.  notesRef.current
+    //     already holds all patient notes for the old day; the pending delta is
+    //     layered on top so no untouched patient is overwritten.
+    //
+    //   • isPersistSafe was false (old day's load was still in-flight): write
+    //     the touched-only payload to the old draft-notes key.  The draft key
+    //     is the same crash-safe path the write handler uses during the load
+    //     window, so when the old Promise.all eventually resolves it will merge
+    //     the draft into savedNotes — preserving the note in storage.
+    //
+    // On the initial mount run pendingNotesRef is always empty, so the guard
+    // below is a no-op.  The prevStorage*Refs are initialised to the current
+    // (first-day) keys, so they always point to the correct old-day bucket.
+    const flushPending = pendingNotesRef.current;
+    if (Object.keys(flushPending).length > 0) {
+      const oldNotesKey = prevStorageKeyNotesRef.current;
+      const oldDraftKey = prevStorageKeyDraftNotesRef.current;
+      if (isPersistSafe(loaded, loadedForKeyRef.current, oldNotesKey)) {
+        // Old day's load had resolved: merge pending delta into the full snapshot.
+        saveJsonToStorage(AsyncStorage, oldNotesKey, { ...notesRef.current, ...flushPending });
+      } else {
+        // Old day's load was still in-flight: write touched-only payload to the
+        // crash-safe draft key so the old Promise.all .then() can merge it.
+        saveJsonToStorage(AsyncStorage, oldDraftKey, flushPending);
+      }
+    }
+
     loadedForKeyRef.current = null;
+
+    // Advance prev-key refs so the next midnight rollover targets the correct
+    // old-day bucket (must happen AFTER the flush above reads them).
+    prevStorageKeyNotesRef.current      = storageKeyNotes;
+    prevStorageKeyDraftNotesRef.current = storageKeyDraftNotes;
 
     // Clear any pending buffers accumulated during the old day's load window.
     // Without this reset, a shift tap or note edit buffered during yesterday's

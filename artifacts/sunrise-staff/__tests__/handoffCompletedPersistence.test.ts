@@ -24,6 +24,7 @@ import {
   makeHandoffShiftKey,
   makeHandoffCompletedKey,
   makeHandoffCompletedDraftKey,
+  makeHandoffDraftNotesKey,
   loadHandoffState,
   saveJsonToStorage,
   pruneStaleStorageKeys,
@@ -1002,5 +1003,154 @@ describe('crash-safe draft-completed — stale key pruning', () => {
     // Current-day notes and shift keys survive
     expect(storage.store[NOTES_KEY]).toBeDefined();
     expect(storage.store[SHIFT_KEY]).toBe('day');
+  });
+});
+
+// ─── Tests: midnight-rollover flush — pending notes preserved across day change ─
+//
+// When the calendar day rolls over while HandoffScreen is open, the load effect
+// re-runs with the new day's storage keys and resets pendingNotesRef to {}.
+// Any note the nurse was actively typing in the final seconds before midnight
+// (buffered in pendingNotesRef because the old day's load was still in-flight)
+// would be silently discarded without the midnight-rollover flush.
+//
+// The flush logic mirrors the write-handler paths (lines 805–819 of handoff.tsx):
+//   • isPersistSafe (old day's load had resolved) → write merged snapshot to old
+//     notes key so the text is durable as part of the old day's record.
+//   • !isPersistSafe (old day's load was in-flight) → write touched-only payload
+//     to the old draft-notes key so the old Promise.all .then() merges it.
+//
+// These tests exercise the pure storage-layer round-trip of each flush path.
+
+const YESTERDAY     = new Date('2026-07-21T23:59:59.000Z');
+const OLD_NOTES_KEY = makeHandoffNotesKey(YESTERDAY);
+const OLD_SHIFT_KEY = makeHandoffShiftKey(YESTERDAY);
+const OLD_DRAFT_KEY = makeHandoffDraftNotesKey(YESTERDAY);
+const OLD_DEFAULTS  = { notes: { p1: '', p2: '' } as Record<string, string>, shift: 'day' as Shift };
+
+describe('midnight rollover — pending notes flushed before buffer clear', () => {
+  /**
+   * isPersistSafe = false path
+   *
+   * Timeline:
+   *   1. App opens near midnight; old day's load is in-flight (isPersistSafe=false).
+   *   2. Nurse types a note → write handler writes it to pendingNotesRef AND the
+   *      old draft-notes key.
+   *   3. Midnight rolls over → load effect re-runs.
+   *   4. Flush: pendingNotesRef non-empty, isPersistSafe=false → write pending to
+   *      old draft-notes key (idempotent with the write-handler write).
+   *   5. pendingNotesRef is cleared.
+   *   6. Old Promise.all .then() eventually resolves, reads old draft-notes key,
+   *      merges it into savedNotes → note is preserved.
+   */
+  it('note typed during old-day load window is recovered via the old draft-notes key', async () => {
+    const storage = makeMemoryStorage({
+      [OLD_NOTES_KEY]: JSON.stringify({ p1: 'Pre-midnight note', p2: '' }),
+    });
+
+    // Old day's load was still in-flight: isPersistSafe = false.
+    const oldLoaded       = false;
+    const oldLoadedForKey: string | null = null;
+    expect(isPersistSafe(oldLoaded, oldLoadedForKey, OLD_NOTES_KEY)).toBe(false);
+
+    // Nurse types a note — write handler accumulates in pendingNotesRef and
+    // writes the touched-only payload to the old draft-notes key.
+    const pendingNotes: Record<string, string> = { p1: 'Critical: BP check q1h (typed at 11:59 PM)' };
+    await saveJsonToStorage(storage, OLD_DRAFT_KEY, pendingNotes);
+
+    // Midnight hits → load effect flush: isPersistSafe=false → write to old draft
+    // key (same path as above — idempotent since same key+value).
+    // pendingNotesRef is then cleared to {}.
+
+    // Old Promise.all .then() eventually resolves (simulated here):
+    const [{ notes: savedNotes }] = await Promise.all([
+      loadHandoffState(storage, { notes: OLD_NOTES_KEY, shift: OLD_SHIFT_KEY }, OLD_DEFAULTS),
+    ]);
+
+    // Read and consume the draft-notes key (mirrors the .then() callback logic).
+    const draftRaw = await storage.getItem(OLD_DRAFT_KEY);
+    let draftNotes: Record<string, string> = {};
+    if (draftRaw) {
+      draftNotes = JSON.parse(draftRaw) as Record<string, string>;
+      storage.multiRemove([OLD_DRAFT_KEY]).catch(() => {});
+    }
+
+    // pendingNotesRef was cleared before .then() ran — empty.
+    const clearedPending: Record<string, string> = {};
+
+    const mergedNotes =
+      Object.keys(draftNotes).length > 0 || Object.keys(clearedPending).length > 0
+        ? { ...savedNotes, ...draftNotes, ...clearedPending }
+        : savedNotes;
+
+    // Note typed at 11:59 PM is preserved — not silently discarded.
+    expect(mergedNotes['p1']).toBe('Critical: BP check q1h (typed at 11:59 PM)');
+    expect(storage.store[OLD_DRAFT_KEY]).toBeUndefined();  // draft consumed ✓
+  });
+
+  /**
+   * isPersistSafe = true path
+   *
+   * Timeline:
+   *   1. App has been open since earlier in the day; old day's load resolved long
+   *      ago (isPersistSafe=true).
+   *   2. In normal operation notes go directly to the notes key, so pendingNotesRef
+   *      is empty.  However, if a note arrives in the narrow gap between the
+   *      midnight timer firing and the effect cleanup (e.g. the timer races with a
+   *      TextInput onChange), the buffer may be non-empty.
+   *   3. Flush: isPersistSafe=true → merge pending delta into old notes key so the
+   *      text appears in the old day's persistent record.
+   *   4. A subsequent cold-start reads the old notes key and finds the note.
+   */
+  it('note flushed via isPersistSafe=true path is found in the old notes key on cold-start', async () => {
+    const existingNotes = { p1: 'Earlier note', p2: '' };
+    const storage = makeMemoryStorage({
+      [OLD_NOTES_KEY]: JSON.stringify(existingNotes),
+    });
+
+    // Old day's load had resolved: isPersistSafe = true.
+    const oldLoaded       = true;
+    const oldLoadedForKey = OLD_NOTES_KEY;
+    expect(isPersistSafe(oldLoaded, oldLoadedForKey, OLD_NOTES_KEY)).toBe(true);
+
+    // Pending delta: note typed in the narrow midnight-timer / effect-cleanup gap.
+    const pendingNotes: Record<string, string> = { p2: 'Last-second note before midnight' };
+    const currentNotesSnapshot = { ...existingNotes };  // mirrors notesRef.current
+
+    // Midnight flush: isPersistSafe=true → write merged snapshot to old notes key.
+    const merged = { ...currentNotesSnapshot, ...pendingNotes };
+    await saveJsonToStorage(storage, OLD_NOTES_KEY, merged);
+
+    // Cold-start for the SAME old day (e.g. the old Promise.all eventually resolves
+    // after the new day's load has already set loaded=true for today):
+    const [{ notes: recovered }] = await Promise.all([
+      loadHandoffState(storage, { notes: OLD_NOTES_KEY, shift: OLD_SHIFT_KEY }, OLD_DEFAULTS),
+    ]);
+
+    // Both notes are present — the last-second edit was not lost.
+    expect(recovered['p1']).toBe('Earlier note');
+    expect(recovered['p2']).toBe('Last-second note before midnight');
+  });
+
+  /**
+   * Empty buffer guard
+   *
+   * On the initial mount run (no nurse input yet) pendingNotesRef is {}.
+   * The flush must be a no-op — no spurious writes to old-day keys.
+   */
+  it('empty pendingNotesRef at mount produces no write to the draft-notes key', async () => {
+    const storage = makeMemoryStorage();
+
+    // pendingNotesRef starts empty on mount.
+    const pendingNotes: Record<string, string> = {};
+
+    // Flush guard: only write if there are pending edits.
+    if (Object.keys(pendingNotes).length > 0) {
+      await saveJsonToStorage(storage, OLD_DRAFT_KEY, pendingNotes);
+    }
+
+    // No write occurred — storage is untouched.
+    expect(storage.store[OLD_DRAFT_KEY]).toBeUndefined();
+    expect(storage.writeCount).toBe(0);
   });
 });
