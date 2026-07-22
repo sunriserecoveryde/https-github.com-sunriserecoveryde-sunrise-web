@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadHandoffState, saveJsonToStorage, pruneStaleStorageKeys, makeHandoffNotesKey, makeHandoffShiftKey, formatDateKey, isPersistSafe, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
+import { loadHandoffState, saveJsonToStorage, pruneStaleStorageKeys, makeHandoffNotesKey, makeHandoffShiftKey, makeHandoffDraftNotesKey, formatDateKey, isPersistSafe, type Shift as ShiftType } from '@/lib/coldStartLoadHelpers';
 import { useColors } from '@/hooks/useColors';
 import { useRole } from '@/context/RoleContext';
 import { useNursingNotes, type NoteType } from '@/context/NursingNotesContext';
@@ -272,9 +272,13 @@ export default function HandoffScreen() {
   // Storage keys are derived from `today` so they update automatically after
   // midnight without requiring an app restart.  The load effect depends on both
   // keys, so it re-runs whenever the day rolls over.
-  const storageKeyNotes     = makeHandoffNotesKey(today);
-  const storageKeyShift     = makeHandoffShiftKey(today);
-  const storageKeyCompleted = `@sunrise_handoff_completed_${formatDateKey(today)}`;
+  const storageKeyNotes      = makeHandoffNotesKey(today);
+  const storageKeyShift      = makeHandoffShiftKey(today);
+  const storageKeyCompleted  = `@sunrise_handoff_completed_${formatDateKey(today)}`;
+  // Crash-safe draft key: notes typed while isPersistSafe is false are written
+  // here immediately so they survive a force-quit before the load resolves.
+  // The .then() callback reads, merges, and clears this key on startup.
+  const storageKeyDraftNotes = makeHandoffDraftNotesKey(today);
 
   // Ref keeps the latest shift key available in write-through callbacks without
   // stale-closure issues (storageKeyShift changes on midnight rollover).
@@ -360,10 +364,17 @@ export default function HandoffScreen() {
     // screen with the static default notes and 'day' shift.  loadedForKeyRef is
     // intentionally left null so the persist-write effects stay blocked — the
     // timed-out defaults should never be written back to storage.
+    // Any note typed during the hang window is merged so the nurse's text is
+    // preserved even if storage never resolved.
     const timeoutId = setTimeout(() => {
       if (!mountedRef.current || settled) return;
       settled = true;
-      setNotes(defaultNotes);
+      const pending = pendingNotesRef.current;
+      pendingNotesRef.current = {};
+      const mergedNotes = Object.keys(pending).length > 0
+        ? { ...defaultNotes, ...pending }
+        : defaultNotes;
+      setNotes(mergedNotes);
       setShift('day');
       setCompleted(false);
       // loadedForKeyRef.current stays null — persist effects remain blocked.
@@ -371,9 +382,10 @@ export default function HandoffScreen() {
     }, 4000);
 
     pruneStaleStorageKeys(AsyncStorage, [
-      { prefix: '@sunrise_handoff_notes_',     currentKey: storageKeyNotes },
-      { prefix: '@sunrise_handoff_shift_',     currentKey: storageKeyShift },
-      { prefix: '@sunrise_handoff_completed_', currentKey: storageKeyCompleted },
+      { prefix: '@sunrise_handoff_notes_',      currentKey: storageKeyNotes },
+      { prefix: '@sunrise_handoff_shift_',      currentKey: storageKeyShift },
+      { prefix: '@sunrise_handoff_completed_',  currentKey: storageKeyCompleted },
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: storageKeyDraftNotes },
     ]).catch(() => {});
     Promise.all([
       loadHandoffState(
@@ -382,11 +394,38 @@ export default function HandoffScreen() {
         { notes: defaultNotes, shift: 'day' },
       ),
       AsyncStorage.getItem(storageKeyCompleted),
-    ]).then(([{ notes: savedNotes, shift: savedShift }, completedRaw]) => {
+    ]).then(async ([{ notes: savedNotes, shift: savedShift }, completedRaw]) => {
       clearTimeout(timeoutId);
       if (!mountedRef.current || settled) return;
       settled = true;
-      setNotes(savedNotes);
+
+      // Read the crash-safe draft key — contains notes written during the load
+      // window of a previous session that was force-quit before the load resolved.
+      let draftNotes: Record<string, string> = {};
+      try {
+        const draftRaw = await AsyncStorage.getItem(storageKeyDraftNotes);
+        if (draftRaw) {
+          draftNotes = JSON.parse(draftRaw) as Record<string, string>;
+          // Clear the draft key now that it has been consumed.
+          AsyncStorage.removeItem(storageKeyDraftNotes).catch(() => {});
+        }
+      } catch {}
+
+      // Re-check after the async draft read — component may have unmounted.
+      if (!mountedRef.current) return;
+
+      // Merge: crash-safe draft (prior session) wins over storage, same-session
+      // pending (pendingNotesRef) wins over the draft (most recently typed).
+      const pending = pendingNotesRef.current;
+      pendingNotesRef.current = {};
+      const hasDraft   = Object.keys(draftNotes).length > 0;
+      const hasPending = Object.keys(pending).length > 0;
+      const mergedNotes =
+        hasDraft || hasPending
+          ? { ...savedNotes, ...draftNotes, ...pending }
+          : savedNotes;
+
+      setNotes(mergedNotes);
       setShift(savedShift);
       setCompleted(completedRaw === 'true');
       loadedForKeyRef.current = storageKeyNotes;
@@ -408,6 +447,13 @@ export default function HandoffScreen() {
   // handler can compute the next value without a stale closure (Task #311).
   const notesRef = useRef(notes);
   useEffect(() => { notesRef.current = notes; }, [notes]);
+
+  // Pending-notes buffer: collects edits typed while `loaded === false` (i.e.
+  // during the startup load window).  When the AsyncStorage read resolves, these
+  // pending edits are merged on top of the freshly-loaded notes so a force-quit
+  // during the load window cannot silently discard a nurse's in-progress text.
+  // The ref is cleared immediately after each merge to avoid stale accumulation.
+  const pendingNotesRef = useRef<Record<string, string>>({});
 
   // Persist notes when they change (after initial load).
   // isPersistSafe guards against writing yesterday's in-memory state into today's
@@ -670,6 +716,18 @@ export default function HandoffScreen() {
                     setNotes(next);
                     if (isPersistSafe(loaded, loadedForKeyRef.current, storageKeyNotes)) {
                       saveJsonToStorage(AsyncStorage, storageKeyNotes, next);
+                    } else {
+                      // Accumulate only the touched keys (not the full snapshot) so
+                      // that the draft payload never contains default-empty values
+                      // for untouched patients — which would overwrite their valid
+                      // persisted notes on restart (Task #326).
+                      const updatedPending = { ...pendingNotesRef.current, [item.id]: n };
+                      pendingNotesRef.current = updatedPending;
+                      // Write the accumulated touched-only payload to the crash-safe
+                      // draft key immediately so it survives a force-quit before the
+                      // load resolves. The .then() callback reads, merges, and clears
+                      // this key on restart.
+                      saveJsonToStorage(AsyncStorage, storageKeyDraftNotes, updatedPending);
                     }
                   }}
                 />

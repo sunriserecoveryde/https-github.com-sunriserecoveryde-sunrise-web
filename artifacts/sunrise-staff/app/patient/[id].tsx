@@ -893,6 +893,7 @@ export default function PatientDetailScreen() {
     }
   }, [noteText, noteModalVisible, editingNoteId]);
 
+
   const openNoteModal = async (prefill?: { id: string; text: string; noteType: NoteType }) => {
     if (prefill) {
       setEditingNoteId(prefill.id);

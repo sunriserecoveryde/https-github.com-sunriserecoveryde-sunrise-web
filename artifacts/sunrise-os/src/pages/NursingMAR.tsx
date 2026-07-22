@@ -170,6 +170,9 @@ export function NursingMAR({ navigate, readOnly }: Props) {
   const setMarTab = (v: typeof marTab) => { _marTab = v; _setMarTab(v); };
   const setExpandedPatient = (v: string | null) => { _expandedPatient = v; _setExpandedPatient(v); };
 
+  const setMarTab = (v: typeof marTab) => { _marTab = v; _setMarTab(v); };
+  const setExpandedPatient = (v: string | null) => { _expandedPatient = v; _setExpandedPatient(v); };
+
   const pendingCount = MAR_DATA.reduce((acc, mar) => {
     return acc + mar.meds.filter(m => {
       if (m.scheduled.length === 0) return false;

@@ -77,6 +77,20 @@ export function makeHandoffShiftKey(date: Date): string {
 }
 
 /**
+ * Return the crash-safe draft-notes key for a given date.
+ * e.g. `@sunrise_handoff_draft_notes_2026-07-20`
+ *
+ * This key stores notes typed during the AsyncStorage load window (when
+ * isPersistSafe is false and the normal write-through is blocked).  It is
+ * written immediately — before the load resolves — so the text survives a
+ * force-quit.  The .then() callback in HandoffScreen reads this key, merges
+ * its contents into the freshly-loaded notes, then deletes the key.
+ */
+export function makeHandoffDraftNotesKey(date: Date): string {
+  return `@sunrise_handoff_draft_notes_${formatDateKey(date)}`;
+}
+
+/**
  * Guard function for persist effects in MARContext.
  *
  * Returns `true` only when both conditions hold:

@@ -29,6 +29,7 @@ import {
   isPersistSafe,
   makeHandoffNotesKey,
   makeHandoffShiftKey,
+  makeHandoffDraftNotesKey,
   loadHandoffState,
   saveJsonToStorage,
   pruneStaleStorageKeys,
@@ -689,5 +690,328 @@ describe('handoff cold-start — note typed before storage load resolves', () =>
     const saved = JSON.parse(storage.store[notesKey]!);
     expect(saved['p1']).toBe('Post-load edit: patient requesting PRN');
     expect(saved['p2']).toBe('');
+  });
+
+  it('note typed during load window is merged into saved state when load resolves (Task #326)', async () => {
+    // Reproduces the force-quit scenario: the nurse types while AsyncStorage is
+    // still reading.  The pendingNotesRef buffer in handoff.tsx collects the
+    // edit; the .then() callback merges it on top of savedNotes so the text
+    // survives even if the app is force-quit before storage resolves.
+    const today = new Date('2026-07-21T08:00:00.000Z');
+    const notesKey = makeHandoffNotesKey(today);
+    const shiftKey = makeHandoffShiftKey(today);
+
+    // Storage has a note from an earlier session this morning
+    const { adapter, release } = makeDeferredStorage({
+      [notesKey]: JSON.stringify({ p1: 'Early morning check — all stable', p2: '' }),
+      [shiftKey]: 'day',
+    });
+
+    // Separate writable store for persist assertions
+    const writeStore: Record<string, string> = {};
+    const persistAdapter: StorageAdapter = {
+      async getItem(k) { return writeStore[k] ?? null; },
+      async setItem(k, v) { writeStore[k] = v; },
+      async multiRemove(keys) { for (const k of keys) delete writeStore[k]; },
+      async getAllKeys() { return Object.keys(writeStore); },
+    };
+
+    // ── PHASE 1: load in-flight ────────────────────────────────────────────
+    let handoffLoaded = false;
+    let loadedForKey: string | null = null;
+    // Buffer that mirrors pendingNotesRef in handoff.tsx
+    let pendingNotes: Record<string, string> = {};
+
+    const loadPromise = loadHandoffState(
+      adapter,
+      { notes: notesKey, shift: shiftKey },
+      { notes: DEFAULT_NOTES, shift: 'day' },
+    );
+
+    // Yield microtask queue — load still pending
+    await Promise.resolve();
+
+    // Nurse types a note while the load is in-flight.
+    // isPersistSafe returns false → edit is buffered, not persisted directly.
+    const nurseDraft = 'Typed during load: BP 118/76, patient calm';
+    const persistSafe = isPersistSafe(handoffLoaded, loadedForKey, notesKey);
+    expect(persistSafe).toBe(false); // guard is closed
+
+    if (persistSafe) {
+      // This branch must NOT execute during the load window
+      await saveJsonToStorage(persistAdapter, notesKey, { p1: nurseDraft, p2: '' });
+    } else {
+      // Mirror handoff.tsx pendingNotesRef accumulation
+      pendingNotes = { ...pendingNotes, p1: nurseDraft };
+    }
+
+    // Nothing written yet
+    expect(writeStore[notesKey]).toBeUndefined();
+
+    // ── PHASE 2: load resolves — merge pending notes ───────────────────────
+    release();
+    const { notes: savedNotes, shift: savedShift, loaded: freshLoaded } = await loadPromise;
+
+    // Mirror the .then() callback in handoff.tsx:
+    //   merge pendingNotes on top of savedNotes, then clear the buffer
+    const mergedNotes = Object.keys(pendingNotes).length > 0
+      ? { ...savedNotes, ...pendingNotes }
+      : savedNotes;
+    pendingNotes = {};
+
+    loadedForKey = notesKey;
+    handoffLoaded = freshLoaded;
+
+    expect(handoffLoaded).toBe(true);
+    // The merged state preserves the nurse's draft AND the stored value for p2
+    expect(mergedNotes['p1']).toBe('Typed during load: BP 118/76, patient calm');
+    expect(mergedNotes['p2']).toBe('');
+
+    // ── PHASE 3: persist after merge — nurse's text reaches storage ────────
+    expect(isPersistSafe(handoffLoaded, loadedForKey, notesKey)).toBe(true);
+    await saveJsonToStorage(persistAdapter, notesKey, mergedNotes);
+
+    const persisted = JSON.parse(writeStore[notesKey]!);
+    expect(persisted['p1']).toBe('Typed during load: BP 118/76, patient calm');
+    expect(persisted['p2']).toBe('');
+  });
+
+  it('pending buffer accumulates multiple edits and all survive the merge', async () => {
+    // Ensures that if a nurse edits several patients before the load resolves,
+    // all buffered drafts are present in the merged state — not just the last one.
+    const today = new Date('2026-07-21T08:00:00.000Z');
+    const notesKey = makeHandoffNotesKey(today);
+    const shiftKey = makeHandoffShiftKey(today);
+
+    const { adapter, release } = makeDeferredStorage(); // empty storage — fresh install
+
+    let handoffLoaded = false;
+    let loadedForKey: string | null = null;
+    let pendingNotes: Record<string, string> = {};
+
+    const loadPromise = loadHandoffState(
+      adapter,
+      { notes: notesKey, shift: shiftKey },
+      { notes: DEFAULT_NOTES, shift: 'day' },
+    );
+
+    await Promise.resolve(); // still pending
+
+    // Nurse edits two patients before load resolves
+    const edits: Array<[string, string]> = [
+      ['p1', 'Draft for p1: vitals stable'],
+      ['p2', 'Draft for p2: requesting PRN'],
+    ];
+    for (const [patientId, text] of edits) {
+      if (!isPersistSafe(handoffLoaded, loadedForKey, notesKey)) {
+        pendingNotes = { ...pendingNotes, [patientId]: text };
+      }
+    }
+
+    expect(Object.keys(pendingNotes)).toHaveLength(2);
+
+    // Load resolves — merge
+    release();
+    const { notes: savedNotes, loaded: freshLoaded } = await loadPromise;
+    const mergedNotes = Object.keys(pendingNotes).length > 0
+      ? { ...savedNotes, ...pendingNotes }
+      : savedNotes;
+    pendingNotes = {};
+    loadedForKey = notesKey;
+    handoffLoaded = freshLoaded;
+
+    expect(handoffLoaded).toBe(true);
+    expect(mergedNotes['p1']).toBe('Draft for p1: vitals stable');
+    expect(mergedNotes['p2']).toBe('Draft for p2: requesting PRN');
+  });
+
+  it('untouched patient notes are not overwritten when only one patient was edited during load window (Task #326)', async () => {
+    // Regression: draft payload must contain only touched keys. If the full
+    // in-memory snapshot (which has default-empty values for all untouched
+    // patients) were written to the draft key, the merge on restart would
+    // overwrite valid persisted notes for every untouched patient.
+    const today = new Date('2026-07-21T08:00:00.000Z');
+    const notesKey = makeHandoffNotesKey(today);
+    const shiftKey = makeHandoffShiftKey(today);
+    const draftKey = makeHandoffDraftNotesKey(today);
+
+    // Storage has existing notes for two patients from a prior session today
+    const store: Record<string, string> = {
+      [notesKey]: JSON.stringify({ p1: 'Morning check — stable', p2: 'Vitals q2h, BP elevated' }),
+      [shiftKey]: 'day',
+    };
+    const adapter: StorageAdapter = {
+      async getItem(k) { return store[k] ?? null; },
+      async setItem(k, v) { store[k] = v; },
+      async multiRemove(keys) { for (const k of keys) delete store[k]; },
+      async getAllKeys() { return Object.keys(store); },
+    };
+
+    // ── LOAD WINDOW: nurse edits only p1 ──────────────────────────────────
+    // pendingNotesRef accumulates only the touched key
+    let pendingNotes: Record<string, string> = {};
+    const nurseDraft = 'Updated: patient requesting PRN pain med';
+
+    // Mirrors onNoteChange with the fix: write only touched keys to draft
+    pendingNotes = { ...pendingNotes, p1: nurseDraft };
+    // Draft key contains ONLY { p1: nurseDraft }, NOT { p1: ..., p2: '' }
+    await saveJsonToStorage(adapter, draftKey, pendingNotes);
+
+    expect(store[draftKey]).toBeDefined();
+    const draftPayload = JSON.parse(store[draftKey]!);
+    expect(Object.keys(draftPayload)).toEqual(['p1']);  // only the touched key
+    expect(draftPayload['p2']).toBeUndefined();         // p2 NOT in draft
+
+    // ── RESTART: load resolves, draft merged ───────────────────────────────
+    const { notes: savedNotes, loaded } = await loadHandoffState(
+      adapter,
+      { notes: notesKey, shift: shiftKey },
+      { notes: DEFAULT_NOTES, shift: 'day' },
+    );
+
+    expect(loaded).toBe(true);
+    expect(savedNotes['p1']).toBe('Morning check — stable');
+    expect(savedNotes['p2']).toBe('Vitals q2h, BP elevated');
+
+    // Read and merge draft (mirrors .then() callback in handoff.tsx)
+    const draftRaw = await adapter.getItem(draftKey);
+    let draftNotes: Record<string, string> = {};
+    if (draftRaw) {
+      try { draftNotes = JSON.parse(draftRaw) as Record<string, string>; } catch {}
+      await adapter.multiRemove([draftKey]);
+    }
+
+    // pendingNotesRef is empty on restart (fresh process)
+    const pendingNotesSession2: Record<string, string> = {};
+    const hasDraft   = Object.keys(draftNotes).length > 0;
+    const hasPending = Object.keys(pendingNotesSession2).length > 0;
+    const mergedNotes =
+      hasDraft || hasPending
+        ? { ...savedNotes, ...draftNotes, ...pendingNotesSession2 }
+        : savedNotes;
+
+    // p1 gets the nurse's draft from the load window
+    expect(mergedNotes['p1']).toBe('Updated: patient requesting PRN pain med');
+    // p2's persisted note is NOT overwritten — draft had no entry for p2
+    expect(mergedNotes['p2']).toBe('Vitals q2h, BP elevated');
+
+    // Draft key cleared after merge
+    expect(store[draftKey]).toBeUndefined();
+  });
+
+  it('crash-safe draft key written during load window survives a process restart (Task #326)', async () => {
+    // This is the true force-quit scenario the task is about:
+    //   1. App opens; AsyncStorage starts loading (load in-flight).
+    //   2. Nurse types a note → isPersistSafe is false → write to crash-safe
+    //      draft key immediately (pendingNotesRef also updated in-memory).
+    //   3. App is force-quit before the load resolves.
+    //      pendingNotesRef is lost (process gone), but draft key IS in storage.
+    //   4. App relaunches → fresh process; pendingNotesRef starts empty.
+    //   5. The .then() callback reads the draft key from storage, merges it into
+    //      savedNotes, then deletes the draft key.
+    //   6. The nurse's text appears — nothing was silently lost.
+    const today = new Date('2026-07-21T08:00:00.000Z');
+    const notesKey   = makeHandoffNotesKey(today);
+    const shiftKey   = makeHandoffShiftKey(today);
+    const draftKey   = makeHandoffDraftNotesKey(today);
+
+    // ── SESSION 1: nurse types during load window ──────────────────────────
+    // Use a writable memory store that persists across the "restart" below.
+    const persistentStore: Record<string, string> = {
+      [notesKey]: JSON.stringify({ p1: 'Morning check — stable', p2: '' }),
+      [shiftKey]: 'day',
+    };
+    const persistentAdapter: StorageAdapter = {
+      async getItem(k) { return persistentStore[k] ?? null; },
+      async setItem(k, v) { persistentStore[k] = v; },
+      async multiRemove(keys) { for (const k of keys) delete persistentStore[k]; },
+      async getAllKeys() { return Object.keys(persistentStore); },
+    };
+
+    // Load is in-flight (deferred adapter backed by persistentStore)
+    let deferredResolve!: () => void;
+    const deferredPending = new Promise<void>(res => { deferredResolve = res; });
+    const session1Adapter: StorageAdapter = {
+      async getItem(k) { await deferredPending; return persistentStore[k] ?? null; },
+      async setItem(k, v) { persistentStore[k] = v; },
+      async multiRemove(keys) { for (const k of keys) delete persistentStore[k]; },
+      async getAllKeys() { return Object.keys(persistentStore); },
+    };
+
+    let pendingNotes: Record<string, string> = {}; // mirrors pendingNotesRef
+    const loadPromise1 = loadHandoffState(
+      session1Adapter,
+      { notes: notesKey, shift: shiftKey },
+      { notes: DEFAULT_NOTES, shift: 'day' },
+    );
+
+    await Promise.resolve(); // yield — still pending
+
+    // Nurse types while load is in-flight
+    const nurseDraft = { p1: 'Critical: BP spike noted at 08:12', p2: '' };
+    // Simulates onNoteChange when isPersistSafe returns false:
+    //   pendingNotesRef updated in-memory
+    pendingNotes = { ...pendingNotes, ...nurseDraft };
+    //   crash-safe draft key written to storage immediately
+    await saveJsonToStorage(persistentAdapter, draftKey, nurseDraft);
+
+    // Draft key is now in persistent storage
+    expect(persistentStore[draftKey]).toBeDefined();
+
+    // ── FORCE-QUIT: process is killed ─────────────────────────────────────
+    // pendingNotes is discarded (process gone). loadPromise1 is abandoned.
+    // persistentStore (AsyncStorage) retains both the original notes and
+    // the draft key written above.
+    // We simulate this by simply not awaiting loadPromise1 and not releasing
+    // the deferred adapter — the draft key is all that's left in storage.
+    void loadPromise1; // intentionally abandoned
+
+    // ── SESSION 2: app relaunches — fresh process ──────────────────────────
+    let pendingNotesSession2: Record<string, string> = {}; // fresh — empty on restart
+    let loadedForKey: string | null = null;
+
+    // Now the load resolves immediately (normal AsyncStorage on second launch)
+    const { notes: savedNotes, shift: savedShift, loaded: freshLoaded } =
+      await loadHandoffState(
+        persistentAdapter, // same persistent storage
+        { notes: notesKey, shift: shiftKey },
+        { notes: DEFAULT_NOTES, shift: 'day' },
+      );
+
+    // Mirrors the .then() callback in handoff.tsx:
+    //   1. Read the crash-safe draft key
+    const draftRaw = await persistentAdapter.getItem(draftKey);
+    let draftNotes: Record<string, string> = {};
+    if (draftRaw) {
+      try { draftNotes = JSON.parse(draftRaw) as Record<string, string>; } catch {}
+      // Clear the draft key now that it has been consumed
+      await persistentAdapter.multiRemove([draftKey]);
+    }
+
+    //   2. Merge: draft wins over storage, same-session pending wins over draft
+    const hasDraft   = Object.keys(draftNotes).length > 0;
+    const hasPending = Object.keys(pendingNotesSession2).length > 0;
+    const mergedNotes =
+      hasDraft || hasPending
+        ? { ...savedNotes, ...draftNotes, ...pendingNotesSession2 }
+        : savedNotes;
+
+    loadedForKey = notesKey;
+
+    expect(freshLoaded).toBe(true);
+
+    // The nurse's text from session 1 is present in the merged notes
+    expect(mergedNotes['p1']).toBe('Critical: BP spike noted at 08:12');
+    expect(mergedNotes['p2']).toBe('');
+
+    // Draft key has been cleared after consumption
+    expect(persistentStore[draftKey]).toBeUndefined();
+
+    // Guard is now open — persist would write the merged notes
+    expect(isPersistSafe(freshLoaded, loadedForKey, notesKey)).toBe(true);
+    await saveJsonToStorage(persistentAdapter, notesKey, mergedNotes);
+
+    const persisted = JSON.parse(persistentStore[notesKey]!);
+    expect(persisted['p1']).toBe('Critical: BP spike noted at 08:12');
   });
 });
