@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Logo } from './Logo';
 import { X, Menu, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DemoModal } from './DemoModal';
 
 const navLinks = [
   { label: 'Problem', href: '#problem' },
@@ -14,6 +15,7 @@ const navLinks = [
 export const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -26,6 +28,11 @@ export const Header = () => {
     document.body.style.overflow = mobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
+
+  const openDemo = () => {
+    setMobileOpen(false);
+    setDemoOpen(true);
+  };
 
   return (
     <>
@@ -55,18 +62,18 @@ export const Header = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3 shrink-0">
-            <a
-              href="mailto:hello@getsunriseos.com"
+            <button
+              onClick={openDemo}
               className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
             >
               Contact
-            </a>
-            <a
-              href="mailto:demo@getsunriseos.com"
+            </button>
+            <button
+              onClick={openDemo}
               className="inline-flex items-center gap-1.5 px-5 py-2 text-sm font-semibold text-white bg-sunrise-orange hover:bg-orange-500 rounded-lg transition-colors"
             >
               Book a Demo <ArrowRight className="w-3.5 h-3.5" />
-            </a>
+            </button>
           </div>
 
           {/* Mobile hamburger */}
@@ -106,24 +113,24 @@ export const Header = () => {
               ))}
             </nav>
             <div className="flex flex-col gap-3">
-              <a
-                href="mailto:demo@getsunriseos.com"
-                onClick={() => setMobileOpen(false)}
+              <button
+                onClick={openDemo}
                 className="flex items-center justify-center gap-2 w-full py-4 text-base font-semibold text-white bg-sunrise-orange hover:bg-orange-500 rounded-xl transition-colors"
               >
                 Book a Demo <ArrowRight className="w-4 h-4" />
-              </a>
-              <a
-                href="mailto:hello@getsunriseos.com"
-                onClick={() => setMobileOpen(false)}
+              </button>
+              <button
+                onClick={openDemo}
                 className="flex items-center justify-center w-full py-4 text-base font-medium text-slate-400 hover:text-white rounded-xl border border-slate-700 transition-colors"
               >
-                hello@getsunriseos.com
-              </a>
+                Contact Us
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </>
   );
 };

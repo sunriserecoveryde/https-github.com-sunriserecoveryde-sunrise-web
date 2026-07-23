@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart3, Target, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
+import { DemoModal } from '../DemoModal';
 
 export const Investors = () => {
+  const [demoOpen, setDemoOpen] = useState(false);
+
   return (
+    <>
     <section id="investors" className="py-28 bg-[#080E1C] border-y border-slate-800/50">
       <div className="container mx-auto px-5 md:px-10">
 
@@ -122,12 +126,12 @@ export const Investors = () => {
               <div className="text-6xl font-black text-white mb-1 tracking-tight">$3.5M</div>
               <div className="text-slate-500 text-sm mb-2">Pre-money valuation on request</div>
               <div className="text-slate-600 text-sm mb-8 leading-relaxed">Target: 8 pilot facilities · $500K ARR · SOC 2 Type II</div>
-              <a
-                href="mailto:investors@getsunriseos.com"
+              <button
+                onClick={() => setDemoOpen(true)}
                 className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold text-white bg-sunrise-orange hover:bg-orange-500 rounded-xl transition-all shadow-[0_0_24px_rgba(249,115,22,0.2)] hover:shadow-[0_0_36px_rgba(249,115,22,0.35)]"
               >
                 Request Data Room <ArrowRight className="w-4 h-4" />
-              </a>
+              </button>
             </div>
             <div className="md:col-span-2">
               <h4 className="text-xs font-bold text-slate-500 tracking-[0.2em] uppercase mb-6">Use of Funds</h4>
@@ -160,5 +164,7 @@ export const Investors = () => {
         </motion.div>
       </div>
     </section>
+    <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} defaultPlan="Investor" />
+    </>
   );
 };
