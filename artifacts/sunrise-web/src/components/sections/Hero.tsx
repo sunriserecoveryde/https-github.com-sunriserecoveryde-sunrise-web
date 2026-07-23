@@ -66,10 +66,12 @@ export const Hero = () => {
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-0.5 transition-transform" />
             </a>
             <a
-              href="#investors"
+              href="/sunrise-pitch/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center justify-center w-full sm:w-auto px-8 py-3.5 text-sm font-semibold text-slate-300 hover:text-white bg-slate-800/70 hover:bg-slate-700/80 rounded-lg transition-colors border border-slate-700"
             >
-              Download Pitch Deck
+              View Pitch Deck
               <Download className="w-4 h-4 ml-2 text-slate-500" />
             </a>
           </motion.div>
