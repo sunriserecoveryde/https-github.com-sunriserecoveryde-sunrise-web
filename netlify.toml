@@ -1,0 +1,11 @@
+[build]
+  command   = "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workspace/sunrise-web run build"
+  publish   = "artifacts/sunrise-web/dist/public"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
