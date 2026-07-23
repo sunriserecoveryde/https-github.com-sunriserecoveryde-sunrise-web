@@ -44,8 +44,13 @@ export const DemoModal: React.FC<DemoModalProps> = ({ open, onClose, defaultPlan
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, plan: defaultPlan }),
+        // website is a honeypot field — always empty for real users
+        body: JSON.stringify({ ...form, plan: defaultPlan, website: '' }),
       });
+
+      if (res.status === 429) {
+        throw new Error("You've submitted too many requests. Please wait a while before trying again.");
+      }
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -133,6 +138,12 @@ export const DemoModal: React.FC<DemoModalProps> = ({ open, onClose, defaultPlan
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                      {/* Honeypot — hidden from real users; bots fill it in */}
+                      <div style={{ position: 'absolute', left: '-9999px', opacity: 0, pointerEvents: 'none' }} aria-hidden="true" tabIndex={-1}>
+                        <label htmlFor="website">Website</label>
+                        <input id="website" name="website" type="text" autoComplete="off" tabIndex={-1} />
+                      </div>
+
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className={labelCls}>Your name *</label>

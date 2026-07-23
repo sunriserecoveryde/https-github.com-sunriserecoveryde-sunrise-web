@@ -11,6 +11,8 @@ const ContactSchema = z.object({
   bedCount: z.string().max(50).optional().default(""),
   message: z.string().max(2000).optional().default(""),
   plan: z.string().max(100).optional().default(""),
+  // Honeypot — bots fill it in; real users never see it
+  website: z.string().optional().default(""),
 });
 
 // In-memory lead store — swap for a DB write or email send once you
@@ -22,6 +24,12 @@ router.post("/contact", (req, res) => {
 
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid form data", details: parsed.error.flatten() });
+    return;
+  }
+
+  // Honeypot: silently discard if a bot filled in the hidden field
+  if (parsed.data.website) {
+    res.json({ ok: true });
     return;
   }
 
