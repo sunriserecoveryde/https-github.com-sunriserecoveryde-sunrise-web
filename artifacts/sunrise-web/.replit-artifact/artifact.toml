@@ -1,5 +1,5 @@
 kind = "web"
-previewPath = "/sunrise-web/"
+previewPath = "/"
 title = "Sunrise OS — Marketing & Investor Site"
 version = "1.0.0"
 id = "artifacts/sunrise-web"
@@ -7,7 +7,7 @@ router = "path"
 
 [[services]]
 name = "web"
-paths = [ "/sunrise-web/" ]
+paths = [ "/" ]
 localPort = 21712
 
 [services.development]
@@ -24,4 +24,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "21712"
-BASE_PATH = "/sunrise-web/"
+BASE_PATH = "/"
