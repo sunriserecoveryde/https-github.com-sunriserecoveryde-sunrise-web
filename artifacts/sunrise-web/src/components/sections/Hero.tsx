@@ -43,6 +43,8 @@ export const Hero = () => {
             <img
               src={logoImg}
               alt="Sunrise OS"
+              width={320}
+              height={320}
               className="w-64 md:w-80 h-auto"
               style={{ filter: 'drop-shadow(0 8px 40px rgba(249,115,22,0.28))' }}
             />
