@@ -302,6 +302,14 @@ export default function HandoffScreen() {
   // MARContext loadedForKey pattern).
   const loadedForKeyRef = useRef<string | null>(null);
 
+  // Tracks the draft-notes key of the MOST RECENTLY STARTED load cycle.
+  // Updated at the very top of the load effect so that any previously-started
+  // effect's Promise.all .then() callback can detect it is now stale before
+  // running the deferred draft-notes prune.  Without this guard, an old-day
+  // .then() resolving late after midnight would prune with currentKey = OLD key,
+  // classifying the new day's draft key as stale and silently deleting it.
+  const activeDraftNotesKeyRef = useRef(storageKeyDraftNotes);
+
   // ── Shift selector + content rehydration guard ───────────────────────────
   // While !loaded: shimmer skeleton on the shift selector so it's never blank.
   // Once loaded: fade in the real ShiftSelector (shiftBarOpacity) and the
@@ -362,6 +370,12 @@ export default function HandoffScreen() {
     // Reset the guard so persist effects cannot fire with yesterday's state
     // while the fresh load for the new key is in flight.
     setLoaded(false);
+
+    // Advance the active-draft-key sentinel immediately so any previously
+    // started Promise.all .then() callback can detect it is now stale and
+    // skip the deferred draft-notes prune.  Must happen before the async work
+    // below so the ref is always up-to-date by the time an old callback resolves.
+    activeDraftNotesKeyRef.current = storageKeyDraftNotes;
 
     // ── Midnight-rollover flush ──────────────────────────────────────────────
     // If the nurse was actively typing in the final seconds before midnight,
@@ -459,12 +473,19 @@ export default function HandoffScreen() {
       setLoaded(true);
     }, 4000);
 
+    // NOTE: '@sunrise_handoff_draft_notes_' is intentionally NOT included here.
+    // If the midnight flush wrote a note to the OLD day's draft-notes key (the
+    // isPersistSafe=false path above), including the draft-notes prefix with
+    // currentKey=storageKeyDraftNotes (the NEW day's key) would immediately
+    // prune the old key before the Promise.all .then() callback below can read
+    // and consume it — silently discarding a note typed in the final second of
+    // the previous calendar day.  The draft-notes prefix is pruned later, inside
+    // the .then() callback, after the old draft has been consumed.
     pruneStaleStorageKeys(AsyncStorage, [
       { prefix: '@sunrise_handoff_notes_',             currentKey: storageKeyNotes },
       { prefix: '@sunrise_handoff_shift_',             currentKey: storageKeyShift },
       { prefix: '@sunrise_handoff_undo_draft_',         currentKey: storageKeyCompletedDraft },
       { prefix: '@sunrise_handoff_completed_',         currentKey: storageKeyCompleted },
-      { prefix: '@sunrise_handoff_draft_notes_',       currentKey: storageKeyDraftNotes },
     ]).catch(() => {});
     Promise.all([
       loadHandoffState(
@@ -480,6 +501,11 @@ export default function HandoffScreen() {
 
       // Read the crash-safe draft-notes key — contains notes written during the
       // load window of a previous session that was force-quit before the load resolved.
+      // It may also contain notes written by the midnight-rollover flush (the
+      // isPersistSafe=false path in the effect above) if the nurse was typing in
+      // the final seconds of the previous calendar day.  The draft-notes prefix
+      // was deliberately excluded from the immediate pruneStaleStorageKeys call
+      // so that old-day draft keys survive until they are consumed here.
       let draftNotes: Record<string, string> = {};
       try {
         const draftRaw = await AsyncStorage.getItem(storageKeyDraftNotes);
@@ -489,6 +515,23 @@ export default function HandoffScreen() {
           AsyncStorage.removeItem(storageKeyDraftNotes).catch(() => {});
         }
       } catch {}
+      // Prune stale draft-notes keys now that the current day's draft has been
+      // consumed (or confirmed absent).  Doing this here — not before the
+      // Promise.all — prevents a midnight-rollover race where the old day's draft
+      // key would be classified as stale and deleted before this callback reads it.
+      //
+      // Staleness guard: only the most recently started load cycle may run this
+      // prune.  If a midnight rollover has occurred since this effect started,
+      // activeDraftNotesKeyRef.current will have been advanced to the new day's
+      // draft key.  Running the prune with the old day's key as currentKey would
+      // classify the new day's draft key as stale and delete it — inverting the
+      // race we just fixed.  Skip the prune entirely for stale callbacks; the
+      // current load cycle's .then() will prune when it resolves.
+      if (storageKeyDraftNotes === activeDraftNotesKeyRef.current) {
+        pruneStaleStorageKeys(AsyncStorage, [
+          { prefix: '@sunrise_handoff_draft_notes_', currentKey: storageKeyDraftNotes },
+        ]).catch(() => {});
+      }
 
       // Read the crash-safe draft-completed key — written by the Undo handler
       // when isPersistSafe was false (storage still loading at the time of tap).

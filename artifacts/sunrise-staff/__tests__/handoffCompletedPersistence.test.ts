@@ -1337,3 +1337,261 @@ describe('force-quit at midnight — note recovery chain end-to-end (Task #348)'
     expect(storage.store[OLD_DRAFT_KEY]).toBeUndefined();
   });
 });
+
+// ─── Tests: midnight pruning must not race with old Promise.all (Task #347) ────
+//
+// Regression suite for the race condition fixed in Task #347.
+//
+// Bug: when the calendar day rolls over, the new-day load effect immediately
+// calls pruneStaleStorageKeys with currentKey = NEW day's draft-notes key.
+// If the midnight flush had written a note to the OLD day's draft-notes key
+// (the isPersistSafe=false path), that key is classified as stale and deleted
+// before the old Promise.all .then() callback can read and consume it —
+// silently discarding the note.
+//
+// Fix: the draft-notes prefix is excluded from the immediate prune call.
+// Instead it is pruned inside the .then() callback, after the old draft has
+// been consumed.  This suite confirms that the note survives.
+
+const OLD_DRAFT_NOTES_KEY = makeHandoffDraftNotesKey(YESTERDAY);
+const NEW_DRAFT_NOTES_KEY = makeHandoffDraftNotesKey(TODAY);
+
+describe('midnight pruning race — note typed at 23:59:59 survives (Task #347)', () => {
+  /**
+   * Core regression: the bug scenario.
+   *
+   * 1. Nurse types a note at 23:59:59; isPersistSafe=false (load still in-flight).
+   * 2. Midnight flush writes the note to the OLD day's draft-notes key.
+   * 3. New-day effect starts.  The old Promise.all is still in-flight.
+   * 4. (BUG) pruneStaleStorageKeys runs with currentKey = NEW day's draft-notes
+   *    key, which deletes the OLD day's draft-notes key.
+   * 5. Old Promise.all .then() reads the OLD draft-notes key → gets null → note lost.
+   *
+   * (FIX) draft-notes prefix is excluded from the immediate prune so the old
+   * key survives until the .then() callback reads and consumes it.
+   */
+  it('note written to old-day draft key is not deleted by the new-day prune', async () => {
+    const midnight_note = 'Critical note typed at 23:59:59';
+
+    // Storage state after the midnight flush: note is in the OLD draft-notes key.
+    const storage = makeMemoryStorage({
+      [OLD_NOTES_KEY]:      JSON.stringify({ p1: '' }),
+      [OLD_DRAFT_NOTES_KEY]: JSON.stringify({ p1: midnight_note }),
+      // New day's keys (no draft yet)
+      [NOTES_KEY]:           JSON.stringify({}),
+    });
+
+    // ── Simulate the BUG: prune with draft-notes included immediately ─────
+    // This is what the code did BEFORE the fix — it would delete OLD_DRAFT_NOTES_KEY.
+    const storageForBug = makeMemoryStorage({ ...storage.store });
+    await pruneStaleStorageKeys(storageForBug, [
+      { prefix: '@sunrise_handoff_notes_',       currentKey: NOTES_KEY },
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: NEW_DRAFT_NOTES_KEY },  // BUG: included here
+    ]);
+
+    // Old draft key is gone — this is the bug.
+    expect(storageForBug.store[OLD_DRAFT_NOTES_KEY]).toBeUndefined();
+
+    // Old Promise.all .then() now reads null for the draft key → note lost.
+    const bugDraftRaw = await storageForBug.getItem(OLD_DRAFT_NOTES_KEY);
+    expect(bugDraftRaw).toBeNull();  // note was silently discarded ✗
+
+    // ── Simulate the FIX: prune WITHOUT the draft-notes prefix initially ──
+    const storageForFix = makeMemoryStorage({ ...storage.store });
+    await pruneStaleStorageKeys(storageForFix, [
+      { prefix: '@sunrise_handoff_notes_', currentKey: NOTES_KEY },
+      // '@sunrise_handoff_draft_notes_' is intentionally omitted — pruned later
+    ]);
+
+    // Old draft key is still present — the fix preserves it.
+    expect(storageForFix.store[OLD_DRAFT_NOTES_KEY]).toBeDefined();
+
+    // Old Promise.all .then() reads the draft key and recovers the note.
+    const fixDraftRaw = await storageForFix.getItem(OLD_DRAFT_NOTES_KEY);
+    expect(fixDraftRaw).not.toBeNull();
+    const recovered = JSON.parse(fixDraftRaw!) as Record<string, string>;
+    expect(recovered['p1']).toBe(midnight_note);  // note survives ✓
+
+    // After consuming, the .then() callback prunes the draft-notes prefix.
+    await storageForFix.multiRemove([OLD_DRAFT_NOTES_KEY]);
+    await pruneStaleStorageKeys(storageForFix, [
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: NEW_DRAFT_NOTES_KEY },
+    ]);
+
+    // Old key is now gone (consumed and pruned) but note data was already merged.
+    expect(storageForFix.store[OLD_DRAFT_NOTES_KEY]).toBeUndefined();
+  });
+
+  /**
+   * Full round-trip: note typed at 23:59:59 (isPersistSafe=false path) is
+   * present in the merged notes that the old .then() callback would commit.
+   *
+   * This test simulates the old effect's Promise.all .then() reading the old
+   * draft key (OLD_DRAFT_NOTES_KEY) while the new effect's immediate prune
+   * deliberately excludes that prefix — so the old draft key is still present
+   * when the .then() runs, and the note is preserved.
+   */
+  it('full round-trip: midnight-flush note merges correctly when draft is read before prune', async () => {
+    const midnight_note = 'BP check q1h — typed in final second of the day';
+    // Storage state after the midnight flush, using the OLD day's keys only.
+    // (The new-day immediate prune touches the new-day keys, not the old draft key,
+    // so we model just the part of storage relevant to the old Promise.all .then().)
+    const storage = makeMemoryStorage({
+      [OLD_NOTES_KEY]:      JSON.stringify({ p1: 'Earlier note', p2: '' }),
+      [OLD_DRAFT_NOTES_KEY]: JSON.stringify({ p2: midnight_note }),
+    });
+
+    // Step 1: new-day immediate prune runs with draft-notes excluded.
+    // Only non-draft prefixes are swept here — OLD_DRAFT_NOTES_KEY is unaffected.
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_shift_',       currentKey: SHIFT_KEY },
+      { prefix: '@sunrise_handoff_undo_draft_',  currentKey: COMPLETED_DRAFT_KEY },
+      { prefix: '@sunrise_handoff_completed_',   currentKey: COMPLETED_KEY },
+      // '@sunrise_handoff_notes_' and '@sunrise_handoff_draft_notes_' intentionally omitted
+      // to keep OLD_NOTES_KEY and OLD_DRAFT_NOTES_KEY available for the old .then().
+    ]);
+
+    // Step 2: old Promise.all .then() reads the old day's notes + draft.
+    const [{ notes: savedNotes }] = await Promise.all([
+      loadHandoffState(storage, { notes: OLD_NOTES_KEY, shift: OLD_SHIFT_KEY }, OLD_DEFAULTS),
+    ]);
+
+    const draftRaw = await storage.getItem(OLD_DRAFT_NOTES_KEY);
+    let draftNotes: Record<string, string> = {};
+    if (draftRaw) {
+      draftNotes = JSON.parse(draftRaw) as Record<string, string>;
+      // Consume the draft key (mirrors .then() callback removeItem).
+      await storage.multiRemove([OLD_DRAFT_NOTES_KEY]);
+    }
+
+    const mergedNotes =
+      Object.keys(draftNotes).length > 0
+        ? { ...savedNotes, ...draftNotes }
+        : savedNotes;
+
+    // Both the earlier note and the last-second note are present.
+    expect(mergedNotes['p1']).toBe('Earlier note');
+    expect(mergedNotes['p2']).toBe(midnight_note);
+
+    // Step 3: deferred prune — safe to run now because draft was consumed.
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: NEW_DRAFT_NOTES_KEY },
+    ]);
+
+    // Old draft key is gone; today's draft key (if any) would survive.
+    expect(storage.store[OLD_DRAFT_NOTES_KEY]).toBeUndefined();
+  });
+
+  /**
+   * Concurrency: pruning and the old Promise.all run in the same microtask
+   * queue.  The deferred approach guarantees the old draft key is only pruned
+   * after the .then() callback has consumed it — no matter how fast storage is.
+   */
+  it('deferred prune guarantees old draft key survives even if storage resolves instantly', async () => {
+    const midnight_note = 'Typed at exactly 23:59:59.999';
+    const storage = makeMemoryStorage({
+      [OLD_NOTES_KEY]:      JSON.stringify({ p1: '' }),
+      [OLD_DRAFT_NOTES_KEY]: JSON.stringify({ p1: midnight_note }),
+      [NOTES_KEY]:           JSON.stringify({}),
+    });
+
+    // Immediate prune (draft-notes excluded) — storage resolves synchronously.
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_notes_',       currentKey: NOTES_KEY },
+      { prefix: '@sunrise_handoff_shift_',       currentKey: SHIFT_KEY },
+      { prefix: '@sunrise_handoff_undo_draft_',  currentKey: COMPLETED_DRAFT_KEY },
+      { prefix: '@sunrise_handoff_completed_',   currentKey: COMPLETED_KEY },
+      // draft-notes intentionally omitted
+    ]);
+
+    // Even if we check immediately after the prune, the old draft key is intact.
+    expect(storage.store[OLD_DRAFT_NOTES_KEY]).toBeDefined();
+
+    // .then() callback can safely read the key.
+    const draftRaw = await storage.getItem(OLD_DRAFT_NOTES_KEY);
+    expect(draftRaw).not.toBeNull();
+    const draft = JSON.parse(draftRaw!) as Record<string, string>;
+    expect(draft['p1']).toBe(midnight_note);
+
+    // Consume + deferred prune.
+    await storage.multiRemove([OLD_DRAFT_NOTES_KEY]);
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: NEW_DRAFT_NOTES_KEY },
+    ]);
+
+    // Old key gone; new key (absent in this scenario) would survive.
+    expect(storage.store[OLD_DRAFT_NOTES_KEY]).toBeUndefined();
+    expect(storage.store[NEW_DRAFT_NOTES_KEY]).toBeUndefined();
+  });
+
+  /**
+   * Regression: old callback's deferred prune must NOT delete the new-day
+   * draft key.
+   *
+   * Scenario (the NEW race introduced by the deferred-prune approach):
+   *   1. Midnight rolls over; new-day effect starts and advances
+   *      activeDraftNotesKeyRef.current = NEW_DRAFT_NOTES_KEY.
+   *   2. Nurse types a note in the new day's load window → new draft key written.
+   *   3. Old day's Promise.all .then() resolves late.
+   *   4. (BUG) Old .then() runs deferred prune with currentKey = OLD_DRAFT_NOTES_KEY,
+   *      classifying NEW_DRAFT_NOTES_KEY as stale and deleting it.
+   *   5. New day's .then() resolves; draft key is gone → note is lost.
+   *
+   * (FIX) The staleness guard compares the captured storageKeyDraftNotes with
+   * activeDraftNotesKeyRef.current.  When they differ the prune is skipped.
+   * This test models that guard directly without React.
+   */
+  it('old-day callback skips deferred prune when activeDraftNotesKeyRef has advanced', async () => {
+    const new_day_note = 'New day note written during new-day load window';
+    const storage = makeMemoryStorage({
+      // New day's draft key contains a note the nurse typed during the load window.
+      [NEW_DRAFT_NOTES_KEY]: JSON.stringify({ p1: new_day_note }),
+    });
+
+    // activeDraftNotesKeyRef starts at OLD key (before midnight), then advances.
+    // Simulate the ref state AFTER the new-day effect has advanced it.
+    const activeDraftNotesKeyRef = { current: NEW_DRAFT_NOTES_KEY };  // already advanced
+
+    // Old day's .then() callback runs — it captured OLD_DRAFT_NOTES_KEY in its closure.
+    const capturedDraftKey = OLD_DRAFT_NOTES_KEY;  // closure value from old effect
+
+    // Staleness check (mirrors the component guard):
+    const isCurrentCycle = capturedDraftKey === activeDraftNotesKeyRef.current;
+    expect(isCurrentCycle).toBe(false);  // stale — must NOT prune
+
+    // BUG path: if the guard were absent, this would run and delete NEW_DRAFT_NOTES_KEY.
+    const storageForBug = makeMemoryStorage({ ...storage.store });
+    await pruneStaleStorageKeys(storageForBug, [
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: capturedDraftKey },
+    ]);
+    expect(storageForBug.store[NEW_DRAFT_NOTES_KEY]).toBeUndefined();  // new key deleted ✗
+
+    // FIX path: the guard suppresses the prune for the stale callback.
+    const storageForFix = makeMemoryStorage({ ...storage.store });
+    if (capturedDraftKey === activeDraftNotesKeyRef.current) {
+      // This branch is NOT taken — prune is skipped.
+      await pruneStaleStorageKeys(storageForFix, [
+        { prefix: '@sunrise_handoff_draft_notes_', currentKey: capturedDraftKey },
+      ]);
+    }
+    // New day's draft key is intact.
+    expect(storageForFix.store[NEW_DRAFT_NOTES_KEY]).toBeDefined();
+
+    // New day's .then() can now read and merge the note.
+    const draftRaw = await storageForFix.getItem(NEW_DRAFT_NOTES_KEY);
+    expect(draftRaw).not.toBeNull();
+    const draft = JSON.parse(draftRaw!) as Record<string, string>;
+    expect(draft['p1']).toBe(new_day_note);  // note survives ✓
+
+    // New day's .then() runs its own deferred prune (it IS the current cycle).
+    const isNewCycleCurrent = NEW_DRAFT_NOTES_KEY === activeDraftNotesKeyRef.current;
+    expect(isNewCycleCurrent).toBe(true);
+    await storageForFix.multiRemove([NEW_DRAFT_NOTES_KEY]);
+    await pruneStaleStorageKeys(storageForFix, [
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: NEW_DRAFT_NOTES_KEY },
+    ]);
+    // Draft consumed and stale keys pruned — clean state.
+    expect(storageForFix.store[NEW_DRAFT_NOTES_KEY]).toBeUndefined();
+    expect(storageForFix.store[OLD_DRAFT_NOTES_KEY]).toBeUndefined();
+  });
+});
