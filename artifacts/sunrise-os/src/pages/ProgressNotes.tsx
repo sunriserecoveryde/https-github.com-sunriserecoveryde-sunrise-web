@@ -11,12 +11,8 @@ import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
 import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
-import {
-  generateProgressNote, getAiFormSections, sectionsToString,
-  NoteFormat, ProgressNoteInput,
-} from '../lib/aiNoteEngine';
-import { TopicPicker } from '../components/ui/TopicPicker';
-import { getTopicById } from '../lib/topicLibrary';
+import { NoteFormat } from '../lib/aiNoteEngine';
+import { NoteIntelligencePanel } from '../components/ui/NoteIntelligencePanel';
 
 // ─── Extended mock notes ─────────────────────────────────────────────────────
 
@@ -249,11 +245,6 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
   const [type, setType] = useState('Individual');
   const [patient, setPatient] = useState('p_demo');
   const [values, setValues] = useState<Record<string, string>>({});
-  // AI assist state
-  const [aiOpen, setAiOpen] = useState(false);
-  const [aiInput, setAiInput] = useState<Partial<ProgressNoteInput>>({});
-  const [aiGenerating, setAiGenerating] = useState(false);
-  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   // Signature modal state
   const [sigOpen, setSigOpen] = useState(false);
   const { currentStaff } = useAuth();
@@ -289,37 +280,10 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
     onClose();
   }
 
-  function applyAndGenerate(input: Partial<ProgressNoteInput>) {
-    const pt = MOCK_PATIENTS.find(p => p.id === patient);
-    const sects = generateProgressNote(format, {
-      clientName: pt ? `${pt.firstName} ${pt.lastName}` : 'Client',
-      noteType: type,
-      ...input,
-      engagementLevel: input.engagementLevel as ProgressNoteInput['engagementLevel'],
-    });
-    const sectValues = Object.values(sects);
-    const newValues: Record<string, string> = {};
-    fields.forEach((f, i) => { if (sectValues[i]) newValues[f] = sectValues[i]; });
-    setValues(prev => ({ ...prev, ...newValues }));
+  function handleFormatChange(f: NoteFormat) {
+    setFormat(f);
+    setValues({});
   }
-
-  function handleTopicSelect(topicId: string) {
-    const topic = getTopicById(topicId);
-    if (!topic) return;
-    setSelectedTopicId(topicId);
-    const merged = { ...topic.input } as Partial<ProgressNoteInput>;
-    setAiInput(merged);
-    applyAndGenerate(merged);
-  }
-
-  function handleGenerateAI() {
-    setAiGenerating(true);
-    applyAndGenerate(aiInput);
-    setAiGenerating(false);
-    setAiOpen(false);
-  }
-
-  const aiFormSections = getAiFormSections(format);
 
   return (
     <div className="bg-white border border-border rounded-xl shadow-sm p-5 mb-6">
@@ -331,7 +295,7 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
       </div>
 
       {/* Context row */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">Patient</label>
           <select value={patient} onChange={e => setPatient(e.target.value)} className="w-full bg-bg border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue">
@@ -345,103 +309,19 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
             {['Individual', 'Group', 'Medical', 'Nursing', 'Psychiatric'].map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
-        <div>
-          <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">Format</label>
-          <div className="flex gap-1">
-            {(['BIRP', 'DAP', 'SOAP', 'GIRP'] as NoteFormat[]).map(f => (
-              <button key={f} onClick={() => { setFormat(f); setValues({}); setAiInput({}); }}
-                className={`flex-1 px-1.5 py-2 text-xs font-semibold rounded border transition-colors ${format === f ? 'bg-navy text-white border-navy' : 'bg-white text-slate border-border hover:border-slate-300'}`}>
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* AI Assist toggle */}
-      <div className="mb-4">
-        <button onClick={() => setAiOpen(o => !o)}
-          className={`flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${aiOpen ? 'bg-teal-50 border-teal-300 text-teal-700' : 'bg-white border-border text-slate hover:border-slate-300 hover:text-navy'}`}>
-          <Sparkles className="w-3.5 h-3.5" />
-          {aiOpen ? 'Hide AI Draft Assistant' : '✨ AI Draft Assistant'}
-        </button>
-      </div>
-
-      {/* AI Assist panel */}
-      {aiOpen && (
-        <div className="mb-5 border border-teal-200 rounded-xl bg-teal-50/40 p-4 space-y-4">
-
-          {/* Header */}
-          <div className="flex items-start gap-2">
-            <Sparkles className="w-4 h-4 text-teal-600 flex-none mt-0.5" />
-            <div>
-              <div className="text-sm font-semibold text-teal-800">AI Draft Assistant — {format} Format</div>
-              <div className="text-xs text-teal-600 mt-0.5">Pick a session topic below for instant suggestions, or fill the fields manually. All output must be reviewed by a clinician before signing.</div>
-            </div>
-          </div>
-
-          {/* ── Topic Picker ────────────────────────────────────────── */}
-          <div className="bg-white/70 border border-teal-100 rounded-xl p-3">
-            <TopicPicker
-              staffTitle={currentStaff?.title}
-              selectedId={selectedTopicId}
-              onSelect={id => { if (patient) handleTopicSelect(id); }}
-              onClear={() => { setSelectedTopicId(null); setAiInput({}); }}
-            />
-            {!patient && (
-              <div className="mt-2 text-[10px] text-amber-600 font-semibold">Select a patient above before choosing a topic.</div>
-            )}
-          </div>
-
-          {/* ── Manual fine-tune ────────────────────────────────────── */}
-          <details className="group">
-            <summary className="text-[10px] font-bold text-teal-700 uppercase tracking-wider cursor-pointer select-none list-none flex items-center gap-1.5">
-              <span className="group-open:hidden">▶</span><span className="hidden group-open:inline">▼</span>
-              Fine-tune fields manually
-            </summary>
-            <div className="mt-3 space-y-4">
-              {aiFormSections.map(section => (
-                <div key={section.heading}>
-                  <div className="text-[10px] font-bold text-teal-700 uppercase tracking-wider mb-2">{section.heading}</div>
-                  <div className="space-y-2">
-                    {section.fields.map(field => (
-                      <div key={field.key}>
-                        <label className="block text-[10px] font-semibold text-slate uppercase tracking-wide mb-0.5">
-                          {field.label}{field.required ? ' *' : ''}
-                        </label>
-                        {field.key === 'engagementLevel' ? (
-                          <select
-                            value={aiInput.engagementLevel ?? ''}
-                            onChange={e => setAiInput(prev => ({ ...prev, engagementLevel: e.target.value as ProgressNoteInput['engagementLevel'] }))}
-                            className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400">
-                            <option value="">Select…</option>
-                            {['Active', 'Moderate', 'Passive', 'Minimal'].map(o => <option key={o}>{o}</option>)}
-                          </select>
-                        ) : field.multiline ? (
-                          <textarea rows={2} value={(aiInput[field.key] as string) ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [field.key]: e.target.value }))}
-                            placeholder={field.placeholder} className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:border-teal-400" />
-                        ) : (
-                          <input type="text" value={(aiInput[field.key] as string) ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [field.key]: e.target.value }))}
-                            placeholder={field.placeholder} className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <button onClick={handleGenerateAI} disabled={aiGenerating || !patient}
-                className="flex items-center gap-2 bg-teal-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors">
-                {aiGenerating ? (
-                  <><span className="animate-spin inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full" /> Generating…</>
-                ) : (
-                  <><Sparkles className="w-3.5 h-3.5" /> Re-generate Draft</>
-                )}
-              </button>
-            </div>
-          </details>
-
-        </div>
-      )}
+      {/* AI Intelligence Panel — always visible, format selector lives inside */}
+      <NoteIntelligencePanel
+        format={format}
+        onFormatChange={handleFormatChange}
+        patientId={patient}
+        noteType={type}
+        staffTitle={currentStaff?.title}
+        values={values}
+        onValuesChange={setValues}
+        fields={fields}
+      />
 
       {/* Note sections */}
       <div className="space-y-3">

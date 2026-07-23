@@ -1,50 +1,83 @@
 ---
-name: AI Note Engine + Wet Signatures
-description: Template-based clinical note draft generator and wet signature capture system added to Sunrise OS. Covers architecture decisions, type fixes, and known pitfalls.
+name: AI Note Engine + Wet Signatures + Intelligence Panel
+description: Template-based BIRP/DAP/SOAP/GIRP generator; wet signature canvas; 46-topic library; NoteIntelligencePanel co-pilot; quick capture NLP parser
 ---
 
-## AI Note Engine (`src/lib/aiNoteEngine.ts`)
-- Pure TypeScript, no external LLM. Generates BIRP / DAP / SOAP / GIRP progress note drafts and group note drafts from structured clinician-entered fields.
-- Exports: `generateProgressNote(format, input)`, `generateGroupNote(input)`, `sectionsToString()`, `getAiFormSections(format)`.
-- `ProgressNoteInput` has 20+ optional fields; the engine uses sensible fallbacks for missing fields so partial input always produces a useful draft.
+## Format union
+`NoteFormat = 'BIRP' | 'DAP' | 'SOAP' | 'GIRP'` — must stay in sync across:
+- `aiNoteEngine.ts` (definition)
+- `mockPatients.ts` (ProgressNote.format)
+- `CosignQueue.tsx` (format display)
 
-## Wet Signature Components (`src/components/ui/`)
-- `WetSignatureCanvas.tsx` — Canvas-based Pointer Events drawing surface (handles mouse/touch/stylus).
-- `SignatureModal.tsx` — Modal wrapping the canvas; exports `SignatureModal`, `SignedBadge`, `SignatureRecord`.
-- `SignatureRecord`: `{ dataUrl, signerName, signerRole, signerType: 'client'|'staff', timestamp }`.
-- `SignedBadge` renders the captured PNG + name + timestamp in a green badge.
+## Core files
+- `src/lib/aiNoteEngine.ts` — `generateProgressNote`, `generateGroupNote`, `getAiFormSections`, `sectionsToString`, `ProgressNoteInput`, `GroupNoteInput`
+- `src/lib/topicLibrary.ts` — 46 topics, 11 categories, `getTopicsForStaff(title)`, `getTopicById(id)`
+- `src/lib/quickCaptureParser.ts` — NLP parser: `parseQuickCapture(text)` → `{input, signals, parseScore}`; `scoreNoteQuality(values)` → `{score, label, color, issues, strengths}`; `getTopicSuggestionsFromGoals(goals)`; `suggestFormat(staffTitle)`
+- `src/components/ui/WetSignatureCanvas.tsx` — Pointer Events canvas
+- `src/components/ui/SignatureModal.tsx` — modal wrapper; also exports `SignedBadge`, `SignatureRecord`
+- `src/components/ui/TopicPicker.tsx` — searchable, role-filtered chip grid
+- `src/components/ui/NoteIntelligencePanel.tsx` — full AI co-pilot for ProgressNotes
 
-## Pages modified
-- `ProgressNotes.tsx` — SOAP/GIRP formats added; AI Assist collapsible panel; "Sign & Submit" opens SignatureModal; NoteRow sign button opens SignatureModal; SignedBadge shown after signing.
-- `GroupNotes.tsx` — "✨ Generate AI Draft" toggle above Group Narrative textarea; AI fields pre-filled from session metadata; "Sign Note" opens SignatureModal; SignedBadge shown on existing note.
-- `TreatmentPlans.tsx` — Client + Clinician signature blocks added inside PatientPlanCard expanded view; state is local to each card.
-- `DischargeSummary.tsx` — Replaced 3 static text signature fields with 4 interactive wet-sig blocks (Clinician, Co-signer, Physician, Client Acknowledgment).
-- `ASAMAssessments.tsx` — Signature section added in AssessmentDetail (Clinician + Client Acknowledgment blocks); state local to AssessmentDetail.
+## NoteIntelligencePanel (ProgressNotes)
+- **Always visible** — no toggle. Replaces the old collapsible AI Draft Assistant.
+- Format buttons live inside the panel header; the context row dropped from 3-col to 2-col (patient + note type only).
+- `onValuesChange` callback fills note section textareas live.
+- State machine: idle → ready (patient selected) → parsed (quick capture typed) → generated → post-actions shown.
+- PatientContextCard: shows dx, co-occurring, mood/craving/recovery/AMA strips, active goals, last note, goal-based topic suggestions.
+- Quick Capture: debounced 350ms parse → `ParsedSignal` chips → "Generate Note" button enabled at ≥2 signals.
+- Post-generation actions: Sign & Submit, Co-sign, Update goal status (if active goals), Flag supervisor (if risk flags).
+- Format auto-suggestion via `suggestFormat(staffTitle)` fires on mount.
+
+## GroupNotes AI panel
+- **Always visible** — old toggle removed; `aiDraftOpen` now only controls topic picker expansion.
+- Quick Capture at top: debounced parse → maps `presentingConcern→notableThemes`, `interventions→groupDynamics`, `plan→followUpActions`, `clientResponse→participantHighlights`.
+- Session context strip: group name, type, attendees, facilitator.
+- Note quality score inline below the panel when `noteText.length > 20`.
+- Topic picker and fine-tune fields remain as collapsibles.
 
 ## Topic Library (`src/lib/topicLibrary.ts`)
-- 46 topics across 11 clinical categories, each with full `ProgressNoteInput` fields pre-populated with authentic addiction-treatment clinical language.
-- Categories: Craving & Relapse Prevention, Motivation & Readiness, Trauma & PTSD, Shame/Guilt/Cognition, Family & Relationships, Co-occurring MH, Medical/MAT/Withdrawal, Recovery Skills, Grief & Loss, Discharge & Continuing Care, Risk & Safety.
-- Each topic specifies `primaryRoles: StaffTitleFragment[]` — used by `getTopicsForStaff(title)` to rank topics by relevance to the logged-in staff member.
-- Medical/MAT topics include SOAP-specific fields (`patientReports`, `objectiveFindings`); GIRP topics include `goalAddressed`.
-- Group-note topics carry a `groupNarrative` string that bypasses the engine entirely and sets noteText directly.
+- 46 topics across 11 clinical categories.
+- Each topic has `primaryRoles: StaffTitleFragment[]` for role-aware ordering.
+- Medical/MAT topics include SOAP-specific fields; GIRP topics include `goalAddressed`.
+- Group-note topics carry a `groupNarrative` string that bypasses engine and sets noteText directly.
 
-## TopicPicker component (`src/components/ui/TopicPicker.tsx`)
-- Searchable, role-filtered chip grid with category filter pills.
-- Props: `staffTitle`, `selectedId`, `onSelect(id)`, `onClear()`.
-- Fires `onSelect` immediately on chip click — parent handles generation, no extra button needed.
+## Topic selection is immediate
+- ProgressNotes: `handleTopicSelect(id)` → merges `topic.input` into aiInput → `applyInputAndGenerate()` — no extra button.
+- GroupNotes: `topic.groupNarrative` exists → `setNoteText` directly; else → `generateGroupNote()` with topic-enriched fields.
 
-## Integration pattern (ProgressNotes + GroupNotes)
-- `handleTopicSelect(id)` in ProgressNotes: gets topic → merges `topic.input` into `aiInput` → immediately calls `applyAndGenerate()` → note section textareas fill without any user button press.
-- `handleTopicSelect(id)` in GroupNotes: uses `topic.groupNarrative` if present (direct setText), otherwise calls `generateGroupNote` with topic-enriched fields.
-- Manual "Fine-tune fields" section lives in a `<details>` collapsible below the topic picker — visible but out of the way.
-- `useAuth()` is imported in GroupNotes.tsx (added this session) to pass `currentStaff?.title` to TopicPicker.
+## NLP parser design (`quickCaptureParser.ts`)
+- Presentation: 12 keyword patterns → maps to clinical phrasing.
+- Mood: regex extracts numeric rating (e.g. "mood 7/10") + word patterns.
+- Modality: 17 patterns (CBT, DBT, MI, ACT, EMDR, CPT, Seeking Safety, etc.).
+- Interventions: 19 action-verb patterns — collects up to 3 for `interventions` string.
+- Engagement: 4 levels (Active/Moderate/Passive/Minimal) via regex priority chain.
+- Safety: 10 regex patterns for SI/HI denial/presence + safety plan status.
+- Plan: 4 future-tense extraction patterns.
+- `parseScore` 0–100 weighted by field importance (siHiStatus=20, presentation=15, interventions=15, presentingConcern=15, plan=10, modality=10, engagementLevel=10, etc.).
 
-## Type fixes required
-- `src/data/mockPatients.ts` — `SessionNote.format` type expanded from `'BIRP'|'DAP'` to `'BIRP'|'DAP'|'SOAP'|'GIRP'`.
-- `src/pages/CosignQueue.tsx` — `format?:` type expanded the same way.
+## Note quality scoring (`scoreNoteQuality`)
+- Input: `values: Record<string, string>` (note section map).
+- Scoring: first section ≥60 chars (+20), intervention keywords (+20), client response pattern (+15), safety keywords (+20), plan ≥40 chars (+15), clinical specificity (+10). Max = 100.
+- Returns `{score, label, color, issues, strengths}`.
+- For group notes: pass `{ 'Group Narrative': noteText }` — safety check won't fire (expected, max ~80).
 
-**Why:** Adding new NoteFormat values without updating the union caused TS2345 on the `buildNote()` return in NewNoteForm.
+## Goal → topic suggestion map
+`getTopicSuggestionsFromGoals(goals)`: filters `status === 'In Progress'`, maps category strings to topic IDs, returns up to 5. Shown in PatientContextCard as orange clickable chips.
 
-## Known pitfalls
-- Apostrophe inside single-quoted TS string literals (e.g. `'Clinician's interpretation…'`) silently breaks esbuild parse — always use double-quote outer delimiters for placeholders containing apostrophes.
-- `calendar.tsx` and `spinner.tsx` have pre-existing React ref type errors (duplicate @types/react packages) — not introduced by this session; Vite HMR still works fine.
+## Wet signatures
+`SignatureRecord = { dataUrl, signerName, signerRole, signerType: 'client'|'staff', timestamp }` — shared across:
+- ProgressNotes (Sign & Submit, per-note Sign & Approve)
+- GroupNotes (Sign Note)
+- TreatmentPlans (client + clinician)
+- DischargeSummary (4 blocks)
+- ASAMAssessments (clinician + client)
+
+## Type fixes (pre-existing, not from new code)
+- `calendar.tsx` and `spinner.tsx` have `@types/react` dual-version `VoidOrUndefinedOnly` conflicts — pre-existing, runtime unaffected.
+- Filter pattern: `grep -v "calendar.tsx\|spinner.tsx"` when checking tsc output.
+
+## Pages wired
+- `ProgressNotes.tsx` — `NoteIntelligencePanel` (always open); format selector moved inside panel; context row is 2-col.
+- `GroupNotes.tsx` — inline always-visible AI panel with Quick Capture, session context strip, topic picker, fine-tune, quality score.
+- `TreatmentPlans.tsx`, `DischargeSummary.tsx`, `ASAMAssessments.tsx` — wet signature blocks only.
+- `Sidebar.tsx` — AI TOOLS nav entry added.

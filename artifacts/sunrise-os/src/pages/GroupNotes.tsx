@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Zap, Brain, Target, ChevronDown, ChevronUp, RotateCcw, AlertTriangle, CheckCircle } from 'lucide-react';
+import { parseQuickCapture, scoreNoteQuality, type ParsedSignal } from '../lib/quickCaptureParser';
 import { useAuth } from '../context/AuthContext';
 import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
 import { generateGroupNote, GroupNoteInput } from '../lib/aiNoteEngine';
@@ -118,6 +119,12 @@ export function GroupNotes({ navigate, readOnly }: Props) {
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [sigModal, setSigModal] = useState<string | null>(null); // session ID
   const [sessionSigs, setSessionSigs] = useState<Record<string, SignatureRecord>>({});
+  // Quick Capture state
+  const captureDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [captureText, setCaptureText] = useState('');
+  const [parsedSignals, setParsedSignals] = useState<ParsedSignal[]>([]);
+  const [groupParseScore, setGroupParseScore] = useState(0);
+  const [parsedGroupInput, setParsedGroupInput] = useState<Partial<GroupNoteInput>>({});
 
   function getSessionPatients(session: GroupSession) {
     return MOCK_PATIENTS.filter(p =>
@@ -140,6 +147,37 @@ export function GroupNotes({ navigate, readOnly }: Props) {
   }
 
   const { currentStaff } = useAuth();
+
+  // Debounced parse of quick capture text → GroupNoteInput fields
+  useEffect(() => {
+    if (captureDebounceRef.current) clearTimeout(captureDebounceRef.current);
+    if (!captureText.trim()) {
+      setParsedSignals([]); setParsedGroupInput({}); setGroupParseScore(0); return;
+    }
+    captureDebounceRef.current = setTimeout(() => {
+      const result = parseQuickCapture(captureText);
+      setParsedSignals(result.signals);
+      setGroupParseScore(result.parseScore);
+      const g: Partial<GroupNoteInput> = {};
+      if (result.input.presentingConcern) g.notableThemes = result.input.presentingConcern;
+      if (result.input.interventions) g.groupDynamics = `Clinician facilitated: ${result.input.interventions}`;
+      if (result.input.plan) g.followUpActions = result.input.plan;
+      if (result.input.clientResponse) g.participantHighlights = result.input.clientResponse;
+      setParsedGroupInput(g);
+    }, 350);
+    return () => { if (captureDebounceRef.current) clearTimeout(captureDebounceRef.current); };
+  }, [captureText]);
+
+  function handleQuickCaptureGenerate() {
+    if (!selected) return;
+    const draft = generateGroupNote({
+      groupName: selected.name, groupType: selected.type, topic: selected.topic,
+      objectives: selected.objectives, facilitator: selected.facilitator,
+      attendance: selected.actualAttendance, expectedCensus: selected.expectedCensus,
+      program: selected.program, ...parsedGroupInput, ...aiInput,
+    });
+    setNoteText(draft);
+  }
 
   function handleTopicSelect(topicId: string) {
     const topic = getTopicById(topicId);
@@ -413,78 +451,164 @@ export function GroupNotes({ navigate, readOnly }: Props) {
                     </div>
                   </div>
 
-                  {/* AI Draft assistant */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-[10px] font-bold text-slate uppercase tracking-wider">Group Narrative Note</div>
-                      <button
-                        onClick={() => {
-                          setAiDraftOpen(o => !o);
-                          if (!aiDraftOpen && selected) {
-                            setAiInput({ groupName: selected.name, groupType: selected.type, topic: selected.topic, objectives: selected.objectives, facilitator: selected.facilitator, attendance: selected.actualAttendance, expectedCensus: selected.expectedCensus, program: selected.program });
-                          }
-                        }}
-                        className={`flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-lg border transition-colors ${aiDraftOpen ? 'bg-teal-50 border-teal-300 text-teal-700' : 'bg-white border-border text-slate hover:border-slate-400'}`}
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        {aiDraftOpen ? 'Hide AI Assistant' : '✨ AI Draft'}
-                      </button>
-                    </div>
-                    {aiDraftOpen && (
-                      <div className="mb-3 border border-teal-200 rounded-xl bg-teal-50/40 p-3 space-y-3">
-
-                        {/* ── Topic Picker ── */}
-                        <div className="bg-white/80 border border-teal-100 rounded-lg p-2.5">
-                          <TopicPicker
-                            staffTitle={currentStaff?.title}
-                            selectedId={selectedTopicId}
-                            onSelect={id => handleTopicSelect(id)}
-                            onClear={() => { setSelectedTopicId(null); }}
-                          />
-                        </div>
-
-                        {/* ── Manual fields ── */}
-                        <details className="group">
-                          <summary className="text-[10px] font-bold text-teal-700 uppercase tracking-wider cursor-pointer select-none list-none flex items-center gap-1.5">
-                            <span className="group-open:hidden">▶</span><span className="hidden group-open:inline">▼</span>
-                            Fine-tune fields manually
-                          </summary>
-                          <div className="mt-2 space-y-2">
-                            {([
-                              { key: 'groupDynamics', label: 'Group Dynamics / Energy', ph: 'Describe overall group energy, cohesion, participation patterns…' },
-                              { key: 'notableThemes', label: 'Notable Themes', ph: 'Key themes or insights that emerged in group discussion…' },
-                              { key: 'participantHighlights', label: 'Individual Highlights', ph: 'Notable individual moments, concerns, or breakthroughs…' },
-                              { key: 'followUpActions', label: 'Follow-up Actions', ph: 'Counselor follow-up actions, referrals, or next session goals…' },
-                            ] as const).map(f => (
-                              <div key={f.key}>
-                                <label className="block text-[10px] font-semibold text-slate uppercase mb-0.5">{f.label}</label>
-                                <textarea rows={2} value={(aiInput as Record<string,string>)[f.key] ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.ph}
-                                  className="w-full bg-white border border-border rounded px-2 py-1 text-xs resize-none focus:outline-none focus:border-teal-400" />
-                              </div>
-                            ))}
-                            <button
-                              onClick={() => {
-                                if (!selected) return;
-                                const draft = generateGroupNote({ groupName: selected.name, groupType: selected.type, topic: selected.topic, objectives: selected.objectives, facilitator: selected.facilitator, attendance: selected.actualAttendance, expectedCensus: selected.expectedCensus, program: selected.program, ...aiInput });
-                                setNoteText(draft);
-                                setAiDraftOpen(false);
-                              }}
-                              className="flex items-center gap-1.5 bg-teal-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-teal-700"
-                            >
-                              <Sparkles className="w-3 h-3" /> Re-generate Draft
-                            </button>
-                          </div>
-                        </details>
-
+                  {/* AI Note Intelligence Panel */}
+                  <div className="mb-3 rounded-xl border border-teal-200 bg-gradient-to-b from-teal-50/60 to-white overflow-hidden">
+                    {/* Header */}
+                    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-teal-200 bg-teal-50/80">
+                      <div className="w-5 h-5 rounded-md bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center flex-none">
+                        <Sparkles className="w-3 h-3 text-white" />
                       </div>
-                    )}
-                    <textarea
-                      value={noteText}
-                      onChange={e => setNoteText(e.target.value)}
-                      placeholder="Document session themes, overall group dynamics, therapeutic interventions, follow-up actions…"
-                      className="w-full border border-border rounded-lg p-3 text-sm min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50"
-                    />
+                      <div>
+                        <div className="text-xs font-bold text-teal-900">AI Group Note Intelligence</div>
+                        <div className="text-[10px] text-teal-600">Describe the session or pick a topic — note fills automatically</div>
+                      </div>
+                      {noteText && (
+                        <button onClick={() => { setNoteText(''); setCaptureText(''); setParsedSignals([]); setSelectedTopicId(null); }} className="ml-auto text-[10px] text-slate hover:text-red-500 flex items-center gap-1 transition-colors">
+                          <RotateCcw className="w-3 h-3" /> Reset
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="p-3 space-y-3">
+                      {/* Session context strip */}
+                      <div className="flex items-center gap-2 flex-wrap px-3 py-2 bg-navy/5 border border-navy/10 rounded-lg text-[11px]">
+                        <span className="font-bold text-navy">{selected.name}</span>
+                        <span className="text-slate-300">·</span>
+                        <span className="text-slate">{selected.type}</span>
+                        <span className="text-slate-300">·</span>
+                        <span className="text-slate">{selected.actualAttendance} attendees</span>
+                        <span className="text-slate-300">·</span>
+                        <span className="font-medium text-teal-700">{selected.facilitator}</span>
+                      </div>
+
+                      {/* Quick Capture */}
+                      <div className="bg-white border border-teal-200 rounded-xl overflow-hidden shadow-sm">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-teal-600 to-teal-700">
+                          <Zap className="w-3 h-3 text-white flex-none" />
+                          <span className="text-xs font-bold text-white">Quick Capture</span>
+                          <span className="text-[10px] text-teal-200 ml-1">Type what happened — AI structures the note</span>
+                        </div>
+                        <div className="p-3">
+                          <textarea
+                            value={captureText}
+                            onChange={e => setCaptureText(e.target.value)}
+                            placeholder={`e.g. "Recovery skills group, good energy. Discussed HALT and craving triggers using CBT. Several members shared personal experiences. Follow up with Marcus re: family conflict. Plan to review urge surfing next session."`}
+                            rows={3}
+                            className="w-full text-sm bg-bg border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-teal-400 placeholder:text-slate-300 leading-relaxed"
+                          />
+                          {parsedSignals.length > 0 && (
+                            <div className="mt-2">
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <Brain className="w-3 h-3 text-teal-600" />
+                                <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wide">Detected from your description</span>
+                                <span className="text-[10px] text-teal-500 ml-auto">{groupParseScore}% parsed</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {parsedSignals.map((s, i) => (
+                                  <div key={i} className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-medium ${
+                                    s.confidence === 'high' ? 'bg-teal-100 text-teal-800 border-teal-200' :
+                                    s.confidence === 'medium' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                    'bg-slate-100 text-slate border-border'
+                                  }`}>
+                                    <CheckCircle className="w-2.5 h-2.5" />
+                                    <span className="font-semibold">{s.label}:</span>
+                                    <span className="truncate max-w-[100px]">{s.value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <button
+                            onClick={handleQuickCaptureGenerate}
+                            disabled={parsedSignals.length < 2 || !selected}
+                            className="mt-3 flex items-center gap-1.5 bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            {parsedSignals.length >= 2 ? 'Generate Group Note' : 'Type more to enable…'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Topic Picker (collapsible) */}
+                      <div className="border border-border rounded-xl overflow-hidden">
+                        <button onClick={() => setAiDraftOpen(o => !o)} className="w-full flex items-center gap-2 px-3 py-2.5 bg-white hover:bg-slate-50 transition-colors text-left">
+                          <Target className="w-4 h-4 text-slate" />
+                          <span className="text-xs font-semibold text-navy">
+                            {selectedTopicId ? `Topic: ${getTopicById(selectedTopicId)?.label}` : 'Browse 46 Clinical Topics'}
+                          </span>
+                          <span className="ml-auto">{aiDraftOpen ? <ChevronUp className="w-3.5 h-3.5 text-slate" /> : <ChevronDown className="w-3.5 h-3.5 text-slate" />}</span>
+                        </button>
+                        {aiDraftOpen && (
+                          <div className="border-t border-border bg-white p-3">
+                            <TopicPicker staffTitle={currentStaff?.title} selectedId={selectedTopicId} onSelect={id => handleTopicSelect(id)} onClear={() => setSelectedTopicId(null)} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Fine-tune fields (collapsible) */}
+                      <details>
+                        <summary className="flex items-center gap-2 px-3 py-2.5 bg-white border border-border rounded-xl cursor-pointer select-none hover:bg-slate-50 transition-colors list-none">
+                          <Sparkles className="w-4 h-4 text-slate" />
+                          <span className="text-xs font-semibold text-navy">Fine-tune fields manually</span>
+                        </summary>
+                        <div className="mt-2 border border-border rounded-xl bg-white p-3 space-y-2">
+                          {([
+                            { key: 'groupDynamics', label: 'Group Dynamics / Energy', ph: 'Describe overall group energy, cohesion, participation patterns…' },
+                            { key: 'notableThemes', label: 'Notable Themes', ph: 'Key themes or insights that emerged in group discussion…' },
+                            { key: 'participantHighlights', label: 'Individual Highlights', ph: 'Notable individual moments, concerns, or breakthroughs…' },
+                            { key: 'followUpActions', label: 'Follow-up Actions', ph: 'Counselor follow-up actions, referrals, or next session goals…' },
+                          ] as const).map(f => (
+                            <div key={f.key}>
+                              <label className="block text-[10px] font-semibold text-slate uppercase mb-0.5">{f.label}</label>
+                              <textarea rows={2} value={(aiInput as Record<string,string>)[f.key] ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.ph}
+                                className="w-full bg-bg border border-border rounded px-2 py-1 text-xs resize-none focus:outline-none focus:border-teal-400" />
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => {
+                              if (!selected) return;
+                              const draft = generateGroupNote({ groupName: selected.name, groupType: selected.type, topic: selected.topic, objectives: selected.objectives, facilitator: selected.facilitator, attendance: selected.actualAttendance, expectedCensus: selected.expectedCensus, program: selected.program, ...aiInput });
+                              setNoteText(draft);
+                            }}
+                            className="flex items-center gap-1.5 bg-teal-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-teal-700"
+                          >
+                            <Sparkles className="w-3 h-3" /> Generate from Fields
+                          </button>
+                        </div>
+                      </details>
+
+                      {/* Note quality score */}
+                      {noteText.length > 20 && (() => {
+                        const q = scoreNoteQuality({ 'Group Narrative': noteText });
+                        const barColor = q.score >= 90 ? 'bg-green-500' : q.score >= 75 ? 'bg-teal-500' : q.score >= 55 ? 'bg-blue-500' : q.score >= 35 ? 'bg-amber-400' : 'bg-red-400';
+                        return (
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold text-slate uppercase tracking-wider">Note Quality</span>
+                              <span className={`text-[11px] font-bold ${q.color}`}>{q.score}% — {q.label}</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${q.score}%` }} />
+                            </div>
+                            {q.issues[0] && (
+                              <div className="flex items-start gap-1 text-[10px] text-amber-600 mt-1">
+                                <AlertTriangle className="w-2.5 h-2.5 flex-none mt-0.5" /><span>{q.issues[0]}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
+
+                  {/* Group Narrative Note textarea */}
+                  <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1.5">Group Narrative Note</div>
+                  <textarea
+                    value={noteText}
+                    onChange={e => setNoteText(e.target.value)}
+                    placeholder="Document session themes, overall group dynamics, therapeutic interventions, follow-up actions…"
+                    className="w-full border border-border rounded-lg p-3 text-sm min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50"
+                  />
                   <div className="flex gap-2 mt-2 flex-wrap">
                     <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => { if (!readOnly && selected) { setSigModal(selected.id); } }} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" /> Sign Note
