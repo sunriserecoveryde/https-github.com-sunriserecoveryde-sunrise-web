@@ -26,7 +26,7 @@ export default function S16Ask() {
             <div className="bg-[#1A3A5E]/80 border border-[#F05A28]/40 rounded-2xl p-[3vh]">
               <div className="text-primary text-[1.2vw] font-body font-semibold uppercase tracking-[0.2em] mb-[1.5vh]">Seed Round</div>
               <div className="text-[4.5vw] font-display font-black text-text leading-none">$3.5M</div>
-              <div className="text-[1.5vw] text-[#7A96B0] font-body mt-[0.8vh]">Pre-money valuation available on request</div>
+              <div className="text-[1.5vw] text-[#7A96B0] font-body mt-[0.8vh]">Pre-money valuation on request</div>
             </div>
 
             <div className="bg-[#0A1F35]/80 border border-[#2A4A7E]/60 rounded-2xl p-[3vh]">
@@ -76,7 +76,8 @@ export default function S16Ask() {
 
             <div className="bg-[#1A3A5E]/80 border border-[#2A4A7E]/60 rounded-2xl p-[3vh]">
               <div className="text-[#7A96B0] text-[1.2vw] font-body font-semibold uppercase tracking-[0.2em] mb-[1.5vh]">Get in Touch</div>
-              <div className="text-[1.6vw] font-display font-bold text-text mb-[0.5vh]">Dr. Sarah Okonkwo</div>
+              <div className="text-[1.6vw] font-display font-bold text-text mb-[0.5vh]">Jim Collins</div>
+              <div className="text-[1.3vw] text-[#7A96B0] font-body mb-[1vh]">CEO &amp; Founder, Sunrise OS</div>
               <div className="text-[1.4vw] text-[#B8C8D8] font-body">hello@sunriseos.com</div>
               <div className="text-[1.4vw] text-[#B8C8D8] font-body">www.sunriseos.com</div>
             </div>
