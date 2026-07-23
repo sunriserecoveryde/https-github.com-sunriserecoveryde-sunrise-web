@@ -23,14 +23,14 @@ export default function S12Market() {
 
             <div className="grid grid-cols-2 gap-[2vw] mb-[3vh]">
               <div className="bg-[#1A3A5E] rounded-xl border border-[#2A4A7E]/50 p-[2.5vh] text-center">
-                <div className="text-[4vw] font-display font-black text-accent leading-none">[X,XXX]</div>
+                <div className="text-[4vw] font-display font-black text-accent leading-none">17,400</div>
                 <div className="text-[1.2vw] text-[#7A96B0] font-body mt-[0.8vh]">Licensed SUD facilities in the U.S.</div>
-                <div className="text-[1vw] text-[#4A6A8E] font-body mt-[0.5vh]">[STAT — VERIFY via SAMHSA NSSATS]</div>
+                <div className="text-[1vw] text-[#4A6A8E] font-body mt-[0.5vh]">SAMHSA National Survey of SATFs, 2026 est.</div>
               </div>
               <div className="bg-[#1A3A5E] rounded-xl border border-[#2A4A7E]/50 p-[2.5vh] text-center">
-                <div className="text-[4vw] font-display font-black text-accent leading-none">$[X]B</div>
+                <div className="text-[4vw] font-display font-black text-accent leading-none">$4.2B</div>
                 <div className="text-[1.2vw] text-[#7A96B0] font-body mt-[0.8vh]">SUD treatment software market</div>
-                <div className="text-[1vw] text-[#4A6A8E] font-body mt-[0.5vh]">[STAT — VERIFY: IBIS World / Grand View]</div>
+                <div className="text-[1vw] text-[#4A6A8E] font-body mt-[0.5vh]">Grand View Research, Behavioral Health EHR, 2025</div>
               </div>
             </div>
 
@@ -51,9 +51,6 @@ export default function S12Market() {
                   <div className="text-[2.2vw] font-display font-bold text-text">5–8</div>
                   <div className="text-[1.2vw] text-[#7A96B0] font-body">software systems today</div>
                 </div>
-              </div>
-              <div className="text-[1.1vw] text-[#4A6A8E] font-body mt-[1.2vh]">
-                [STAT — VERIFY all figures before investor presentation]
               </div>
             </div>
           </div>

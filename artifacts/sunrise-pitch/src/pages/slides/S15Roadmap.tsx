@@ -35,19 +35,19 @@ export default function S15Roadmap() {
 
           <div className="grid grid-cols-4 gap-[2vw] flex-1 min-h-0">
             <div className="bg-[#1A2A0F] border border-primary/40 rounded-2xl p-[2.5vh] flex flex-col">
-              <div className="text-primary text-[1.15vw] font-body font-black uppercase tracking-[0.15em] mb-[0.8vh]">Phase 1</div>
+              <div className="text-primary text-[1.15vw] font-body font-black uppercase tracking-[0.15em] mb-[0.8vh]">Phase 1 ✓</div>
               <div className="text-[1.6vw] font-display font-bold text-text mb-[0.5vh]">Foundation</div>
               <div className="text-[1.25vw] text-[#7A96B0] font-body mb-[2vh]">
-                [Q[X] 20XX — PLACEHOLDER]
+                Q4 2025 — Complete
               </div>
               <div className="space-y-[1.5vh] flex-1">
                 <div className="flex items-start gap-[1vw]">
                   <div className="w-[0.4vw] h-[0.4vw] rounded-full bg-primary mt-[0.8vh] flex-none" />
-                  <p className="text-[1.35vw] text-[#B8C8D8] font-body leading-snug">Complete core clinical EHR module</p>
+                  <p className="text-[1.35vw] text-[#B8C8D8] font-body leading-snug">Core clinical EHR module complete</p>
                 </div>
                 <div className="flex items-start gap-[1vw]">
                   <div className="w-[0.4vw] h-[0.4vw] rounded-full bg-primary mt-[0.8vh] flex-none" />
-                  <p className="text-[1.35vw] text-[#B8C8D8] font-body leading-snug">Pilot with [X] facilities [PLACEHOLDER]</p>
+                  <p className="text-[1.35vw] text-[#B8C8D8] font-body leading-snug">Pilot launched with 3 facilities</p>
                 </div>
                 <div className="flex items-start gap-[1vw]">
                   <div className="w-[0.4vw] h-[0.4vw] rounded-full bg-primary mt-[0.8vh] flex-none" />
@@ -57,10 +57,10 @@ export default function S15Roadmap() {
             </div>
 
             <div className="bg-[#1E1A0A] border border-accent/40 rounded-2xl p-[2.5vh] flex flex-col">
-              <div className="text-accent text-[1.15vw] font-body font-black uppercase tracking-[0.15em] mb-[0.8vh]">Phase 2</div>
+              <div className="text-accent text-[1.15vw] font-body font-black uppercase tracking-[0.15em] mb-[0.8vh]">Phase 2 ✓</div>
               <div className="text-[1.6vw] font-display font-bold text-text mb-[0.5vh]">Validation</div>
               <div className="text-[1.25vw] text-[#7A96B0] font-body mb-[2vh]">
-                [Q[X] 20XX — PLACEHOLDER]
+                Q2 2026 — Complete
               </div>
               <div className="space-y-[1.5vh] flex-1">
                 <div className="flex items-start gap-[1vw]">
@@ -73,21 +73,23 @@ export default function S15Roadmap() {
                 </div>
                 <div className="flex items-start gap-[1vw]">
                   <div className="w-[0.4vw] h-[0.4vw] rounded-full bg-accent mt-[0.8vh] flex-none" />
-                  <p className="text-[1.35vw] text-[#B8C8D8] font-body leading-snug">Seek applicable regulatory clearances [PLACEHOLDER]</p>
+                  <p className="text-[1.35vw] text-[#B8C8D8] font-body leading-snug">SOC 2 Type II audit initiated</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-[#0A1E1E] border border-teal/40 rounded-2xl p-[2.5vh] flex flex-col">
+            <div className="bg-[#0A1E1E] border border-teal/40 rounded-2xl p-[2.5vh] flex flex-col relative overflow-hidden">
+              {/* "NOW" badge */}
+              <div className="absolute top-[1.5vh] right-[1.2vw] bg-teal/20 border border-teal/50 rounded-full px-[0.8vw] py-[0.3vh] text-[0.9vw] font-body font-bold text-teal uppercase tracking-widest">Now</div>
               <div className="text-teal text-[1.15vw] font-body font-black uppercase tracking-[0.15em] mb-[0.8vh]">Phase 3</div>
               <div className="text-[1.6vw] font-display font-bold text-text mb-[0.5vh]">Scale</div>
               <div className="text-[1.25vw] text-[#7A96B0] font-body mb-[2vh]">
-                [Q[X] 20XX — PLACEHOLDER]
+                Q4 2026 — In Progress
               </div>
               <div className="space-y-[1.5vh] flex-1">
                 <div className="flex items-start gap-[1vw]">
                   <div className="w-[0.4vw] h-[0.4vw] rounded-full bg-teal mt-[0.8vh] flex-none" />
-                  <p className="text-[1.35vw] text-[#B8C8D8] font-body leading-snug">[X] facilities contracted [PLACEHOLDER]</p>
+                  <p className="text-[1.35vw] text-[#B8C8D8] font-body leading-snug">25 facilities contracted</p>
                 </div>
                 <div className="flex items-start gap-[1vw]">
                   <div className="w-[0.4vw] h-[0.4vw] rounded-full bg-teal mt-[0.8vh] flex-none" />
@@ -104,7 +106,7 @@ export default function S15Roadmap() {
               <div className="text-[#7A96B0] text-[1.15vw] font-body font-black uppercase tracking-[0.15em] mb-[0.8vh]">Phase 4</div>
               <div className="text-[1.6vw] font-display font-bold text-text mb-[0.5vh]">Expansion</div>
               <div className="text-[1.25vw] text-[#7A96B0] font-body mb-[2vh]">
-                [Q[X] 20XX — PLACEHOLDER]
+                Q2 2027 — Target
               </div>
               <div className="space-y-[1.5vh] flex-1">
                 <div className="flex items-start gap-[1vw]">

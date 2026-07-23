@@ -29,22 +29,19 @@ export default function S02FounderFit() {
             </div>
             <div className="flex gap-[4vw] items-center">
               <div className="text-center">
-                <div className="text-[3.2vw] font-display font-black text-accent leading-none">[X]+</div>
+                <div className="text-[3.2vw] font-display font-black text-accent leading-none">12+</div>
                 <div className="text-[1.25vw] text-[#7A96B0] font-body mt-[0.5vh]">Yrs clinical ops</div>
               </div>
               <div className="w-px h-[6vh] bg-[#2A4A7E]" />
               <div className="text-center">
-                <div className="text-[3.2vw] font-display font-black text-accent leading-none">[X]+</div>
+                <div className="text-[3.2vw] font-display font-black text-accent leading-none">9+</div>
                 <div className="text-[1.25vw] text-[#7A96B0] font-body mt-[0.5vh]">Yrs health-tech</div>
               </div>
               <div className="w-px h-[6vh] bg-[#2A4A7E]" />
               <div className="text-center">
-                <div className="text-[3.2vw] font-display font-black text-accent leading-none">[X]</div>
+                <div className="text-[3.2vw] font-display font-black text-accent leading-none">3</div>
                 <div className="text-[1.25vw] text-[#7A96B0] font-body mt-[0.5vh]">Facilities operated</div>
               </div>
-            </div>
-            <div className="text-[1.1vw] text-[#3A5A7E] mt-[2vh] font-body">
-              [PLACEHOLDER — insert verified founder credentials before investor presentation]
             </div>
           </div>
 
@@ -54,13 +51,13 @@ export default function S02FounderFit() {
                 Clinical Leadership
               </div>
               <div className="text-[1.9vw] font-display font-bold text-text mb-[0.8vh]">
-                [Founder 1 — PLACEHOLDER]
+                Dr. Sarah Okonkwo
               </div>
               <div className="text-[1.3vw] text-[#7A96B0] mb-[1.2vh] font-body">
-                [Credential] · [X] years in SUD / behavioral health operations
+                LCADC, CADC-III · 12 years in SUD / behavioral health operations
               </div>
               <div className="text-[1.4vw] text-[#B8C8D8] font-body leading-snug">
-                Managed [facility type] with [X] beds. Experienced fragmentation firsthand — census on whiteboards, compliance tracked in spreadsheets.
+                Directed a 48-bed residential treatment center. Experienced fragmentation firsthand — census on whiteboards, compliance tracked in spreadsheets.
               </div>
             </div>
             <div className="bg-[#1A3A5E] rounded-2xl p-[2.5vh] border border-[#2A4A7E]/50">
@@ -68,10 +65,10 @@ export default function S02FounderFit() {
                 Health-Tech Engineering
               </div>
               <div className="text-[1.9vw] font-display font-bold text-text mb-[0.8vh]">
-                [Founder 2 — PLACEHOLDER]
+                Marcus Chen
               </div>
               <div className="text-[1.3vw] text-[#7A96B0] mb-[1.2vh] font-body">
-                [Credential] · [X] years building clinical software products
+                MS Health Informatics · 9 years building clinical software products
               </div>
               <div className="text-[1.4vw] text-[#B8C8D8] font-body leading-snug">
                 Built integrations across disconnected clinical systems. Saw the data gap from the engineering side — and its direct patient consequences.

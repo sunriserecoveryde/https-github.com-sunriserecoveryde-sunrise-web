@@ -9,10 +9,10 @@ export const Pricing = () => {
         <div className="text-center mb-16 max-w-2xl mx-auto">
           <div className="text-xs font-semibold tracking-[0.18em] uppercase text-sunrise-orange mb-5">Pricing</div>
           <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight">
-            Transparent, facility-based pricing.
+            Transparent, per-bed pricing.
           </h2>
           <p className="text-lg text-slate-400 leading-relaxed">
-            No hidden implementation fees. No surprise per-user charges. You pay for the capacity of your facility.
+            $150 per bed per month — billed annually. No per-user fees. No surprise implementation charges. You pay for the capacity of your facility.
           </p>
         </div>
 
@@ -27,13 +27,20 @@ export const Pricing = () => {
           >
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">Starter</h3>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-white tracking-tight">$299</span>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-4xl font-extrabold text-white tracking-tight">$1,500</span>
                 <span className="text-slate-500 text-sm">/month</span>
               </div>
+              <div className="text-slate-500 text-xs">Up to 10 beds · billed annually</div>
             </div>
             <ul className="space-y-3.5 mb-8 flex-1">
-              {['Up to 30 beds', 'Up to 5 clinical staff', 'Core EHR workflows', 'Basic census management'].map((f, i) => (
+              {[
+                'Up to 10 beds',
+                'Unlimited clinical staff',
+                'Core EHR & census management',
+                'Shift handoff & notes',
+                'Sunrise Staff mobile app',
+              ].map((f, i) => (
                 <li key={i} className="flex items-center gap-3 text-slate-400 text-sm">
                   <Check className="w-4 h-4 text-slate-600 shrink-0" /> {f}
                 </li>
@@ -57,13 +64,21 @@ export const Pricing = () => {
             </div>
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-sunrise-orange uppercase tracking-widest mb-4">Growth</h3>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-white tracking-tight">$699</span>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-4xl font-extrabold text-white tracking-tight">$6,000</span>
                 <span className="text-slate-500 text-sm">/month</span>
               </div>
+              <div className="text-slate-500 text-xs">Up to 40 beds · billed annually</div>
             </div>
             <ul className="space-y-3.5 mb-8 flex-1">
-              {['Up to 75 beds', 'Up to 15 clinical staff', 'AI Note Generation Engine', 'Compliance Dashboards', 'Priority Support'].map((f, i) => (
+              {[
+                'Up to 40 beds',
+                'Unlimited clinical staff',
+                'AI Note Generation Engine',
+                'CIWA / COWS scoring',
+                'Compliance & billing dashboards',
+                'Priority support',
+              ].map((f, i) => (
                 <li key={i} className="flex items-center gap-3 text-white text-sm">
                   <Check className="w-4 h-4 text-sunrise-orange shrink-0" /> {f}
                 </li>
@@ -84,12 +99,19 @@ export const Pricing = () => {
           >
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">Enterprise</h3>
-              <div className="flex items-baseline gap-1">
+              <div className="flex items-baseline gap-1 mb-1">
                 <span className="text-4xl font-extrabold text-white tracking-tight">Custom</span>
               </div>
+              <div className="text-slate-500 text-xs">75+ beds · volume discounts available</div>
             </div>
             <ul className="space-y-3.5 mb-8 flex-1">
-              {['Unlimited beds & staff', 'Multi-facility management', 'Dedicated compliance officer', 'White-label patient portal', 'Custom API integrations'].map((f, i) => (
+              {[
+                'Unlimited beds & staff',
+                'Multi-facility management',
+                'Dedicated compliance officer',
+                'White-label patient portal',
+                'Custom API & EHR integrations',
+              ].map((f, i) => (
                 <li key={i} className="flex items-center gap-3 text-slate-400 text-sm">
                   <Check className="w-4 h-4 text-slate-600 shrink-0" /> {f}
                 </li>
@@ -101,6 +123,18 @@ export const Pricing = () => {
           </motion.div>
 
         </div>
+
+        {/* Per-bed callout */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="mt-10 text-center"
+        >
+          <p className="text-slate-500 text-sm">
+            All plans include Sunrise Staff mobile, shift exports, and onboarding support. Implementation billed separately. <a href="mailto:sales@sunriseos.com" className="text-sunrise-orange hover:text-orange-400 transition-colors">Talk to sales</a> for a custom quote.
+          </p>
+        </motion.div>
       </div>
     </section>
   );

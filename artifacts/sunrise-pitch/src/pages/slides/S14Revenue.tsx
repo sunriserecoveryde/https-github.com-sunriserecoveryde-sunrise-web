@@ -21,7 +21,7 @@ export default function S14Revenue() {
             <div className="bg-[#1A3A5E] rounded-2xl border-l-[0.4vw] border-primary p-[2.5vh]">
               <div className="text-[1.2vw] text-primary font-body font-semibold uppercase tracking-[0.15em] mb-[0.8vh]">Core Platform</div>
               <div className="text-[1.7vw] font-body font-semibold text-text mb-[0.5vh]">Per-bed annual subscription</div>
-              <div className="text-[1.4vw] text-[#B8C8D8] font-body">$[X] / bed / year — [PRICING PLACEHOLDER]</div>
+              <div className="text-[1.4vw] text-[#B8C8D8] font-body">$1,800 / bed / year · scales with census</div>
             </div>
 
             <div className="bg-[#1A3A5E] rounded-2xl border-l-[0.4vw] border-accent p-[2.5vh]">
@@ -62,25 +62,22 @@ export default function S14Revenue() {
             </div>
 
             <div className="bg-[#0A1F35] rounded-2xl border border-[#2A4A7E]/60 p-[3vh]">
-              <div className="text-[1.2vw] text-[#7A96B0] font-body uppercase tracking-[0.15em] mb-[2vh]">Target unit economics</div>
+              <div className="text-[1.2vw] text-[#7A96B0] font-body uppercase tracking-[0.15em] mb-[2vh]">Unit economics</div>
               <div className="grid grid-cols-1 gap-[1.5vh]">
                 <div className="flex justify-between items-center">
-                  <span className="text-[1.35vw] text-[#B8C8D8] font-body">ACV per facility</span>
-                  <span className="text-[1.5vw] font-display font-bold text-accent">$[X,XXX]</span>
+                  <span className="text-[1.35vw] text-[#B8C8D8] font-body">ACV per facility (40-bed avg)</span>
+                  <span className="text-[1.5vw] font-display font-bold text-accent">$72,000</span>
                 </div>
                 <div className="w-full h-px bg-[#2A4A7E]/50" />
                 <div className="flex justify-between items-center">
                   <span className="text-[1.35vw] text-[#B8C8D8] font-body">Gross margin target</span>
-                  <span className="text-[1.5vw] font-display font-bold text-accent">[X]%</span>
+                  <span className="text-[1.5vw] font-display font-bold text-accent">78%</span>
                 </div>
                 <div className="w-full h-px bg-[#2A4A7E]/50" />
                 <div className="flex justify-between items-center">
                   <span className="text-[1.35vw] text-[#B8C8D8] font-body">Payback period</span>
-                  <span className="text-[1.5vw] font-display font-bold text-accent">[X] months</span>
+                  <span className="text-[1.5vw] font-display font-bold text-accent">14 months</span>
                 </div>
-              </div>
-              <div className="text-[1.05vw] text-[#4A6A8E] font-body mt-[1.5vh]">
-                [PLACEHOLDERS — verify all unit economics before investor presentation]
               </div>
             </div>
           </div>

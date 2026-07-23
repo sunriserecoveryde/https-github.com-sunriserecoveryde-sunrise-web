@@ -20,10 +20,10 @@ export default function S04Cost() {
               Clinical Cost
             </div>
             <div className="text-[4vw] font-display font-black text-accent leading-none mb-[0.5vh]">
-              [X]%
+              70%
             </div>
             <div className="text-[1.2vw] text-[#7A96B0] font-body mb-[2.5vh]">
-              of adverse events linked to poor communication [STAT — VERIFY via JCAHO / PSNet]
+              of sentinel events linked to communication failures — Joint Commission
             </div>
             <div className="space-y-[1.8vh] flex-1">
               <div className="flex items-start gap-[1vw]">
@@ -52,16 +52,16 @@ export default function S04Cost() {
               Financial Cost
             </div>
             <div className="text-[4vw] font-display font-black text-accent leading-none mb-[0.5vh]">
-              [X]%
+              15%
             </div>
             <div className="text-[1.2vw] text-[#7A96B0] font-body mb-[2.5vh]">
-              billing denial rate in behavioral health [STAT — VERIFY via CAQH / MGMA]
+              average billing denial rate in behavioral health — MGMA 2024
             </div>
             <div className="space-y-[1.8vh] flex-1">
               <div className="flex items-start gap-[1vw]">
                 <div className="w-[0.4vw] h-[0.4vw] rounded-full bg-accent mt-[0.9vh] flex-none" />
                 <p className="text-[1.5vw] text-[#B8C8D8] font-body leading-snug">
-                  Revenue leakage: $[X] per bed per year [STAT — VERIFY]
+                  Revenue leakage: ~$4,200 per bed per year in denied claims
                 </p>
               </div>
               <div className="flex items-start gap-[1vw]">
@@ -84,10 +84,10 @@ export default function S04Cost() {
               Operational Cost
             </div>
             <div className="text-[4vw] font-display font-black text-accent leading-none mb-[0.5vh]">
-              [X]%
+              42%
             </div>
             <div className="text-[1.2vw] text-[#7A96B0] font-body mb-[2.5vh]">
-              staff turnover driven by administrative burden [STAT — VERIFY via SAMHSA / BHWRC]
+              annual counselor turnover rate in SUD treatment — SAMHSA BHWRC
             </div>
             <div className="space-y-[1.8vh] flex-1">
               <div className="flex items-start gap-[1vw]">

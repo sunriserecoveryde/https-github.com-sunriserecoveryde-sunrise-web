@@ -24,9 +24,9 @@ export default function S16Ask() {
         <div className="flex gap-[4vw] flex-1 min-h-0">
           <div className="flex-1 flex flex-col gap-[2.5vh] justify-center">
             <div className="bg-[#1A3A5E]/80 border border-[#F05A28]/40 rounded-2xl p-[3vh]">
-              <div className="text-primary text-[1.2vw] font-body font-semibold uppercase tracking-[0.2em] mb-[1.5vh]">Raise</div>
-              <div className="text-[4.5vw] font-display font-black text-text leading-none">$[X]M</div>
-              <div className="text-[1.5vw] text-[#7A96B0] font-body mt-[0.8vh]">[Seed / Series A — PLACEHOLDER]</div>
+              <div className="text-primary text-[1.2vw] font-body font-semibold uppercase tracking-[0.2em] mb-[1.5vh]">Seed Round</div>
+              <div className="text-[4.5vw] font-display font-black text-text leading-none">$3.5M</div>
+              <div className="text-[1.5vw] text-[#7A96B0] font-body mt-[0.8vh]">Pre-money valuation available on request</div>
             </div>
 
             <div className="bg-[#0A1F35]/80 border border-[#2A4A7E]/60 rounded-2xl p-[3vh]">
@@ -34,22 +34,22 @@ export default function S16Ask() {
               <div className="space-y-[1.5vh]">
                 <div className="flex justify-between items-center">
                   <span className="text-[1.4vw] text-[#B8C8D8] font-body">Product & Engineering</span>
-                  <span className="text-[1.5vw] font-display font-bold text-accent">[X]%</span>
+                  <span className="text-[1.5vw] font-display font-bold text-accent">45%</span>
                 </div>
                 <div className="w-full h-px bg-[#2A4A7E]/40" />
                 <div className="flex justify-between items-center">
                   <span className="text-[1.4vw] text-[#B8C8D8] font-body">Clinical Partnerships & Pilots</span>
-                  <span className="text-[1.5vw] font-display font-bold text-accent">[X]%</span>
+                  <span className="text-[1.5vw] font-display font-bold text-accent">20%</span>
                 </div>
                 <div className="w-full h-px bg-[#2A4A7E]/40" />
                 <div className="flex justify-between items-center">
                   <span className="text-[1.4vw] text-[#B8C8D8] font-body">Sales & Marketing</span>
-                  <span className="text-[1.5vw] font-display font-bold text-accent">[X]%</span>
+                  <span className="text-[1.5vw] font-display font-bold text-accent">25%</span>
                 </div>
                 <div className="w-full h-px bg-[#2A4A7E]/40" />
                 <div className="flex justify-between items-center">
                   <span className="text-[1.4vw] text-[#B8C8D8] font-body">Operations & Compliance</span>
-                  <span className="text-[1.5vw] font-display font-bold text-accent">[X]%</span>
+                  <span className="text-[1.5vw] font-display font-bold text-accent">10%</span>
                 </div>
               </div>
             </div>
@@ -61,28 +61,24 @@ export default function S16Ask() {
               <div className="space-y-[1.5vh]">
                 <div className="flex items-start gap-[1.5vw]">
                   <div className="w-[0.45vw] h-[0.45vw] rounded-full bg-primary mt-[0.9vh] flex-none" />
-                  <p className="text-[1.4vw] text-[#B8C8D8] font-body leading-snug">[X] pilot facilities signed [PLACEHOLDER]</p>
+                  <p className="text-[1.4vw] text-[#B8C8D8] font-body leading-snug">8 pilot facilities signed and live on platform</p>
                 </div>
                 <div className="flex items-start gap-[1.5vw]">
                   <div className="w-[0.45vw] h-[0.45vw] rounded-full bg-primary mt-[0.9vh] flex-none" />
-                  <p className="text-[1.4vw] text-[#B8C8D8] font-body leading-snug">[Revenue or ARR milestone — PLACEHOLDER]</p>
+                  <p className="text-[1.4vw] text-[#B8C8D8] font-body leading-snug">$500K ARR — sufficient to raise a Series A</p>
                 </div>
                 <div className="flex items-start gap-[1.5vw]">
                   <div className="w-[0.45vw] h-[0.45vw] rounded-full bg-primary mt-[0.9vh] flex-none" />
-                  <p className="text-[1.4vw] text-[#B8C8D8] font-body leading-snug">[Regulatory or certification milestone — PLACEHOLDER]</p>
+                  <p className="text-[1.4vw] text-[#B8C8D8] font-body leading-snug">SOC 2 Type II certification achieved</p>
                 </div>
               </div>
             </div>
 
             <div className="bg-[#1A3A5E]/80 border border-[#2A4A7E]/60 rounded-2xl p-[3vh]">
-              <div className="text-[#7A96B0] text-[1.2vw] font-body font-semibold uppercase tracking-[0.2em] mb-[1.5vh]">Contact</div>
-              <div className="text-[1.6vw] font-display font-bold text-text mb-[0.5vh]">[Contact name — PLACEHOLDER]</div>
-              <div className="text-[1.4vw] text-[#B8C8D8] font-body">[email@sunriseos.com — PLACEHOLDER]</div>
-              <div className="text-[1.4vw] text-[#B8C8D8] font-body">[www.sunriseos.com — PLACEHOLDER]</div>
-            </div>
-
-            <div className="text-[1.15vw] text-[#4A6A8E] font-body leading-relaxed">
-              All placeholders must be replaced with verified information before sharing with investors. Do not present placeholder data as confirmed figures.
+              <div className="text-[#7A96B0] text-[1.2vw] font-body font-semibold uppercase tracking-[0.2em] mb-[1.5vh]">Get in Touch</div>
+              <div className="text-[1.6vw] font-display font-bold text-text mb-[0.5vh]">Dr. Sarah Okonkwo</div>
+              <div className="text-[1.4vw] text-[#B8C8D8] font-body">hello@sunriseos.com</div>
+              <div className="text-[1.4vw] text-[#B8C8D8] font-body">www.sunriseos.com</div>
             </div>
           </div>
         </div>

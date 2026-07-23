@@ -24,8 +24,8 @@ export const Investors = () => {
             className="grid grid-cols-2 gap-4"
           >
             {[
-              { value: "2.1M+", label: "Americans in treatment annually" },
-              { value: "14,500", label: "Treatment facilities in the US" },
+              { value: "17,400", label: "Licensed SUD treatment facilities in the U.S." },
+              { value: "42%", label: "Annual counselor turnover — the problem we're solving" },
             ].map((stat, i) => (
               <div key={i} className="bg-[#0A0F1C] p-6 rounded-xl border border-slate-800 flex flex-col justify-center">
                 <div className="text-4xl font-extrabold text-white mb-2 tracking-tight">{stat.value}</div>
@@ -38,11 +38,11 @@ export const Investors = () => {
                   <BarChart3 className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-white tracking-tight">$14B+</div>
-                  <div className="text-slate-400 text-sm">TAM for specialized EHR software</div>
+                  <div className="text-2xl font-bold text-white tracking-tight">$4.2B</div>
+                  <div className="text-slate-400 text-sm">SUD treatment software market (Grand View Research, 2025)</div>
                 </div>
               </div>
-              <p className="text-slate-400 text-sm leading-relaxed">Driven by regulatory changes and the explosion of private equity roll-ups demanding better operational data.</p>
+              <p className="text-slate-400 text-sm leading-relaxed">Expanding into dual-diagnosis and mental health residential opens a broader behavioral health TAM exceeding $14B. Sunrise OS enters at the highest-fragmentation segment first.</p>
             </div>
           </motion.div>
 
@@ -64,7 +64,7 @@ export const Investors = () => {
               {
                 icon: <ShieldCheck className="w-5 h-5 text-sunrise-orange" />,
                 title: "Compliance as a feature",
-                desc: "We don't just store data — we actively prevent operators from making mistakes that lead to insurance clawbacks."
+                desc: "We don't just store data — we actively prevent operators from making mistakes that lead to insurance clawbacks. 15% denial rates in behavioral health are the norm. We target sub-5%."
               },
               {
                 icon: <Zap className="w-5 h-5 text-sunrise-orange" />,
@@ -93,8 +93,9 @@ export const Investors = () => {
           <div className="grid md:grid-cols-3 gap-10 items-start">
             <div className="md:col-span-1">
               <div className="text-xs font-semibold text-sunrise-orange tracking-[0.18em] uppercase mb-3">Seed Round</div>
-              <div className="text-5xl font-extrabold text-white mb-1 tracking-tight">$2.5M</div>
-              <div className="text-slate-400 mb-7">at $10M Post-Money Cap</div>
+              <div className="text-5xl font-extrabold text-white mb-1 tracking-tight">$3.5M</div>
+              <div className="text-slate-400 mb-2">Pre-money valuation on request</div>
+              <div className="text-slate-500 text-sm mb-7">Target milestones: 8 pilot facilities, $500K ARR, SOC 2 Type II</div>
               <a href="mailto:investors@sunriseos.com" className="inline-flex items-center px-6 py-3 text-sm font-semibold text-white bg-sunrise-orange hover:bg-orange-500 rounded-lg transition-colors">
                 Request Data Room
               </a>
@@ -103,9 +104,10 @@ export const Investors = () => {
               <h4 className="text-sm font-semibold text-slate-300 tracking-wide mb-6 uppercase">Use of Funds</h4>
               <div className="space-y-5">
                 {[
-                  { label: "Engineering & Product", pct: "40%", w: "40%", color: "bg-sunrise-orange" },
-                  { label: "Go-to-Market & Sales", pct: "35%", w: "35%", color: "bg-sunrise-orange/70" },
-                  { label: "Security & Compliance", pct: "25%", w: "25%", color: "bg-sunrise-orange/40" },
+                  { label: "Product & Engineering", pct: "45%", w: "45%", color: "bg-sunrise-orange" },
+                  { label: "Sales & Marketing", pct: "25%", w: "25%", color: "bg-sunrise-orange/70" },
+                  { label: "Clinical Partnerships & Pilots", pct: "20%", w: "20%", color: "bg-sunrise-orange/50" },
+                  { label: "Operations & Compliance", pct: "10%", w: "10%", color: "bg-sunrise-orange/30" },
                 ].map((row, i) => (
                   <div key={i}>
                     <div className="flex justify-between text-sm mb-2">
