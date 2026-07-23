@@ -3,22 +3,9 @@ import { motion } from 'framer-motion';
 
 const team = [
   {
-    name: "Alex Rivera",
+    name: "Jim Collins",
     role: "CEO & Founder",
-    bg: "Former Clinical Director at a 100-bed facility. Managed operations and compliance for 8 years.",
-    image: "https://api.dicebear.com/7.x/notionists/svg?seed=Alex"
-  },
-  {
-    name: "Jordan Kim",
-    role: "CTO",
-    bg: "Ex-Epic Systems. Built enterprise healthcare architecture handling millions of records safely.",
-    image: "https://api.dicebear.com/7.x/notionists/svg?seed=Jordan"
-  },
-  {
-    name: "Sam Torres",
-    role: "CMO",
-    bg: "LCSW with 12 years in addiction treatment. Designed the clinical workflows driving Sunrise.",
-    image: "https://api.dicebear.com/7.x/notionists/svg?seed=Sam"
+    bg: "Clinical Supervisor and Counselor across all levels of care in addiction treatment for 17 years. Built Sunrise OS from the inside out — because he lived the problem every single day.",
   }
 ];
 
@@ -35,7 +22,7 @@ export const Team = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="flex justify-center max-w-5xl mx-auto">
           {team.map((member, i) => (
             <motion.div
               key={i}
