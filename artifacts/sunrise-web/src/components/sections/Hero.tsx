@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Download, Activity, Clock, FileText } from 'lucide-react';
+import logoImg from '@assets/SunriseOS_Logo_transparent.png';
 
 export const Hero = () => {
   return (
@@ -11,6 +12,22 @@ export const Hero = () => {
       
       <div className="container mx-auto px-6 md:px-12 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
+          {/* Featured logo — hero centerpiece */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="flex justify-center mb-10"
+          >
+            <motion.img
+              src={logoImg}
+              alt="Sunrise OS"
+              className="w-72 md:w-96 h-auto drop-shadow-[0_0_60px_rgba(249,115,22,0.45)]"
+              animate={{ filter: ['drop-shadow(0 0 40px rgba(249,115,22,0.35))', 'drop-shadow(0 0 70px rgba(249,115,22,0.6))', 'drop-shadow(0 0 40px rgba(249,115,22,0.35))'] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

@@ -6,7 +6,7 @@ export const Logo = ({ className = "" }: { className?: string }) => (
     <img
       src={logoImg}
       alt="Sunrise OS"
-      className="h-24 w-auto"
+      className="h-10 w-auto"
     />
   </div>
 );
