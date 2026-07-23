@@ -15,6 +15,8 @@ import {
   generateProgressNote, getAiFormSections, sectionsToString,
   NoteFormat, ProgressNoteInput,
 } from '../lib/aiNoteEngine';
+import { TopicPicker } from '../components/ui/TopicPicker';
+import { getTopicById } from '../lib/topicLibrary';
 
 // ─── Extended mock notes ─────────────────────────────────────────────────────
 
@@ -251,6 +253,7 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
   const [aiOpen, setAiOpen] = useState(false);
   const [aiInput, setAiInput] = useState<Partial<ProgressNoteInput>>({});
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   // Signature modal state
   const [sigOpen, setSigOpen] = useState(false);
   const { currentStaff } = useAuth();
@@ -286,19 +289,32 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
     onClose();
   }
 
-  function handleGenerateAI() {
+  function applyAndGenerate(input: Partial<ProgressNoteInput>) {
     const pt = MOCK_PATIENTS.find(p => p.id === patient);
-    setAiGenerating(true);
     const sects = generateProgressNote(format, {
       clientName: pt ? `${pt.firstName} ${pt.lastName}` : 'Client',
       noteType: type,
-      ...aiInput,
-      engagementLevel: aiInput.engagementLevel as ProgressNoteInput['engagementLevel'],
+      ...input,
+      engagementLevel: input.engagementLevel as ProgressNoteInput['engagementLevel'],
     });
     const sectValues = Object.values(sects);
     const newValues: Record<string, string> = {};
     fields.forEach((f, i) => { if (sectValues[i]) newValues[f] = sectValues[i]; });
     setValues(prev => ({ ...prev, ...newValues }));
+  }
+
+  function handleTopicSelect(topicId: string) {
+    const topic = getTopicById(topicId);
+    if (!topic) return;
+    setSelectedTopicId(topicId);
+    const merged = { ...topic.input } as Partial<ProgressNoteInput>;
+    setAiInput(merged);
+    applyAndGenerate(merged);
+  }
+
+  function handleGenerateAI() {
+    setAiGenerating(true);
+    applyAndGenerate(aiInput);
     setAiGenerating(false);
     setAiOpen(false);
   }
@@ -354,50 +370,76 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
       {/* AI Assist panel */}
       {aiOpen && (
         <div className="mb-5 border border-teal-200 rounded-xl bg-teal-50/40 p-4 space-y-4">
+
+          {/* Header */}
           <div className="flex items-start gap-2">
             <Sparkles className="w-4 h-4 text-teal-600 flex-none mt-0.5" />
             <div>
               <div className="text-sm font-semibold text-teal-800">AI Draft Assistant — {format} Format</div>
-              <div className="text-xs text-teal-600 mt-0.5">Fill fields below, then Generate Draft. All AI output must be reviewed and edited by a clinician before signing.</div>
+              <div className="text-xs text-teal-600 mt-0.5">Pick a session topic below for instant suggestions, or fill the fields manually. All output must be reviewed by a clinician before signing.</div>
             </div>
           </div>
-          {aiFormSections.map(section => (
-            <div key={section.heading}>
-              <div className="text-[10px] font-bold text-teal-700 uppercase tracking-wider mb-2">{section.heading}</div>
-              <div className="space-y-2">
-                {section.fields.map(field => (
-                  <div key={field.key}>
-                    <label className="block text-[10px] font-semibold text-slate uppercase tracking-wide mb-0.5">
-                      {field.label}{field.required ? ' *' : ''}
-                    </label>
-                    {field.key === 'engagementLevel' ? (
-                      <select
-                        value={aiInput.engagementLevel ?? ''}
-                        onChange={e => setAiInput(prev => ({ ...prev, engagementLevel: e.target.value as ProgressNoteInput['engagementLevel'] }))}
-                        className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400">
-                        <option value="">Select…</option>
-                        {['Active', 'Moderate', 'Passive', 'Minimal'].map(o => <option key={o}>{o}</option>)}
-                      </select>
-                    ) : field.multiline ? (
-                      <textarea rows={2} value={(aiInput[field.key] as string) ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [field.key]: e.target.value }))}
-                        placeholder={field.placeholder} className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:border-teal-400" />
-                    ) : (
-                      <input type="text" value={(aiInput[field.key] as string) ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [field.key]: e.target.value }))}
-                        placeholder={field.placeholder} className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-          <button onClick={handleGenerateAI} disabled={aiGenerating || !patient}
-            className="flex items-center gap-2 bg-teal-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors">
-            {aiGenerating ? (
-              <><span className="animate-spin inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full" /> Generating…</>
-            ) : (
-              <><Sparkles className="w-3.5 h-3.5" /> Generate Draft</>
+
+          {/* ── Topic Picker ────────────────────────────────────────── */}
+          <div className="bg-white/70 border border-teal-100 rounded-xl p-3">
+            <TopicPicker
+              staffTitle={currentStaff?.title}
+              selectedId={selectedTopicId}
+              onSelect={id => { if (patient) handleTopicSelect(id); }}
+              onClear={() => { setSelectedTopicId(null); setAiInput({}); }}
+            />
+            {!patient && (
+              <div className="mt-2 text-[10px] text-amber-600 font-semibold">Select a patient above before choosing a topic.</div>
             )}
-          </button>
+          </div>
+
+          {/* ── Manual fine-tune ────────────────────────────────────── */}
+          <details className="group">
+            <summary className="text-[10px] font-bold text-teal-700 uppercase tracking-wider cursor-pointer select-none list-none flex items-center gap-1.5">
+              <span className="group-open:hidden">▶</span><span className="hidden group-open:inline">▼</span>
+              Fine-tune fields manually
+            </summary>
+            <div className="mt-3 space-y-4">
+              {aiFormSections.map(section => (
+                <div key={section.heading}>
+                  <div className="text-[10px] font-bold text-teal-700 uppercase tracking-wider mb-2">{section.heading}</div>
+                  <div className="space-y-2">
+                    {section.fields.map(field => (
+                      <div key={field.key}>
+                        <label className="block text-[10px] font-semibold text-slate uppercase tracking-wide mb-0.5">
+                          {field.label}{field.required ? ' *' : ''}
+                        </label>
+                        {field.key === 'engagementLevel' ? (
+                          <select
+                            value={aiInput.engagementLevel ?? ''}
+                            onChange={e => setAiInput(prev => ({ ...prev, engagementLevel: e.target.value as ProgressNoteInput['engagementLevel'] }))}
+                            className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400">
+                            <option value="">Select…</option>
+                            {['Active', 'Moderate', 'Passive', 'Minimal'].map(o => <option key={o}>{o}</option>)}
+                          </select>
+                        ) : field.multiline ? (
+                          <textarea rows={2} value={(aiInput[field.key] as string) ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [field.key]: e.target.value }))}
+                            placeholder={field.placeholder} className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs resize-none focus:outline-none focus:border-teal-400" />
+                        ) : (
+                          <input type="text" value={(aiInput[field.key] as string) ?? ''} onChange={e => setAiInput(prev => ({ ...prev, [field.key]: e.target.value }))}
+                            placeholder={field.placeholder} className="w-full bg-white border border-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-teal-400" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button onClick={handleGenerateAI} disabled={aiGenerating || !patient}
+                className="flex items-center gap-2 bg-teal-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors">
+                {aiGenerating ? (
+                  <><span className="animate-spin inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full" /> Generating…</>
+                ) : (
+                  <><Sparkles className="w-3.5 h-3.5" /> Re-generate Draft</>
+                )}
+              </button>
+            </div>
+          </details>
+
         </div>
       )}
 

@@ -21,6 +21,24 @@ description: Template-based clinical note draft generator and wet signature capt
 - `DischargeSummary.tsx` — Replaced 3 static text signature fields with 4 interactive wet-sig blocks (Clinician, Co-signer, Physician, Client Acknowledgment).
 - `ASAMAssessments.tsx` — Signature section added in AssessmentDetail (Clinician + Client Acknowledgment blocks); state local to AssessmentDetail.
 
+## Topic Library (`src/lib/topicLibrary.ts`)
+- 46 topics across 11 clinical categories, each with full `ProgressNoteInput` fields pre-populated with authentic addiction-treatment clinical language.
+- Categories: Craving & Relapse Prevention, Motivation & Readiness, Trauma & PTSD, Shame/Guilt/Cognition, Family & Relationships, Co-occurring MH, Medical/MAT/Withdrawal, Recovery Skills, Grief & Loss, Discharge & Continuing Care, Risk & Safety.
+- Each topic specifies `primaryRoles: StaffTitleFragment[]` — used by `getTopicsForStaff(title)` to rank topics by relevance to the logged-in staff member.
+- Medical/MAT topics include SOAP-specific fields (`patientReports`, `objectiveFindings`); GIRP topics include `goalAddressed`.
+- Group-note topics carry a `groupNarrative` string that bypasses the engine entirely and sets noteText directly.
+
+## TopicPicker component (`src/components/ui/TopicPicker.tsx`)
+- Searchable, role-filtered chip grid with category filter pills.
+- Props: `staffTitle`, `selectedId`, `onSelect(id)`, `onClear()`.
+- Fires `onSelect` immediately on chip click — parent handles generation, no extra button needed.
+
+## Integration pattern (ProgressNotes + GroupNotes)
+- `handleTopicSelect(id)` in ProgressNotes: gets topic → merges `topic.input` into `aiInput` → immediately calls `applyAndGenerate()` → note section textareas fill without any user button press.
+- `handleTopicSelect(id)` in GroupNotes: uses `topic.groupNarrative` if present (direct setText), otherwise calls `generateGroupNote` with topic-enriched fields.
+- Manual "Fine-tune fields" section lives in a `<details>` collapsible below the topic picker — visible but out of the way.
+- `useAuth()` is imported in GroupNotes.tsx (added this session) to pass `currentStaff?.title` to TopicPicker.
+
 ## Type fixes required
 - `src/data/mockPatients.ts` — `SessionNote.format` type expanded from `'BIRP'|'DAP'` to `'BIRP'|'DAP'|'SOAP'|'GIRP'`.
 - `src/pages/CosignQueue.tsx` — `format?:` type expanded the same way.
