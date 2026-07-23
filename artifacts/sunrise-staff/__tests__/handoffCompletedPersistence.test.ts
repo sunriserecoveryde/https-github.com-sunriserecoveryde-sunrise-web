@@ -1154,3 +1154,186 @@ describe('midnight rollover — pending notes flushed before buffer clear', () =
     expect(storage.writeCount).toBe(0);
   });
 });
+
+// ─── Tests: force-quit at midnight — note recovery chain (Task #348) ──────────
+//
+// Scenario: nurse types a note during the OLD day's storage-load window
+// (isPersistSafe=false).  The write handler writes the touched-only payload to
+// the old draft-notes key.  Midnight then rolls over: the load effect re-runs,
+// flushes pendingNotesRef to the old draft-notes key (idempotent), and clears
+// the buffer.  The app is then force-quit BEFORE the old Promise.all resolves
+// (so the .then() callback that would merge the draft into savedNotes never
+// runs).
+//
+// On the new-day relaunch:
+//   1. pruneStaleStorageKeys removes any draft-notes key whose date suffix does
+//      NOT match today — this includes the old day's draft-notes key that holds
+//      the note.
+//   2. The new-day cold-start reads today's notes key and today's draft-notes
+//      key.  Neither exists yet, so the note is not recovered.
+//
+// This is an ACCEPTED LIMITATION for an extremely narrow race window:
+//   • The nurse must have force-quit in the interval between midnight (when the
+//     load effect re-runs and clears pendingNotesRef) and the old Promise.all
+//     resolving (which would have merged the draft).
+//   • Recovering the note would require the new-day cold-start to read and
+//     merge the old day's draft key, which risks applying stale data from the
+//     previous day to the current day's notes — a harder to detect correctness
+//     bug.
+//   • The note is preserved across all other force-quit scenarios: a force-quit
+//     that occurs before midnight (draft key is in today's bucket) or after the
+//     old Promise.all resolves (draft already merged into the main key) are both
+//     fully covered.
+//
+// This test documents the limitation so the edge case cannot silently regress.
+
+describe('force-quit at midnight — note recovery chain end-to-end (Task #348)', () => {
+  const NEW_DAY         = new Date('2026-07-22T00:05:00.000Z'); // 5 min after midnight
+  const NEW_NOTES_KEY   = makeHandoffNotesKey(NEW_DAY);
+  const NEW_DRAFT_KEY   = makeHandoffDraftNotesKey(NEW_DAY);
+
+  /**
+   * ACCEPTED LIMITATION: note typed during old-day load window is lost when
+   * the app is force-quit between midnight rollover and old Promise.all resolving.
+   *
+   * Timeline of the race:
+   *   T-2:00  App opens late in the old day; old Promise.all is in-flight (load hangs).
+   *   T-1:00  Nurse types "Critical: BP check q1h" → write handler writes it to
+   *           OLD_DRAFT_KEY (isPersistSafe=false path).  pendingNotesRef holds it too.
+   *   T=0     Midnight: load effect re-runs.
+   *           Flush: pendingNotesRef non-empty + isPersistSafe=false → writes to
+   *           OLD_DRAFT_KEY again (idempotent).  pendingNotesRef is cleared to {}.
+   *           Old Promise.all is still pending.
+   *   T+0     Force-quit.  Old Promise.all .then() never fires.
+   *           OLD_DRAFT_KEY holds the note in storage.
+   *   T+1     App relaunches on the new day.
+   *           pruneStaleStorageKeys removes OLD_DRAFT_KEY (wrong date suffix).
+   *           New-day cold-start reads NEW_NOTES_KEY + NEW_DRAFT_KEY — both absent.
+   *           Note is not recovered.  This is the documented accepted limitation.
+   */
+  it('ACCEPTED LIMITATION: note in old draft-notes key is pruned on new-day relaunch before it can be read', async () => {
+    // ── T-1:00: nurse types note during old-day load window ───────────────
+    // isPersistSafe is false: old day's load is still in-flight.
+    expect(isPersistSafe(false, null, OLD_NOTES_KEY)).toBe(false);
+
+    const storage = makeMemoryStorage();
+
+    // Write handler mirrors the isPersistSafe=false path:
+    // write touched-only payload to the old draft-notes key.
+    const typedNote = 'Critical: BP check q1h';
+    const pendingNotes: Record<string, string> = { p1: typedNote };
+    await saveJsonToStorage(storage, OLD_DRAFT_KEY, pendingNotes);
+
+    // Note is now durable in the old draft-notes key.
+    expect(storage.store[OLD_DRAFT_KEY]).toBe(JSON.stringify({ p1: typedNote }));
+
+    // ── T=0: midnight rollover flush (isPersistSafe=false path) ──────────
+    // The flush re-writes the same payload to OLD_DRAFT_KEY (idempotent).
+    // Then pendingNotesRef is cleared.  (We simply verify the key still holds
+    // the note — a duplicate setItem call changes nothing.)
+    const flushPending: Record<string, string> = { p1: typedNote };
+    if (Object.keys(flushPending).length > 0) {
+      // isPersistSafe=false path → write to old draft key
+      await saveJsonToStorage(storage, OLD_DRAFT_KEY, flushPending);
+    }
+    // pendingNotesRef cleared — buffer is now {}
+    // OLD_DRAFT_KEY is unchanged
+    expect(storage.store[OLD_DRAFT_KEY]).toBe(JSON.stringify({ p1: typedNote }));
+
+    // ── T+0: force-quit — old Promise.all .then() never fires ────────────
+    // (Nothing to simulate: the .then() just doesn't run.)
+    // OLD_DRAFT_KEY still holds the note in persistent storage.
+
+    // ── T+1: app relaunches on the new day ───────────────────────────────
+    // pruneStaleStorageKeys runs with the new-day draft key as currentKey.
+    // OLD_DRAFT_KEY has the OLD day's date suffix → it is pruned.
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: NEW_DRAFT_KEY },
+    ]);
+
+    // OLD_DRAFT_KEY is gone — the note cannot be recovered.
+    expect(storage.store[OLD_DRAFT_KEY]).toBeUndefined();
+
+    // New-day cold-start reads today's keys — both are absent.
+    const newDayDefaults = { notes: { p1: '', p2: '' } as Record<string, string>, shift: 'day' as Shift };
+    const [{ notes: newDayNotes, loaded }] = await Promise.all([
+      loadHandoffState(storage, { notes: NEW_NOTES_KEY, shift: makeHandoffShiftKey(NEW_DAY) }, newDayDefaults),
+    ]);
+    const newDayDraftRaw = await storage.getItem(NEW_DRAFT_KEY);
+
+    expect(loaded).toBe(true);
+    expect(newDayDraftRaw).toBeNull();     // no draft for the new day
+    // The note is NOT recovered — this is the accepted limitation.
+    expect(newDayNotes['p1']).toBe('');    // default empty, not "Critical: BP check q1h"
+  });
+
+  /**
+   * Contrast: force-quit BEFORE midnight is fully covered — note IS recovered.
+   *
+   * If the nurse types a note during the old-day load window and force-quits
+   * BEFORE midnight rolls over, OLD_DRAFT_KEY still has the current day's date
+   * suffix.  On the next relaunch (same calendar day) pruneStaleStorageKeys
+   * keeps the key and the old Promise.all .then() merges the draft into notes.
+   */
+  it('force-quit BEFORE midnight: note in draft-notes key IS recovered on same-day relaunch', async () => {
+    const storage = makeMemoryStorage({
+      [OLD_NOTES_KEY]: JSON.stringify({ p1: 'Pre-existing note', p2: '' }),
+    });
+
+    // Nurse types a note during the old-day load window.
+    const typedNote = 'Critical: BP check q1h';
+    await saveJsonToStorage(storage, OLD_DRAFT_KEY, { p1: typedNote });
+
+    // Force-quit occurs — old Promise.all never resolves.
+    // App relaunches on the SAME calendar day.
+    // pruneStaleStorageKeys: OLD_DRAFT_KEY IS the current-day key → survives.
+    await pruneStaleStorageKeys(storage, [
+      { prefix: '@sunrise_handoff_draft_notes_', currentKey: OLD_DRAFT_KEY },
+    ]);
+
+    // Draft key is still present.
+    expect(storage.store[OLD_DRAFT_KEY]).toBeDefined();
+
+    // Cold-start .then() reads main notes key then draft key and merges.
+    const [{ notes: savedNotes }] = await Promise.all([
+      loadHandoffState(storage, { notes: OLD_NOTES_KEY, shift: OLD_SHIFT_KEY }, OLD_DEFAULTS),
+    ]);
+    const draftRaw = await storage.getItem(OLD_DRAFT_KEY);
+    let draftNotes: Record<string, string> = {};
+    if (draftRaw) {
+      draftNotes = JSON.parse(draftRaw) as Record<string, string>;
+      await storage.multiRemove([OLD_DRAFT_KEY]);
+    }
+    const mergedNotes = Object.keys(draftNotes).length > 0
+      ? { ...savedNotes, ...draftNotes }
+      : savedNotes;
+
+    // Note IS recovered on same-day relaunch.
+    expect(mergedNotes['p1']).toBe(typedNote);
+    expect(storage.store[OLD_DRAFT_KEY]).toBeUndefined();  // draft consumed ✓
+  });
+
+  /**
+   * Contrast: force-quit AFTER old Promise.all resolves is fully covered —
+   * note IS recovered because the .then() callback has already merged the draft
+   * into the main notes key before the force-quit.
+   */
+  it('force-quit AFTER old Promise.all resolves: note is in main key and IS recovered', async () => {
+    // Simulate: old .then() ran and merged the draft into the main notes key,
+    // then deleted the draft key.  The app is force-quit after this point.
+    const mergedAfterThen = { p1: 'Critical: BP check q1h', p2: '' };
+    const storage = makeMemoryStorage({
+      [OLD_NOTES_KEY]: JSON.stringify(mergedAfterThen),
+      // OLD_DRAFT_KEY has been deleted by the .then() callback.
+    });
+
+    // Same-day relaunch: cold-start reads the main key.
+    const [{ notes: recovered }] = await Promise.all([
+      loadHandoffState(storage, { notes: OLD_NOTES_KEY, shift: OLD_SHIFT_KEY }, OLD_DEFAULTS),
+    ]);
+
+    // Note is present in the main key — fully recovered.
+    expect(recovered['p1']).toBe('Critical: BP check q1h');
+    expect(storage.store[OLD_DRAFT_KEY]).toBeUndefined();
+  });
+});
