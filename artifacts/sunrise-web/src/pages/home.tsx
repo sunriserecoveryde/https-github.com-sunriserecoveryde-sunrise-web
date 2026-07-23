@@ -8,11 +8,12 @@ import { Mobile } from '@/components/sections/Mobile';
 import { Investors } from '@/components/sections/Investors';
 import { Team } from '@/components/sections/Team';
 import { Pricing } from '@/components/sections/Pricing';
+import { CTABanner } from '@/components/sections/CTABanner';
 import { Footer } from '@/components/sections/Footer';
 
 export default function Home() {
   return (
-    <div className="bg-[#0F172A] min-h-screen text-slate-50 selection:bg-sunrise-orange/30 selection:text-white">
+    <div className="bg-[#0B1120] min-h-screen text-slate-50 selection:bg-sunrise-orange/30 selection:text-white">
       <Header />
       <main>
         <Hero />
@@ -23,6 +24,7 @@ export default function Home() {
         <Investors />
         <Team />
         <Pricing />
+        <CTABanner />
       </main>
       <Footer />
     </div>
