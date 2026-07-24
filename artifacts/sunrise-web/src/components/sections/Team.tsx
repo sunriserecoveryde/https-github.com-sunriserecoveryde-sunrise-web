@@ -59,7 +59,8 @@ export const Team = () => {
             {/* Bio */}
             <div className="flex-1 text-center md:text-left">
               <h3 className="text-xl font-black text-white mb-1">Jim Collins</h3>
-              <div className="text-sunrise-orange text-xs font-bold tracking-[0.18em] uppercase mb-5">CEO & Founder</div>
+              <div className="text-sunrise-orange text-xs font-bold tracking-[0.18em] uppercase mb-1">CEO & Founder</div>
+              <a href="mailto:jim@getsunriseos.com" className="text-xs text-slate-500 hover:text-sunrise-orange transition-colors mb-5 inline-block">jim@getsunriseos.com</a>
 
               <p className="text-slate-400 text-sm leading-relaxed mb-6">
                 Jim spent 17 years as a Clinical Supervisor and Counselor across all levels of addiction treatment — detox, residential, PHP, and IOP. He watched facilities spend thousands per month on EHR software while staff still passed paper clipboards between shifts. He built Sunrise OS from the inside out, because he lived the problem every single day.
