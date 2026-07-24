@@ -75,7 +75,7 @@ export const Team = () => {
               </div>
 
               <a
-                href="mailto:hello@getsunriseos.com"
+                href="mailto:jim@getsunriseos.com"
                 className="inline-flex items-center gap-2 bg-sunrise-orange hover:bg-sunrise-orange/90 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors"
               >
                 <Mail className="w-4 h-4" />
