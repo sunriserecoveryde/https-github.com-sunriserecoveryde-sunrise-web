@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import { rateLimit } from "express-rate-limit";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { notifySpamAlert } from "./lib/spamAlert";
 
 const app: Express = express();
 
@@ -41,6 +42,17 @@ const contactLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: { error: "Too many requests. Please try again later." },
+  handler(req, res, _next, options) {
+    const ip = (req.ip ?? req.socket.remoteAddress ?? "unknown").replace(
+      /^::ffff:/,
+      "",
+    );
+    // Fire-and-forget — alert failure must never affect the HTTP response
+    notifySpamAlert(ip).catch((err) =>
+      logger.error({ err }, "notifySpamAlert threw unexpectedly"),
+    );
+    res.status(options.statusCode).json(options.message);
+  },
 });
 app.use("/api/contact", contactLimiter);
 
