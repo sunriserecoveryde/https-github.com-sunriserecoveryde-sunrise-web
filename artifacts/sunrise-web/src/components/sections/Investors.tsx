@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, Target, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
+import { BarChart3, Target, ShieldCheck, Zap, ArrowRight, Mail } from 'lucide-react';
 import { DemoModal } from '../DemoModal';
 
 export const Investors = () => {
@@ -132,6 +132,13 @@ export const Investors = () => {
               >
                 Request Data Room <ArrowRight className="w-4 h-4" />
               </button>
+              <a
+                href="mailto:investors@getsunriseos.com"
+                className="inline-flex items-center gap-2 mt-3 px-6 py-3 text-sm font-semibold text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-700/80 rounded-xl border border-slate-700/60 transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+                investors@getsunriseos.com
+              </a>
             </div>
             <div className="md:col-span-2">
               <h4 className="text-xs font-bold text-slate-500 tracking-[0.2em] uppercase mb-6">Use of Funds</h4>
