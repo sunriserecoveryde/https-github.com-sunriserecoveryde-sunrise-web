@@ -41,21 +41,24 @@ export const DemoModal: React.FC<DemoModalProps> = ({ open, onClose, defaultPlan
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // website is a honeypot field — always empty for real users
-        body: JSON.stringify({ ...form, plan: defaultPlan, website: '' }),
+      const body = new URLSearchParams({
+        'form-name': 'demo-request',
+        name: form.name,
+        email: form.email,
+        facility: form.facility,
+        bedCount: form.bedCount,
+        message: form.message,
+        plan: defaultPlan,
+        'bot-field': '',
       });
 
-      if (res.status === 429) {
-        throw new Error("You've submitted too many requests. Please wait a while before trying again.");
-      }
+      const res = await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as any)?.error ?? `Server error ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Submission failed (${res.status}). Please try again.`);
 
       setStatus('success');
     } catch (err: any) {

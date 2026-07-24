@@ -28,5 +28,16 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Hidden form so Netlify detects fields at build time -->
+    <form name="demo-request" netlify netlify-honeypot="bot-field" hidden>
+      <input name="bot-field" type="text" />
+      <input name="name" type="text" />
+      <input name="email" type="email" />
+      <input name="facility" type="text" />
+      <input name="bedCount" type="text" />
+      <input name="message" type="text" />
+      <input name="plan" type="text" />
+    </form>
   </body>
 </html>
