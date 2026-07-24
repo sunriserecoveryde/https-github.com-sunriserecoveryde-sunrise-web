@@ -1,0 +1,27 @@
+kind = "video"
+previewPath = "/sunrise-video/"
+title = "Sunrise OS Demo Video"
+version = "1.0.0"
+id = "artifacts/sunrise-video"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/sunrise-video/" ]
+localPort = 23057
+
+[services.development]
+run = "pnpm --filter @workspace/sunrise-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sunrise-video", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sunrise-video/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23057"
+BASE_PATH = "/sunrise-video/"
