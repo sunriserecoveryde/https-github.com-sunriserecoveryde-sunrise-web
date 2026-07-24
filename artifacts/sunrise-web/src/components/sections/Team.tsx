@@ -84,22 +84,6 @@ export const Team = () => {
             </div>
           </motion.div>
 
-          {/* Co-founder banner */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.18 }}
-            className="mt-4 bg-slate-800/30 border border-slate-800 rounded-2xl p-6 flex items-center gap-5"
-          >
-            <div className="w-14 h-14 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-600 text-xs font-bold shrink-0">
-              ?
-            </div>
-            <div>
-              <div className="text-sm font-bold text-slate-400 mb-0.5">Technical Co-Founder — Seeking</div>
-              <div className="text-xs text-slate-600 leading-relaxed">Engineering leader with healthcare SaaS experience. If that's you, reach out — <a href="mailto:hello@getsunriseos.com" className="text-sunrise-orange/80 hover:text-sunrise-orange transition-colors">hello@getsunriseos.com</a></div>
-            </div>
-          </motion.div>
         </div>
       </div>
     </section>
