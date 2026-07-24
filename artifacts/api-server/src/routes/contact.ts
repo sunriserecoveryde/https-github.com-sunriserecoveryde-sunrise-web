@@ -45,7 +45,7 @@ router.post("/contact", (req, res) => {
       plan: lead.data.plan,
       receivedAt: lead.receivedAt,
     },
-    "Demo request received — forward to hello@getsunriseos.com",
+    "Demo request received — forward to sales@getsunriseos.com",
   );
 
   res.json({ ok: true });
