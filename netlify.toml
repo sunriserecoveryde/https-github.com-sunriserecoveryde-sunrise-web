@@ -4,6 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  PORT         = "3000"
+  BASE_PATH    = "/"
 
 [[redirects]]
   from   = "/*"
