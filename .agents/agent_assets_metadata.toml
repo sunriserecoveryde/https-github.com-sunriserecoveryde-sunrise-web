@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "u6nj0rntRzYmtn0XQqj72"
+uri = "file://sunrise-web-dist.zip"
+type = "unspecified"
+title = "Sunrise Web — Built Site (drag to Netlify)"
