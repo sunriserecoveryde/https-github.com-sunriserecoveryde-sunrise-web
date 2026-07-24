@@ -2,9 +2,168 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { useSessionChart } from '../context/SessionChartContext';
-import { CheckCircle, ChevronDown, ChevronRight, AlertTriangle, FileText, Save, Printer } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronRight, AlertTriangle, FileText, Save, Printer, Sparkles } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
+
+// ---------------------------------------------------------------------------
+// Intake screening data keyed by patient ID — mirrors what was captured in
+// the Admissions pre-screen so the BPS assessment sections can surface AI cues.
+// ---------------------------------------------------------------------------
+interface IntakeScreeningData {
+  primaryDx: string;
+  program: string;
+  referralSource: string;
+  insurance: string;
+  asamPre?: { d1: number; d2: number; d6: number };
+  ciwa?: number;
+  cows?: number;
+  notes: string;
+}
+
+const INTAKE_SCREENING: Record<string, IntakeScreeningData> = {
+  p_demo: {
+    primaryDx: 'Alcohol Use Disorder (Moderate)',
+    program: 'IOP',
+    referralSource: 'Self-Referral',
+    insurance: 'CareFirst BlueCross BlueShield (Verified)',
+    asamPre: { d1: 1, d2: 0, d6: 1 },
+    ciwa: 2,
+    notes: 'Auth #CFBC-7741-IOP confirmed through 10/20/2026. ASAM pre-screen indicates IOP (2.1) level of care. CIWA-Ar: 2 — no medical detox required.',
+  },
+  p1: {
+    primaryDx: 'Opioid Use Disorder, Severe (F11.20)',
+    program: 'Residential (ASAM 3.7)',
+    referralSource: 'Primary care physician — post-ED overdose',
+    insurance: "Wife's employer plan (on file)",
+    asamPre: { d1: 3, d2: 2, d6: 2 },
+    cows: 6,
+    notes: 'Accidental fentanyl overdose 7/5/2026 — naloxone x2 in ED. FMLA leave active. VA benefits eligible. Open to buprenorphine.',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Per-section AI cue generator — reads intake data and returns a focused cue.
+// ---------------------------------------------------------------------------
+function getAiCues(key: SectionKey, intake: IntakeScreeningData): string[] {
+  const { primaryDx, program, referralSource, asamPre, ciwa, cows, notes, insurance } = intake;
+  const wdScore = ciwa != null ? `CIWA-Ar ${ciwa}` : cows != null ? `COWS ${cows}` : null;
+
+  switch (key) {
+    case 'presenting':
+      return [
+        `Referral source: ${referralSource}. Presenting dx from intake: ${primaryDx}. Recommended LOC: ${program}.`,
+        asamPre ? `ASAM pre-screen — D1 (Intoxication/Withdrawal): ${asamPre.d1} · D2 (Medical): ${asamPre.d2} · D6 (Recovery Environment): ${asamPre.d6}.` : '',
+        'Explore: what specific event or threshold prompted the decision to seek treatment now?',
+      ].filter(Boolean);
+
+    case 'substances':
+      return [
+        `Primary substance at intake: ${primaryDx}. ${wdScore ? `Withdrawal score at intake: ${wdScore}${ciwa != null && ciwa < 8 ? ' — no clinical detox required.' : ' — monitor closely.'}` : ''}`,
+        'Document each substance: age of first use, route, quantity, frequency, last use date, longest abstinence, and prior quit attempts.',
+        ciwa != null && ciwa < 8 ? 'Low CIWA at intake supports outpatient management — confirm patient has no history of complicated withdrawal (seizures, DTs).' : '',
+        cows != null && cows >= 5 ? 'Elevated COWS at intake — buprenorphine induction candidacy should be addressed in this section.' : '',
+      ].filter(Boolean);
+
+    case 'medical':
+      return [
+        wdScore ? `Intake vital: ${wdScore}. ${ciwa != null && ciwa < 8 ? 'No medically supervised detox indicated.' : 'Medically supervised withdrawal management indicated.'}` : '',
+        `Insurance: ${insurance}. Pre-admission labs should be ordered if not already completed (CMP, CBC, LFTs, UA, UDS, HCV Ab, HIV).`,
+        'Document current medications (including MAT if applicable), allergies, chronic conditions, and any acute medical concerns.',
+      ].filter(Boolean);
+
+    case 'psychiatric':
+      return [
+        'No formal psychiatric history was captured at intake. Assess for co-occurring disorders now.',
+        `${primaryDx.toLowerCase().includes('alcohol') ? 'Alcohol use is frequently comorbid with depression and anxiety — administer PHQ-9 and GAD-7 if not already done.' : 'Opioid and stimulant use disorders have high rates of co-occurring PTSD and MDD — administer PHQ-9 and PCL-5.'}`,
+        "Patient described use as partly driven by coping — explore whether a primary psychiatric condition predates substance use.",
+      ];
+
+    case 'legal':
+      return [
+        'No legal involvement was flagged at intake screening.',
+        'Confirm: any pending charges, probation, parole, or court-mandated treatment orders? This affects 42 CFR Part 2 release considerations.',
+      ];
+
+    case 'family':
+      return [
+        'Family history was not captured during pre-screening.',
+        'Assess: parental SUD or mental health history (strong heritability factor), current relationship status, children in the home, and primary support contacts.',
+        'Family involvement in treatment significantly improves outcomes — note who, if anyone, should be contacted or included.',
+      ];
+
+    case 'social':
+      return [
+        `Referral context: ${referralSource}. Program requested: ${program} — explore whether schedule, transportation, or childcare constraints drove the LOC preference.`,
+        'Document: housing stability, employment status, education, military history, financial stressors, and recovery environment.',
+        `Insurance: ${insurance}. Note any financial or benefit-related barriers to continuing care post-${program}.`,
+      ];
+
+    case 'trauma':
+      return [
+        'Trauma history was not assessed at intake screening — this section is the primary opportunity.',
+        'Administer ACE questionnaire if not completed. Use trauma-informed language; patient is not required to disclose event details.',
+        `${primaryDx.toLowerCase().includes('alcohol') || primaryDx.toLowerCase().includes('opioid') ? 'Research shows 70–80% of patients in SUD treatment have significant trauma histories. Substance use is frequently a coping mechanism for unresolved trauma.' : 'Assess trauma history in the context of current substance use patterns.'}`,
+      ];
+
+    case 'strengths':
+      return [
+        `Patient initiated this referral (${referralSource}) — voluntary help-seeking is a significant protective factor and motivational indicator.`,
+        'Document stage of change (URICA), internal resources (insight, coping skills), and external supports (family, employment, housing).',
+        'Strengths-based framing improves treatment engagement — capture what the patient is proud of and what they want to protect through recovery.',
+      ];
+
+    case 'diagnostic':
+      return [
+        `Intake pre-screen Dx: ${primaryDx}. Confirm severity specifier (Mild/Moderate/Severe) and any co-occurring psychiatric diagnoses.`,
+        asamPre ? `ASAM pre-screen supports ${program}: D1=${asamPre.d1}, D2=${asamPre.d2}, D6=${asamPre.d6}. Confirm full 6-dimension ASAM assessment.` : '',
+        `Insurance auth: ${notes.includes('Auth') ? notes.split('.')[0] : 'Verify auth status before finalizing LOC in this section'}.`,
+      ].filter(Boolean);
+
+    case 'summary':
+      return [
+        `Confirmed LOC from intake: ${program}. ${notes}`,
+        'The clinical summary should connect the biopsychosocial findings to the treatment plan: link substance use history → trauma → psychiatric needs → social determinants → LOC justification.',
+        'Include ASAM medical necessity language for each relevant dimension if insurance authorization is required.',
+      ];
+
+    default:
+      return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// AiIntakeCue — callout component shown at the top of each BPS section
+// ---------------------------------------------------------------------------
+function AiIntakeCue({ cues }: { cues: string[] }) {
+  const [open, setOpen] = useState(true);
+  if (!cues.length) return null;
+  return (
+    <div className={`rounded-xl border border-violet-200 bg-violet-50 overflow-hidden transition-all`}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-violet-100/60 transition-colors"
+      >
+        <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
+        <span className="text-xs font-bold text-violet-700 uppercase tracking-wide flex-1">AI · From Intake Screening</span>
+        <span className="text-violet-400 text-xs">{open ? '▲ hide' : '▼ show'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-3 space-y-1.5 border-t border-violet-200">
+          {cues.map((cue, i) => (
+            <div key={i} className="flex gap-2 items-start text-xs text-violet-800 mt-1.5">
+              <span className="text-violet-400 shrink-0 mt-0.5">›</span>
+              <span>{cue}</span>
+            </div>
+          ))}
+          <div className="text-[10px] text-violet-400 italic mt-2 pt-1.5 border-t border-violet-100">
+            AI-generated from intake pre-screen data. Always verify with patient.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -112,6 +271,12 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
 
   const completedCount = completedSections.size;
   const totalSections = SECTIONS_ORDER.length;
+
+  // Build per-section AI cues from intake screening data (if available for this patient)
+  const intakeData = INTAKE_SCREENING[selectedPatient];
+  const intakeCues: Partial<Record<SectionKey, string[]>> = intakeData
+    ? Object.fromEntries(SECTIONS_ORDER.map(k => [k, getAiCues(k, intakeData)]))
+    : {};
 
   return (
     <div className="space-y-6">
@@ -310,17 +475,17 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
 
               {isOpen && (
                 <div className="px-6 py-5 border-t border-border bg-white space-y-4">
-                  {key === 'presenting' && <PresentingSection data={sectionData} />}
-                  {key === 'substances' && <SubstancesSection data={sectionData} />}
-                  {key === 'medical' && <MedicalSection data={sectionData} />}
-                  {key === 'psychiatric' && <PsychiatricSection data={sectionData} />}
-                  {key === 'legal' && <LegalSection data={sectionData} />}
-                  {key === 'family' && <FamilySection data={sectionData} />}
-                  {key === 'social' && <SocialSection data={sectionData} />}
-                  {key === 'trauma' && <TraumaSection data={sectionData} />}
-                  {key === 'strengths' && <StrengthsSection data={sectionData} />}
-                  {key === 'diagnostic' && <DiagnosticSection data={sectionData} />}
-                  {key === 'summary' && <SummarySection data={sectionData} />}
+                  {key === 'presenting' && <PresentingSection data={sectionData} cues={intakeCues[key]} />}
+                  {key === 'substances' && <SubstancesSection data={sectionData} cues={intakeCues[key]} />}
+                  {key === 'medical' && <MedicalSection data={sectionData} cues={intakeCues[key]} />}
+                  {key === 'psychiatric' && <PsychiatricSection data={sectionData} cues={intakeCues[key]} />}
+                  {key === 'legal' && <LegalSection data={sectionData} cues={intakeCues[key]} />}
+                  {key === 'family' && <FamilySection data={sectionData} cues={intakeCues[key]} />}
+                  {key === 'social' && <SocialSection data={sectionData} cues={intakeCues[key]} />}
+                  {key === 'trauma' && <TraumaSection data={sectionData} cues={intakeCues[key]} />}
+                  {key === 'strengths' && <StrengthsSection data={sectionData} cues={intakeCues[key]} />}
+                  {key === 'diagnostic' && <DiagnosticSection data={sectionData} cues={intakeCues[key]} />}
+                  {key === 'summary' && <SummarySection data={sectionData} cues={intakeCues[key]} />}
                   <div className="flex justify-end gap-3 pt-2 border-t border-border">
                     <button onClick={() => toggleSection(key)} className="text-sm border border-border text-slate px-4 py-2 rounded-lg hover:bg-gray-50">Close</button>
                     <LockedButton
@@ -472,9 +637,10 @@ function Field({ label, value, multiline = true }: { label: string; value?: stri
   );
 }
 
-function PresentingSection({ data }: { data: Record<string, string> }) {
+function PresentingSection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <Field label="Chief Complaint (Patient's Own Words)" value={data.chiefComplaint} />
       <Field label="Presenting Problem & Circumstances of Referral" value={data.presentingProblem} />
       <Field label="Current Mental Status & Crisis Assessment" value={data.currentCrisis} />
@@ -482,9 +648,10 @@ function PresentingSection({ data }: { data: Record<string, string> }) {
   );
 }
 
-function SubstancesSection({ data }: { data: Record<string, string> }) {
+function SubstancesSection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
         Document each substance separately. Include: age of first use, route, frequency, quantity, date of last use, withdrawal history, and longest period of abstinence.
       </div>
@@ -495,9 +662,10 @@ function SubstancesSection({ data }: { data: Record<string, string> }) {
   );
 }
 
-function MedicalSection({ data }: { data: Record<string, string> }) {
+function MedicalSection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <Field label="Current Medical Conditions, Medications & Allergies" value={data.medicalHistory} />
       <Field label="Immediate Medical Concerns & Treatment Needs" value={data.medicalConcerns} />
       <div className="grid grid-cols-3 gap-3">
@@ -518,9 +686,10 @@ function MedicalSection({ data }: { data: Record<string, string> }) {
   );
 }
 
-function PsychiatricSection({ data }: { data: Record<string, string> }) {
+function PsychiatricSection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <Field label="Psychiatric History (Diagnoses, Hospitalizations, Prior Treatment, Medications)" value={data.psychiatricHistory} />
       <Field label="Current Psychiatric Status & Standardized Screening Results" value={data.currentPsych} />
       <div className="grid grid-cols-4 gap-3">
@@ -540,9 +709,10 @@ function PsychiatricSection({ data }: { data: Record<string, string> }) {
   );
 }
 
-function LegalSection({ data }: { data: Record<string, string> }) {
+function LegalSection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <Field label="Legal History & Current Legal Involvement" value={data.legalHistory} />
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -561,27 +731,30 @@ function LegalSection({ data }: { data: Record<string, string> }) {
   );
 }
 
-function FamilySection({ data }: { data: Record<string, string> }) {
+function FamilySection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <Field label="Family History (SUD, Mental Health, Medical) & Relationships" value={data.familyHistory} />
       <Field label="Current Relationships & Primary Support System" value={data.familyRelationships} />
     </div>
   );
 }
 
-function SocialSection({ data }: { data: Record<string, string> }) {
+function SocialSection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <Field label="Social & Environmental History (Housing, Employment, Education, Military, Financial)" value={data.socialHistory} />
       <Field label="Social Supports & Barriers to Recovery Environment" value={data.socialSupports} />
     </div>
   );
 }
 
-function TraumaSection({ data }: { data: Record<string, string> }) {
+function TraumaSection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs text-purple-800">
         <strong>Trauma-Informed Approach:</strong> Ask about trauma history in a safe, non-pressuring way. Patients are not required to disclose details. Documentation should support care planning without re-traumatization.
       </div>
@@ -601,9 +774,10 @@ function TraumaSection({ data }: { data: Record<string, string> }) {
   );
 }
 
-function StrengthsSection({ data }: { data: Record<string, string> }) {
+function StrengthsSection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
         Strengths-based assessment is essential. Document motivation level (URICA stage of change), internal resources, and protective factors that support treatment engagement and long-term recovery.
       </div>
@@ -613,9 +787,10 @@ function StrengthsSection({ data }: { data: Record<string, string> }) {
   );
 }
 
-function DiagnosticSection({ data }: { data: Record<string, string> }) {
+function DiagnosticSection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
         Use DSM-5 codes and severity specifiers. For SUDs, specify severity (Mild/Moderate/Severe) based on symptom count. Note "In Early Remission" if applicable.
       </div>
@@ -624,9 +799,10 @@ function DiagnosticSection({ data }: { data: Record<string, string> }) {
   );
 }
 
-function SummarySection({ data }: { data: Record<string, string> }) {
+function SummarySection({ data, cues }: { data: Record<string, string>; cues?: string[] }) {
   return (
     <div className="space-y-4">
+      {cues?.length ? <AiIntakeCue cues={cues} /> : null}
       <Field label="Clinical Summary & Formulation" value={data.clinicalSummary} />
       <Field label="Treatment Recommendations & ASAM Level of Care Justification" value={data.treatmentRecommendations} />
       <Field label="Clinician Attestation & Co-signature Plan" value={data.assessmentCompleted} multiline={false} />
