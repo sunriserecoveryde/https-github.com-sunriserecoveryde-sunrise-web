@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Award, Clock, Heart } from 'lucide-react';
+import { Award, Clock, Heart, Mail } from 'lucide-react';
 
 const credentials = [
   { icon: <Clock className="w-4 h-4" />, text: '17 years in SUD treatment' },
@@ -65,7 +65,7 @@ export const Team = () => {
                 Jim spent 17 years as a Clinical Supervisor and Counselor across all levels of addiction treatment — detox, residential, PHP, and IOP. He watched facilities spend thousands per month on EHR software while staff still passed paper clipboards between shifts. He built Sunrise OS from the inside out, because he lived the problem every single day.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start mb-6">
                 {credentials.map((c, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs text-slate-500">
                     <div className="text-sunrise-orange/70">{c.icon}</div>
@@ -73,6 +73,14 @@ export const Team = () => {
                   </div>
                 ))}
               </div>
+
+              <a
+                href="mailto:hello@getsunriseos.com"
+                className="inline-flex items-center gap-2 bg-sunrise-orange hover:bg-sunrise-orange/90 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+                Contact Jim
+              </a>
             </div>
           </motion.div>
 
