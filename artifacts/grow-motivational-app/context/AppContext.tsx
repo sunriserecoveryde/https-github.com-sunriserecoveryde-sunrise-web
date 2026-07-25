@@ -344,6 +344,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (settings: ReminderSettings) => {
       save({ reminderSettings: settings });
       if (settings.enabled) {
+        // scheduleDailyReminder always cancels the existing OS trigger before
+        // registering a new one (see utils/notifications.ts), so calling it
+        // here with the updated hour/minute is sufficient to reschedule — no
+        // separate cancel step is needed when only the time changes.
         await scheduleDailyReminder(settings.hour, settings.minute);
       } else {
         await cancelDailyReminder();
