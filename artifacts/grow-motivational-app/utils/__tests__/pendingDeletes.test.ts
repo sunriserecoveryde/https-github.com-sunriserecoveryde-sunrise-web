@@ -360,6 +360,85 @@ describe("5xx delete failure — full lifecycle", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Successful retry — tombstone cleared immediately (no waiting for TTL)
+// ---------------------------------------------------------------------------
+
+/**
+ * Simulates the happy-retry path:
+ *   1. User triggers a delete → tombstone written via addEntryToRaw.
+ *   2. The DELETE request initially fails (5xx) — tombstone stays.
+ *   3. The app retries and the DELETE returns 200 → removeEntryFromRaw is
+ *      called, clearing the tombstone.
+ *   4. Immediately after the successful retry parsePendingDeletes must NOT
+ *      include the id — the conversation is visible right away without waiting
+ *      for the 7-day TTL.
+ */
+describe("successful retry — tombstone cleared immediately", () => {
+  it("removes the conversation from the filtered set as soon as removeEntryFromRaw is called", () => {
+    const CONV_ID = 3001;
+    const deleteAttemptTime = NOW;
+
+    // --- Step 1: tombstone written on first delete attempt ---
+    const rawAfterAdd = addEntryToRaw(null, CONV_ID, deleteAttemptTime);
+
+    // Confirm the entry is suppressed while the tombstone is live
+    expect(parsePendingDeletes(rawAfterAdd, deleteAttemptTime).has(CONV_ID)).toBe(true);
+
+    // --- Step 2: DELETE returns 5xx — tombstone remains (removeEntryFromRaw
+    //             is NOT called yet; the app will retry).
+
+    // --- Step 3: retry succeeds (200) — removeEntryFromRaw is called ---
+    const retryTime = deleteAttemptTime + HOUR; // 1 hour later
+    const rawAfterRemove = removeEntryFromRaw(rawAfterAdd, CONV_ID, retryTime);
+
+    // --- Step 4: the conversation must be immediately visible — no TTL wait ---
+    // removeEntryFromRaw returns null when the set is empty (signals key removal)
+    const filteredSet = parsePendingDeletes(rawAfterRemove, retryTime);
+    expect(filteredSet.has(CONV_ID)).toBe(false);
+  });
+
+  it("clears the target tombstone immediately while keeping other live tombstones intact", () => {
+    const TARGET_ID = 4001;
+    const OTHER_ID = 4002;
+    const t0 = NOW;
+
+    // Both conversations are being deleted; both tombstones written
+    const raw0 = addEntryToRaw(null, TARGET_ID, t0);
+    const raw1 = addEntryToRaw(raw0, OTHER_ID, t0 + HOUR);
+
+    // Both are suppressed before the retry
+    expect(parsePendingDeletes(raw1, t0 + HOUR).has(TARGET_ID)).toBe(true);
+    expect(parsePendingDeletes(raw1, t0 + HOUR).has(OTHER_ID)).toBe(true);
+
+    // Successful retry for TARGET_ID only
+    const retryTime = t0 + 2 * HOUR;
+    const rawAfterRetry = removeEntryFromRaw(raw1, TARGET_ID, retryTime);
+
+    // TARGET_ID is gone immediately
+    expect(rawAfterRetry).not.toBeNull();
+    const filteredSet = parsePendingDeletes(rawAfterRetry!, retryTime);
+    expect(filteredSet.has(TARGET_ID)).toBe(false);
+
+    // OTHER_ID is still suppressed (its delete is still pending)
+    expect(filteredSet.has(OTHER_ID)).toBe(true);
+  });
+
+  it("clearing the last tombstone returns null, signalling AsyncStorage key removal", () => {
+    const CONV_ID = 5001;
+    const t0 = NOW;
+
+    const raw = addEntryToRaw(null, CONV_ID, t0);
+    const result = removeEntryFromRaw(raw, CONV_ID, t0 + HOUR);
+
+    // null means the caller should delete the AsyncStorage key entirely
+    expect(result).toBeNull();
+
+    // Parsing null is safe and produces an empty set (conversation is visible)
+    expect(parsePendingDeletes(result, t0 + HOUR).has(CONV_ID)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // TTL expiry integration — the key regression guard
 // ---------------------------------------------------------------------------
 
