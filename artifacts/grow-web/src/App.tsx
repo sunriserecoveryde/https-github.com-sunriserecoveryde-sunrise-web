@@ -21,6 +21,7 @@ import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { TermsOfUse } from './pages/TermsOfUse';
 import { Disclaimer } from './pages/Disclaimer';
 import { AccessibilityStatement } from './pages/AccessibilityStatement';
+import { FounderStory } from './pages/FounderStory';
 import NotFound from './pages/not-found';
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/terms-of-use" component={TermsOfUse} />
       <Route path="/disclaimer" component={Disclaimer} />
       <Route path="/accessibility" component={AccessibilityStatement} />
+      <Route path="/founder" component={FounderStory} />
       <Route component={NotFound} />
     </Switch>
   );
