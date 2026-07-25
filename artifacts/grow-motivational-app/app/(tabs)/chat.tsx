@@ -67,6 +67,20 @@ interface ConversationSummary {
 const DEVICE_ID_KEY = "grow_chat_device_id_v1";
 const CONV_PREVIEWS_KEY = "grow_chat_previews_v2"; // { [convId]: string }
 
+// Legacy keys written by the pre-multi-session version of the app.
+// Checked once on first mount; cleaned up after successful migration.
+const LEGACY_CONV_ID_KEY = "grow_chat_conv_id_v1";
+const LEGACY_MESSAGES_KEY = "grow_chat_messages_v1";
+
+// Written after the fallback is safely persisted. Survives across list reloads
+// so the synthetic "Previous session" entry is re-injected every time
+// loadConversations runs until the server confirms the conv is accessible.
+const LEGACY_PENDING_MIGRATION_KEY = "grow_chat_pending_legacy_conv_v1";
+
+// Per-conv fallback: migrated local messages stored here until openConversation
+// successfully loads from the server, then removed.
+const migratedMsgsKey = (convId: number) => `grow_chat_migrated_msgs_${convId}`;
+
 // ---------------------------------------------------------------------------
 // API base
 // ---------------------------------------------------------------------------
@@ -489,6 +503,10 @@ export default function ChatScreen() {
   const [streamingContent, setStreamingContent] = useState("");
   const [isOffline, setIsOffline] = useState(false);
 
+  // Holds the conv ID found in legacy storage, used once to ensure it appears
+  // in the list. Null means either no legacy data or migration already done.
+  const [legacyConvId, setLegacyConvId] = useState<number | null>(null);
+
   const flatListRef = useRef<FlatList>(null);
   const convListRef = useRef<FlatList>(null);
 
@@ -523,10 +541,116 @@ export default function ChatScreen() {
   }, []);
 
   // ---------------------------------------------------------------------------
+  // One-time legacy migration: grow_chat_conv_id_v1 → multi-session list
+  //
+  // The pre-multi-session app wrote messages to grow_chat_messages_v1 (local)
+  // and the server-side conversation ID to grow_chat_conv_id_v1. We must read
+  // both before deleting so users don't lose history if the server is
+  // unreachable on first launch after the upgrade.
+  //
+  // Steps:
+  //  1. Read both legacy keys atomically.
+  //  2. Persist the messages under a per-conv fallback key so openConversation
+  //     can display them if the server fetch fails (e.g. offline).
+  //  3. Seed the preview cache from the first user message.
+  //  4. Write LEGACY_PENDING_MIGRATION_KEY so every subsequent loadConversations
+  //     call can re-inject the synthetic entry until the server confirms access.
+  //  5. Only then remove the original legacy keys.
+  //  6. Set legacyConvId state for an immediate injection on this first mount
+  //     (races with loadConversations; the guard in the effect prevents doubles).
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    (async () => {
+      try {
+        const [[, rawId], [, rawMsgs]] = await AsyncStorage.multiGet([
+          LEGACY_CONV_ID_KEY,
+          LEGACY_MESSAGES_KEY,
+        ]);
+
+        if (!rawId) return; // No legacy data — nothing to do
+
+        const convId = parseInt(rawId, 10);
+        if (isNaN(convId)) {
+          // Malformed ID — nothing to migrate; clean up and bail
+          await AsyncStorage.multiRemove([LEGACY_CONV_ID_KEY, LEGACY_MESSAGES_KEY]);
+          return;
+        }
+
+        // Persist the local message array as an offline fallback BEFORE touching
+        // legacy keys. Parse and write errors are handled separately:
+        //  - Parse failure → messages are unrecoverable; proceed without fallback.
+        //  - Write failure → storage is unhealthy; abort migration entirely and
+        //    leave legacy keys intact so the next launch can retry.
+        if (rawMsgs) {
+          let legacyMsgs: ChatMessage[] | null = null;
+          try {
+            legacyMsgs = JSON.parse(rawMsgs);
+          } catch {
+            // Malformed JSON — treat as no messages; safe to continue
+          }
+
+          if (legacyMsgs !== null) {
+            // Write MUST succeed before we touch legacy keys. If it throws,
+            // the outer catch aborts migration and legacy keys are preserved.
+            await AsyncStorage.setItem(migratedMsgsKey(convId), rawMsgs);
+
+            // Seed the preview from the first user message (best-effort)
+            const firstUser = legacyMsgs.find((m) => m.role === "user");
+            if (firstUser?.content) {
+              const preview =
+                firstUser.content.length > 60
+                  ? firstUser.content.slice(0, 57) + "…"
+                  : firstUser.content;
+              setPreviews((prev) => {
+                const next = { ...prev, [String(convId)]: preview };
+                AsyncStorage.setItem(CONV_PREVIEWS_KEY, JSON.stringify(next)).catch(() => {});
+                return next;
+              });
+            }
+          }
+        }
+
+        // Write the persistent migration marker. This also throws on storage
+        // failure, aborting before we touch legacy keys.
+        await AsyncStorage.setItem(LEGACY_PENDING_MIGRATION_KEY, String(convId));
+
+        // Both fallback and marker are durable — now safe to remove legacy keys.
+        await AsyncStorage.multiRemove([LEGACY_CONV_ID_KEY, LEGACY_MESSAGES_KEY]);
+
+        // Set state for an immediate first-render injection (loadConversations
+        // may have already run before this async block finished; the "after
+        // load" effect's guard prevents double-injection).
+        setLegacyConvId(convId);
+      } catch (e) {
+        console.warn("Legacy chat migration error:", e);
+      }
+    })();
+  }, []); // Intentionally runs once on mount
+
+  // ---------------------------------------------------------------------------
   // Load conversation list
+  //
+  // After every server fetch, checks LEGACY_PENDING_MIGRATION_KEY so the
+  // synthetic "Previous session" entry is re-injected whenever the user returns
+  // to the list — even if loadConversations ran before the migration effect
+  // finished writing the marker on first mount.
   // ---------------------------------------------------------------------------
   const loadConversations = useCallback(async (dId: string) => {
     setIsLoadingList(true);
+
+    // Read the pending migration marker regardless of network outcome so we can
+    // inject the synthetic entry even on offline / server-error cold starts.
+    let pendingLegacyId: number | null = null;
+    try {
+      const pendingRaw = await AsyncStorage.getItem(LEGACY_PENDING_MIGRATION_KEY);
+      if (pendingRaw) {
+        const parsed = parseInt(pendingRaw, 10);
+        if (!isNaN(parsed)) pendingLegacyId = parsed;
+      }
+    } catch {
+      // Storage read failed — continue without migration awareness
+    }
+
     try {
       const res = await fetch(`${getApiBase()}/anthropic/conversations`, {
         headers: { "X-Device-Id": dId },
@@ -537,13 +661,72 @@ export default function ChatScreen() {
       const sorted = [...data].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
-      setConversations(sorted);
+
+      if (pendingLegacyId !== null) {
+        if (sorted.some((c) => c.id === pendingLegacyId)) {
+          // Server returned it — migration confirmed; wipe all migration state
+          AsyncStorage.multiRemove([
+            LEGACY_PENDING_MIGRATION_KEY,
+            migratedMsgsKey(pendingLegacyId),
+          ]).catch(() => {});
+          setConversations(sorted);
+        } else {
+          // Server hasn't surfaced the legacy conv yet — keep synthetic at top
+          const synthetic: ConversationSummary = {
+            id: pendingLegacyId,
+            title: "Previous session",
+            createdAt: new Date().toISOString(),
+          };
+          setConversations([synthetic, ...sorted]);
+        }
+      } else {
+        setConversations(sorted);
+      }
     } catch (e) {
       console.warn("Failed to load conversations:", e);
+
+      // Even on a network failure, surface the synthetic entry so users can
+      // open their migrated history from the offline fallback.
+      if (pendingLegacyId !== null) {
+        setConversations((prev) => {
+          if (prev.some((c) => c.id === pendingLegacyId)) return prev;
+          const synthetic: ConversationSummary = {
+            id: pendingLegacyId as number,
+            title: "Previous session",
+            createdAt: new Date().toISOString(),
+          };
+          return [synthetic, ...prev];
+        });
+      }
     } finally {
       setIsLoadingList(false);
     }
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // First-render injection: handles the race where the migration effect finishes
+  // AFTER loadConversations has already run (before LEGACY_PENDING_MIGRATION_KEY
+  // was written). On the next navigation back, loadConversations picks it up
+  // from AsyncStorage; this effect bridges that first-session gap.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (legacyConvId === null || isLoadingList) return;
+
+    setConversations((prev) => {
+      // Already in the list (server returned it or synthetic already injected)
+      if (prev.some((c) => c.id === legacyConvId)) return prev;
+
+      const synthetic: ConversationSummary = {
+        id: legacyConvId,
+        title: "Previous session",
+        createdAt: new Date().toISOString(),
+      };
+      return [synthetic, ...prev];
+    });
+
+    // Clear in-memory flag — persistence is now handled by the AsyncStorage key
+    setLegacyConvId(null);
+  }, [legacyConvId, isLoadingList]);
 
   // Load list whenever deviceId is ready or we return to list view
   useEffect(() => {
@@ -586,8 +769,39 @@ export default function ChatScreen() {
         timestamp: new Date(m.createdAt).getTime(),
       }));
       setChatMessages(msgs);
+
+      // Clean up the per-conv message fallback now that the server has responded.
+      // Only remove LEGACY_PENDING_MIGRATION_KEY if this is the actual legacy
+      // conversation — opening any other conv must not prematurely clear the
+      // marker and hide the "Previous session" entry from the list.
+      try {
+        const pendingRaw = await AsyncStorage.getItem(LEGACY_PENDING_MIGRATION_KEY);
+        const pendingLegacyId = pendingRaw ? parseInt(pendingRaw, 10) : NaN;
+        const keysToRemove = [migratedMsgsKey(convId)];
+        if (!isNaN(pendingLegacyId) && pendingLegacyId === convId) {
+          keysToRemove.push(LEGACY_PENDING_MIGRATION_KEY);
+        }
+        AsyncStorage.multiRemove(keysToRemove).catch(() => {});
+      } catch {
+        // Storage read failed — leave keys in place; they'll be cleaned up
+        // the next time loadConversations confirms the conv from the server.
+      }
     } catch (e) {
       console.warn("Failed to load messages:", e);
+
+      // Fall back to the locally-migrated messages so the user isn't left with
+      // an empty chat (e.g. offline on first launch after the upgrade).
+      try {
+        const fallbackRaw = await AsyncStorage.getItem(migratedMsgsKey(convId));
+        if (fallbackRaw) {
+          const fallbackMsgs: ChatMessage[] = JSON.parse(fallbackRaw);
+          if (fallbackMsgs.length > 0) {
+            setChatMessages(fallbackMsgs);
+          }
+        }
+      } catch {
+        // Fallback unavailable — show empty chat
+      }
     } finally {
       setIsLoadingMessages(false);
     }
