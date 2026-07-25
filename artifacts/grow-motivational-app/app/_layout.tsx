@@ -11,8 +11,9 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { AppProvider } from '@/context/AppContext';
 
 SplashScreen.preventAutoHideAsync();
@@ -20,6 +21,31 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Handle notification tap when app is backgrounded
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const screen = response.notification.request.content.data?.screen;
+        if (screen === '/(tabs)') {
+          router.replace('/(tabs)');
+        }
+      }
+    );
+
+    // Handle cold-start: app opened from a notification while fully closed
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (!response) return;
+      const screen = response.notification.request.content.data?.screen;
+      if (screen === '/(tabs)') {
+        router.replace('/(tabs)');
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
