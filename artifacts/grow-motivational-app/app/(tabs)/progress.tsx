@@ -16,15 +16,7 @@ import { useColors } from '@/hooks/useColors';
 import { useApp, ReminderSettings } from '@/context/AppContext';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { formatReminderTime } from '@/utils/notifications';
-
-const QUICK_TIMES = [
-  { label: '7 AM', hour: 7, minute: 0 },
-  { label: '8 AM', hour: 8, minute: 0 },
-  { label: '9 AM', hour: 9, minute: 0 },
-  { label: 'Noon', hour: 12, minute: 0 },
-  { label: '6 PM', hour: 18, minute: 0 },
-  { label: '9 PM', hour: 21, minute: 0 },
-];
+import { TimeSpinnerPicker } from '@/components/TimeSpinnerPicker';
 
 const MOOD_COLORS = ['#EF4444', '#F97316', '#FBBF24', '#86EFAC', '#22C55E'];
 const MOOD_LABELS = ['Very Low', 'Low', 'Okay', 'Good', 'Great'];
@@ -271,33 +263,12 @@ export default function ProgressScreen() {
               <Text style={[styles.reminderTimeLabel, { color: colors.mutedForeground }]}>
                 REMINDER TIME
               </Text>
-              <View style={styles.quickTimeRow}>
-                {QUICK_TIMES.map((t) => {
-                  const selected = t.hour === reminderSettings.hour && t.minute === reminderSettings.minute;
-                  return (
-                    <TouchableOpacity
-                      key={t.label}
-                      onPress={() => handlePickTime(t.hour, t.minute)}
-                      style={[
-                        styles.quickTimeChip,
-                        {
-                          backgroundColor: selected ? colors.primary : colors.muted,
-                          borderColor: selected ? colors.primary : colors.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.quickTimeText,
-                          { color: selected ? '#fff' : colors.foreground },
-                        ]}
-                      >
-                        {t.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <TimeSpinnerPicker
+                hour={reminderSettings.hour}
+                minute={reminderSettings.minute}
+                onHourChange={(h) => handlePickTime(h, reminderSettings.minute)}
+                onMinuteChange={(m) => handlePickTime(reminderSettings.hour, m)}
+              />
             </>
           )}
         </View>
@@ -494,20 +465,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     letterSpacing: 1,
     marginBottom: 10,
-  },
-  quickTimeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  quickTimeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  quickTimeText: {
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
   },
 });
