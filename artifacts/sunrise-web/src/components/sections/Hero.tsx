@@ -90,12 +90,20 @@ export const Hero = () => {
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
               <a
+                href="/sunrise-video/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center w-full sm:w-auto gap-2 px-8 py-3.5 text-sm font-semibold text-white bg-slate-800/60 hover:bg-slate-700/80 rounded-xl transition-colors border border-slate-700/60 group"
+              >
+                <Play className="w-3.5 h-3.5 text-sunrise-orange group-hover:text-orange-400 transition-colors" />
+                Watch Demo Video
+              </a>
+              <a
                 href="/sunrise-pitch/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center w-full sm:w-auto gap-2 px-8 py-3.5 text-sm font-semibold text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-700/80 rounded-xl transition-colors border border-slate-700/60"
+                className="flex items-center justify-center w-full sm:w-auto gap-2 px-8 py-3.5 text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 rounded-xl transition-colors"
               >
-                <Play className="w-3.5 h-3.5 text-slate-500" />
                 View Pitch Deck
               </a>
             </motion.div>
