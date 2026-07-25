@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useClickSound } from '@/hooks/useClickSound';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 
 import { Home } from './pages/Home';
@@ -50,6 +51,7 @@ function Router() {
 }
 
 function App() {
+  useClickSound();
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
