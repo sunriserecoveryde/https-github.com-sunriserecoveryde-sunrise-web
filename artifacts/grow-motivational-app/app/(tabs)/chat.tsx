@@ -520,6 +520,12 @@ export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
   const convListRef = useRef<FlatList>(null);
 
+  // Holds the conversation the user just navigated back from, so
+  // loadConversations can re-inject it if the server response is slow or
+  // doesn't include it yet (e.g. race / brief offline window).
+  // Cleared once the server confirms the conversation is present.
+  const optimisticBackConvRef = useRef<ConversationSummary | null>(null);
+
   // Track online / offline transitions — cross-platform via NetInfo
   useEffect(() => {
     // Set initial connectivity state
@@ -684,14 +690,30 @@ export default function ChatScreen() {
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
 
+      // Reconcile the optimistic back-navigation entry: if the server list
+      // doesn't include the conversation yet (e.g. a brief race where the
+      // response arrived before the DB committed), keep it pinned at the top
+      // so it doesn't vanish.  Once confirmed, clear the ref.
+      const optimisticBack = optimisticBackConvRef.current;
+      let baseList = sorted;
+      if (optimisticBack !== null) {
+        if (sorted.some((c) => c.id === optimisticBack.id)) {
+          // Server confirmed it — clear the ref, use server data as-is
+          optimisticBackConvRef.current = null;
+        } else {
+          // Server hasn't returned it yet — keep optimistic entry at top
+          baseList = [optimisticBack, ...sorted];
+        }
+      }
+
       if (pendingLegacyId !== null) {
-        if (sorted.some((c) => c.id === pendingLegacyId)) {
+        if (baseList.some((c) => c.id === pendingLegacyId)) {
           // Server returned it — migration confirmed; wipe all migration state
           AsyncStorage.multiRemove([
             LEGACY_PENDING_MIGRATION_KEY,
             migratedMsgsKey(pendingLegacyId),
           ]).catch(() => {});
-          setConversations(sorted);
+          setConversations(baseList);
         } else {
           // Server hasn't surfaced the legacy conv yet — keep synthetic at top
           const synthetic: ConversationSummary = {
@@ -699,10 +721,10 @@ export default function ChatScreen() {
             title: "Previous session",
             createdAt: new Date().toISOString(),
           };
-          setConversations([synthetic, ...sorted]);
+          setConversations([synthetic, ...baseList]);
         }
       } else {
-        setConversations(sorted);
+        setConversations(baseList);
       }
     } catch (e) {
       console.warn("Failed to load conversations:", e);
@@ -877,7 +899,27 @@ export default function ChatScreen() {
   // ---------------------------------------------------------------------------
   // Go back to list
   // ---------------------------------------------------------------------------
-  const goBackToList = useCallback(() => {
+  // skipOptimistic must be true when called after a deletion so the just-deleted
+  // conversation is not re-injected into the list by the optimistic update.
+  const goBackToList = useCallback((skipOptimistic = false) => {
+    // Optimistically place the conversation we're leaving at the top of the
+    // list immediately, before loadConversations resolves. This prevents the
+    // conversation from disappearing when the user backs out while the server
+    // is slow or the device is briefly offline.
+    // Skipped when returning from a delete — we don't want to re-add a ghost.
+    if (!skipOptimistic && activeConvId !== null) {
+      const optimistic: ConversationSummary = {
+        id: activeConvId,
+        title: chatConvTitle,
+        createdAt: new Date().toISOString(),
+      };
+      optimisticBackConvRef.current = optimistic;
+      setConversations((prev) => {
+        const rest = prev.filter((c) => c.id !== activeConvId);
+        return [optimistic, ...rest];
+      });
+    }
+
     setView("list");
     setActiveConvId(null);
     setChatMessages([]);
@@ -886,7 +928,7 @@ export default function ChatScreen() {
     // Clear the restore key so a cold-start doesn't re-open a conv the user
     // intentionally left.
     AsyncStorage.removeItem(ACTIVE_CONV_RESTORE_KEY).catch(() => {});
-  }, []);
+  }, [activeConvId, chatConvTitle]);
 
   // ---------------------------------------------------------------------------
   // Rename a conversation
@@ -938,7 +980,12 @@ export default function ChatScreen() {
           headers: { "X-Device-Id": deviceId },
         });
         setConversations((prev) => prev.filter((c) => c.id !== convId));
-        if (fromChat) goBackToList();
+        // Clear any optimistic back-nav entry for this conv so loadConversations
+        // doesn't re-inject it after the delete.
+        if (optimisticBackConvRef.current?.id === convId) {
+          optimisticBackConvRef.current = null;
+        }
+        if (fromChat) goBackToList(true /* skipOptimistic */);
       } catch (e) {
         console.warn("Failed to delete conversation:", e);
       }
