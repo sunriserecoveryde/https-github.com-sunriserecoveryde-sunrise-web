@@ -681,6 +681,56 @@ export default function ChatScreen() {
   }, []);
 
   // ---------------------------------------------------------------------------
+  // Cold-start pending-delete retry
+  //
+  // Runs once when deviceId first becomes available.  Any tombstones written
+  // during a previous session (e.g. the DELETE was issued but the app was
+  // force-quit before the response arrived, or the device was offline) are
+  // re-attempted here.
+  //
+  // Rules (per spec):
+  //   200 or 404 → conversation is definitively gone → remove tombstone.
+  //   5xx or network error → leave tombstone in place; retry next cold start.
+  //
+  // This effect does NOT modify the conversations list — the optimistic removal
+  // was already applied when the tombstone was first written.  It only cleans
+  // up stale tombstones so the TTL safety net isn't the sole recovery path.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!deviceId) return;
+    (async () => {
+      try {
+        const pendingIds = await readPendingDeletes();
+        if (pendingIds.size === 0) return;
+
+        await Promise.all(
+          [...pendingIds].map(async (convId) => {
+            try {
+              const res = await fetch(
+                `${getApiBase()}/anthropic/conversations/${convId}`,
+                {
+                  method: "DELETE",
+                  headers: { "X-Device-Id": deviceId },
+                }
+              );
+              if (res.ok || res.status === 404) {
+                // Conversation is definitively gone — clear the tombstone.
+                await removePendingDelete(convId);
+              }
+              // 5xx: leave tombstone; will retry on the next cold start.
+            } catch {
+              // Network-level failure — leave tombstone; will retry next launch.
+            }
+          })
+        );
+      } catch (e) {
+        console.warn("Pending-delete cold-start retry error:", e);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deviceId]); // run exactly once when deviceId first becomes available
+
+  // ---------------------------------------------------------------------------
   // Cold-start restore: if the app was killed while a conversation was open,
   // reopen it with the persisted title so the header never shows "New
   // conversation" while the server fetch is in flight.
