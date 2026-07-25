@@ -55,12 +55,18 @@ export function Contact() {
   const onSubmit = async (data: ContactFormValues) => {
     setStatus('submitting');
     try {
-      const res = await fetch('/api/subscribe', {
+      const res = await fetch('https://formsubmit.co/ajax/info@growmotivational.com', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formType: 'contact', ...data }),
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          _subject: `Contact Form: ${data.reason} — ${data.firstName} ${data.lastName}`,
+          _replyto: data.email,
+          _captcha: 'false',
+        }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json.success !== 'true' && json.success !== true) throw new Error('Failed');
       setStatus('success');
     } catch {
       setStatus('error');
