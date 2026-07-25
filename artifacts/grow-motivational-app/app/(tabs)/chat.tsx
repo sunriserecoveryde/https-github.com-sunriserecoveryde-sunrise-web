@@ -992,6 +992,21 @@ export default function ChatScreen() {
       ).catch(() => {});
     }
 
+    // Optimistically update the conversations list immediately for both the
+    // chat-view and list-view rename paths. The catch block rolls this back
+    // using originalTitle if the PATCH fails.
+    setConversations((prev) =>
+      prev.map((c) => (c.id === convId ? { ...c, title: newTitle } : c))
+    );
+    // Keep the optimistic back-nav ref consistent so a loadConversations call
+    // that fires before the PATCH resolves doesn't re-inject the stale title.
+    if (optimisticBackConvRef.current?.id === convId) {
+      optimisticBackConvRef.current = {
+        ...optimisticBackConvRef.current,
+        title: newTitle,
+      };
+    }
+
     try {
       const res = await fetch(`${getApiBase()}/anthropic/conversations/${convId}`, {
         method: "PATCH",
@@ -1013,10 +1028,6 @@ export default function ChatScreen() {
       confirmedListTitlesRef.current.set(convId, newTitle);
       // Clear the pending ref so goBackToList stops using it.
       pendingRenameTitleRef.current = null;
-      // Update local state so the list reflects the new title immediately.
-      setConversations((prev) =>
-        prev.map((c) => (c.id === convId ? { ...c, title: newTitle } : c))
-      );
     } catch (e) {
       // Rename failed — determine the authoritative rollback title.
       // - Chat view (convId === activeConvId): prefer lastConfirmedTitleRef,
