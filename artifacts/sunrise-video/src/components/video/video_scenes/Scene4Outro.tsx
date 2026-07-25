@@ -17,7 +17,7 @@ export function Scene4Outro() {
           className="rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(249,115,22,0.35)]"
         >
           <img
-            src={`${import.meta.env.BASE_URL}og.jpg`}
+            src={`${import.meta.env.BASE_URL}sunrise-logo.png`}
             alt="Sunrise OS"
             className="w-64 h-auto object-contain"
           />

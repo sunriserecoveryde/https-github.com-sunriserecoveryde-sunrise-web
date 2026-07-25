@@ -17,7 +17,7 @@ export function Scene0Hero() {
           className="mb-8 overflow-hidden rounded-2xl shadow-2xl"
         >
           <img
-            src={`${import.meta.env.BASE_URL}og.jpg`}
+            src={`${import.meta.env.BASE_URL}sunrise-logo.png`}
             alt="Sunrise OS"
             className="w-48 h-auto object-contain"
           />
