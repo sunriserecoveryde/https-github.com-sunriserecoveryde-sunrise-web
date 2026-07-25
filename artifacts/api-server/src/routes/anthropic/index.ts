@@ -113,6 +113,41 @@ router.get("/conversations/:id", async (req: Request, res: Response): Promise<vo
   }
 });
 
+// Rename a conversation owned by this device
+router.patch("/conversations/:id", async (req: Request, res: Response): Promise<void> => {
+  const deviceId = getDeviceId(req);
+  if (!deviceId) { sendUnauthorized(res); return; }
+
+  const id = parseInt(String(req.params.id), 10);
+  if (Number.isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const bodySchema = z.object({ title: z.string().trim().min(1).max(100) });
+  const parsed = bodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Title must be 1–100 characters" });
+    return;
+  }
+
+  try {
+    const [conv] = await db
+      .select()
+      .from(conversations)
+      .where(and(eq(conversations.id, id), eq(conversations.deviceId, deviceId)));
+
+    if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
+
+    const [updated] = await db
+      .update(conversations)
+      .set({ title: parsed.data.title })
+      .where(eq(conversations.id, id))
+      .returning();
+
+    res.json(updated);
+  } catch {
+    res.status(500).json({ error: "Failed to rename conversation" });
+  }
+});
+
 // Delete a conversation owned by this device
 router.delete("/conversations/:id", async (req: Request, res: Response): Promise<void> => {
   const deviceId = getDeviceId(req);

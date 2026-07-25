@@ -5,11 +5,13 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -122,7 +124,11 @@ function formatRelativeDate(iso: string): string {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+const DEFAULT_TITLE = "Grow Support Chat";
+
 function chatTitle(conv: ConversationSummary): string {
+  // User-assigned custom title takes priority over the auto-preview snippet
+  if (conv.title && conv.title !== DEFAULT_TITLE) return conv.title;
   if (conv.preview) return conv.preview;
   return conv.title || "New conversation";
 }
@@ -251,6 +257,115 @@ function TypingIndicator({ colors }: { colors: ReturnType<typeof useColors> }) {
 }
 
 // ---------------------------------------------------------------------------
+// RenameModal — bottom-sheet style inline rename dialog
+// ---------------------------------------------------------------------------
+
+function RenameModal({
+  visible,
+  initialTitle,
+  colors,
+  onConfirm,
+  onCancel,
+}: {
+  visible: boolean;
+  initialTitle: string;
+  colors: ReturnType<typeof useColors>;
+  onConfirm: (title: string) => void;
+  onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState(initialTitle);
+
+  // Reset draft whenever the modal opens with a new title
+  useEffect(() => {
+    if (visible) setDraft(initialTitle);
+  }, [visible, initialTitle]);
+
+  const handleConfirm = () => {
+    const trimmed = draft.trim();
+    if (trimmed.length === 0) return;
+    onConfirm(trimmed);
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+      statusBarTranslucent
+    >
+      <TouchableWithoutFeedback onPress={onCancel}>
+        <View style={styles.renameOverlay}>
+          <TouchableWithoutFeedback>
+            <View
+              style={[
+                styles.renameSheet,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.renameTitle, { color: colors.foreground }]}>
+                Rename conversation
+              </Text>
+              <TextInput
+                style={[
+                  styles.renameInput,
+                  {
+                    backgroundColor: colors.background,
+                    color: colors.foreground,
+                    borderColor: colors.border,
+                  },
+                ]}
+                value={draft}
+                onChangeText={setDraft}
+                placeholder="Conversation name"
+                placeholderTextColor={colors.mutedForeground}
+                maxLength={100}
+                autoFocus
+                selectTextOnFocus
+                returnKeyType="done"
+                onSubmitEditing={handleConfirm}
+              />
+              <View style={styles.renameActions}>
+                <TouchableOpacity
+                  onPress={onCancel}
+                  activeOpacity={0.7}
+                  style={[styles.renameBtn, { borderColor: colors.border }]}
+                >
+                  <Text style={[styles.renameBtnText, { color: colors.mutedForeground }]}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleConfirm}
+                  activeOpacity={0.8}
+                  style={[
+                    styles.renameBtn,
+                    styles.renameBtnPrimary,
+                    {
+                      backgroundColor:
+                        draft.trim().length > 0 ? colors.primary : colors.muted,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.renameBtnText,
+                      { color: draft.trim().length > 0 ? "#fff" : colors.mutedForeground },
+                    ]}
+                  >
+                    Save
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // ConversationListItem
 // ---------------------------------------------------------------------------
 
@@ -259,16 +374,23 @@ function ConversationListItem({
   colors,
   onOpen,
   onDelete,
+  onRename,
 }: {
   conv: ConversationSummary;
   colors: ReturnType<typeof useColors>;
   onOpen: () => void;
   onDelete: () => void;
+  onRename: () => void;
 }) {
   return (
     <TouchableOpacity
       activeOpacity={0.75}
       onPress={onOpen}
+      onLongPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onRename();
+      }}
+      delayLongPress={400}
       style={[styles.convItem, { backgroundColor: colors.card, borderColor: colors.border }]}
     >
       <View style={[styles.convIconWrap, { backgroundColor: colors.primary + "18" }]}>
@@ -285,14 +407,24 @@ function ConversationListItem({
           {formatRelativeDate(conv.createdAt)}
         </Text>
       </View>
-      <TouchableOpacity
-        onPress={onDelete}
-        activeOpacity={0.7}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        style={styles.convDeleteBtn}
-      >
-        <Feather name="trash-2" size={15} color={colors.mutedForeground} />
-      </TouchableOpacity>
+      <View style={styles.convRowActions}>
+        <TouchableOpacity
+          onPress={onRename}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={styles.convActionBtn}
+        >
+          <Feather name="edit-2" size={14} color={colors.mutedForeground} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onDelete}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={styles.convActionBtn}
+        >
+          <Feather name="trash-2" size={14} color={colors.mutedForeground} />
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -340,6 +472,11 @@ export default function ChatScreen() {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [previews, setPreviews] = useState<Record<string, string>>({});
+
+  // ---------------------------------------------------------------------------
+  // Rename modal state
+  // ---------------------------------------------------------------------------
+  const [renamingConv, setRenamingConv] = useState<ConversationSummary | null>(null);
 
   // ---------------------------------------------------------------------------
   // Chat view state
@@ -494,6 +631,31 @@ export default function ChatScreen() {
     setStreamingContent("");
     setInput("");
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // Rename a conversation
+  // ---------------------------------------------------------------------------
+  const renameConversation = useCallback(async (convId: number, newTitle: string) => {
+    if (!deviceId) return;
+    try {
+      const res = await fetch(`${getApiBase()}/anthropic/conversations/${convId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Id": deviceId,
+        },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      // Optimistically update local state so the list refreshes immediately
+      setConversations((prev) =>
+        prev.map((c) => (c.id === convId ? { ...c, title: newTitle } : c))
+      );
+    } catch (e) {
+      console.warn("Failed to rename conversation:", e);
+      Alert.alert("Rename failed", "Could not save the new title. Please try again.");
+    }
+  }, [deviceId]);
 
   // ---------------------------------------------------------------------------
   // Delete a conversation
@@ -746,10 +908,25 @@ export default function ChatScreen() {
                 colors={colors}
                 onOpen={() => openConversation(item.id)}
                 onDelete={() => deleteConversation(item.id, false)}
+                onRename={() => setRenamingConv(item)}
               />
             )}
           />
         )}
+
+        {/* Rename modal — rendered inside the list view so it floats above everything */}
+        <RenameModal
+          visible={renamingConv !== null}
+          initialTitle={renamingConv ? chatTitle(renamingConv) : ""}
+          colors={colors}
+          onConfirm={(newTitle) => {
+            if (renamingConv) {
+              renameConversation(renamingConv.id, newTitle);
+            }
+            setRenamingConv(null);
+          }}
+          onCancel={() => setRenamingConv(null)}
+        />
       </View>
     );
   }
@@ -991,8 +1168,60 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
   },
-  convDeleteBtn: {
+  convRowActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  convActionBtn: {
     padding: 4,
+  },
+  // ---- Rename modal ----
+  renameOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  renameSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 36,
+    gap: 14,
+  },
+  renameTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  renameInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+  },
+  renameActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  renameBtn: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  renameBtnPrimary: {
+    borderWidth: 0,
+  },
+  renameBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
   startChatCta: {
     flexDirection: "row",
