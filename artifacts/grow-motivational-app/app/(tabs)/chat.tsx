@@ -790,8 +790,12 @@ export default function ChatScreen() {
   // to the list — even if loadConversations ran before the migration effect
   // finished writing the marker on first mount.
   // ---------------------------------------------------------------------------
-  const loadConversations = useCallback(async (dId: string) => {
-    setIsLoadingList(true);
+  const loadConversations = useCallback(async (dId: string, skipSpinner = false) => {
+    // Only show the spinner when the list is empty (first load / forced
+    // refresh).  If the caller already has conversations in state — e.g. the
+    // optimistic entry injected by goBackToList — skip the spinner so the list
+    // appears immediately while the server fetch runs in the background.
+    if (!skipSpinner) setIsLoadingList(true);
 
     // Read both the pending migration marker and pending delete intents in
     // parallel so we have full awareness before processing the server list.
@@ -922,10 +926,13 @@ export default function ChatScreen() {
     setLegacyConvId(null);
   }, [legacyConvId, isLoadingList]);
 
-  // Load list whenever deviceId is ready or we return to list view
+  // Load list whenever deviceId is ready or we return to list view.
+  // Skip the spinner when conversations are already populated (e.g. optimistic
+  // entry injected by goBackToList) so the list renders immediately while the
+  // background fetch reconciles with the server.
   useEffect(() => {
     if (deviceId && view === "list") {
-      loadConversations(deviceId);
+      loadConversations(deviceId, conversationsRef.current.length > 0);
     }
   }, [deviceId, view, loadConversations]);
 
