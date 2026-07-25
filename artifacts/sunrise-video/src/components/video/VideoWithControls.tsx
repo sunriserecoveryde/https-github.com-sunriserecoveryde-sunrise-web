@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Repeat } from 'lucide-react';
+import { ChevronDown, ChevronUp, Repeat, Volume2, VolumeX } from 'lucide-react';
 import VideoTemplate, { SCENE_DURATIONS } from './VideoTemplate';
 import { useSceneControls } from '@/hooks/useSceneControls';
 
@@ -63,11 +63,13 @@ interface ControlBarProps {
   visible: boolean;
   collapsed: boolean;
   locked: boolean;
+  muted: boolean;
   sceneKeys: string[];
   activeIndex: number;
   activeDuration: number;
   tick: number;
   onToggleLock: () => void;
+  onToggleMute: () => void;
   onJumpTo: (index: number) => void;
   onToggleCollapsed: () => void;
 }
@@ -76,11 +78,13 @@ function ControlBar({
   visible,
   collapsed,
   locked,
+  muted,
   sceneKeys,
   activeIndex,
   activeDuration,
   tick,
   onToggleLock,
+  onToggleMute,
   onJumpTo,
   onToggleCollapsed,
 }: ControlBarProps) {
@@ -122,6 +126,20 @@ function ControlBar({
       </div>
 
       <button
+        onClick={onToggleMute}
+        className={`w-14 h-14 flex items-center justify-center transition-colors rounded-lg shrink-0 ${
+          muted
+            ? 'text-white/40 hover:text-white hover:bg-white/10'
+            : 'text-white bg-white/15 hover:bg-white/25'
+        }`}
+        title={muted ? 'Unmute audio' : 'Mute audio'}
+        aria-label={muted ? 'Unmute audio' : 'Mute audio'}
+        aria-pressed={!muted}
+      >
+        {muted ? <VolumeX className="w-8 h-8" /> : <Volume2 className="w-8 h-8" />}
+      </button>
+
+      <button
         onClick={onToggleCollapsed}
         className="w-14 h-14 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors rounded-lg shrink-0"
         title={collapsed ? 'Show controls' : 'Hide controls'}
@@ -157,6 +175,59 @@ export default function VideoWithControls() {
   const [hovering, setHovering] = useState(false);
   const [tapPinned, setTapPinned] = useState(false);
 
+  // ── Audio ──────────────────────────────────────────────────────────────────
+  const musicRef = useRef<HTMLAudioElement | null>(null);
+  const narrationRef = useRef<HTMLAudioElement | null>(null);
+  const [muted, setMuted] = useState(true); // start muted; user clicks to enable
+
+  // Initialise audio elements once
+  useEffect(() => {
+    const base = import.meta.env.BASE_URL;
+
+    const music = new Audio(`${base}bg-music.mp3`);
+    music.loop = true;
+    music.volume = 0.22;
+    music.muted = true;
+    musicRef.current = music;
+
+    const narration = new Audio(`${base}narration.mp3`);
+    narration.loop = false;
+    narration.volume = 0.85;
+    narration.muted = true;
+    narrationRef.current = narration;
+
+    // Attempt silent autoplay so audio is primed
+    music.play().catch(() => {});
+    narration.play().catch(() => {});
+
+    return () => {
+      music.pause();
+      narration.pause();
+    };
+  }, []);
+
+  // Restart narration whenever the video loops (mountKey changes)
+  useEffect(() => {
+    const narration = narrationRef.current;
+    if (!narration) return;
+    narration.currentTime = 0;
+    narration.play().catch(() => {});
+  }, [mountKey]);
+
+  // Apply mute state to both tracks
+  useEffect(() => {
+    if (musicRef.current) musicRef.current.muted = muted;
+    if (narrationRef.current) narrationRef.current.muted = muted;
+    // If unmuting, ensure both are playing
+    if (!muted) {
+      musicRef.current?.play().catch(() => {});
+      narrationRef.current?.play().catch(() => {});
+    }
+  }, [muted]);
+
+  const toggleMute = useCallback(() => setMuted((m) => !m), []);
+
+  // ── Control bar visibility ─────────────────────────────────────────────────
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse') setHovering(true);
   }, []);
@@ -205,6 +276,18 @@ export default function VideoWithControls() {
         onSceneChange={onSceneChange}
       />
 
+      {/* Muted-start nudge — disappears after first unmute */}
+      {muted && (
+        <button
+          onClick={toggleMute}
+          className="absolute top-5 right-5 z-50 flex items-center gap-2 bg-black/60 backdrop-blur-sm text-white/80 hover:text-white text-base px-4 py-2.5 rounded-full transition-colors"
+          aria-label="Enable audio"
+        >
+          <VolumeX className="w-5 h-5" />
+          <span className="font-body text-sm">Click to enable audio</span>
+        </button>
+      )}
+
       <div
         ref={sensorRef}
         className="absolute bottom-0 left-0 right-0 z-50 flex flex-col justify-end"
@@ -218,11 +301,13 @@ export default function VideoWithControls() {
           visible={barVisible}
           collapsed={collapsed}
           locked={locked}
+          muted={muted}
           sceneKeys={sceneKeys}
           activeIndex={activeIndex}
           activeDuration={activeDuration}
           tick={tick}
           onToggleLock={toggleLock}
+          onToggleMute={toggleMute}
           onJumpTo={jumpTo}
           onToggleCollapsed={handleToggleCollapsed}
         />

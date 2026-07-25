@@ -6,3 +6,15 @@ id = "u6nj0rntRzYmtn0XQqj72"
 uri = "file://sunrise-web-dist.zip"
 type = "unspecified"
 title = "Sunrise Web — Built Site (drag to Netlify)"
+
+[[outputs]]
+id = "PosnNIrCnSVz3XHRKqv02"
+uri = "file://artifacts/sunrise-video/public/narration.mp3"
+type = "audio"
+title = "sunrise-demo-narration"
+
+[[outputs]]
+id = "S3pFWPXhIMLUck5u8hpf8"
+uri = "file://artifacts/sunrise-video/public/bg-music.mp3"
+type = "audio"
+title = "corporate-tech-bed"
