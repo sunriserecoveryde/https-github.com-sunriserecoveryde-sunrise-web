@@ -268,6 +268,98 @@ describe("normalizePendingDeletes", () => {
 });
 
 // ---------------------------------------------------------------------------
+// 5xx delete failure — full lifecycle integration
+// ---------------------------------------------------------------------------
+
+/**
+ * Simulates the complete cycle described in task 469:
+ *   1. User triggers a delete → tombstone is written via addEntryToRaw.
+ *   2. The DELETE request returns a 5xx error → removeEntryFromRaw is NOT
+ *      called (the server-side delete did not succeed, so the client must
+ *      keep the tombstone until the DELETE is retried or the TTL expires).
+ *   3. App is force-quit and restarted → the raw string is re-read from
+ *      AsyncStorage and passed to parsePendingDeletes (simulated here by
+ *      re-using the stored raw value).
+ *   4. Immediately after restart the conversation is still suppressed.
+ *   5. After PENDING_DELETE_TTL_MS the tombstone expires and the
+ *      conversation reappears in loadConversations (i.e. is no longer in
+ *      the filtered-out set).
+ */
+describe("5xx delete failure — full lifecycle", () => {
+  it("suppresses the conversation after a 5xx, then lets it reappear after 7 days", () => {
+    const CONV_ID = 1001;
+    const deleteAttemptTime = NOW;
+
+    // --- Step 1: user triggers delete — tombstone written to storage ---
+    const rawAfterAdd = addEntryToRaw(null, CONV_ID, deleteAttemptTime);
+
+    // --- Step 2: DELETE returns 5xx — removeEntryFromRaw is NOT called;
+    //             tombstone remains as-is in storage.
+
+    // --- Step 3: app is force-quit; on the next cold start the app reads
+    //             the stored raw string (simulated by re-using rawAfterAdd).
+    const rawOnRestart = rawAfterAdd; // same bytes, as if read from AsyncStorage
+
+    // --- Step 4: immediately after restart the conversation is still suppressed ---
+    const filteredImmediately = parsePendingDeletes(
+      rawOnRestart,
+      deleteAttemptTime + HOUR // 1 hour after the failed delete
+    );
+    expect(filteredImmediately.has(CONV_ID)).toBe(true);
+
+    // Also check at 6 days 23 hours — still filtered (just inside TTL)
+    const almostExpired = parsePendingDeletes(
+      rawOnRestart,
+      deleteAttemptTime + PENDING_DELETE_TTL_MS - 1
+    );
+    expect(almostExpired.has(CONV_ID)).toBe(true);
+
+    // --- Step 5: 7 days pass — tombstone expires, conversation reappears ---
+    // This mirrors readPendingDeletes being called on the next app open after
+    // the TTL has elapsed; the id must no longer be in the filtered set.
+    const filteredAfterTTL = parsePendingDeletes(
+      rawOnRestart,
+      deleteAttemptTime + PENDING_DELETE_TTL_MS
+    );
+    expect(filteredAfterTTL.has(CONV_ID)).toBe(false);
+
+    // Extra: well past expiry (8 days) — definitely not filtered
+    const filteredAt8Days = parsePendingDeletes(
+      rawOnRestart,
+      deleteAttemptTime + 8 * DAY
+    );
+    expect(filteredAt8Days.has(CONV_ID)).toBe(false);
+  });
+
+  it("does not affect other live tombstones when one expires after a 5xx", () => {
+    // Two conversations: one deleted just now (fresh tombstone), one deleted
+    // 8 days ago (expired).  A 5xx on the second one must not suppress it
+    // past the TTL while the first remains correctly suppressed.
+    const FRESH_ID = 2001;
+    const STALE_ID = 2002;
+
+    const now = NOW;
+    // STALE_ID was added 8 days ago (already past TTL)
+    const rawWithStale = addEntryToRaw(null, STALE_ID, now - 8 * DAY);
+    // FRESH_ID added now (its DELETE also fails with 5xx)
+    const rawBothIds = addEntryToRaw(rawWithStale, FRESH_ID, now);
+
+    // Immediately: only the fresh id is filtered (stale has expired)
+    const immediateSet = parsePendingDeletes(rawBothIds, now);
+    expect(immediateSet.has(FRESH_ID)).toBe(true);
+    expect(immediateSet.has(STALE_ID)).toBe(false);
+
+    // 7 days later: fresh id also expires
+    const afterTTLSet = parsePendingDeletes(
+      rawBothIds,
+      now + PENDING_DELETE_TTL_MS
+    );
+    expect(afterTTLSet.has(FRESH_ID)).toBe(false);
+    expect(afterTTLSet.has(STALE_ID)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // TTL expiry integration — the key regression guard
 // ---------------------------------------------------------------------------
 
