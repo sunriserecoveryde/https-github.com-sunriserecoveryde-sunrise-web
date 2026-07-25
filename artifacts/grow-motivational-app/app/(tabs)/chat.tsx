@@ -1048,9 +1048,12 @@ export default function ChatScreen() {
 
       // Restore the list entry so it doesn't keep showing a title that never
       // took effect on the server.
-      setConversations((prev) =>
-        prev.map((c) => (c.id === convId ? { ...c, title: rollbackTitle } : c))
-      );
+      // Guard: skip the rollback if the conversation was deleted while the PATCH
+      // was in-flight — rolling back a missing entry would re-insert a ghost.
+      setConversations((prev) => {
+        if (!prev.some((c) => c.id === convId)) return prev;
+        return prev.map((c) => (c.id === convId ? { ...c, title: rollbackTitle } : c));
+      });
 
       // If the optimistic back-nav ref still holds the pending (failed) title,
       // roll it back too.  Without this, a subsequent loadConversations call
