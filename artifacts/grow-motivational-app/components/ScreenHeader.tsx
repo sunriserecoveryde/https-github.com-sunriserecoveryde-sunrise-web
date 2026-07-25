@@ -10,9 +10,11 @@ interface ScreenHeaderProps {
   subtitle?: string;
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode;
+  /** When provided, the title itself becomes tappable and calls this handler. */
+  onTitlePress?: () => void;
 }
 
-export function ScreenHeader({ title, subtitle, rightElement, leftElement }: ScreenHeaderProps) {
+export function ScreenHeader({ title, subtitle, rightElement, leftElement, onTitlePress }: ScreenHeaderProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [emergencyVisible, setEmergencyVisible] = useState(false);
@@ -32,7 +34,13 @@ export function ScreenHeader({ title, subtitle, rightElement, leftElement }: Scr
       >
         {leftElement ? <View style={styles.leftElement}>{leftElement}</View> : null}
         <View style={styles.left}>
-          <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
+          {onTitlePress ? (
+            <TouchableOpacity onPress={onTitlePress} activeOpacity={0.6} accessibilityLabel="Rename conversation">
+              <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
+          )}
           {subtitle ? (
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>
           ) : null}

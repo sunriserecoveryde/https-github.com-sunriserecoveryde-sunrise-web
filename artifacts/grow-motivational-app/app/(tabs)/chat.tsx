@@ -1143,6 +1143,7 @@ export default function ChatScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ScreenHeader
         title={chatConvTitle}
+        onTitlePress={activeConvId !== null ? () => setShowChatRenameModal(true) : undefined}
         leftElement={
           <TouchableOpacity onPress={goBackToList} activeOpacity={0.7} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={20} color={colors.mutedForeground} />
