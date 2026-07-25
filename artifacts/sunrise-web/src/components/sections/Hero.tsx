@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Play, Activity, Clock, FileText, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Play, Activity, Clock, FileText, ShieldCheck, LayoutTemplate } from 'lucide-react';
 import logoImg from '@assets/SunriseOS_Logo_transparent.png';
 import { DemoModal } from '../DemoModal';
 
@@ -90,6 +90,15 @@ export const Hero = () => {
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
               <a
+                href="/sunrise-pitch/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center w-full sm:w-auto gap-2 px-8 py-3.5 text-sm font-semibold text-white bg-slate-800/60 hover:bg-slate-700/80 rounded-xl transition-colors border border-slate-700/60 group"
+              >
+                <LayoutTemplate className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-300 transition-colors" />
+                View Pitch Deck
+              </a>
+              <a
                 href="/sunrise-video/"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -97,14 +106,6 @@ export const Hero = () => {
               >
                 <Play className="w-3.5 h-3.5 text-sunrise-orange group-hover:text-orange-400 transition-colors" />
                 Watch Demo Video
-              </a>
-              <a
-                href="/sunrise-pitch/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center w-full sm:w-auto gap-2 px-8 py-3.5 text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 rounded-xl transition-colors"
-              >
-                View Pitch Deck
               </a>
             </motion.div>
 
