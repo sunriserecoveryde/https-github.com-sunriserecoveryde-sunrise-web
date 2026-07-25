@@ -99,7 +99,7 @@ export const Hero = () => {
                 View Pitch Deck
               </a>
               <a
-                href="/sunrise-video/"
+                href="/video/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center w-full sm:w-auto gap-2 px-8 py-3.5 text-sm font-semibold text-white bg-slate-800/60 hover:bg-slate-700/80 rounded-xl transition-colors border border-slate-700/60 group"
