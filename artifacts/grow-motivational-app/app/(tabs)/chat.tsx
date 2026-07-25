@@ -526,6 +526,12 @@ export default function ChatScreen() {
   // Cleared once the server confirms the conversation is present.
   const optimisticBackConvRef = useRef<ConversationSummary | null>(null);
 
+  // Tracks an in-flight rename title (user-typed, server not yet confirmed).
+  // Set when the user confirms the in-chat rename modal; cleared when the
+  // rename request settles. Used by goBackToList so the optimistic back-nav
+  // entry shows the pending title rather than the last confirmed one.
+  const pendingRenameTitleRef = useRef<string | null>(null);
+
   // Track online / offline transitions — cross-platform via NetInfo
   useEffect(() => {
     // Set initial connectivity state
@@ -908,9 +914,13 @@ export default function ChatScreen() {
     // is slow or the device is briefly offline.
     // Skipped when returning from a delete — we don't want to re-add a ghost.
     if (!skipOptimistic && activeConvId !== null) {
+      // Prefer the pending (user-typed) rename title when a rename is still
+      // in-flight, so the optimistic entry reflects what the user just typed
+      // rather than the last server-confirmed title.
+      const optimisticTitle = pendingRenameTitleRef.current ?? chatConvTitle;
       const optimistic: ConversationSummary = {
         id: activeConvId,
-        title: chatConvTitle,
+        title: optimisticTitle,
         createdAt: new Date().toISOString(),
       };
       optimisticBackConvRef.current = optimistic;
@@ -945,6 +955,8 @@ export default function ChatScreen() {
         body: JSON.stringify({ title: newTitle }),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
+      // Rename confirmed — clear the pending ref so goBackToList stops using it.
+      pendingRenameTitleRef.current = null;
       // Optimistically update local state so the list refreshes immediately
       setConversations((prev) =>
         prev.map((c) => (c.id === convId ? { ...c, title: newTitle } : c))
@@ -961,6 +973,9 @@ export default function ChatScreen() {
         ).catch(() => {});
       }
     } catch (e) {
+      // Rename failed — clear the pending ref; the list will keep the last
+      // confirmed title rather than showing a title that never took effect.
+      pendingRenameTitleRef.current = null;
       console.warn("Failed to rename conversation:", e);
       Alert.alert("Rename failed", "Could not save the new title. Please try again.");
     }
@@ -1412,6 +1427,10 @@ export default function ChatScreen() {
         colors={colors}
         onConfirm={(newTitle) => {
           if (activeConvId !== null) {
+            // Record the user-typed title before the network call so that
+            // goBackToList can show it in the optimistic entry if the user
+            // navigates away before the PATCH response arrives.
+            pendingRenameTitleRef.current = newTitle;
             renameConversation(activeConvId, newTitle);
           }
           setShowChatRenameModal(false);
