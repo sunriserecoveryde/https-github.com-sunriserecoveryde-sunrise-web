@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: grow
+    description: Grow Motivational App — user auth and data sync
 paths:
   /healthz:
     get:
@@ -24,7 +26,116 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /grow/register:
+    post:
+      operationId: growRegister
+      tags: [grow]
+      summary: Create a new Grow user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrowAuthRequest"
+      responses:
+        "201":
+          description: Account created; returns token and any existing server data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrowAuthResponse"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /grow/login:
+    post:
+      operationId: growLogin
+      tags: [grow]
+      summary: Sign in to an existing Grow account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrowAuthRequest"
+      responses:
+        "200":
+          description: Authentication successful; returns token and server data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrowAuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /grow/me:
+    get:
+      operationId: growGetMe
+      tags: [grow]
+      summary: Fetch the authenticated user's synced data
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current server state for the user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrowUserDataResponse"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /grow/sync:
+    put:
+      operationId: growSync
+      tags: [grow]
+      summary: Upload the full app state for the authenticated user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrowStateSnapshot"
+      responses:
+        "200":
+          description: State saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +145,88 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    GrowAuthRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+      required:
+        - email
+        - password
+
+    GrowStateSnapshot:
+      type: object
+      description: Serialisable app state (no auth fields)
+      properties:
+        userName:
+          type: string
+        userType:
+          type: string
+        sobrietyStartDate:
+          type: string
+          nullable: true
+        lessonsCompleted:
+          type: array
+          items:
+            type: string
+        skillsUsed:
+          type: array
+          items:
+            type: string
+        journalEntries:
+          type: array
+          items:
+            type: object
+        dailyMoods:
+          type: array
+          items:
+            type: object
+
+    GrowAuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+          required: [id, email]
+        data:
+          $ref: "#/components/schemas/GrowStateSnapshot"
+      required:
+        - token
+        - user
+        - data
+
+    GrowUserDataResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+          required: [id, email]
+        data:
+          $ref: "#/components/schemas/GrowStateSnapshot"
+      required:
+        - user
+        - data

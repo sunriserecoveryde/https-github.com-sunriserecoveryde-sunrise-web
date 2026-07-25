@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleDailyReminder, cancelDailyReminder, ensureDailyReminderScheduled } from '@/utils/notifications';
+import { useAuth } from '@/context/AuthContext';
 
 export interface JournalEntry {
   id: string;
@@ -43,6 +44,16 @@ interface AppContextValue extends AppState {
   getSobrietyDays: () => number;
   getTodayMood: () => number | null;
   updateReminderSettings: (settings: ReminderSettings) => Promise<void>;
+  /** Restore state from a server snapshot (called after login/register) */
+  restoreFromServer: (snapshot: {
+    userName?: string;
+    userType?: string;
+    sobrietyStartDate?: string | null;
+    lessonsCompleted?: string[];
+    skillsUsed?: string[];
+    journalEntries?: Array<{ id: string; date: string; prompt: string; text: string }>;
+    dailyMoods?: Array<{ date: string; rating: number }>;
+  }) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -65,6 +76,8 @@ function daysBetween(start: string): number {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { token, syncToServer } = useAuth();
+
   const [state, setState] = useState<AppState>({
     hasOnboarded: false,
     userName: '',
@@ -78,6 +91,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isLoading: true,
   });
 
+  // Track the latest state in a ref so sync callbacks always see fresh data
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // -------------------------------------------------------------------------
+  // Boot: load from AsyncStorage
+  // -------------------------------------------------------------------------
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then(async (raw) => {
       if (raw) {
@@ -104,15 +124,82 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const save = useCallback((next: Partial<AppState>) => {
-    setState((prev) => {
-      const merged = { ...prev, ...next };
-      const { isLoading: _ignored, ...toSave } = merged;
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
-      return merged;
-    });
-  }, []);
+  // -------------------------------------------------------------------------
+  // Sync helper — persists locally and fires an async server sync when authed
+  // -------------------------------------------------------------------------
+  const save = useCallback(
+    (next: Partial<AppState>) => {
+      setState((prev) => {
+        const merged = { ...prev, ...next };
+        const { isLoading: _ignored, ...storagePayload } = merged;
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(storagePayload)).catch(() => {});
 
+        // Fire-and-forget server sync
+        if (token) {
+          const snapshot = {
+            userName: merged.userName,
+            userType: merged.userType,
+            sobrietyStartDate: merged.sobrietyStartDate,
+            lessonsCompleted: merged.lessonsCompleted,
+            skillsUsed: merged.skillsUsed,
+            journalEntries: merged.journalEntries,
+            dailyMoods: merged.dailyMoods,
+          };
+          syncToServer(snapshot);
+        }
+
+        return merged;
+      });
+    },
+    [token, syncToServer],
+  );
+
+  // -------------------------------------------------------------------------
+  // restoreFromServer — called after login/register when server has data
+  // -------------------------------------------------------------------------
+  const restoreFromServer = useCallback(
+    (snapshot: {
+      userName?: string;
+      userType?: string;
+      sobrietyStartDate?: string | null;
+      lessonsCompleted?: string[];
+      skillsUsed?: string[];
+      journalEntries?: Array<{ id: string; date: string; prompt: string; text: string }>;
+      dailyMoods?: Array<{ date: string; rating: number }>;
+    }) => {
+      // Only restore if there is meaningful data from the server
+      const hasData =
+        snapshot.userName ||
+        snapshot.sobrietyStartDate ||
+        (snapshot.lessonsCompleted?.length ?? 0) > 0 ||
+        (snapshot.journalEntries?.length ?? 0) > 0;
+
+      if (!hasData) return;
+
+      setState((prev) => {
+        const merged: AppState = {
+          ...prev,
+          userName: snapshot.userName || prev.userName,
+          userType: (snapshot.userType as AppState['userType']) || prev.userType,
+          sobrietyStartDate: snapshot.sobrietyStartDate ?? prev.sobrietyStartDate,
+          lessonsCompleted: snapshot.lessonsCompleted ?? prev.lessonsCompleted,
+          skillsUsed: snapshot.skillsUsed ?? prev.skillsUsed,
+          journalEntries: (snapshot.journalEntries ?? prev.journalEntries) as JournalEntry[],
+          dailyMoods: (snapshot.dailyMoods ?? prev.dailyMoods) as MoodEntry[],
+          // Mark as onboarded if server data is present
+          hasOnboarded: true,
+        };
+        const { isLoading: _i, ...toSave } = merged;
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
+        return merged;
+      });
+    },
+    [],
+  );
+
+  // -------------------------------------------------------------------------
+  // Mutations
+  // -------------------------------------------------------------------------
   const completeOnboarding = useCallback(
     async (name: string, type: string, sobrietyDays: number, reminder?: ReminderSettings) => {
       const startDate = new Date();
@@ -137,12 +224,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setState((prev) => {
         if (prev.lessonsCompleted.includes(lessonId)) return prev;
         const updated = [...prev.lessonsCompleted, lessonId];
-        const { isLoading: _ignored, ...toSave } = { ...prev, lessonsCompleted: updated };
+        const merged = { ...prev, lessonsCompleted: updated };
+        const { isLoading: _i, ...toSave } = merged;
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
-        return { ...prev, lessonsCompleted: updated };
+        if (token) {
+          syncToServer({
+            userName: merged.userName,
+            userType: merged.userType,
+            sobrietyStartDate: merged.sobrietyStartDate,
+            lessonsCompleted: merged.lessonsCompleted,
+            skillsUsed: merged.skillsUsed,
+            journalEntries: merged.journalEntries,
+            dailyMoods: merged.dailyMoods,
+          });
+        }
+        return merged;
       });
     },
-    [],
+    [token, syncToServer],
   );
 
   const markSkillUsed = useCallback(
@@ -150,12 +249,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setState((prev) => {
         const entry = `${skillId}_${Date.now()}`;
         const updated = [...prev.skillsUsed, entry];
-        const { isLoading: _ignored, ...toSave } = { ...prev, skillsUsed: updated };
+        const merged = { ...prev, skillsUsed: updated };
+        const { isLoading: _i, ...toSave } = merged;
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
-        return { ...prev, skillsUsed: updated };
+        if (token) {
+          syncToServer({
+            userName: merged.userName,
+            userType: merged.userType,
+            sobrietyStartDate: merged.sobrietyStartDate,
+            lessonsCompleted: merged.lessonsCompleted,
+            skillsUsed: merged.skillsUsed,
+            journalEntries: merged.journalEntries,
+            dailyMoods: merged.dailyMoods,
+          });
+        }
+        return merged;
       });
     },
-    [],
+    [token, syncToServer],
   );
 
   const addJournalEntry = useCallback(
@@ -168,12 +279,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           text,
         };
         const updated = [entry, ...prev.journalEntries];
-        const { isLoading: _ignored, ...toSave } = { ...prev, journalEntries: updated };
+        const merged = { ...prev, journalEntries: updated };
+        const { isLoading: _i, ...toSave } = merged;
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
-        return { ...prev, journalEntries: updated };
+        if (token) {
+          syncToServer({
+            userName: merged.userName,
+            userType: merged.userType,
+            sobrietyStartDate: merged.sobrietyStartDate,
+            lessonsCompleted: merged.lessonsCompleted,
+            skillsUsed: merged.skillsUsed,
+            journalEntries: merged.journalEntries,
+            dailyMoods: merged.dailyMoods,
+          });
+        }
+        return merged;
       });
     },
-    [],
+    [token, syncToServer],
   );
 
   const recordMood = useCallback(
@@ -182,12 +305,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const today = todayStr();
         const filtered = prev.dailyMoods.filter((m) => m.date !== today);
         const updated = [...filtered, { date: today, rating }];
-        const { isLoading: _ignored, ...toSave } = { ...prev, dailyMoods: updated };
+        const merged = { ...prev, dailyMoods: updated };
+        const { isLoading: _i, ...toSave } = merged;
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
-        return { ...prev, dailyMoods: updated };
+        if (token) {
+          syncToServer({
+            userName: merged.userName,
+            userType: merged.userType,
+            sobrietyStartDate: merged.sobrietyStartDate,
+            lessonsCompleted: merged.lessonsCompleted,
+            skillsUsed: merged.skillsUsed,
+            journalEntries: merged.journalEntries,
+            dailyMoods: merged.dailyMoods,
+          });
+        }
+        return merged;
       });
     },
-    [],
+    [token, syncToServer],
   );
 
   const resetSobriety = useCallback(() => {
@@ -230,6 +365,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         getSobrietyDays,
         getTodayMood,
         updateReminderSettings,
+        restoreFromServer,
       }}
     >
       {children}

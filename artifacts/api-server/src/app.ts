@@ -62,6 +62,10 @@ app.use("/api/contact", makeLimiter(5));
 // Rate-limit the subscribe/lead-capture forms: 10 per IP per hour
 app.use("/api/subscribe", makeLimiter(10));
 
+// Rate-limit Grow auth endpoints: 20 per IP per hour (covers login + register)
+app.use("/api/grow/register", makeLimiter(10));
+app.use("/api/grow/login", makeLimiter(20));
+
 app.use("/api", router);
 
 export default app;
