@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/grow-web/"
+title = "Grow Motivational"
+version = "1.0.0"
+id = "artifacts/grow-web"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/grow-web/" ]
+localPort = 25623
+
+[services.development]
+run = "pnpm --filter @workspace/grow-web run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/grow-web", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/grow-web/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25623"
+BASE_PATH = "/grow-web/"
