@@ -13,6 +13,9 @@ import { mediaItems } from '@/data/mediaItems';
 import { BookOpen, Stethoscope, Users, Building, GraduationCap, Mic, Library, MonitorPlay, Heart, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'wouter';
+import { StatCounter } from '@/components/StatCounter';
+import { QuoteRotator } from '@/components/QuoteRotator';
+import { ScrollReveal } from '@/components/ScrollReveal';
 
 export function Home() {
   const purposeCards = [
@@ -47,6 +50,8 @@ export function Home() {
         primaryCta={{ text: "Explore Resources", href: "/education" }}
         secondaryCta={{ text: "Partner With Us", href: "/contact" }}
       />
+
+      <StatCounter />
 
       {/* Purpose & Divisions */}
       <section className="py-24 bg-card/30">
@@ -159,6 +164,8 @@ export function Home() {
           </div>
         </div>
       </section>
+
+      <QuoteRotator />
 
       {/* Newsletter / General Updates Sign-up */}
       <section className="py-20 bg-card/20 border-t border-white/5">

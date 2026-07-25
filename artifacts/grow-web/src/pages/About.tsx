@@ -83,9 +83,9 @@ export function About() {
               </div>
               <div className="md:col-span-3 p-10 md:p-16 flex flex-col justify-center">
                 <span className="text-primary font-medium text-sm tracking-wider uppercase mb-2">Founder & Chief Educational Officer</span>
-                <h3 className="text-3xl font-heading font-bold mb-6">Dr. Elena Richardson</h3>
+                <h3 className="text-3xl font-heading font-bold mb-6">Jim Collins</h3>
                 <p className="text-muted-foreground mb-8 leading-relaxed">
-                  With over two decades of clinical experience in addiction medicine, Dr. Richardson founded Grow Motivational to address a critical gap: patients leaving treatment without the ongoing educational support needed to maintain recovery. Her vision for a "curriculum of recovery" has now reached thousands of individuals and organizations.
+                  Jim Collins founded Grow Motivational to address a critical gap: individuals leaving treatment without the ongoing educational support needed to sustain recovery. His vision for accessible, science-based behavioral health education has grown into a platform reaching thousands of individuals, families, and clinicians across the country.
                 </p>
                 <div>
                   <button className="text-primary hover:text-gold font-medium flex items-center gap-2 transition-colors">
