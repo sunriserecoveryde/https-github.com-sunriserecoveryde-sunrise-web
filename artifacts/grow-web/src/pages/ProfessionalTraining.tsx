@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
+import { PageMeta } from '@/components/PageMeta';
 import { SectionHeading } from '@/components/SectionHeading';
 import { HeroSection } from '@/components/HeroSection';
 import { trainingCourses, TRAINING_CATEGORIES, DELIVERY_FORMATS, TrainingCategory, DeliveryFormat } from '@/data/trainingCourses';
@@ -158,6 +159,11 @@ export function ProfessionalTraining() {
 
   return (
     <Layout>
+      <PageMeta
+        title="Professional Training & CEUs | Grow Motivational"
+        description="CEU-eligible professional training for addiction counselors, clinical supervisors, and behavioral health organizations — ethics, motivational interviewing, trauma-informed care, and more."
+        ogUrl="https://www.growmotivational.com/professional-training"
+      />
       <HeroSection
         headline="Train. Certify. Lead."
         subheadline="Evidence-based professional training for addiction counselors, clinical supervisors, and behavioral health organizations — with CEU credits recognized across multiple states."

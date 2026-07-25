@@ -1,4 +1,5 @@
 import { Layout } from '@/components/Layout';
+import { PageMeta } from '@/components/PageMeta';
 import { HeroSection } from '@/components/HeroSection';
 import { EcosystemDiagram } from '@/components/EcosystemDiagram';
 import { Activity, BrainCircuit, BookOpen, HeartHandshake, ArrowRight } from 'lucide-react';
@@ -58,6 +59,11 @@ export function TheSunriseGroup() {
 
   return (
     <Layout>
+      <PageMeta
+        title="The Sunrise Group | Behavioral Health Ecosystem"
+        description="The Sunrise Group is an integrated family of organizations tackling behavioral health from every angle — clinical care, technology (SunriseOS), education (Grow Motivational), and philanthropy."
+        ogUrl="https://www.growmotivational.com/the-sunrise-group"
+      />
       <HeroSection 
         headline={
           <>

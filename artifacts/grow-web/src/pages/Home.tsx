@@ -1,4 +1,6 @@
 import { Layout } from '@/components/Layout';
+import { PageMeta } from '@/components/PageMeta';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { HeroSection } from '@/components/HeroSection';
 import { SectionHeading } from '@/components/SectionHeading';
 import { AudienceCard } from '@/components/AudienceCard';
@@ -22,13 +24,18 @@ export function Home() {
 
   const divisions = [
     { icon: BookOpen, title: "Education & Courses", desc: "Self-guided and instructor-led curriculums.", link: "/education" },
-    { icon: Mic, title: "Media & Podcasts", desc: "Conversations that break down stigma.", link: "/coming-soon" },
-    { icon: Library, title: "Publishing & Books", desc: "Workbooks, guides, and memoirs.", link: "/coming-soon" },
-    { icon: GraduationCap, title: "Professional Training", desc: "CEUs and certification prep.", link: "/coming-soon" }
+    { icon: Mic, title: "Media & Podcasts", desc: "Conversations that break down stigma.", link: "/media" },
+    { icon: Library, title: "Publishing & Books", desc: "Workbooks, guides, and memoirs.", link: "/publishing" },
+    { icon: GraduationCap, title: "Professional Training", desc: "CEUs and certification prep.", link: "/professional-training" }
   ];
 
   return (
     <Layout>
+      <PageMeta
+        title="Grow Motivational | Education for the Journey of Recovery"
+        description="Grow Motivational delivers science-based behavioral health education for individuals in recovery, families, and clinicians — courses, resources, media, and more."
+        ogUrl="https://www.growmotivational.com/"
+      />
       <HeroSection 
         headline={
           <>
@@ -140,7 +147,7 @@ export function Home() {
                 title="Conversations That Matter." 
                 subtitle="Tune into our award-winning podcast series and documentaries exploring the realties of behavioral health."
               />
-              <Link href="/coming-soon" className="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors mt-4">
+              <Link href="/media" className="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors mt-4">
                 Explore Media Library
               </Link>
             </div>
@@ -149,6 +156,19 @@ export function Home() {
                 <MediaCard key={item.id} item={item} />
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter / General Updates Sign-up */}
+      <section className="py-20 bg-card/20 border-t border-white/5">
+        <div className="container mx-auto px-4">
+          <div className="max-w-xl mx-auto bg-card border border-border rounded-2xl p-10 text-center">
+            <h2 className="text-2xl font-heading font-bold mb-3">Stay Connected</h2>
+            <p className="text-muted-foreground text-sm mb-8">
+              Get updates on new courses, recovery resources, media releases, and educational content from Grow Motivational.
+            </p>
+            <NewsletterSignup type="general" compact={false} />
           </div>
         </div>
       </section>

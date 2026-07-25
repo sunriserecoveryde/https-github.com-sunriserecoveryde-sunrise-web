@@ -1,4 +1,6 @@
 import { Layout } from '@/components/Layout';
+import { PageMeta } from '@/components/PageMeta';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { HeroSection } from '@/components/HeroSection';
 import { SectionHeading } from '@/components/SectionHeading';
 import { CTABanner } from '@/components/CTABanner';
@@ -22,6 +24,11 @@ const values = [
 export function About() {
   return (
     <Layout>
+      <PageMeta
+        title="About Grow Motivational | Our Mission & Values"
+        description="Grow Motivational is a behavioral health education company committed to translating clinical science into accessible content for individuals in recovery, families, and clinicians."
+        ogUrl="https://www.growmotivational.com/about"
+      />
       <HeroSection 
         headline="Our Purpose"
         subheadline="We believe that recovery is not just a destination, but a continuous journey of learning and growth."
@@ -87,6 +94,19 @@ export function About() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* General Newsletter */}
+      <section className="py-16 border-t border-white/5">
+        <div className="container mx-auto px-4">
+          <div className="max-w-xl mx-auto bg-card border border-border rounded-2xl p-10">
+            <h2 className="text-2xl font-heading font-bold mb-2">Stay in Touch</h2>
+            <p className="text-muted-foreground text-sm mb-8">
+              Sign up for our newsletter to receive updates on new educational content, organizational news, and recovery resources.
+            </p>
+            <NewsletterSignup type="general" compact={false} />
           </div>
         </div>
       </section>

@@ -1,4 +1,6 @@
 import { Layout } from '@/components/Layout';
+import { PageMeta } from '@/components/PageMeta';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { SectionHeading } from '@/components/SectionHeading';
 import { Stethoscope, BrainCircuit, Users, ShieldCheck, GraduationCap, LineChart, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -16,6 +18,11 @@ export function SunriseOS() {
 
   return (
     <Layout>
+      <PageMeta
+        title="SunriseOS — Intelligent Clinical Platform | Grow Motivational"
+        description="SunriseOS is the AI-powered clinical operating system for behavioral health — combining real-time patient care, compliance tools, analytics, and integrated Grow Motivational education."
+        ogUrl="https://www.growmotivational.com/sunriseos"
+      />
       <section className="relative pt-32 pb-20 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background z-0" />
         <div className="container mx-auto px-4 relative z-10 text-center max-w-4xl">
@@ -114,6 +121,25 @@ export function SunriseOS() {
           </p>
         </div>
       </div>
+
+      {/* Demo Request */}
+      <section className="py-24 bg-card/20">
+        <div className="container mx-auto px-4 max-w-xl">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-heading font-bold mb-3">Request a Demo</h2>
+            <p className="text-muted-foreground">
+              See SunriseOS in action. Leave your details and our team will reach out to schedule a personalized walkthrough of the platform.
+            </p>
+          </div>
+          <div className="bg-card border border-border rounded-2xl p-8">
+            <NewsletterSignup
+              type="sunriseos-demo"
+              title="Request a SunriseOS Demo"
+              description="Tell us about your organization and we'll schedule a tailored demo walkthrough."
+            />
+          </div>
+        </div>
+      </section>
     </Layout>
   );
 }

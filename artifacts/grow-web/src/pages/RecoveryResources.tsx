@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
+import { PageMeta } from '@/components/PageMeta';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { SectionHeading } from '@/components/SectionHeading';
 import { HeroSection } from '@/components/HeroSection';
 import { recoveryResources, RECOVERY_CATEGORIES, RecoveryCategory } from '@/data/recoveryResources';
@@ -79,6 +81,11 @@ export function RecoveryResources() {
 
   return (
     <Layout>
+      <PageMeta
+        title="Recovery Resources | Grow Motivational"
+        description="Free worksheets, audio guides, checklists, and recovery tools created by behavioral health clinicians — for individuals in recovery, families, and their support networks."
+        ogUrl="https://www.growmotivational.com/recovery-resources"
+      />
       <HeroSection
         headline="Your Recovery, Supported."
         subheadline="Free tools, worksheets, guides, and exercises created by clinicians and grounded in evidence — for every stage of the recovery journey."
@@ -209,6 +216,19 @@ export function RecoveryResources() {
             {filtered.map(r => (
               <ResourceCard key={r.id} resource={r} />
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter signup */}
+      <section className="py-16 border-t border-white/5">
+        <div className="container mx-auto px-4">
+          <div className="max-w-xl mx-auto bg-card border border-border rounded-2xl p-10">
+            <h2 className="text-2xl font-heading font-bold mb-2">Get New Resources in Your Inbox</h2>
+            <p className="text-muted-foreground text-sm mb-8">
+              We add new worksheets, guides, and tools regularly. Sign up to be notified when new recovery resources are published.
+            </p>
+            <NewsletterSignup type="recovery-resources" compact={false} />
           </div>
         </div>
       </section>

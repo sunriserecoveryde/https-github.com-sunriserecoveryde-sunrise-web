@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
+import { PageMeta } from '@/components/PageMeta';
 import { SectionHeading } from '@/components/SectionHeading';
 import { HeroSection } from '@/components/HeroSection';
 import { mediaItems, MEDIA_AUDIENCES, MediaAudience, MediaType } from '@/data/mediaItems';
@@ -113,6 +114,11 @@ export function Media() {
 
   return (
     <Layout>
+      <PageMeta
+        title="Media & Podcasts | Grow Motivational"
+        description="Explore podcasts, documentaries, videos, articles, and recovery stories from Grow Motivational — media that breaks down stigma and advances behavioral health literacy."
+        ogUrl="https://www.growmotivational.com/media"
+      />
       <HeroSection
         headline="Stories That Move Recovery Forward."
         subheadline="Podcasts, documentaries, videos, articles, and recovery stories — created for people in recovery, their families, and the professionals who serve them."

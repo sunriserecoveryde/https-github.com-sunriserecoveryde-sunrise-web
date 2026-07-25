@@ -14,6 +14,11 @@ import { SunriseOS } from './pages/SunriseOS';
 import { TheSunriseGroup } from './pages/TheSunriseGroup';
 import { Contact } from './pages/Contact';
 import { ComingSoon } from './pages/ComingSoon';
+import { Partnership } from './pages/Partnership';
+import { DigitalLearning } from './pages/DigitalLearning';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { TermsOfUse } from './pages/TermsOfUse';
+import { Disclaimer } from './pages/Disclaimer';
 import NotFound from './pages/not-found';
 
 const queryClient = new QueryClient();
@@ -32,6 +37,11 @@ function Router() {
       <Route path="/the-sunrise-group" component={TheSunriseGroup} />
       <Route path="/contact" component={Contact} />
       <Route path="/coming-soon" component={ComingSoon} />
+      <Route path="/partnership" component={Partnership} />
+      <Route path="/digital-learning" component={DigitalLearning} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/terms-of-use" component={TermsOfUse} />
+      <Route path="/disclaimer" component={Disclaimer} />
       <Route component={NotFound} />
     </Switch>
   );

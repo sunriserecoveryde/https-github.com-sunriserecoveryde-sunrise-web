@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
+import { PageMeta } from '@/components/PageMeta';
 import { SectionHeading } from '@/components/SectionHeading';
 import { HeroSection } from '@/components/HeroSection';
 import { publications, PUBLICATION_CATEGORIES, PublicationCategory } from '@/data/publications';
@@ -112,6 +113,11 @@ export function Publishing() {
 
   return (
     <Layout>
+      <PageMeta
+        title="Publishing | Grow Motivational"
+        description="Books, workbooks, journals, group curricula, and treatment manuals authored by behavioral health clinicians — evidence-based recovery literature for every audience."
+        ogUrl="https://www.growmotivational.com/publishing"
+      />
       <HeroSection
         headline="Recovery Literature, Professionally Authored."
         subheadline="Books, workbooks, journals, curricula, and treatment manuals written by behavioral health clinicians — for people in recovery, their families, and the professionals who support them."

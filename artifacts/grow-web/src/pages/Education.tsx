@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
+import { PageMeta } from '@/components/PageMeta';
 import { HeroSection } from '@/components/HeroSection';
 import { ResourceCard } from '@/components/ResourceCard';
 import { CourseCard } from '@/components/CourseCard';
@@ -42,6 +43,11 @@ export function Education() {
 
   return (
     <Layout>
+      <PageMeta
+        title="Education & Courses | Grow Motivational"
+        description="Browse our library of behavioral health courses, resources, and tools for addiction recovery, mental health, family support, and professional development."
+        ogUrl="https://www.growmotivational.com/education"
+      />
       <HeroSection 
         headline="Learn. Grow. Recover."
         subheadline="Explore our comprehensive library of courses, workbooks, guides, and tools designed for every stage of the recovery journey."

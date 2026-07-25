@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Layout } from '@/components/Layout';
+import { PageMeta } from '@/components/PageMeta';
 import { HeroSection } from '@/components/HeroSection';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -66,6 +67,11 @@ export function Contact() {
 
   return (
     <Layout>
+      <PageMeta
+        title="Contact Us | Grow Motivational"
+        description="Reach out to Grow Motivational for partnership inquiries, media requests, professional training, SunriseOS demos, and general questions."
+        ogUrl="https://www.growmotivational.com/contact"
+      />
       <HeroSection 
         headline="Get in Touch"
         subheadline="Whether you're looking to partner, ask a question about our resources, or request a demo, our team is here to help."
