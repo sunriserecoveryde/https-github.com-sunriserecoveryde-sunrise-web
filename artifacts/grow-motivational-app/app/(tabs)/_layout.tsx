@@ -27,6 +27,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }} />
         <Label>Progress</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="chat">
+        <Icon sf={{ default: 'bubble.left.and.bubble.right', selected: 'bubble.left.and.bubble.right.fill' }} />
+        <Label>Chat</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="resources">
         <Icon sf={{ default: 'cross.circle', selected: 'cross.circle.fill' }} />
         <Label>Resources</Label>
@@ -115,6 +119,18 @@ function ClassicTabLayout() {
               <SymbolView name="chart.bar.fill" tintColor={color} size={24} />
             ) : (
               <Feather name="bar-chart-2" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="bubble.left.and.bubble.right.fill" tintColor={color} size={24} />
+            ) : (
+              <Feather name="message-circle" size={22} color={color} />
             ),
         }}
       />

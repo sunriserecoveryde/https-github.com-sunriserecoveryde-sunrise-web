@@ -12,7 +12,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
-import { growUsers, growUserState } from "@workspace/db/schema";
+import { growUsers, growUserState } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 

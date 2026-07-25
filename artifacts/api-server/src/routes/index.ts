@@ -5,6 +5,7 @@ import alertsRouter from "./alerts";
 import contactRouter from "./contact";
 import subscribeRouter from "./subscribe";
 import growRouter from "./grow";
+import anthropicRouter from "./anthropic";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(alertsRouter);
 router.use(contactRouter);
 router.use(subscribeRouter);
 router.use(growRouter);
+router.use("/anthropic", anthropicRouter);
 
 export default router;
