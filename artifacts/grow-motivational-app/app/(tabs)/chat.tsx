@@ -526,6 +526,12 @@ export default function ChatScreen() {
   // Cleared once the server confirms the conversation is present.
   const optimisticBackConvRef = useRef<ConversationSummary | null>(null);
 
+  // Mirror of the conversations state kept in sync via useEffect below.
+  // Used by callbacks with empty/minimal dep arrays (loadConversations,
+  // goBackToList) so they can check current list membership without
+  // capturing a stale closure value.
+  const conversationsRef = useRef<ConversationSummary[]>([]);
+
   // Tracks an in-flight rename title (user-typed, server not yet confirmed).
   // Set when the user confirms the in-chat rename modal; cleared when the
   // rename request settles. Used by goBackToList so the optimistic back-nav
@@ -547,6 +553,11 @@ export default function ChatScreen() {
   // a known-good server title rather than to whatever optimistic value the
   // conversations array happened to hold when the modal was opened.
   const confirmedListTitlesRef = useRef<Map<number, string>>(new Map());
+
+  // Keep conversationsRef in sync so zero-dep callbacks can read current state.
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   // Track online / offline transitions — cross-platform via NetInfo
   useEffect(() => {
@@ -722,9 +733,15 @@ export default function ChatScreen() {
         if (sorted.some((c) => c.id === optimisticBack.id)) {
           // Server confirmed it — clear the ref, use server data as-is
           optimisticBackConvRef.current = null;
-        } else {
-          // Server hasn't returned it yet — keep optimistic entry at top
+        } else if (conversationsRef.current.some((c) => c.id === optimisticBack.id)) {
+          // Server hasn't returned it yet but it still exists in local state
+          // (e.g. a brief race or transient offline window) — keep it pinned.
           baseList = [optimisticBack, ...sorted];
+        } else {
+          // Absent from both the server list AND current state — the conversation
+          // was deleted while the app was backgrounded. Clear the ref so the
+          // ghost entry is not re-injected on resume.
+          optimisticBackConvRef.current = null;
         }
       }
 
@@ -943,20 +960,25 @@ export default function ChatScreen() {
     // is slow or the device is briefly offline.
     // Skipped when returning from a delete — we don't want to re-add a ghost.
     if (!skipOptimistic && activeConvId !== null) {
-      // Prefer the pending (user-typed) rename title when a rename is still
-      // in-flight, so the optimistic entry reflects what the user just typed
-      // rather than the last server-confirmed title.
-      const optimisticTitle = pendingRenameTitleRef.current ?? chatConvTitle;
-      const optimistic: ConversationSummary = {
-        id: activeConvId,
-        title: optimisticTitle,
-        createdAt: new Date().toISOString(),
-      };
-      optimisticBackConvRef.current = optimistic;
-      setConversations((prev) => {
-        const rest = prev.filter((c) => c.id !== activeConvId);
-        return [optimistic, ...rest];
-      });
+      // Guard: if the conversation has already been removed from state (e.g.
+      // deleted while a PATCH was in-flight and the app was backgrounded),
+      // skip the optimistic injection entirely so it can't ghost back.
+      if (conversationsRef.current.some((c) => c.id === activeConvId)) {
+        // Prefer the pending (user-typed) rename title when a rename is still
+        // in-flight, so the optimistic entry reflects what the user just typed
+        // rather than the last server-confirmed title.
+        const optimisticTitle = pendingRenameTitleRef.current ?? chatConvTitle;
+        const optimistic: ConversationSummary = {
+          id: activeConvId,
+          title: optimisticTitle,
+          createdAt: new Date().toISOString(),
+        };
+        optimisticBackConvRef.current = optimistic;
+        setConversations((prev) => {
+          const rest = prev.filter((c) => c.id !== activeConvId);
+          return [optimistic, ...rest];
+        });
+      }
     }
 
     setView("list");
