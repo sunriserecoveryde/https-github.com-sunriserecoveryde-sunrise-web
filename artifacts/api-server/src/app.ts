@@ -35,26 +35,32 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Shared rate-limit handler (logs + optional Slack alert)
+function makeLimiter(limit: number) {
+  return rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    limit,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: "Too many requests. Please try again later." },
+    handler(req, res, _next, options) {
+      const ip = (req.ip ?? req.socket.remoteAddress ?? "unknown").replace(
+        /^::ffff:/,
+        "",
+      );
+      notifySpamAlert(ip).catch((err) =>
+        logger.error({ err }, "notifySpamAlert threw unexpectedly"),
+      );
+      res.status(options.statusCode).json(options.message);
+    },
+  });
+}
+
 // Rate-limit the contact form: 5 submissions per IP per hour
-const contactLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  limit: 5,
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
-  message: { error: "Too many requests. Please try again later." },
-  handler(req, res, _next, options) {
-    const ip = (req.ip ?? req.socket.remoteAddress ?? "unknown").replace(
-      /^::ffff:/,
-      "",
-    );
-    // Fire-and-forget — alert failure must never affect the HTTP response
-    notifySpamAlert(ip).catch((err) =>
-      logger.error({ err }, "notifySpamAlert threw unexpectedly"),
-    );
-    res.status(options.statusCode).json(options.message);
-  },
-});
-app.use("/api/contact", contactLimiter);
+app.use("/api/contact", makeLimiter(5));
+
+// Rate-limit the subscribe/lead-capture forms: 10 per IP per hour
+app.use("/api/subscribe", makeLimiter(10));
 
 app.use("/api", router);
 

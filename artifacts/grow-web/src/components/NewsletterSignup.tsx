@@ -114,9 +114,19 @@ export function NewsletterSignup({
     }
   });
 
-  const onSubmit = async (_data: OrgFormValues) => {
+  const onSubmit = async (data: OrgFormValues) => {
     setStatus('submitting');
-    setTimeout(() => setStatus('success'), 1400);
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formType: type, ...data }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setStatus('success');
+    } catch {
+      setStatus('error');
+    }
   };
 
   const displayTitle = title ?? meta.title;

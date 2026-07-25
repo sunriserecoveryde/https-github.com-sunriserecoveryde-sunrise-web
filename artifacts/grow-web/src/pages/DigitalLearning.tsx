@@ -90,9 +90,19 @@ export function DigitalLearning() {
     }
   });
 
-  const onSubmit = async (_data: AppInterestFormValues) => {
+  const onSubmit = async (data: AppInterestFormValues) => {
     setStatus('submitting');
-    setTimeout(() => setStatus('success'), 1500);
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formType: 'app-interest', ...data }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setStatus('success');
+    } catch {
+      setStatus('error');
+    }
   };
 
   const watchedFeatures = form.watch('featuresOfInterest') ?? [];

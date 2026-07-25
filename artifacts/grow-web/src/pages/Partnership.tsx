@@ -129,11 +129,19 @@ export function Partnership() {
     }
   });
 
-  const onSubmit = async (_data: PartnershipFormValues) => {
+  const onSubmit = async (data: PartnershipFormValues) => {
     setStatus('submitting');
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formType: 'partnership', ...data }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setStatus('success');
-    }, 1500);
+    } catch {
+      setStatus('error');
+    }
   };
 
   return (

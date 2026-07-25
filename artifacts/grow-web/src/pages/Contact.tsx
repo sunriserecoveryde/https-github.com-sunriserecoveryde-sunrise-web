@@ -54,15 +54,17 @@ export function Contact() {
 
   const onSubmit = async (data: ContactFormValues) => {
     setStatus('submitting');
-    // Simulate network delay
-    setTimeout(() => {
-      // Simulate 10% error rate for demonstration
-      if (Math.random() > 0.9) {
-        setStatus('error');
-      } else {
-        setStatus('success');
-      }
-    }, 1500);
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formType: 'contact', ...data }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setStatus('success');
+    } catch {
+      setStatus('error');
+    }
   };
 
   return (
