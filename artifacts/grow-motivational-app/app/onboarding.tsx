@@ -1,0 +1,491 @@
+import React, { useState } from 'react';
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import { useColors } from '@/hooks/useColors';
+import { useApp } from '@/context/AppContext';
+
+const USER_TYPES = [
+  {
+    id: 'individual',
+    label: 'In Recovery',
+    desc: 'Building daily habits and navigating my journey',
+    icon: 'person' as const,
+  },
+  {
+    id: 'family',
+    label: 'Family / Loved One',
+    desc: 'Supporting someone I care about',
+    icon: 'people' as const,
+  },
+  {
+    id: 'clinician',
+    label: 'Clinician / Counselor',
+    desc: 'Supplementing sessions with clients',
+    icon: 'medkit' as const,
+  },
+  {
+    id: 'student',
+    label: 'Student / Trainee',
+    desc: 'Learning behavioral health skills',
+    icon: 'school' as const,
+  },
+];
+
+function UserTypeCard({
+  item,
+  selected,
+  onPress,
+}: {
+  item: (typeof USER_TYPES)[0];
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={[
+        styles.typeCard,
+        {
+          backgroundColor: selected ? '#1C2D1C' : colors.card,
+          borderColor: selected ? colors.primary : colors.border,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.typeIcon,
+          { backgroundColor: selected ? colors.primary : colors.muted },
+        ]}
+      >
+        <Ionicons name={item.icon} size={22} color={selected ? '#fff' : colors.mutedForeground} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.typeLabel, { color: colors.foreground }]}>{item.label}</Text>
+        <Text style={[styles.typeDesc, { color: colors.mutedForeground }]}>{item.desc}</Text>
+      </View>
+      {selected && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
+    </TouchableOpacity>
+  );
+}
+
+export default function Onboarding() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { completeOnboarding } = useApp();
+  const isWeb = Platform.OS === 'web';
+
+  const [step, setStep] = useState(0);
+  const [userType, setUserType] = useState('');
+  const [name, setName] = useState('');
+  const [sobrietyDays, setSobrietyDays] = useState(0);
+
+  const totalSteps = 3;
+
+  const handleNext = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (step < totalSteps - 1) {
+      setStep((s) => s + 1);
+    } else {
+      await completeOnboarding(name.trim() || 'Friend', userType || 'individual', sobrietyDays);
+      router.replace('/(tabs)');
+    }
+  };
+
+  const canProceed =
+    step === 0
+      ? !!userType
+      : step === 1
+      ? name.trim().length > 0
+      : true;
+
+  const adjustDays = (delta: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSobrietyDays((d) => Math.max(0, d + delta));
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[
+          styles.container,
+          {
+            paddingTop: isWeb ? 80 : insets.top + 24,
+            paddingBottom: isWeb ? 60 : insets.bottom + 40,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Logo / branding */}
+        <View style={styles.logoArea}>
+          <Image
+            source={require('../assets/images/icon.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={[styles.appName, { color: colors.foreground }]}>Grow Motivational</Text>
+          <Text style={[styles.tagline, { color: colors.mutedForeground }]}>
+            Your recovery journey companion
+          </Text>
+        </View>
+
+        {/* Step indicator */}
+        <View style={styles.stepRow}>
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.stepDot,
+                {
+                  backgroundColor: i <= step ? colors.primary : colors.muted,
+                  width: i === step ? 24 : 8,
+                },
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Step 0: User type */}
+        {step === 0 && (
+          <View style={styles.stepContent}>
+            <Text style={[styles.stepTitle, { color: colors.foreground }]}>
+              Who are you joining as?
+            </Text>
+            <Text style={[styles.stepSub, { color: colors.mutedForeground }]}>
+              We'll tailor your experience to fit your needs.
+            </Text>
+            <View style={styles.typeList}>
+              {USER_TYPES.map((item) => (
+                <UserTypeCard
+                  key={item.id}
+                  item={item}
+                  selected={userType === item.id}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setUserType(item.id);
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Step 1: Name */}
+        {step === 1 && (
+          <View style={styles.stepContent}>
+            <Text style={[styles.stepTitle, { color: colors.foreground }]}>
+              What should we call you?
+            </Text>
+            <Text style={[styles.stepSub, { color: colors.mutedForeground }]}>
+              Your first name or a nickname is fine.
+            </Text>
+            <TextInput
+              style={[
+                styles.nameInput,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: name.length > 0 ? colors.primary : colors.border,
+                  color: colors.foreground,
+                },
+              ]}
+              placeholder="Your name…"
+              placeholderTextColor={colors.mutedForeground}
+              value={name}
+              onChangeText={setName}
+              autoFocus
+              returnKeyType="next"
+              onSubmitEditing={canProceed ? handleNext : undefined}
+              maxLength={40}
+            />
+          </View>
+        )}
+
+        {/* Step 2: Sobriety days (only show for individuals; others skip to 0) */}
+        {step === 2 && (
+          <View style={styles.stepContent}>
+            {userType === 'individual' ? (
+              <>
+                <Text style={[styles.stepTitle, { color: colors.foreground }]}>
+                  How many days sober are you today?
+                </Text>
+                <Text style={[styles.stepSub, { color: colors.mutedForeground }]}>
+                  This starts your streak counter. You can adjust it anytime.
+                </Text>
+                <View style={styles.stepperRow}>
+                  <TouchableOpacity
+                    onPress={() => adjustDays(-10)}
+                    style={[styles.stepperBtn, { backgroundColor: colors.muted }]}
+                    disabled={sobrietyDays < 10}
+                  >
+                    <Feather name="minus" size={18} color={sobrietyDays >= 10 ? colors.foreground : colors.mutedForeground} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => adjustDays(-1)}
+                    style={[styles.stepperBtn, { backgroundColor: colors.muted }]}
+                    disabled={sobrietyDays === 0}
+                  >
+                    <Feather name="minus" size={22} color={sobrietyDays > 0 ? colors.foreground : colors.mutedForeground} />
+                  </TouchableOpacity>
+                  <LinearGradient
+                    colors={['#F97316', '#FBBF24']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.daysBubble}
+                  >
+                    <Text style={styles.daysNumber}>{sobrietyDays}</Text>
+                    <Text style={styles.daysLabel}>days</Text>
+                  </LinearGradient>
+                  <TouchableOpacity
+                    onPress={() => adjustDays(1)}
+                    style={[styles.stepperBtn, { backgroundColor: colors.muted }]}
+                  >
+                    <Feather name="plus" size={22} color={colors.foreground} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => adjustDays(10)}
+                    style={[styles.stepperBtn, { backgroundColor: colors.muted }]}
+                  >
+                    <Feather name="plus" size={18} color={colors.foreground} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.daysHint, { color: colors.mutedForeground }]}>
+                  {sobrietyDays === 0
+                    ? "Starting fresh — today is day one."
+                    : `Starting from ${sobrietyDays} days ago`}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.stepTitle, { color: colors.foreground }]}>
+                  You're all set, {name || 'friend'}!
+                </Text>
+                <Text style={[styles.stepSub, { color: colors.mutedForeground }]}>
+                  Your personalized experience is ready. Explore lessons, coping skills, and
+                  resources built for your role.
+                </Text>
+                <View style={[styles.readyCard, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+                  <Ionicons name="checkmark-circle" size={48} color={colors.primary} />
+                  <Text style={[styles.readyText, { color: colors.foreground }]}>Ready to begin</Text>
+                </View>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* CTA */}
+        <TouchableOpacity
+          onPress={handleNext}
+          disabled={!canProceed}
+          activeOpacity={0.85}
+          style={styles.ctaWrap}
+        >
+          <LinearGradient
+            colors={canProceed ? ['#F97316', '#FBBF24'] : ['#293548', '#293548']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.cta}
+          >
+            <Text style={[styles.ctaText, { color: canProceed ? '#fff' : colors.mutedForeground }]}>
+              {step === totalSteps - 1 ? 'Start My Journey' : 'Continue'}
+            </Text>
+            <Feather name="arrow-right" size={18} color={canProceed ? '#fff' : colors.mutedForeground} />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Disclaimer */}
+        <Text style={[styles.legalNote, { color: colors.mutedForeground }]}>
+          Grow is an educational wellness tool, not a substitute for clinical treatment. In crisis,
+          call 988 or 911.
+        </Text>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 24,
+    flexGrow: 1,
+    alignItems: 'center',
+  },
+  logoArea: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    marginBottom: 12,
+  },
+  appName: {
+    fontSize: 24,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.3,
+  },
+  tagline: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 4,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  stepDot: {
+    height: 8,
+    borderRadius: 4,
+  },
+  stepContent: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  stepTitle: {
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.4,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  stepSub: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  typeList: {
+    gap: 10,
+  },
+  typeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  typeIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  typeLabel: {
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 2,
+  },
+  typeDesc: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 16,
+  },
+  nameInput: {
+    fontSize: 18,
+    fontFamily: 'Inter_500Medium',
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    width: '100%',
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginVertical: 24,
+  },
+  stepperBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  daysBubble: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 8,
+  },
+  daysNumber: {
+    fontSize: 36,
+    fontFamily: 'Inter_700Bold',
+    color: '#fff',
+    lineHeight: 40,
+  },
+  daysLabel: {
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    color: '#fff',
+    opacity: 0.85,
+  },
+  daysHint: {
+    textAlign: 'center',
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+  },
+  readyCard: {
+    alignItems: 'center',
+    padding: 32,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 12,
+  },
+  readyText: {
+    fontSize: 18,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  ctaWrap: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  cta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 16,
+  },
+  ctaText: {
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  legalNote: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    lineHeight: 16,
+    paddingHorizontal: 16,
+  },
+});
