@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
+  Animated,
   ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
@@ -160,6 +161,73 @@ function CrisisBanner({ colors }: { colors: ReturnType<typeof useColors> }) {
 }
 
 // ---------------------------------------------------------------------------
+// TypingIndicator — three animated dots shown while AI is composing
+// ---------------------------------------------------------------------------
+
+function TypingIndicator({ colors }: { colors: ReturnType<typeof useColors> }) {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const pulse = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+          Animated.delay(600 - delay),
+        ])
+      );
+
+    const a1 = pulse(dot1, 0);
+    const a2 = pulse(dot2, 200);
+    const a3 = pulse(dot3, 400);
+    a1.start();
+    a2.start();
+    a3.start();
+    return () => { a1.stop(); a2.stop(); a3.stop(); };
+  }, [dot1, dot2, dot3]);
+
+  const dotStyle = (anim: Animated.Value) => ({
+    opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }),
+    transform: [
+      {
+        translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }),
+      },
+    ],
+  });
+
+  return (
+    <View style={styles.bubbleRow}>
+      <View style={[styles.avatar, { backgroundColor: colors.primary + "22" }]}>
+        <Ionicons name="sparkles" size={14} color={colors.primary} />
+      </View>
+      <View
+        style={[
+          styles.bubble,
+          styles.bubbleAI,
+          { backgroundColor: colors.card, borderColor: colors.border },
+        ]}
+      >
+        <View style={styles.typingDots}>
+          {[dot1, dot2, dot3].map((dot, i) => (
+            <Animated.View
+              key={i}
+              style={[
+                styles.typingDot,
+                { backgroundColor: colors.primary },
+                dotStyle(dot),
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Screen
 // ---------------------------------------------------------------------------
 
@@ -204,12 +272,12 @@ export default function ChatScreen() {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(chatMessages)).catch(() => {});
   }, [chatMessages, isLoadingHistory]);
 
-  // Scroll to bottom on new content
+  // Scroll to bottom on new content or when typing indicator appears
   useEffect(() => {
-    if (chatMessages.length > 0 || streamingContent) {
+    if (chatMessages.length > 0 || streamingContent || isSending) {
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
     }
-  }, [chatMessages, streamingContent]);
+  }, [chatMessages, streamingContent, isSending]);
 
   // ---------------------------------------------------------------------------
   // Send message with SSE streaming
@@ -340,8 +408,8 @@ export default function ChatScreen() {
 
   const bottomPad = isWeb ? 100 : insets.bottom + 90;
 
-  // Merge real messages with live streaming placeholder
-  type ListItem = ChatMessage | "streaming";
+  // Merge real messages with live streaming placeholder or typing indicator
+  type ListItem = ChatMessage | "streaming" | "typing";
   const listData: ListItem[] = streamingContent
     ? [
         ...chatMessages,
@@ -352,10 +420,13 @@ export default function ChatScreen() {
           timestamp: Date.now(),
         },
       ]
+    : isSending
+    ? [...chatMessages, "typing"]
     : chatMessages;
 
   const renderItem = ({ item }: { item: ListItem }) => {
-    if (typeof item === "string") return null; // shouldn't happen
+    if (item === "typing") return <TypingIndicator colors={colors} />;
+    if (typeof item === "string") return null;
     return <MessageBubble message={item} colors={colors} />;
   };
 
@@ -379,7 +450,7 @@ export default function ChatScreen() {
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} />
         </View>
-      ) : chatMessages.length === 0 && !streamingContent ? (
+      ) : chatMessages.length === 0 && !streamingContent && !isSending ? (
         // Empty state with suggestion chips
         <View style={styles.emptyState}>
           <View style={[styles.emptyIcon, { backgroundColor: colors.primary + "18" }]}>
@@ -585,6 +656,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     lineHeight: 21,
+  },
+  typingDots: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+  },
+  typingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   clearBtn: { padding: 8 },
   inputBar: {
