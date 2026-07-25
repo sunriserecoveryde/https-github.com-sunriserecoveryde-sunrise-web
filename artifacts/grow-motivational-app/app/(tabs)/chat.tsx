@@ -820,6 +820,13 @@ export default function ChatScreen() {
     } catch (e) {
       console.warn("Failed to load messages:", e);
 
+      // If the fetch failed because we're offline, mark it immediately so the
+      // OfflineBanner appears without waiting for the next NetInfo event.
+      // This covers the cold-start case where NetInfo hasn't fired yet.
+      if (isNetworkError(e)) {
+        setIsOffline(true);
+      }
+
       // Fall back to the locally-migrated messages so the user isn't left with
       // an empty chat (e.g. offline on first launch after the upgrade).
       try {
@@ -1231,39 +1238,57 @@ export default function ChatScreen() {
           <ActivityIndicator color={colors.primary} />
         </View>
       ) : chatMessages.length === 0 && !streamingContent && !isSending ? (
-        // Empty state with suggestion chips
-        <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.primary + "18" }]}>
-            <Ionicons name="sparkles" size={32} color={colors.primary} />
+        // Empty state — offline restore vs. normal new conversation
+        isOffline && activeConvId !== null ? (
+          // Restored a conversation while offline: messages couldn't load.
+          // Show a clear offline state rather than the suggestion chips which
+          // imply the user can start sending.
+          <View style={styles.emptyState}>
+            <View style={[styles.emptyIcon, { backgroundColor: "#FFF3CD" }]}>
+              <Ionicons name="cloud-offline-outline" size={32} color="#92400E" />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+              You're offline
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
+              Your conversation history will appear here once you reconnect. Messages can't be sent right now.
+            </Text>
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-            Your recovery companion
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
-            Ask me anything about coping strategies, managing cravings, or how you're feeling today.
-          </Text>
-          <View style={styles.suggestionsRow}>
-            {[
-              "I'm feeling a craving right now",
-              "Help me with a breathing exercise",
-              "I need some encouragement",
-            ].map((prompt) => (
-              <TouchableOpacity
-                key={prompt}
-                onPress={() => setInput(prompt)}
-                activeOpacity={0.75}
-                style={[
-                  styles.suggestionChip,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-              >
-                <Text style={[styles.suggestionText, { color: colors.foreground }]}>
-                  {prompt}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        ) : (
+          // Normal new-conversation empty state with suggestion chips
+          <View style={styles.emptyState}>
+            <View style={[styles.emptyIcon, { backgroundColor: colors.primary + "18" }]}>
+              <Ionicons name="sparkles" size={32} color={colors.primary} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+              Your recovery companion
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
+              Ask me anything about coping strategies, managing cravings, or how you're feeling today.
+            </Text>
+            <View style={styles.suggestionsRow}>
+              {[
+                "I'm feeling a craving right now",
+                "Help me with a breathing exercise",
+                "I need some encouragement",
+              ].map((prompt) => (
+                <TouchableOpacity
+                  key={prompt}
+                  onPress={() => setInput(prompt)}
+                  activeOpacity={0.75}
+                  style={[
+                    styles.suggestionChip,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.suggestionText, { color: colors.foreground }]}>
+                    {prompt}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )
       ) : (
         <FlatList
           ref={flatListRef}
