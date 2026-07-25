@@ -66,6 +66,12 @@ interface ConversationSummary {
 
 const DEVICE_ID_KEY = "grow_chat_device_id_v1";
 
+// Persists the active chat so that a cold-start into the chat view can restore
+// the correct conversation title immediately, without a "New conversation" flash.
+// Written on every openConversation call and after in-chat renames.
+// Cleared when the user navigates back to the list.
+const ACTIVE_CONV_RESTORE_KEY = "grow_chat_active_conv_restore_v1";
+
 // Legacy keys written by the pre-multi-session version of the app.
 // Checked once on first mount; cleaned up after successful migration.
 const LEGACY_CONV_ID_KEY = "grow_chat_conv_id_v1";
@@ -542,6 +548,34 @@ export default function ChatScreen() {
   }, []);
 
   // ---------------------------------------------------------------------------
+  // Cold-start restore: if the app was killed while a conversation was open,
+  // reopen it with the persisted title so the header never shows "New
+  // conversation" while the server fetch is in flight.
+  // Runs once when deviceId first becomes available (transitions null → string).
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!deviceId) return;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(ACTIVE_CONV_RESTORE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as { convId: number; title: string };
+        if (
+          typeof parsed?.convId !== "number" ||
+          isNaN(parsed.convId)
+        ) return;
+        // openConversation sets chatConvTitle immediately from the title arg
+        // before the network fetch completes, eliminating the "New conversation"
+        // flash on cold start.
+        openConversation(parsed.convId, parsed.title || "New conversation");
+      } catch (e) {
+        console.warn("Chat cold-start restore error:", e);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deviceId]); // run exactly once — openConversation is stable after deviceId is set
+
+  // ---------------------------------------------------------------------------
   // One-time legacy migration: grow_chat_conv_id_v1 → multi-session list
   //
   // The pre-multi-session app wrote messages to grow_chat_messages_v1 (local)
@@ -735,13 +769,21 @@ export default function ChatScreen() {
   // ---------------------------------------------------------------------------
   const openConversation = useCallback(async (convId: number, initialTitle?: string) => {
     if (!deviceId) return;
+    const resolvedTitle = initialTitle ?? "New conversation";
     setActiveConvId(convId);
     setChatMessages([]);
     setStreamingContent("");
     setInput("");
-    setChatConvTitle(initialTitle ?? "New conversation");
+    setChatConvTitle(resolvedTitle);
     setView("chat");
     setIsLoadingMessages(true);
+
+    // Persist the active conversation so a cold-start can restore the title
+    // immediately without a "New conversation" flash.
+    AsyncStorage.setItem(
+      ACTIVE_CONV_RESTORE_KEY,
+      JSON.stringify({ convId, title: resolvedTitle })
+    ).catch(() => {});
 
     try {
       const res = await fetch(
@@ -834,6 +876,9 @@ export default function ChatScreen() {
     setChatMessages([]);
     setStreamingContent("");
     setInput("");
+    // Clear the restore key so a cold-start doesn't re-open a conv the user
+    // intentionally left.
+    AsyncStorage.removeItem(ACTIVE_CONV_RESTORE_KEY).catch(() => {});
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -859,6 +904,12 @@ export default function ChatScreen() {
       // the chat header title immediately without waiting for a list reload.
       if (convId === activeConvId) {
         setChatConvTitle(newTitle);
+        // Keep the restore key in sync so a cold-start after a rename still
+        // shows the updated title.
+        AsyncStorage.setItem(
+          ACTIVE_CONV_RESTORE_KEY,
+          JSON.stringify({ convId, title: newTitle })
+        ).catch(() => {});
       }
     } catch (e) {
       console.warn("Failed to rename conversation:", e);
