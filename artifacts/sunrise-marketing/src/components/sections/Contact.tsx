@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,10 +16,13 @@ const contactSchema = z.object({
   message: z.string().min(10, "Please provide a bit more detail"),
 });
 
+type ContactFormValues = z.infer<typeof contactSchema>;
+
 export function Contact() {
   const [submitted, setSubmitted] = useState(false);
-  
-  const form = useForm<z.infer<typeof contactSchema>>({
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
     defaultValues: {
       name: "",
@@ -29,10 +32,37 @@ export function Contact() {
     },
   });
 
-  function onSubmit(data: z.infer<typeof contactSchema>) {
-    // In a real app, send data to an API
-    console.log("Form data:", data);
-    setSubmitted(true);
+  async function onSubmit(data: ContactFormValues) {
+    setSubmitError(null);
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          facility: data.organization,
+          email: data.email,
+          message: data.message,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const detail = body?.error ?? `Server error (${res.status})`;
+        setSubmitError(detail);
+        return;
+      }
+
+      const result = await res.json();
+      if (result?.ok) {
+        setSubmitted(true);
+      } else {
+        setSubmitError("Something went wrong. Please try again.");
+      }
+    } catch {
+      setSubmitError("Unable to reach the server. Please check your connection and try again.");
+    }
   }
 
   return (
@@ -77,7 +107,10 @@ export function Contact() {
               <Button 
                 variant="outline" 
                 className="mt-8"
-                onClick={() => setSubmitted(false)}
+                onClick={() => {
+                  setSubmitted(false);
+                  form.reset();
+                }}
               >
                 Send another message
               </Button>
@@ -144,8 +177,26 @@ export function Contact() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full text-base h-12" data-testid="button-submit">
-                  Submit Inquiry
+
+                {submitError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                    role="alert"
+                  >
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{submitError}</span>
+                  </motion.div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full text-base h-12"
+                  data-testid="button-submit"
+                  disabled={form.formState.isSubmitting}
+                >
+                  {form.formState.isSubmitting ? "Sending…" : "Submit Inquiry"}
                 </Button>
               </form>
             </Form>
