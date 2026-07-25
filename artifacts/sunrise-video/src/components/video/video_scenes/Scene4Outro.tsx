@@ -14,7 +14,7 @@ export function Scene4Outro() {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(249,115,22,0.35)]"
+          className="drop-shadow-[0_0_40px_rgba(249,115,22,0.5)]"
         >
           <img
             src={`${import.meta.env.BASE_URL}sunrise-logo.png`}

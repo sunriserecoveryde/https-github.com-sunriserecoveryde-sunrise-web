@@ -14,7 +14,7 @@ export function Scene0Hero() {
           initial={{ opacity: 0, y: 30, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-8 overflow-hidden rounded-2xl shadow-2xl"
+          className="mb-8"
         >
           <img
             src={`${import.meta.env.BASE_URL}sunrise-logo.png`}
