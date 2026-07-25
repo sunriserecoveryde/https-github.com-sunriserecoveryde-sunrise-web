@@ -49,7 +49,7 @@ Keep responses concise and warm — typically 2-4 short paragraphs. Focus on wha
 // Routes
 // ---------------------------------------------------------------------------
 
-// List conversations owned by this device
+// List conversations owned by this device (includes lastMessagePreview)
 router.get("/conversations", async (req: Request, res: Response): Promise<void> => {
   const deviceId = getDeviceId(req);
   if (!deviceId) { sendUnauthorized(res); return; }
@@ -229,6 +229,16 @@ router.post("/conversations/:id/messages", async (req: Request, res: Response): 
       role: "user",
       content: parsed.data.content,
     });
+
+    // Update the conversation's preview with the first 80 chars of this message
+    // so the list API can return it without a separate messages fetch.
+    const previewText = parsed.data.content.length > 80
+      ? parsed.data.content.slice(0, 77) + "…"
+      : parsed.data.content;
+    await db
+      .update(conversations)
+      .set({ lastMessagePreview: previewText })
+      .where(and(eq(conversations.id, id), eq(conversations.deviceId, deviceId)));
 
     // Load conversation history for context
     const history = await db

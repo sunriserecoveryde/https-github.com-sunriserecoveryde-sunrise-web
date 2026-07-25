@@ -10,6 +10,9 @@ export const conversations = pgTable("conversations", {
   // this value so one device cannot access another device's conversations.
   deviceId: text("device_id").notNull().default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  // Truncated first-user-message text; updated server-side so the list API can
+  // return previews without any extra per-conversation fetch.
+  lastMessagePreview: text("last_message_preview"),
 });
 
 export const insertConversationSchema = createInsertSchema(conversations).omit({

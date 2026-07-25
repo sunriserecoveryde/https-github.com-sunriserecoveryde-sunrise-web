@@ -57,7 +57,7 @@ interface ConversationSummary {
   id: number;
   title: string;
   createdAt: string;
-  preview?: string; // first user message, cached locally
+  lastMessagePreview?: string | null; // returned by the server; no local cache needed
 }
 
 // ---------------------------------------------------------------------------
@@ -65,7 +65,6 @@ interface ConversationSummary {
 // ---------------------------------------------------------------------------
 
 const DEVICE_ID_KEY = "grow_chat_device_id_v1";
-const CONV_PREVIEWS_KEY = "grow_chat_previews_v2"; // { [convId]: string }
 
 // Legacy keys written by the pre-multi-session version of the app.
 // Checked once on first mount; cleaned up after successful migration.
@@ -143,7 +142,7 @@ const DEFAULT_TITLE = "Grow Support Chat";
 function chatTitle(conv: ConversationSummary): string {
   // User-assigned custom title takes priority over the auto-preview snippet
   if (conv.title && conv.title !== DEFAULT_TITLE) return conv.title;
-  if (conv.preview) return conv.preview;
+  if (conv.lastMessagePreview) return conv.lastMessagePreview;
   return conv.title || "New conversation";
 }
 
@@ -485,7 +484,6 @@ export default function ChatScreen() {
   // ---------------------------------------------------------------------------
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
-  const [previews, setPreviews] = useState<Record<string, string>>({});
 
   // ---------------------------------------------------------------------------
   // Rename modal state
@@ -524,16 +522,13 @@ export default function ChatScreen() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Init: load device ID and previews cache
+  // Init: load device ID
   // ---------------------------------------------------------------------------
   useEffect(() => {
     (async () => {
       try {
         const dId = await getDeviceId();
         setDeviceId(dId);
-
-        const rawPreviews = await AsyncStorage.getItem(CONV_PREVIEWS_KEY);
-        if (rawPreviews) setPreviews(JSON.parse(rawPreviews));
       } catch (e) {
         console.warn("Chat init error:", e);
       }
@@ -656,7 +651,7 @@ export default function ChatScreen() {
         headers: { "X-Device-Id": dId },
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
-      const data: Array<{ id: number; title: string; createdAt: string }> = await res.json();
+      const data: Array<{ id: number; title: string; createdAt: string; lastMessagePreview?: string | null }> = await res.json();
       // Newest first
       const sorted = [...data].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -884,13 +879,6 @@ export default function ChatScreen() {
           method: "DELETE",
           headers: { "X-Device-Id": deviceId },
         });
-        // Remove from local preview cache
-        setPreviews((prev) => {
-          const next = { ...prev };
-          delete next[String(convId)];
-          AsyncStorage.setItem(CONV_PREVIEWS_KEY, JSON.stringify(next)).catch(() => {});
-          return next;
-        });
         setConversations((prev) => prev.filter((c) => c.id !== convId));
         if (fromChat) goBackToList();
       } catch (e) {
@@ -937,8 +925,6 @@ export default function ChatScreen() {
     setIsSending(true);
     setStreamingContent("");
 
-    const isFirstMessage = chatMessages.length === 0;
-
     const userMsg: ChatMessage = {
       id: generateId(),
       role: "user",
@@ -946,16 +932,6 @@ export default function ChatScreen() {
       timestamp: Date.now(),
     };
     setChatMessages((prev) => [...prev, userMsg]);
-
-    // Cache preview for this conversation (first user message)
-    if (isFirstMessage) {
-      const preview = text.length > 60 ? text.slice(0, 57) + "…" : text;
-      setPreviews((prev) => {
-        const next = { ...prev, [String(activeConvId)]: preview };
-        AsyncStorage.setItem(CONV_PREVIEWS_KEY, JSON.stringify(next)).catch(() => {});
-        return next;
-      });
-    }
 
     let accumulated = "";
 
@@ -1051,14 +1027,6 @@ export default function ChatScreen() {
   }, [input, isSending, activeConvId, deviceId, isOffline, chatMessages.length]);
 
   // ---------------------------------------------------------------------------
-  // Merge conversations with locally-cached previews
-  // ---------------------------------------------------------------------------
-  const conversationsWithPreviews: ConversationSummary[] = conversations.map((c) => ({
-    ...c,
-    preview: previews[String(c.id)],
-  }));
-
-  // ---------------------------------------------------------------------------
   // Render: list view
   // ---------------------------------------------------------------------------
   const bottomPad = isWeb ? 100 : insets.bottom + 90;
@@ -1087,7 +1055,7 @@ export default function ChatScreen() {
           <View style={styles.centered}>
             <ActivityIndicator color={colors.primary} />
           </View>
-        ) : conversationsWithPreviews.length === 0 ? (
+        ) : conversations.length === 0 ? (
           // Empty state
           <View style={styles.emptyState}>
             <View style={[styles.emptyIcon, { backgroundColor: colors.primary + "18" }]}>
@@ -1111,7 +1079,7 @@ export default function ChatScreen() {
         ) : (
           <FlatList
             ref={convListRef}
-            data={conversationsWithPreviews}
+            data={conversations}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={[styles.convList, { paddingBottom: bottomPad }]}
             showsVerticalScrollIndicator={false}
