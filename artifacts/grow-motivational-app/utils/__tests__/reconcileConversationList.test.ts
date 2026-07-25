@@ -243,3 +243,152 @@ describe("buildOptimisticBackEntry", () => {
     expect(clearOptimistic).toBe(true); // caller must null out the ref
   });
 });
+
+// ---------------------------------------------------------------------------
+// Two rapid back-navigations — interleaved loadConversations responses
+// ---------------------------------------------------------------------------
+
+describe("two rapid back-navigations (interleaved scenario)", () => {
+  /**
+   * Sequence under test:
+   *   1. User opens conv A → presses back  (optimisticBackConvRef = entryA)
+   *      loadConversations request #1 starts but hasn't resolved yet.
+   *   2. User opens conv B → presses back quickly before #1 resolves
+   *      (optimisticBackConvRef is overwritten with entryB)
+   *      loadConversations request #2 starts.
+   *   3. Response #1 arrives — reconcileConversationList runs with entryB as
+   *      the current ref (entryA's ref has already been overwritten).
+   *   4. Response #2 arrives — reconcileConversationList runs again.
+   *
+   * Invariant: the final conversations list must contain exactly one entry per id.
+   */
+  const NOW = "2026-07-25T14:00:00.000Z";
+
+  it("no duplicates when both back-navigations complete before either loadConversations resolves", () => {
+    // Baseline data: three conversations on the server.
+    const serverResponse = [conv(1), conv(2), conv(3)];
+
+    // ── Step 1: user is in conv 1, presses back ──────────────────────────────
+    const localAfterOpenA = [conv(1), conv(2), conv(3)];
+    const entryA = buildOptimisticBackEntry(1, localAfterOpenA, null, "Conv 1", NOW);
+    expect(entryA).not.toBeNull(); // sanity: entry was built
+
+    // Simulate caller injecting optimistic entry at top of local state.
+    // optimisticBackConvRef is now entryA.
+    let optimisticRef: ConversationSummary | null = entryA;
+    const localAfterBackA = [entryA!, conv(2), conv(3)];
+
+    // ── Step 2: user opens conv 2, presses back quickly ──────────────────────
+    // entryA is still in local state (the reload from step 1 hasn't finished).
+    const entryB = buildOptimisticBackEntry(2, localAfterBackA, null, "Conv 2", NOW);
+    expect(entryB).not.toBeNull();
+
+    // Ref is overwritten — entryA is now orphaned.
+    optimisticRef = entryB;
+    const localAfterBackB = [entryB!, entryA!, conv(3)];
+
+    // ── Step 3: loadConversations response #1 arrives ────────────────────────
+    // optimisticRef is still entryB (ref was overwritten in step 2).
+    const result1 = reconcileConversationList(
+      serverResponse,
+      optimisticRef,
+      localAfterBackB
+    );
+
+    // conv 2 (entryB's id) IS in the server response → ref is cleared.
+    expect(result1.clearOptimistic).toBe(true);
+    if (result1.clearOptimistic) {
+      optimisticRef = null;
+    }
+
+    // After step 3 the list should already have no duplicates.
+    const ids1 = result1.baseList.map((c) => c.id);
+    expect(ids1).toHaveLength(new Set(ids1).size);
+
+    // ── Step 4: loadConversations response #2 arrives ────────────────────────
+    // optimisticRef was cleared in step 3; response is the same server data.
+    const result2 = reconcileConversationList(
+      serverResponse,
+      optimisticRef,
+      result1.baseList
+    );
+
+    // Final invariant: exactly one entry per id, no ghost entries.
+    const finalIds = result2.baseList.map((c) => c.id);
+    expect(finalIds).toHaveLength(new Set(finalIds).size);
+    expect(result2.baseList).toHaveLength(serverResponse.length);
+    // Both conv 1 and conv 2 are present exactly once.
+    expect(finalIds.filter((id) => id === 1)).toHaveLength(1);
+    expect(finalIds.filter((id) => id === 2)).toHaveLength(1);
+    expect(finalIds.filter((id) => id === 3)).toHaveLength(1);
+  });
+
+  it("no duplicates when response #1 arrives before the second back-navigation fires", () => {
+    // Variant: the first loadConversations resolves before the user opens conv B.
+    const serverResponse = [conv(1), conv(2), conv(3)];
+
+    // Step 1: back from conv 1.
+    const localStart = [conv(1), conv(2), conv(3)];
+    const entryA = buildOptimisticBackEntry(1, localStart, null, "Conv 1", NOW)!;
+    let optimisticRef: ConversationSummary | null = entryA;
+    const localAfterBackA = [entryA, conv(2), conv(3)];
+
+    // Step 2: response #1 arrives — conv 1 confirmed by server.
+    const result1 = reconcileConversationList(
+      serverResponse,
+      optimisticRef,
+      localAfterBackA
+    );
+    expect(result1.clearOptimistic).toBe(true);
+    if (result1.clearOptimistic) optimisticRef = null;
+
+    // Step 3: user opens conv 2 and immediately presses back.
+    const entryB = buildOptimisticBackEntry(2, result1.baseList, null, "Conv 2", NOW)!;
+    optimisticRef = entryB;
+    const localAfterBackB = [entryB, ...result1.baseList.filter((c) => c.id !== 2)];
+
+    // Step 4: response #2 arrives — conv 2 confirmed.
+    const result2 = reconcileConversationList(
+      serverResponse,
+      optimisticRef,
+      localAfterBackB
+    );
+
+    const finalIds = result2.baseList.map((c) => c.id);
+    expect(finalIds).toHaveLength(new Set(finalIds).size);
+    expect(result2.baseList).toHaveLength(serverResponse.length);
+  });
+
+  it("second optimistic ref overwrites first — orphaned first ref never re-appears", () => {
+    // The orphaned entryA ref (conv 1) must not resurface at any point.
+    // If the caller had two separate refs, conv 1 could be injected twice.
+    // This test confirms a single-ref design is sufficient.
+    const serverResponse = [conv(1), conv(2), conv(3)];
+    const NOW2 = "2026-07-25T14:05:00.000Z";
+
+    const localStart = [conv(1), conv(2), conv(3)];
+
+    // Back from conv 1 — ref is entryA.
+    const entryA = buildOptimisticBackEntry(1, localStart, "Draft A", "Conv 1", NOW)!;
+    // Back from conv 2 — ref is overwritten with entryB.
+    const localWithA = [entryA, conv(2), conv(3)];
+    const entryB = buildOptimisticBackEntry(2, localWithA, null, "Conv 2", NOW2)!;
+
+    // Only entryB (the latest ref) is passed to reconcileConversationList.
+    const { baseList, clearOptimistic } = reconcileConversationList(
+      serverResponse,
+      entryB, // entryA is already orphaned
+      localWithA
+    );
+
+    // conv 2 is confirmed by server → ref cleared.
+    expect(clearOptimistic).toBe(true);
+
+    // conv 1 must appear exactly once (from the server list).
+    const ids = baseList.map((c) => c.id);
+    expect(ids.filter((id) => id === 1)).toHaveLength(1);
+    expect(ids.filter((id) => id === 2)).toHaveLength(1);
+    // No ghost / no duplication.
+    expect(ids).toHaveLength(new Set(ids).size);
+  });
+});
