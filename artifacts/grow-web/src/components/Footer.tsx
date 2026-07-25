@@ -87,6 +87,7 @@ export function Footer() {
               <li><Link href="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">Privacy Policy</Link></li>
               <li><Link href="/terms-of-use" className="text-muted-foreground hover:text-primary transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">Terms of Use</Link></li>
               <li><Link href="/disclaimer" className="text-muted-foreground hover:text-primary transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">Disclaimer</Link></li>
+              <li><Link href="/accessibility" className="text-muted-foreground hover:text-primary transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">Accessibility Statement</Link></li>
             </ul>
             <div className="mt-6 p-4 rounded-xl bg-red-950/20 border border-red-500/20">
               <p className="text-xs text-red-200/70 leading-relaxed">
