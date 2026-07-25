@@ -468,18 +468,21 @@ function ConversationListItem({
   onOpen,
   onDelete,
   onRename,
+  isListLoading,
 }: {
   conv: ConversationSummary;
   colors: ReturnType<typeof useColors>;
   onOpen: () => void;
   onDelete: () => void;
   onRename: () => void;
+  isListLoading: boolean;
 }) {
   return (
     <TouchableOpacity
       activeOpacity={0.75}
       onPress={onOpen}
       onLongPress={() => {
+        if (isListLoading) return;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         onRename();
       }}
@@ -502,12 +505,13 @@ function ConversationListItem({
       </View>
       <View style={styles.convRowActions}>
         <TouchableOpacity
-          onPress={onRename}
+          onPress={isListLoading ? undefined : onRename}
+          disabled={isListLoading}
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={styles.convActionBtn}
         >
-          <Feather name="edit-2" size={14} color={colors.mutedForeground} />
+          <Feather name="edit-2" size={14} color={isListLoading ? colors.muted : colors.mutedForeground} />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={onDelete}
@@ -1472,6 +1476,7 @@ export default function ChatScreen() {
                 onOpen={() => openConversation(item.id, chatTitle(item))}
                 onDelete={() => deleteConversation(item.id, false)}
                 onRename={() => setRenamingConv(item)}
+                isListLoading={isLoadingList}
               />
             )}
           />
