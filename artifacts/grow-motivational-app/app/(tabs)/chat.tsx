@@ -1473,7 +1473,7 @@ export default function ChatScreen() {
       {/* Rename modal — floats above the chat view */}
       <RenameModal
         visible={showChatRenameModal}
-        initialTitle={chatConvTitle}
+        initialTitle={lastConfirmedTitleRef.current ?? chatConvTitle}
         colors={colors}
         onConfirm={(newTitle) => {
           if (activeConvId !== null) {
