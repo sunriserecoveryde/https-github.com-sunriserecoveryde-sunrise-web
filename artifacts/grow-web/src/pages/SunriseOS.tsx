@@ -49,14 +49,13 @@ export function SunriseOS() {
       {/* Image / Mockup Placeholder */}
       <section className="py-12 relative z-10">
         <div className="container mx-auto px-4">
-          <div className="w-full max-w-5xl mx-auto aspect-video bg-card rounded-2xl border border-white/10 shadow-2xl overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-card to-background flex flex-col items-center justify-center p-8 text-center">
-               <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                 <BrainCircuit className="w-10 h-10 text-primary" />
-               </div>
-               <h3 className="text-2xl font-heading font-semibold mb-2">SunriseOS Dashboard Interface</h3>
-               <p className="text-muted-foreground max-w-md">The unified command center for clinicians, administrators, and educators.</p>
-            </div>
+          <div className="w-full max-w-5xl mx-auto rounded-2xl border border-white/10 shadow-2xl overflow-hidden relative">
+            <img
+              src="/sunriseos-dashboard.jpg"
+              alt="SunriseOS Dashboard Interface — the unified command center for clinicians, administrators, and educators"
+              className="w-full h-auto block"
+            />
+            <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10 pointer-events-none" />
           </div>
         </div>
       </section>
