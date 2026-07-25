@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { scheduleDailyReminder, cancelDailyReminder } from '@/utils/notifications';
+import { scheduleDailyReminder, cancelDailyReminder, ensureDailyReminderScheduled } from '@/utils/notifications';
 
 export interface JournalEntry {
   id: string;
@@ -79,7 +79,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+    AsyncStorage.getItem(STORAGE_KEY).then(async (raw) => {
       if (raw) {
         try {
           const saved = JSON.parse(raw);
@@ -88,6 +88,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             saved.reminderSettings = DEFAULT_REMINDER;
           }
           setState((prev) => ({ ...prev, ...saved, isLoading: false }));
+
+          // Re-register the reminder if it was enabled but lost (force-quit,
+          // app upgrade, OS notification prune, etc.)
+          const reminder: ReminderSettings = saved.reminderSettings;
+          if (reminder.enabled) {
+            await ensureDailyReminderScheduled(reminder.hour, reminder.minute);
+          }
         } catch {
           setState((prev) => ({ ...prev, isLoading: false }));
         }

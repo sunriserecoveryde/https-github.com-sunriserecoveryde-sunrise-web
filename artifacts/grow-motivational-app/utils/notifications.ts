@@ -74,6 +74,22 @@ export async function scheduleDailyReminder(hour: number, minute: number): Promi
 }
 
 /**
+ * Ensure the daily reminder is scheduled. If it is already present in the
+ * OS schedule it is left untouched; otherwise it is (re)scheduled. Call this
+ * on cold start after loading persisted settings so a force-quit or app
+ * upgrade cannot silently drop the reminder.
+ */
+export async function ensureDailyReminderScheduled(hour: number, minute: number): Promise<void> {
+  if (Platform.OS === 'web') return;
+
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const exists = scheduled.some((n) => n.identifier === DAILY_REMINDER_IDENTIFIER);
+  if (!exists) {
+    await scheduleDailyReminder(hour, minute);
+  }
+}
+
+/**
  * Cancel the daily reminder.
  */
 export async function cancelDailyReminder(): Promise<void> {
