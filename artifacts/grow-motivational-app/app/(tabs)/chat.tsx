@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Animated,
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -29,13 +30,19 @@ interface ChatMessage {
   timestamp: number;
 }
 
+interface ConversationSummary {
+  id: number;
+  title: string;
+  createdAt: string;
+  preview?: string; // first user message, cached locally
+}
+
 // ---------------------------------------------------------------------------
 // Storage keys
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = "grow_chat_messages_v1";
-const CONV_ID_KEY = "grow_chat_conv_id_v1";
 const DEVICE_ID_KEY = "grow_chat_device_id_v1";
+const CONV_PREVIEWS_KEY = "grow_chat_previews_v2"; // { [convId]: string }
 
 // ---------------------------------------------------------------------------
 // API base
@@ -50,7 +57,6 @@ function getApiBase(): string {
 
 // ---------------------------------------------------------------------------
 // Device ID — a UUID generated once per install and sent as X-Device-Id.
-// All server conversations are scoped to this value.
 // ---------------------------------------------------------------------------
 
 function generateUUID(): string {
@@ -74,34 +80,30 @@ async function getDeviceId(): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// Server conversation management
-// ---------------------------------------------------------------------------
-
-async function getOrCreateConversation(deviceId: string): Promise<number> {
-  const stored = await AsyncStorage.getItem(CONV_ID_KEY);
-  if (stored) return parseInt(stored, 10);
-
-  const res = await fetch(`${getApiBase()}/anthropic/conversations`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Device-Id": deviceId,
-    },
-    body: JSON.stringify({ title: "Grow Support Chat" }),
-  });
-
-  if (!res.ok) throw new Error(`Server error ${res.status}`);
-  const data = await res.json();
-  await AsyncStorage.setItem(CONV_ID_KEY, String(data.id));
-  return data.id;
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function formatRelativeDate(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffDays === 0) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return date.toLocaleDateString([], { weekday: "long" });
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function chatTitle(conv: ConversationSummary): string {
+  if (conv.preview) return conv.preview;
+  return conv.title || "New conversation";
 }
 
 // ---------------------------------------------------------------------------
@@ -228,69 +230,270 @@ function TypingIndicator({ colors }: { colors: ReturnType<typeof useColors> }) {
 }
 
 // ---------------------------------------------------------------------------
+// ConversationListItem
+// ---------------------------------------------------------------------------
+
+function ConversationListItem({
+  conv,
+  colors,
+  onOpen,
+  onDelete,
+}: {
+  conv: ConversationSummary;
+  colors: ReturnType<typeof useColors>;
+  onOpen: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.75}
+      onPress={onOpen}
+      style={[styles.convItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+    >
+      <View style={[styles.convIconWrap, { backgroundColor: colors.primary + "18" }]}>
+        <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.primary} />
+      </View>
+      <View style={styles.convItemBody}>
+        <Text
+          style={[styles.convItemTitle, { color: colors.foreground }]}
+          numberOfLines={1}
+        >
+          {chatTitle(conv)}
+        </Text>
+        <Text style={[styles.convItemDate, { color: colors.mutedForeground }]}>
+          {formatRelativeDate(conv.createdAt)}
+        </Text>
+      </View>
+      <TouchableOpacity
+        onPress={onDelete}
+        activeOpacity={0.7}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={styles.convDeleteBtn}
+      >
+        <Feather name="trash-2" size={15} color={colors.mutedForeground} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Screen
 // ---------------------------------------------------------------------------
+
+type ViewMode = "list" | "chat";
 
 export default function ChatScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === "web";
 
+  // ---------------------------------------------------------------------------
+  // Shared state
+  // ---------------------------------------------------------------------------
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [view, setView] = useState<ViewMode>("list");
+
+  // ---------------------------------------------------------------------------
+  // List view state
+  // ---------------------------------------------------------------------------
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(true);
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+
+  // ---------------------------------------------------------------------------
+  // Chat view state
+  // ---------------------------------------------------------------------------
+  const [activeConvId, setActiveConvId] = useState<number | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const [convId, setConvId] = useState<number | null>(null);
-  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
 
   const flatListRef = useRef<FlatList>(null);
+  const convListRef = useRef<FlatList>(null);
 
-  // Initialise: load device ID, persisted messages, and server conversation
+  // ---------------------------------------------------------------------------
+  // Init: load device ID and previews cache
+  // ---------------------------------------------------------------------------
   useEffect(() => {
     (async () => {
       try {
         const dId = await getDeviceId();
         setDeviceId(dId);
 
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) setChatMessages(JSON.parse(raw) as ChatMessage[]);
-
-        const cId = await getOrCreateConversation(dId);
-        setConvId(cId);
+        const rawPreviews = await AsyncStorage.getItem(CONV_PREVIEWS_KEY);
+        if (rawPreviews) setPreviews(JSON.parse(rawPreviews));
       } catch (e) {
         console.warn("Chat init error:", e);
-      } finally {
-        setIsLoadingHistory(false);
       }
     })();
   }, []);
 
-  // Persist messages whenever they change
-  useEffect(() => {
-    if (isLoadingHistory) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(chatMessages)).catch(() => {});
-  }, [chatMessages, isLoadingHistory]);
+  // ---------------------------------------------------------------------------
+  // Load conversation list
+  // ---------------------------------------------------------------------------
+  const loadConversations = useCallback(async (dId: string) => {
+    setIsLoadingList(true);
+    try {
+      const res = await fetch(`${getApiBase()}/anthropic/conversations`, {
+        headers: { "X-Device-Id": dId },
+      });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data: Array<{ id: number; title: string; createdAt: string }> = await res.json();
+      // Newest first
+      const sorted = [...data].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setConversations(sorted);
+    } catch (e) {
+      console.warn("Failed to load conversations:", e);
+    } finally {
+      setIsLoadingList(false);
+    }
+  }, []);
 
-  // Scroll to bottom on new content or when typing indicator appears
+  // Load list whenever deviceId is ready or we return to list view
   useEffect(() => {
-    if (chatMessages.length > 0 || streamingContent || isSending) {
+    if (deviceId && view === "list") {
+      loadConversations(deviceId);
+    }
+  }, [deviceId, view, loadConversations]);
+
+  // Scroll to bottom on new chat content or when typing indicator appears
+  useEffect(() => {
+    if (view === "chat" && (chatMessages.length > 0 || streamingContent || isSending)) {
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
     }
-  }, [chatMessages, streamingContent, isSending]);
+  }, [chatMessages, streamingContent, isSending, view]);
+
+  // ---------------------------------------------------------------------------
+  // Open a past conversation
+  // ---------------------------------------------------------------------------
+  const openConversation = useCallback(async (convId: number) => {
+    if (!deviceId) return;
+    setActiveConvId(convId);
+    setChatMessages([]);
+    setStreamingContent("");
+    setInput("");
+    setView("chat");
+    setIsLoadingMessages(true);
+
+    try {
+      const res = await fetch(
+        `${getApiBase()}/anthropic/conversations/${convId}`,
+        { headers: { "X-Device-Id": deviceId } }
+      );
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data: { messages: Array<{ id: number; role: string; content: string; createdAt: string }> } =
+        await res.json();
+      const msgs: ChatMessage[] = (data.messages ?? []).map((m) => ({
+        id: String(m.id),
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        timestamp: new Date(m.createdAt).getTime(),
+      }));
+      setChatMessages(msgs);
+    } catch (e) {
+      console.warn("Failed to load messages:", e);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  }, [deviceId]);
+
+  // ---------------------------------------------------------------------------
+  // Start a new chat
+  // ---------------------------------------------------------------------------
+  const startNewChat = useCallback(async () => {
+    if (!deviceId) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const res = await fetch(`${getApiBase()}/anthropic/conversations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Id": deviceId,
+        },
+        body: JSON.stringify({ title: "Grow Support Chat" }),
+      });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data: { id: number } = await res.json();
+      setActiveConvId(data.id);
+      setChatMessages([]);
+      setStreamingContent("");
+      setInput("");
+      setView("chat");
+      setIsLoadingMessages(false);
+    } catch (e) {
+      console.warn("Failed to create conversation:", e);
+    }
+  }, [deviceId]);
+
+  // ---------------------------------------------------------------------------
+  // Go back to list
+  // ---------------------------------------------------------------------------
+  const goBackToList = useCallback(() => {
+    setView("list");
+    setActiveConvId(null);
+    setChatMessages([]);
+    setStreamingContent("");
+    setInput("");
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // Delete a conversation
+  // ---------------------------------------------------------------------------
+  const deleteConversation = useCallback(async (convId: number, fromChat = false) => {
+    if (!deviceId) return;
+
+    const doDelete = async () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      try {
+        await fetch(`${getApiBase()}/anthropic/conversations/${convId}`, {
+          method: "DELETE",
+          headers: { "X-Device-Id": deviceId },
+        });
+        // Remove from local preview cache
+        setPreviews((prev) => {
+          const next = { ...prev };
+          delete next[String(convId)];
+          AsyncStorage.setItem(CONV_PREVIEWS_KEY, JSON.stringify(next)).catch(() => {});
+          return next;
+        });
+        setConversations((prev) => prev.filter((c) => c.id !== convId));
+        if (fromChat) goBackToList();
+      } catch (e) {
+        console.warn("Failed to delete conversation:", e);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      await doDelete();
+    } else {
+      Alert.alert(
+        "Delete conversation?",
+        "This chat will be permanently removed.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", style: "destructive", onPress: doDelete },
+        ]
+      );
+    }
+  }, [deviceId, goBackToList]);
 
   // ---------------------------------------------------------------------------
   // Send message with SSE streaming
   // ---------------------------------------------------------------------------
-
   const sendMessage = useCallback(async () => {
     const text = input.trim();
-    if (!text || isSending || convId === null || deviceId === null) return;
+    if (!text || isSending || activeConvId === null || deviceId === null) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setInput("");
     setIsSending(true);
     setStreamingContent("");
+
+    const isFirstMessage = chatMessages.length === 0;
 
     const userMsg: ChatMessage = {
       id: generateId(),
@@ -300,11 +503,21 @@ export default function ChatScreen() {
     };
     setChatMessages((prev) => [...prev, userMsg]);
 
+    // Cache preview for this conversation (first user message)
+    if (isFirstMessage) {
+      const preview = text.length > 60 ? text.slice(0, 57) + "…" : text;
+      setPreviews((prev) => {
+        const next = { ...prev, [String(activeConvId)]: preview };
+        AsyncStorage.setItem(CONV_PREVIEWS_KEY, JSON.stringify(next)).catch(() => {});
+        return next;
+      });
+    }
+
     let accumulated = "";
 
     try {
       const response = await fetch(
-        `${getApiBase()}/anthropic/conversations/${convId}/messages`,
+        `${getApiBase()}/anthropic/conversations/${activeConvId}/messages`,
         {
           method: "POST",
           headers: {
@@ -343,13 +556,10 @@ export default function ChatScreen() {
           try {
             payload = JSON.parse(rawJson);
           } catch {
-            continue; // skip malformed chunk
+            continue;
           }
 
-          if (payload.error) {
-            // Surface server-sent errors to the user immediately
-            throw new Error(payload.error);
-          }
+          if (payload.error) throw new Error(payload.error);
           if (payload.done) break outer;
           if (payload.content) {
             accumulated += payload.content;
@@ -383,30 +593,91 @@ export default function ChatScreen() {
     } finally {
       setIsSending(false);
     }
-  }, [input, isSending, convId, deviceId]);
+  }, [input, isSending, activeConvId, deviceId, chatMessages.length]);
 
   // ---------------------------------------------------------------------------
-  // Clear chat
+  // Merge conversations with locally-cached previews
   // ---------------------------------------------------------------------------
-
-  const clearChat = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setChatMessages([]);
-    await AsyncStorage.removeItem(STORAGE_KEY);
-    await AsyncStorage.removeItem(CONV_ID_KEY);
-    try {
-      if (deviceId) {
-        const cId = await getOrCreateConversation(deviceId);
-        setConvId(cId);
-      }
-    } catch {}
-  }, [deviceId]);
+  const conversationsWithPreviews: ConversationSummary[] = conversations.map((c) => ({
+    ...c,
+    preview: previews[String(c.id)],
+  }));
 
   // ---------------------------------------------------------------------------
-  // Render
+  // Render: list view
   // ---------------------------------------------------------------------------
-
   const bottomPad = isWeb ? 100 : insets.bottom + 90;
+
+  if (view === "list") {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        <ScreenHeader
+          title="AI Support Chat"
+          subtitle="Empathetic guidance for your recovery"
+          rightElement={
+            <TouchableOpacity
+              onPress={startNewChat}
+              activeOpacity={0.7}
+              style={[styles.newChatBtn, { backgroundColor: colors.primary }]}
+            >
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text style={styles.newChatBtnText}>New Chat</Text>
+            </TouchableOpacity>
+          }
+        />
+
+        <CrisisBanner colors={colors} />
+
+        {isLoadingList ? (
+          <View style={styles.centered}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : conversationsWithPreviews.length === 0 ? (
+          // Empty state
+          <View style={styles.emptyState}>
+            <View style={[styles.emptyIcon, { backgroundColor: colors.primary + "18" }]}>
+              <Ionicons name="chatbubbles-outline" size={32} color={colors.primary} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+              No conversations yet
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
+              Tap <Text style={{ fontFamily: "Inter_600SemiBold" }}>New Chat</Text> to start talking with your AI recovery companion.
+            </Text>
+            <TouchableOpacity
+              onPress={startNewChat}
+              activeOpacity={0.8}
+              style={[styles.startChatCta, { backgroundColor: colors.primary }]}
+            >
+              <Ionicons name="sparkles" size={16} color="#fff" />
+              <Text style={styles.startChatCtaText}>Start your first chat</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            ref={convListRef}
+            data={conversationsWithPreviews}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={[styles.convList, { paddingBottom: bottomPad }]}
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            renderItem={({ item }) => (
+              <ConversationListItem
+                conv={item}
+                colors={colors}
+                onOpen={() => openConversation(item.id)}
+                onDelete={() => deleteConversation(item.id, false)}
+              />
+            )}
+          />
+        )}
+      </View>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Render: chat view
+  // ---------------------------------------------------------------------------
 
   // Merge real messages with live streaming placeholder or typing indicator
   type ListItem = ChatMessage | "streaming" | "typing";
@@ -424,7 +695,7 @@ export default function ChatScreen() {
     ? [...chatMessages, "typing"]
     : chatMessages;
 
-  const renderItem = ({ item }: { item: ListItem }) => {
+  const renderMessage = ({ item }: { item: ListItem }) => {
     if (item === "typing") return <TypingIndicator colors={colors} />;
     if (typeof item === "string") return null;
     return <MessageBubble message={item} colors={colors} />;
@@ -435,9 +706,18 @@ export default function ChatScreen() {
       <ScreenHeader
         title="AI Support Chat"
         subtitle="Empathetic guidance for your recovery"
+        leftElement={
+          <TouchableOpacity onPress={goBackToList} activeOpacity={0.7} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={20} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        }
         rightElement={
-          chatMessages.length > 0 ? (
-            <TouchableOpacity onPress={clearChat} activeOpacity={0.7} style={styles.clearBtn}>
+          activeConvId !== null ? (
+            <TouchableOpacity
+              onPress={() => deleteConversation(activeConvId, true)}
+              activeOpacity={0.7}
+              style={styles.clearBtn}
+            >
               <Feather name="trash-2" size={16} color={colors.mutedForeground} />
             </TouchableOpacity>
           ) : undefined
@@ -446,7 +726,7 @@ export default function ChatScreen() {
 
       <CrisisBanner colors={colors} />
 
-      {isLoadingHistory ? (
+      {isLoadingMessages ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} />
         </View>
@@ -489,7 +769,7 @@ export default function ChatScreen() {
           ref={flatListRef}
           data={listData}
           keyExtractor={(item) => (typeof item === "string" ? item : item.id)}
-          renderItem={renderItem}
+          renderItem={renderMessage}
           contentContainerStyle={[styles.messageList, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
@@ -561,6 +841,8 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
+  backBtn: { padding: 8, marginLeft: -4 },
+  clearBtn: { padding: 8 },
   crisisBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -579,6 +861,72 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     lineHeight: 16,
   },
+  // ---- Conversation list ----
+  newChatBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  newChatBtnText: {
+    color: "#fff",
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  convList: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  convItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  convIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  convItemBody: {
+    flex: 1,
+    gap: 3,
+  },
+  convItemTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    lineHeight: 20,
+  },
+  convItemDate: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  convDeleteBtn: {
+    padding: 4,
+  },
+  startChatCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  startChatCtaText: {
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  // ---- Empty state (shared) ----
   emptyState: {
     flex: 1,
     alignItems: "center",
@@ -623,6 +971,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     textAlign: "center",
   },
+  // ---- Chat messages ----
   messageList: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -669,7 +1018,6 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 4,
   },
-  clearBtn: { padding: 8 },
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",

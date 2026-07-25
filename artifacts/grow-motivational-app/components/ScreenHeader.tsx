@@ -9,9 +9,10 @@ interface ScreenHeaderProps {
   title: string;
   subtitle?: string;
   rightElement?: React.ReactNode;
+  leftElement?: React.ReactNode;
 }
 
-export function ScreenHeader({ title, subtitle, rightElement }: ScreenHeaderProps) {
+export function ScreenHeader({ title, subtitle, rightElement, leftElement }: ScreenHeaderProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [emergencyVisible, setEmergencyVisible] = useState(false);
@@ -29,6 +30,7 @@ export function ScreenHeader({ title, subtitle, rightElement }: ScreenHeaderProp
           },
         ]}
       >
+        {leftElement ? <View style={styles.leftElement}>{leftElement}</View> : null}
         <View style={styles.left}>
           <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
           {subtitle ? (
@@ -61,6 +63,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  leftElement: {
+    marginRight: 8,
+    flexShrink: 0,
   },
   left: {
     flex: 1,
