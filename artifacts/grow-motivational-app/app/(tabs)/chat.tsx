@@ -18,6 +18,27 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import NetInfo from "@react-native-community/netinfo";
+
+// ---------------------------------------------------------------------------
+// Offline detection helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * True when a fetch error looks like a network/connectivity failure.
+ * React Native throws "Network request failed"; web throws "Failed to fetch" / "Load failed".
+ */
+function isNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return (
+    msg.includes("network request failed") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("load failed") ||
+    msg.includes("networkerror") ||
+    err.name === "TypeError"
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -277,6 +298,26 @@ function ConversationListItem({
 }
 
 // ---------------------------------------------------------------------------
+// OfflineBanner — shown when network is unavailable
+// ---------------------------------------------------------------------------
+
+function OfflineBanner({ colors }: { colors: ReturnType<typeof useColors> }) {
+  return (
+    <View
+      style={[
+        styles.offlineBanner,
+        { backgroundColor: "#FFF3CD", borderColor: "#FBBF24" },
+      ]}
+    >
+      <Ionicons name="cloud-offline-outline" size={14} color="#92400E" />
+      <Text style={[styles.offlineText, { color: "#92400E" }]}>
+        You're offline — messages can't be sent right now.
+      </Text>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Screen
 // ---------------------------------------------------------------------------
 
@@ -309,9 +350,23 @@ export default function ChatScreen() {
   const [isSending, setIsSending] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [isOffline, setIsOffline] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const convListRef = useRef<FlatList>(null);
+
+  // Track online / offline transitions — cross-platform via NetInfo
+  useEffect(() => {
+    // Set initial connectivity state
+    NetInfo.fetch().then((state) => {
+      setIsOffline(state.isConnected === false);
+    });
+    // Subscribe to changes
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOffline(state.isConnected === false);
+    });
+    return unsubscribe;
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Init: load device ID and previews cache
@@ -488,6 +543,19 @@ export default function ChatScreen() {
     const text = input.trim();
     if (!text || isSending || activeConvId === null || deviceId === null) return;
 
+    // Check connectivity before attempting any network call
+    if (isOffline) {
+      const offlineMsg: ChatMessage = {
+        id: generateId(),
+        role: "assistant",
+        content:
+          "You appear to be offline right now. Please check your connection and try again when you're back online.\n\nIf you need immediate support, you can call or text 988 — they're available 24/7.",
+        timestamp: Date.now(),
+      };
+      setChatMessages((prev) => [...prev, offlineMsg]);
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setInput("");
     setIsSending(true);
@@ -581,19 +649,30 @@ export default function ChatScreen() {
       }
     } catch (err: unknown) {
       setStreamingContent("");
-      const msg =
-        err instanceof Error ? err.message : "Something went wrong. Please try again.";
+
+      const networkFailure = isNetworkError(err);
+
+      // Mark offline so the banner appears and the input bar disables
+      if (networkFailure) {
+        setIsOffline(true);
+      }
+
+      // Distinguish connectivity failures from server errors
+      const errorContent = networkFailure
+        ? "It looks like the connection was lost mid-message. Your feelings matter — please try again when you're back online.\n\nIf you need immediate support, call or text 988 anytime."
+        : "I ran into a problem and couldn't respond right now. Please try again in a moment.\n\nIf you're in crisis, please call or text 988.";
+
       const errorMsg: ChatMessage = {
         id: generateId(),
         role: "assistant",
-        content: `I ran into a problem: ${msg}\n\nIf you're in crisis, please call or text 988.`,
+        content: errorContent,
         timestamp: Date.now(),
       };
       setChatMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsSending(false);
     }
-  }, [input, isSending, activeConvId, deviceId, chatMessages.length]);
+  }, [input, isSending, activeConvId, deviceId, isOffline, chatMessages.length]);
 
   // ---------------------------------------------------------------------------
   // Merge conversations with locally-cached previews
@@ -725,6 +804,7 @@ export default function ChatScreen() {
       />
 
       <CrisisBanner colors={colors} />
+      {isOffline && <OfflineBanner colors={colors} />}
 
       {isLoadingMessages ? (
         <View style={styles.centered}>
@@ -794,12 +874,14 @@ export default function ChatScreen() {
                 backgroundColor: colors.background,
                 color: colors.foreground,
                 borderColor: colors.border,
+                opacity: isOffline ? 0.5 : 1,
               },
             ]}
-            placeholder="How are you feeling today?"
+            placeholder={isOffline ? "Reconnect to send messages" : "How are you feeling today?"}
             placeholderTextColor={colors.mutedForeground}
             value={input}
             onChangeText={setInput}
+            editable={!isOffline}
             multiline
             maxLength={800}
             returnKeyType="send"
@@ -808,13 +890,13 @@ export default function ChatScreen() {
           />
           <TouchableOpacity
             onPress={sendMessage}
-            disabled={!input.trim() || isSending || deviceId === null}
+            disabled={!input.trim() || isSending || deviceId === null || isOffline}
             activeOpacity={0.8}
             style={[
               styles.sendBtn,
               {
                 backgroundColor:
-                  input.trim() && !isSending ? colors.primary : colors.muted,
+                  input.trim() && !isSending && !isOffline ? colors.primary : colors.muted,
               },
             ]}
           >
@@ -822,9 +904,9 @@ export default function ChatScreen() {
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <Ionicons
-                name="arrow-up"
+                name={isOffline ? "cloud-offline-outline" : "arrow-up"}
                 size={20}
-                color={input.trim() ? "#fff" : colors.mutedForeground}
+                color={input.trim() && !isOffline ? "#fff" : colors.mutedForeground}
               />
             )}
           </TouchableOpacity>
@@ -925,6 +1007,25 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
+  },
+  // ---- Offline banner ----
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  offlineText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    lineHeight: 16,
   },
   // ---- Empty state (shared) ----
   emptyState: {
