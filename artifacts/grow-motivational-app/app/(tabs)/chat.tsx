@@ -945,6 +945,28 @@ export default function ChatScreen() {
   // ---------------------------------------------------------------------------
   const renameConversation = useCallback(async (convId: number, newTitle: string) => {
     if (!deviceId) return;
+
+    // Capture the previous restore snapshot before touching anything so we can
+    // roll back on failure. Only relevant when renaming the active conversation.
+    let previousRestoreJson: string | null = null;
+    if (convId === activeConvId) {
+      try {
+        previousRestoreJson = await AsyncStorage.getItem(ACTIVE_CONV_RESTORE_KEY);
+      } catch {
+        // If we can't read the old value we still proceed; rollback will just
+        // remove the key instead of restoring the previous snapshot.
+      }
+
+      // Optimistically update UI and the restore key immediately so that a
+      // force-quit between now and the PATCH response persists the pending
+      // title rather than the stale confirmed one.
+      setChatConvTitle(newTitle);
+      AsyncStorage.setItem(
+        ACTIVE_CONV_RESTORE_KEY,
+        JSON.stringify({ convId, title: newTitle })
+      ).catch(() => {});
+    }
+
     try {
       const res = await fetch(`${getApiBase()}/anthropic/conversations/${convId}`, {
         method: "PATCH",
@@ -961,21 +983,26 @@ export default function ChatScreen() {
       setConversations((prev) =>
         prev.map((c) => (c.id === convId ? { ...c, title: newTitle } : c))
       );
-      // If the user renamed the conversation they're currently inside, update
-      // the chat header title immediately without waiting for a list reload.
-      if (convId === activeConvId) {
-        setChatConvTitle(newTitle);
-        // Keep the restore key in sync so a cold-start after a rename still
-        // shows the updated title.
-        AsyncStorage.setItem(
-          ACTIVE_CONV_RESTORE_KEY,
-          JSON.stringify({ convId, title: newTitle })
-        ).catch(() => {});
-      }
     } catch (e) {
-      // Rename failed — clear the pending ref; the list will keep the last
-      // confirmed title rather than showing a title that never took effect.
+      // Rename failed — roll back everything to the last confirmed state.
       pendingRenameTitleRef.current = null;
+      if (convId === activeConvId) {
+        // Restore the header title from the previous snapshot (or fall back to
+        // the raw title that was displayed before the user opened the modal).
+        if (previousRestoreJson) {
+          try {
+            const prev = JSON.parse(previousRestoreJson) as { convId: number; title: string };
+            setChatConvTitle(prev.title);
+            AsyncStorage.setItem(ACTIVE_CONV_RESTORE_KEY, previousRestoreJson).catch(() => {});
+          } catch {
+            // Malformed snapshot — clear the key so the next cold-start doesn't
+            // show a corrupt title.
+            AsyncStorage.removeItem(ACTIVE_CONV_RESTORE_KEY).catch(() => {});
+          }
+        } else {
+          AsyncStorage.removeItem(ACTIVE_CONV_RESTORE_KEY).catch(() => {});
+        }
+      }
       console.warn("Failed to rename conversation:", e);
       Alert.alert("Rename failed", "Could not save the new title. Please try again.");
     }
