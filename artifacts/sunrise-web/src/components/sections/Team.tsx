@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import { Award, Clock, Heart, Mail } from 'lucide-react';
 
 const credentials = [
-  { icon: <Clock className="w-4 h-4" />, text: '17 years in SUD treatment' },
-  { icon: <Award className="w-4 h-4" />, text: 'Clinical Supervisor & Counselor' },
-  { icon: <Heart className="w-4 h-4" />, text: 'All levels of care — detox through IOP' },
+  { icon: <Clock className="w-4 h-4" />, text: '20+ years personal & professional experience' },
+  { icon: <Award className="w-4 h-4" />, text: 'Clinical Supervisor & Entrepreneur' },
+  { icon: <Heart className="w-4 h-4" />, text: 'Person in long-term recovery' },
 ];
 
 export const Team = () => {
@@ -37,7 +37,7 @@ export const Team = () => {
             transition={{ delay: 0.1 }}
             className="text-lg text-slate-400 max-w-xl mx-auto"
           >
-            We didn't enter behavioral health from the outside. We lived the problem for 17 years — then built the solution.
+            We didn't enter behavioral health from the outside. We lived the problem — then built the solution.
           </motion.p>
         </div>
 
@@ -59,11 +59,17 @@ export const Team = () => {
             {/* Bio */}
             <div className="flex-1 text-center md:text-left">
               <h3 className="text-xl font-black text-white mb-1">Jim Collins</h3>
-              <div className="text-sunrise-orange text-xs font-bold tracking-[0.18em] uppercase mb-1">CEO & Founder</div>
+              <div className="text-sunrise-orange text-xs font-bold tracking-[0.18em] uppercase mb-1">Founder & CEO</div>
               <a href="mailto:jim@getsunriseos.com" className="text-xs text-slate-500 hover:text-sunrise-orange transition-colors mb-5 inline-block">jim@getsunriseos.com</a>
 
+              <p className="text-slate-400 text-sm leading-relaxed mb-4">
+                Jim is an addiction treatment professional, clinical supervisor, entrepreneur, and person in long-term recovery with more than two decades of personal and professional experience. His work combines clinical knowledge, lived experience, ethical leadership, and a genuine commitment to helping people rebuild their lives.
+              </p>
+              <p className="text-slate-400 text-sm leading-relaxed mb-4">
+                Throughout his career, Jim has supported individuals and families affected by substance use disorders while helping clinical teams provide structured, accountable, and compassionate care. He believes treatment should go beyond stabilization — helping people develop honesty, responsibility, consistency, practical life skills, and a sustainable foundation for long-term recovery.
+              </p>
               <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                Jim spent 17 years as a Clinical Supervisor and Counselor across all levels of addiction treatment — detox, residential, PHP, and IOP. He watched facilities spend thousands per month on EHR software while staff still passed paper clipboards between shifts. He built Sunrise OS from the inside out, because he lived the problem every single day.
+                Known for being dependable, direct, supportive, and genuine, Jim believes people should never be permanently defined by their past. As a husband and father, he considers time his most valuable asset — and his goal is to serve the recovery community, create security for his family, and build a legacy that continues helping others for generations.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start mb-6">
