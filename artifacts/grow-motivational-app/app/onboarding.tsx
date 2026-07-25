@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -17,7 +18,8 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
-import { useApp } from '@/context/AppContext';
+import { useApp, ReminderSettings } from '@/context/AppContext';
+import { formatReminderTime } from '@/utils/notifications';
 
 const USER_TYPES = [
   {
@@ -44,6 +46,16 @@ const USER_TYPES = [
     desc: 'Learning behavioral health skills',
     icon: 'school' as const,
   },
+];
+
+// Quick-pick reminder times
+const QUICK_TIMES = [
+  { label: '7 AM', hour: 7, minute: 0 },
+  { label: '8 AM', hour: 8, minute: 0 },
+  { label: '9 AM', hour: 9, minute: 0 },
+  { label: 'Noon', hour: 12, minute: 0 },
+  { label: '6 PM', hour: 18, minute: 0 },
+  { label: '9 PM', hour: 21, minute: 0 },
 ];
 
 function UserTypeCard({
@@ -96,15 +108,23 @@ export default function Onboarding() {
   const [userType, setUserType] = useState('');
   const [name, setName] = useState('');
   const [sobrietyDays, setSobrietyDays] = useState(0);
+  const [reminderEnabled, setReminderEnabled] = useState(true);
+  const [reminderHour, setReminderHour] = useState(8);
+  const [reminderMinute, setReminderMinute] = useState(0);
 
-  const totalSteps = 3;
+  const totalSteps = 4; // user type, name, sobriety, reminder
 
   const handleNext = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (step < totalSteps - 1) {
       setStep((s) => s + 1);
     } else {
-      await completeOnboarding(name.trim() || 'Friend', userType || 'individual', sobrietyDays);
+      const reminder: ReminderSettings = {
+        enabled: reminderEnabled && Platform.OS !== 'web',
+        hour: reminderHour,
+        minute: reminderMinute,
+      };
+      await completeOnboarding(name.trim() || 'Friend', userType || 'individual', sobrietyDays, reminder);
       router.replace('/(tabs)');
     }
   };
@@ -294,6 +314,91 @@ export default function Onboarding() {
           </View>
         )}
 
+        {/* Step 3: Reminder opt-in */}
+        {step === 3 && (
+          <View style={styles.stepContent}>
+            <View style={[styles.reminderIconWrap, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="notifications-outline" size={40} color={colors.primary} />
+            </View>
+            <Text style={[styles.stepTitle, { color: colors.foreground }]}>
+              Stay on track with a daily reminder
+            </Text>
+            <Text style={[styles.stepSub, { color: colors.mutedForeground }]}>
+              A gentle nudge each day helps build lasting habits. You can change or turn this off anytime.
+            </Text>
+
+            {/* Enable toggle */}
+            <View style={[styles.toggleRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.toggleLabel, { color: colors.foreground }]}>Daily check-in reminder</Text>
+                <Text style={[styles.toggleSub, { color: colors.mutedForeground }]}>
+                  {reminderEnabled
+                    ? `Fires every day at ${formatReminderTime(reminderHour, reminderMinute)}`
+                    : 'Off — you can enable it later in Progress'}
+                </Text>
+              </View>
+              <Switch
+                value={reminderEnabled}
+                onValueChange={(v) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setReminderEnabled(v);
+                }}
+                trackColor={{ false: colors.muted, true: colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
+
+            {/* Time picker (only visible when enabled) */}
+            {reminderEnabled && (
+              <>
+                <Text style={[styles.timePickerLabel, { color: colors.mutedForeground }]}>
+                  REMINDER TIME
+                </Text>
+                <View style={styles.quickTimeRow}>
+                  {QUICK_TIMES.map((t) => {
+                    const selected = t.hour === reminderHour && t.minute === reminderMinute;
+                    return (
+                      <TouchableOpacity
+                        key={t.label}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setReminderHour(t.hour);
+                          setReminderMinute(t.minute);
+                        }}
+                        style={[
+                          styles.quickTimeChip,
+                          {
+                            backgroundColor: selected ? colors.primary : colors.card,
+                            borderColor: selected ? colors.primary : colors.border,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.quickTimeText,
+                            { color: selected ? '#fff' : colors.foreground },
+                          ]}
+                        >
+                          {t.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            {Platform.OS === 'web' && (
+              <View style={[styles.webNote, { backgroundColor: colors.muted }]}>
+                <Feather name="info" size={14} color={colors.mutedForeground} />
+                <Text style={[styles.webNoteText, { color: colors.mutedForeground }]}>
+                  Push notifications require the mobile app.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* CTA */}
         <TouchableOpacity
           onPress={handleNext}
@@ -464,6 +569,69 @@ const styles = StyleSheet.create({
   readyText: {
     fontSize: 18,
     fontFamily: 'Inter_600SemiBold',
+  },
+  // Reminder step
+  reminderIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+    marginBottom: 16,
+  },
+  toggleLabel: {
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 2,
+  },
+  toggleSub: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 16,
+  },
+  timePickerLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 1,
+    marginBottom: 10,
+    marginLeft: 2,
+  },
+  quickTimeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickTimeChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+  },
+  quickTimeText: {
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  webNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 16,
+  },
+  webNoteText: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
   },
   ctaWrap: {
     width: '100%',

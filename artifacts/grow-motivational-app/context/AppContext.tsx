@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { scheduleDailyReminder, cancelDailyReminder } from '@/utils/notifications';
 
 export interface JournalEntry {
   id: string;
@@ -13,6 +14,12 @@ export interface MoodEntry {
   rating: number; // 1-5
 }
 
+export interface ReminderSettings {
+  enabled: boolean;
+  hour: number;   // 0-23
+  minute: number; // 0-59
+}
+
 interface AppState {
   hasOnboarded: boolean;
   userName: string;
@@ -22,11 +29,12 @@ interface AppState {
   skillsUsed: string[];
   journalEntries: JournalEntry[];
   dailyMoods: MoodEntry[];
+  reminderSettings: ReminderSettings;
   isLoading: boolean;
 }
 
 interface AppContextValue extends AppState {
-  completeOnboarding: (name: string, type: string, sobrietyDays: number) => Promise<void>;
+  completeOnboarding: (name: string, type: string, sobrietyDays: number, reminder?: ReminderSettings) => Promise<void>;
   completeLesson: (lessonId: string) => void;
   markSkillUsed: (skillId: string) => void;
   addJournalEntry: (prompt: string, text: string) => void;
@@ -34,6 +42,7 @@ interface AppContextValue extends AppState {
   resetSobriety: () => void;
   getSobrietyDays: () => number;
   getTodayMood: () => number | null;
+  updateReminderSettings: (settings: ReminderSettings) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -41,6 +50,12 @@ const AppContext = createContext<AppContextValue | null>(null);
 const STORAGE_KEY = 'grow_app_state_v1';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
+
+const DEFAULT_REMINDER: ReminderSettings = {
+  enabled: false,
+  hour: 8,
+  minute: 0,
+};
 
 function daysBetween(start: string): number {
   const startDate = new Date(start);
@@ -59,6 +74,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     skillsUsed: [],
     journalEntries: [],
     dailyMoods: [],
+    reminderSettings: DEFAULT_REMINDER,
     isLoading: true,
   });
 
@@ -67,6 +83,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (raw) {
         try {
           const saved = JSON.parse(raw);
+          // Ensure reminderSettings exists for old installs
+          if (!saved.reminderSettings) {
+            saved.reminderSettings = DEFAULT_REMINDER;
+          }
           setState((prev) => ({ ...prev, ...saved, isLoading: false }));
         } catch {
           setState((prev) => ({ ...prev, isLoading: false }));
@@ -87,15 +107,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const completeOnboarding = useCallback(
-    async (name: string, type: string, sobrietyDays: number) => {
+    async (name: string, type: string, sobrietyDays: number, reminder?: ReminderSettings) => {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - sobrietyDays);
+      const finalReminder = reminder ?? DEFAULT_REMINDER;
       save({
         hasOnboarded: true,
         userName: name,
         userType: type as AppState['userType'],
         sobrietyStartDate: startDate.toISOString(),
+        reminderSettings: finalReminder,
       });
+      if (finalReminder.enabled) {
+        await scheduleDailyReminder(finalReminder.hour, finalReminder.minute);
+      }
     },
     [save],
   );
@@ -173,6 +198,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return entry ? entry.rating : null;
   }, [state.dailyMoods]);
 
+  const updateReminderSettings = useCallback(
+    async (settings: ReminderSettings) => {
+      save({ reminderSettings: settings });
+      if (settings.enabled) {
+        await scheduleDailyReminder(settings.hour, settings.minute);
+      } else {
+        await cancelDailyReminder();
+      }
+    },
+    [save],
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -185,6 +222,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         resetSobriety,
         getSobrietyDays,
         getTodayMood,
+        updateReminderSettings,
       }}
     >
       {children}

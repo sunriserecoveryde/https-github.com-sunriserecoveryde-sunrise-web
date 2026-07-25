@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Alert,
   FlatList,
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -11,8 +13,18 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import { useApp } from '@/context/AppContext';
+import { useApp, ReminderSettings } from '@/context/AppContext';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { formatReminderTime } from '@/utils/notifications';
+
+const QUICK_TIMES = [
+  { label: '7 AM', hour: 7, minute: 0 },
+  { label: '8 AM', hour: 8, minute: 0 },
+  { label: '9 AM', hour: 9, minute: 0 },
+  { label: 'Noon', hour: 12, minute: 0 },
+  { label: '6 PM', hour: 18, minute: 0 },
+  { label: '9 PM', hour: 21, minute: 0 },
+];
 
 const MOOD_COLORS = ['#EF4444', '#F97316', '#FBBF24', '#86EFAC', '#22C55E'];
 const MOOD_LABELS = ['Very Low', 'Low', 'Okay', 'Good', 'Great'];
@@ -65,8 +77,21 @@ function EmptyMoodDot({ label }: { label: string }) {
 export default function ProgressScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { getSobrietyDays, lessonsCompleted, skillsUsed, journalEntries, dailyMoods } = useApp();
+  const { getSobrietyDays, lessonsCompleted, skillsUsed, journalEntries, dailyMoods, reminderSettings, updateReminderSettings } = useApp();
   const isWeb = Platform.OS === 'web';
+
+  const handleToggleReminder = async (enabled: boolean) => {
+    const next: ReminderSettings = { ...reminderSettings, enabled };
+    await updateReminderSettings(next);
+    if (enabled && isWeb) {
+      Alert.alert('Mobile only', 'Push notifications require the Grow mobile app.');
+    }
+  };
+
+  const handlePickTime = async (hour: number, minute: number) => {
+    const next: ReminderSettings = { ...reminderSettings, hour, minute };
+    await updateReminderSettings(next);
+  };
 
   const daysSober = getSobrietyDays();
   const skillsThisWeek = skillsUsed.filter((s) => {
@@ -206,6 +231,75 @@ export default function ProgressScreen() {
               ? 'You have completed at least one lesson per day this week!'
               : `${7 - Math.min(lessonsCompleted.length, 7)} more to complete a full week`}
           </Text>
+        </View>
+
+        {/* Daily reminder settings */}
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+          DAILY REMINDER
+        </Text>
+        <View style={[styles.reminderCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {/* Toggle row */}
+          <View style={styles.reminderToggleRow}>
+            <View style={[styles.reminderIcon, { backgroundColor: colors.primary + '22' }]}>
+              <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.reminderToggleLabel, { color: colors.foreground }]}>
+                Check-in reminder
+              </Text>
+              <Text style={[styles.reminderToggleSub, { color: colors.mutedForeground }]}>
+                {reminderSettings.enabled && !isWeb
+                  ? `Every day at ${formatReminderTime(reminderSettings.hour, reminderSettings.minute)}`
+                  : isWeb
+                  ? 'Requires the mobile app'
+                  : 'Off'}
+              </Text>
+            </View>
+            <Switch
+              value={reminderSettings.enabled}
+              onValueChange={handleToggleReminder}
+              trackColor={{ false: colors.muted, true: colors.primary }}
+              thumbColor="#fff"
+              disabled={isWeb}
+            />
+          </View>
+
+          {/* Time picker (when enabled and not web) */}
+          {reminderSettings.enabled && !isWeb && (
+            <>
+              <View style={[styles.reminderDivider, { backgroundColor: colors.border }]} />
+              <Text style={[styles.reminderTimeLabel, { color: colors.mutedForeground }]}>
+                REMINDER TIME
+              </Text>
+              <View style={styles.quickTimeRow}>
+                {QUICK_TIMES.map((t) => {
+                  const selected = t.hour === reminderSettings.hour && t.minute === reminderSettings.minute;
+                  return (
+                    <TouchableOpacity
+                      key={t.label}
+                      onPress={() => handlePickTime(t.hour, t.minute)}
+                      style={[
+                        styles.quickTimeChip,
+                        {
+                          backgroundColor: selected ? colors.primary : colors.muted,
+                          borderColor: selected ? colors.primary : colors.border,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.quickTimeText,
+                          { color: selected ? '#fff' : colors.foreground },
+                        ]}
+                      >
+                        {t.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          )}
         </View>
 
         {/* Journal entries */}
@@ -363,4 +457,57 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   journalText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
+  reminderCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 4,
+    gap: 4,
+  },
+  reminderToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  reminderIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reminderToggleLabel: {
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 2,
+  },
+  reminderToggleSub: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+  },
+  reminderDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 12,
+  },
+  reminderTimeLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  quickTimeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickTimeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+  },
+  quickTimeText: {
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+  },
 });
