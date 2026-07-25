@@ -628,6 +628,13 @@ export default function ChatScreen() {
   // conversations array happened to hold when the modal was opened.
   const confirmedListTitlesRef = useRef<Map<number, string>>(new Map());
 
+  // Tracks the conversation whose PATCH rename is currently in-flight.
+  // Set immediately before the fetch; cleared in the finally block so both
+  // success and failure lift the guard. While set, loadConversations will
+  // preserve the optimistic title for this conversation ID rather than
+  // overwriting it with whatever the server still reports (the old title).
+  const inFlightRenameRef = useRef<{ convId: number; title: string } | null>(null);
+
   // Keep conversationsRef in sync so zero-dep callbacks can read current state.
   useEffect(() => {
     conversationsRef.current = conversations;
@@ -824,14 +831,26 @@ export default function ChatScreen() {
         confirmedListTitlesRef.current.set(c.id, c.title);
       }
 
+      // Guard: if a rename PATCH is in-flight for a specific conversation,
+      // don't let the server response (which still carries the old title) stomp
+      // the optimistic title that the user already sees. Once the PATCH settles
+      // (success or failure) the ref is cleared and the next loadConversations
+      // can freely overwrite the title with whatever the server returns.
+      const inFlight = inFlightRenameRef.current;
+      const guardedList = inFlight
+        ? baseList.map((c) =>
+            c.id === inFlight.convId ? { ...c, title: inFlight.title } : c
+          )
+        : baseList;
+
       if (pendingLegacyId !== null) {
-        if (baseList.some((c) => c.id === pendingLegacyId)) {
+        if (guardedList.some((c) => c.id === pendingLegacyId)) {
           // Server returned it — migration confirmed; wipe all migration state
           AsyncStorage.multiRemove([
             LEGACY_PENDING_MIGRATION_KEY,
             migratedMsgsKey(pendingLegacyId),
           ]).catch(() => {});
-          setConversations(baseList);
+          setConversations(guardedList);
         } else {
           // Server hasn't surfaced the legacy conv yet — keep synthetic at top
           const synthetic: ConversationSummary = {
@@ -839,10 +858,10 @@ export default function ChatScreen() {
             title: "Previous session",
             createdAt: new Date().toISOString(),
           };
-          setConversations([synthetic, ...baseList]);
+          setConversations([synthetic, ...guardedList]);
         }
       } else {
-        setConversations(baseList);
+        setConversations(guardedList);
       }
     } catch (e) {
       console.warn("Failed to load conversations:", e);
@@ -1100,6 +1119,10 @@ export default function ChatScreen() {
       };
     }
 
+    // Mark this rename as in-flight so loadConversations doesn't overwrite the
+    // optimistic title with the server's stale value during the PATCH request.
+    inFlightRenameRef.current = { convId, title: newTitle };
+
     try {
       const res = await fetch(`${getApiBase()}/anthropic/conversations/${convId}`, {
         method: "PATCH",
@@ -1177,6 +1200,11 @@ export default function ChatScreen() {
       }
       console.warn("Failed to rename conversation:", e);
       Alert.alert("Rename failed", "Could not save the new title. Please try again.");
+    } finally {
+      // Lift the in-flight guard so the next loadConversations call (e.g. a
+      // pull-to-refresh or focus event) can freely update this conversation's
+      // title with whatever the server now reports.
+      inFlightRenameRef.current = null;
     }
   }, [deviceId, activeConvId]);
 
