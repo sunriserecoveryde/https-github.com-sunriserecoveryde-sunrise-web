@@ -68,13 +68,15 @@ interface ConversationSummary {
   title: string;
   createdAt: string;
   lastMessagePreview?: string | null; // returned by the server; no local cache needed
+  wasRenamed?: boolean; // user explicitly set a custom title via rename
 }
 
 // ---------------------------------------------------------------------------
 // Storage keys
 // ---------------------------------------------------------------------------
 
-const DEVICE_ID_KEY = "grow_chat_device_id_v1";
+const DEVICE_ID_KEY    = "grow_chat_device_id_v1";
+const CONV_RENAMED_KEY = "grow_chat_renamed_v2";    // { [convId]: true } — convs with a user-set title
 
 // Persists the active chat so that a cold-start into the chat view can restore
 // the correct conversation title immediately, without a "New conversation" flash.
@@ -220,7 +222,10 @@ function formatRelativeDate(iso: string): string {
 const DEFAULT_TITLE = "Grow Support Chat";
 
 function chatTitle(conv: ConversationSummary): string {
-  // User-assigned custom title takes priority over the auto-preview snippet
+  // A conversation the user explicitly renamed always shows its server title,
+  // even if the chosen name happens to equal the default string.
+  if (conv.wasRenamed) return conv.title || "Untitled conversation";
+  // For auto-titled convs, show the cached first-message snippet if available.
   if (conv.title && conv.title !== DEFAULT_TITLE) return conv.title;
   if (conv.lastMessagePreview) return conv.lastMessagePreview;
   return conv.title || "New conversation";
@@ -568,6 +573,7 @@ export default function ChatScreen() {
   // ---------------------------------------------------------------------------
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
+  const [renamedIds, setRenamedIds] = useState<Record<string, true>>({});
 
   // ---------------------------------------------------------------------------
   // Rename modal state — list view
@@ -665,6 +671,9 @@ export default function ChatScreen() {
       try {
         const dId = await getDeviceId();
         setDeviceId(dId);
+
+        const rawRenamed = await AsyncStorage.getItem(CONV_RENAMED_KEY);
+        if (rawRenamed) setRenamedIds(JSON.parse(rawRenamed));
       } catch (e) {
         console.warn("Chat init error:", e);
       }
@@ -1148,6 +1157,17 @@ export default function ChatScreen() {
       confirmedListTitlesRef.current.set(convId, newTitle);
       // Clear the pending ref so goBackToList stops using it.
       pendingRenameTitleRef.current = null;
+      // Mark the conversation as explicitly renamed so chatTitle never lets
+      // the server preview snippet shadow the custom title on cold start —
+      // even if the chosen name happens to equal the default string.
+      setConversations((prev) =>
+        prev.map((c) => (c.id === convId ? { ...c, wasRenamed: true } : c))
+      );
+      setRenamedIds((prev) => {
+        const next = { ...prev, [String(convId)]: true as const };
+        AsyncStorage.setItem(CONV_RENAMED_KEY, JSON.stringify(next)).catch(() => {});
+        return next;
+      });
     } catch (e) {
       // Rename failed — determine the authoritative rollback title.
       // - Chat view (convId === activeConvId): prefer lastConfirmedTitleRef,
@@ -1242,8 +1262,15 @@ export default function ChatScreen() {
         });
         if (res.ok || res.status === 404) {
           // 200 or 404 both mean the conversation is definitively gone — clear
-          // the tombstone.
+          // the tombstone and the renamed-flag cache entry.
           await removePendingDelete(convId);
+          setRenamedIds((prev) => {
+            if (!prev[String(convId)]) return prev;
+            const next = { ...prev };
+            delete next[String(convId)];
+            AsyncStorage.setItem(CONV_RENAMED_KEY, JSON.stringify(next)).catch(() => {});
+            return next;
+          });
         } else {
           // Definitive server error (4xx other than 404, 5xx) — the DELETE did
           // not go through.  Clear the tombstone and restore the conversation so
@@ -1410,6 +1437,14 @@ export default function ChatScreen() {
       setIsSending(false);
     }
   }, [input, isSending, activeConvId, deviceId, isOffline, chatMessages.length]);
+
+  // ---------------------------------------------------------------------------
+  // Annotate conversations with the wasRenamed flag from AsyncStorage
+  // ---------------------------------------------------------------------------
+  const conversationsWithPreviews: ConversationSummary[] = conversations.map((c) => ({
+    ...c,
+    wasRenamed: renamedIds[String(c.id)] === true || c.wasRenamed,
+  }));
 
   // ---------------------------------------------------------------------------
   // Render: list view
