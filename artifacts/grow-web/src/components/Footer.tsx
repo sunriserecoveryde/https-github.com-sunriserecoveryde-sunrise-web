@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { Sunrise, Linkedin, Instagram, Facebook, Youtube, ArrowRight } from 'lucide-react';
+import { Linkedin, Instagram, Facebook, Youtube, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,7 +25,7 @@ export function Footer() {
           {/* Col 1 — Brand + newsletter */}
           <div className="lg:col-span-2 space-y-6">
             <Link href="/" className="flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">
-              <Sunrise className="h-8 w-8 text-primary" aria-hidden="true" />
+              <img src="/logo.png" alt="Grow Motivational logo" className="h-10 w-10" />
               <span className="font-heading font-bold text-xl tracking-tight">
                 Grow <span className="text-muted-foreground font-normal">Motivational</span>
               </span>

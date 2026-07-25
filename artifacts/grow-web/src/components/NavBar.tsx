@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Sunrise, Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 
 const mainLinks = [
   { name: 'Home', href: '/' },
@@ -122,7 +122,7 @@ export function NavBar() {
       >
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">
-            <Sunrise className="h-8 w-8 text-primary transition-transform group-hover:scale-110" aria-hidden="true" />
+            <img src="/logo.png" alt="Grow Motivational logo" className="h-10 w-10 transition-transform group-hover:scale-110" />
             <span className="font-heading font-bold text-xl tracking-tight">
               Grow <span className="text-muted-foreground font-normal">Motivational</span>
             </span>
@@ -182,7 +182,7 @@ export function NavBar() {
         >
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-2">
-              <Sunrise className="h-8 w-8 text-primary" aria-hidden="true" />
+              <img src="/logo.png" alt="Grow Motivational logo" className="h-10 w-10" />
               <span className="font-heading font-bold text-xl tracking-tight">
                 Grow <span className="text-muted-foreground font-normal">Motivational</span>
               </span>
