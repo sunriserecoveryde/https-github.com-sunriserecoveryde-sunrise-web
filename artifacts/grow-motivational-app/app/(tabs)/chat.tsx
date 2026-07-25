@@ -21,6 +21,16 @@ import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import NetInfo from "@react-native-community/netinfo";
+import {
+  reconcileConversationList,
+  buildOptimisticBackEntry,
+} from "@/utils/reconcileConversationList";
+import {
+  parsePendingDeletes,
+  normalizePendingDeletes,
+  addEntryToRaw,
+  removeEntryFromRaw,
+} from "@/utils/pendingDeletes";
 
 // ---------------------------------------------------------------------------
 // Offline detection helpers
@@ -89,42 +99,61 @@ const migratedMsgsKey = (convId: number) => `grow_chat_migrated_msgs_${convId}`;
 // Persists ids of conversations whose DELETE request has been issued but not
 // yet confirmed by the server (e.g. the app was backgrounded while offline).
 // loadConversations reads this and suppresses any matching id from the server
-// list so a ghost entry cannot reappear on resume.  Cleared once the DELETE
-// settles (HTTP 200 or 404 — both mean the conv is gone from the user's view).
+// list so a ghost entry cannot reappear on resume.  Entries carry a timestamp
+// and expire after PENDING_DELETE_TTL_MS (24 h) so a failed DELETE can never
+// permanently hide a conversation — the tombstone simply ages out and the
+// conversation reappears on the next server fetch.
 const PENDING_DELETE_KEY = "grow_chat_pending_deletes_v1";
 
-/** Read the set of pending-delete conversation ids from AsyncStorage. */
+/** Read the set of non-expired pending-delete conversation ids from AsyncStorage.
+ *  On first read after an upgrade, any legacy v1 (plain number) entries are
+ *  stamped with the current time and written back as v2, ensuring they will
+ *  expire after PENDING_DELETE_TTL_MS and can never permanently hide a
+ *  conversation on a device that never successfully retried the DELETE. */
 async function readPendingDeletes(): Promise<Set<number>> {
   try {
+    const nowMs = Date.now();
     const raw = await AsyncStorage.getItem(PENDING_DELETE_KEY);
-    if (!raw) return new Set();
-    const arr: number[] = JSON.parse(raw);
-    return new Set(Array.isArray(arr) ? arr : []);
+    const ids = parsePendingDeletes(raw, nowMs);
+
+    // Migrate v1 entries to v2 in the background so subsequent reads are
+    // properly TTL-governed.  We only write when the normalized form differs
+    // from what is already stored (i.e. there were v1 entries or expired ones).
+    const normalized = normalizePendingDeletes(raw, nowMs);
+    if (normalized !== raw) {
+      if (normalized === null) {
+        AsyncStorage.removeItem(PENDING_DELETE_KEY).catch(() => {});
+      } else {
+        AsyncStorage.setItem(PENDING_DELETE_KEY, normalized).catch(() => {});
+      }
+    }
+
+    return ids;
   } catch {
     return new Set();
   }
 }
 
-/** Add a conversation id to the pending-delete set. */
+/** Add a timestamped tombstone for convId; prunes expired entries at the same time. */
 async function addPendingDelete(convId: number): Promise<void> {
   try {
-    const existing = await readPendingDeletes();
-    existing.add(convId);
-    await AsyncStorage.setItem(PENDING_DELETE_KEY, JSON.stringify([...existing]));
+    const raw = await AsyncStorage.getItem(PENDING_DELETE_KEY);
+    const updated = addEntryToRaw(raw, convId, Date.now());
+    await AsyncStorage.setItem(PENDING_DELETE_KEY, updated);
   } catch {
     // Non-fatal — worst case the ghost appears once and vanishes on next fetch
   }
 }
 
-/** Remove a conversation id from the pending-delete set (delete settled). */
+/** Remove the tombstone for convId once the DELETE has definitively settled. */
 async function removePendingDelete(convId: number): Promise<void> {
   try {
-    const existing = await readPendingDeletes();
-    existing.delete(convId);
-    if (existing.size === 0) {
+    const raw = await AsyncStorage.getItem(PENDING_DELETE_KEY);
+    const updated = removeEntryFromRaw(raw, convId, Date.now());
+    if (updated === null) {
       await AsyncStorage.removeItem(PENDING_DELETE_KEY);
     } else {
-      await AsyncStorage.setItem(PENDING_DELETE_KEY, JSON.stringify([...existing]));
+      await AsyncStorage.setItem(PENDING_DELETE_KEY, updated);
     }
   } catch {
     // Non-fatal
@@ -779,22 +808,13 @@ export default function ChatScreen() {
       // doesn't include the conversation yet (e.g. a brief race where the
       // response arrived before the DB committed), keep it pinned at the top
       // so it doesn't vanish.  Once confirmed, clear the ref.
-      const optimisticBack = optimisticBackConvRef.current;
-      let baseList = sorted;
-      if (optimisticBack !== null) {
-        if (sorted.some((c) => c.id === optimisticBack.id)) {
-          // Server confirmed it — clear the ref, use server data as-is
-          optimisticBackConvRef.current = null;
-        } else if (conversationsRef.current.some((c) => c.id === optimisticBack.id)) {
-          // Server hasn't returned it yet but it still exists in local state
-          // (e.g. a brief race or transient offline window) — keep it pinned.
-          baseList = [optimisticBack, ...sorted];
-        } else {
-          // Absent from both the server list AND current state — the conversation
-          // was deleted while the app was backgrounded. Clear the ref so the
-          // ghost entry is not re-injected on resume.
-          optimisticBackConvRef.current = null;
-        }
+      const { baseList, clearOptimistic } = reconcileConversationList(
+        sorted,
+        optimisticBackConvRef.current,
+        conversationsRef.current
+      );
+      if (clearOptimistic) {
+        optimisticBackConvRef.current = null;
       }
 
       // Record the server-confirmed title for every conversation returned so
@@ -1011,23 +1031,22 @@ export default function ChatScreen() {
     // conversation from disappearing when the user backs out while the server
     // is slow or the device is briefly offline.
     // Skipped when returning from a delete — we don't want to re-add a ghost.
-    if (!skipOptimistic && activeConvId !== null) {
+    if (!skipOptimistic) {
       // Guard: if the conversation has already been removed from state (e.g.
       // deleted while a PATCH was in-flight and the app was backgrounded),
-      // skip the optimistic injection entirely so it can't ghost back.
-      if (conversationsRef.current.some((c) => c.id === activeConvId)) {
-        // Prefer the pending (user-typed) rename title when a rename is still
-        // in-flight, so the optimistic entry reflects what the user just typed
-        // rather than the last server-confirmed title.
-        const optimisticTitle = pendingRenameTitleRef.current ?? chatConvTitle;
-        const optimistic: ConversationSummary = {
-          id: activeConvId,
-          title: optimisticTitle,
-          createdAt: new Date().toISOString(),
-        };
+      // buildOptimisticBackEntry returns null and we skip the injection so the
+      // ghost can't come back.
+      const optimistic = buildOptimisticBackEntry(
+        activeConvId,
+        conversationsRef.current,
+        pendingRenameTitleRef.current,
+        chatConvTitle,
+        new Date().toISOString()
+      );
+      if (optimistic !== null) {
         optimisticBackConvRef.current = optimistic;
         setConversations((prev) => {
-          const rest = prev.filter((c) => c.id !== activeConvId);
+          const rest = prev.filter((c) => c.id !== optimistic.id);
           return [optimistic, ...rest];
         });
       }
@@ -1189,16 +1208,34 @@ export default function ChatScreen() {
           method: "DELETE",
           headers: { "X-Device-Id": deviceId },
         });
-        // 200 or 404 both mean the conversation is gone — clear the intent.
         if (res.ok || res.status === 404) {
+          // 200 or 404 both mean the conversation is definitively gone — clear
+          // the tombstone.
           await removePendingDelete(convId);
+        } else {
+          // Definitive server error (4xx other than 404, 5xx) — the DELETE did
+          // not go through.  Clear the tombstone and restore the conversation so
+          // it is never permanently hidden on this device.
+          await removePendingDelete(convId);
+          setConversations((prev) => {
+            // Only restore if it isn't already in the list (idempotent).
+            if (prev.some((c) => c.id === convId)) return prev;
+            const restored: ConversationSummary = {
+              id: convId,
+              title: confirmedListTitlesRef.current.get(convId) ?? "Conversation",
+              createdAt: new Date().toISOString(),
+            };
+            return [restored, ...prev];
+          });
+          console.warn(`Delete failed with status ${res.status} — conversation restored.`);
         }
-        // Any other status (5xx, network error) leaves the intent in place so
-        // the next loadConversations still filters the id out.
       } catch (e) {
-        console.warn("Failed to delete conversation (will retry filter on next load):", e);
-        // Intent remains in AsyncStorage — loadConversations will suppress the
-        // ghost until the DELETE eventually settles.
+        // Network-level failure (offline, timeout).  The tombstone stays in
+        // place with its 24-hour TTL so that if the app is force-quit here the
+        // conversation doesn't ghost back on the next resume.  After 24 h the
+        // tombstone expires automatically and the conversation reappears.
+        // A future retry task (#460) can clear it sooner on reconnect.
+        console.warn("Failed to delete conversation (tombstone TTL guards against permanent hide):", e);
       }
     };
 
@@ -1461,7 +1498,7 @@ export default function ChatScreen() {
         title={chatConvTitle}
         onTitlePress={activeConvId !== null ? () => setShowChatRenameModal(true) : undefined}
         leftElement={
-          <TouchableOpacity onPress={goBackToList} activeOpacity={0.7} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => goBackToList()} activeOpacity={0.7} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={20} color={colors.mutedForeground} />
           </TouchableOpacity>
         }
