@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/sunrise-marketing/"
+title = "SunriseOS — Marketing & Investor Site"
+version = "1.0.0"
+id = "artifacts/sunrise-marketing"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/sunrise-marketing/" ]
+localPort = 19402
+
+[services.development]
+run = "pnpm --filter @workspace/sunrise-marketing run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sunrise-marketing", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sunrise-marketing/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19402"
+BASE_PATH = "/sunrise-marketing/"
