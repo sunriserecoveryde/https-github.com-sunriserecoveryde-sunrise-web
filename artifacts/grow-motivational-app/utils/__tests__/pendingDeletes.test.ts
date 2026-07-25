@@ -4,7 +4,7 @@
  * These guard against the regression where a failed DELETE permanently hides a
  * conversation because the tombstone is never cleared.  The TTL-based expiry
  * ensures that even if the app is force-quit mid-delete and never retries, the
- * conversation reappears on the device within 24 hours.
+ * conversation reappears on the device within 7 days.
  */
 
 import {
@@ -67,11 +67,11 @@ describe("parsePendingDeletes", () => {
     expect(result).toEqual(new Set([10, 20]));
   });
 
-  it("drops entries that have exceeded the 24-hour TTL", () => {
+  it("drops entries that have exceeded the 7-day TTL", () => {
     const raw = v2Raw(
       v2Entry(10, NOW - HOUR),            // live
-      v2Entry(99, NOW - DAY - 1),         // expired by 1 ms
-      v2Entry(88, NOW - 2 * DAY),         // expired
+      v2Entry(99, NOW - 7 * DAY - 1),     // expired by 1 ms
+      v2Entry(88, NOW - 10 * DAY),        // expired
     );
     const result = parsePendingDeletes(raw, NOW);
     expect(result).toEqual(new Set([10]));
@@ -81,8 +81,8 @@ describe("parsePendingDeletes", () => {
 
   it("returns empty set when all entries are expired", () => {
     const raw = v2Raw(
-      v2Entry(1, NOW - DAY - HOUR),
-      v2Entry(2, NOW - 3 * DAY),
+      v2Entry(1, NOW - 7 * DAY - HOUR),
+      v2Entry(2, NOW - 10 * DAY),
     );
     expect(parsePendingDeletes(raw, NOW).size).toBe(0);
   });
@@ -103,7 +103,7 @@ describe("parsePendingDeletes", () => {
     const raw = JSON.stringify([
       1,                                  // v1 plain number → kept
       v2Entry(2, NOW - HOUR),             // v2 live → kept
-      v2Entry(3, NOW - 2 * DAY),          // v2 expired → dropped
+      v2Entry(3, NOW - 8 * DAY),           // v2 expired → dropped
     ]);
     const result = parsePendingDeletes(raw, NOW);
     expect(result).toEqual(new Set([1, 2]));
@@ -131,7 +131,7 @@ describe("addEntryToRaw", () => {
   it("prunes expired entries at the same time as adding a new one", () => {
     const existing = v2Raw(
       v2Entry(1, NOW - HOUR),       // live
-      v2Entry(99, NOW - 2 * DAY),   // expired
+      v2Entry(99, NOW - 8 * DAY),    // expired
     );
     const updated = addEntryToRaw(existing, 2, NOW);
     const result = parsePendingDeletes(updated, NOW);
@@ -182,7 +182,7 @@ describe("removeEntryFromRaw", () => {
     const raw = v2Raw(
       v2Entry(1, NOW - HOUR),     // live — target to remove
       v2Entry(2, NOW - HOUR * 2), // live — keep
-      v2Entry(3, NOW - 2 * DAY),  // expired — should be pruned
+      v2Entry(3, NOW - 8 * DAY),  // expired — should be pruned
     );
     const updated = removeEntryFromRaw(raw, 1, NOW);
     expect(updated).not.toBeNull();
@@ -206,7 +206,7 @@ describe("normalizePendingDeletes", () => {
   });
 
   it("returns null when all entries are expired (empty result)", () => {
-    const raw = v2Raw(v2Entry(1, NOW - 2 * DAY), v2Entry(2, NOW - 3 * DAY));
+    const raw = v2Raw(v2Entry(1, NOW - 8 * DAY), v2Entry(2, NOW - 10 * DAY));
     expect(normalizePendingDeletes(raw, NOW)).toBeNull();
   });
 
@@ -232,8 +232,8 @@ describe("normalizePendingDeletes", () => {
     // Expired at exactly T + TTL
     expect(parsePendingDeletes(normalizedAtT, T + PENDING_DELETE_TTL_MS).has(7)).toBe(false);
 
-    // Definitely gone at T + 25 hours
-    expect(parsePendingDeletes(normalizedAtT, T + 25 * HOUR).has(7)).toBe(false);
+    // Definitely gone at T + 8 days
+    expect(parsePendingDeletes(normalizedAtT, T + 8 * DAY).has(7)).toBe(false);
   });
 
   it("preserves original timestamps for live v2 entries (does not reset their clock)", () => {
@@ -247,7 +247,7 @@ describe("normalizePendingDeletes", () => {
   it("drops expired v2 entries and keeps live ones during normalization", () => {
     const raw = v2Raw(
       v2Entry(1, NOW - HOUR),     // live
-      v2Entry(2, NOW - 2 * DAY),  // expired
+      v2Entry(2, NOW - 8 * DAY),  // expired
     );
     const result = normalizePendingDeletes(raw, NOW)!;
     const ids = parsePendingDeletes(result, NOW);
@@ -258,7 +258,7 @@ describe("normalizePendingDeletes", () => {
     const raw = JSON.stringify([
       5,                              // v1 → stamped with nowMs
       v2Entry(6, NOW - HOUR),         // live v2 → preserved
-      v2Entry(7, NOW - 2 * DAY),      // expired v2 → dropped
+      v2Entry(7, NOW - 8 * DAY),       // expired v2 → dropped
     ]);
     const result = normalizePendingDeletes(raw, NOW)!;
     const ids = parsePendingDeletes(result, NOW);
@@ -272,9 +272,9 @@ describe("normalizePendingDeletes", () => {
 // ---------------------------------------------------------------------------
 
 describe("TTL expiry integration", () => {
-  it("a tombstone written before a network failure expires and stops filtering after 24 h", () => {
+  it("a tombstone written before a network failure expires and stops filtering after 7 days", () => {
     // Scenario: DELETE failed, tombstone was written, app never retried.
-    // After 24 h the conversation must stop being filtered.
+    // After 7 days the conversation must stop being filtered.
 
     const writeTime = NOW;
     const raw = addEntryToRaw(null, 42, writeTime);
@@ -292,7 +292,7 @@ describe("TTL expiry integration", () => {
       parsePendingDeletes(raw, writeTime + PENDING_DELETE_TTL_MS).has(42)
     ).toBe(false);
 
-    // 25 hours after write: definitely expired
-    expect(parsePendingDeletes(raw, writeTime + 25 * HOUR).has(42)).toBe(false);
+    // 8 days after write: definitely expired
+    expect(parsePendingDeletes(raw, writeTime + 8 * DAY).has(42)).toBe(false);
   });
 });

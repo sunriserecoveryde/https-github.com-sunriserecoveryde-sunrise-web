@@ -102,7 +102,7 @@ const migratedMsgsKey = (convId: number) => `grow_chat_migrated_msgs_${convId}`;
 // yet confirmed by the server (e.g. the app was backgrounded while offline).
 // loadConversations reads this and suppresses any matching id from the server
 // list so a ghost entry cannot reappear on resume.  Entries carry a timestamp
-// and expire after PENDING_DELETE_TTL_MS (24 h) so a failed DELETE can never
+// and expire after PENDING_DELETE_TTL_MS (7 days) so a failed DELETE can never
 // permanently hide a conversation — the tombstone simply ages out and the
 // conversation reappears on the next server fetch.
 const PENDING_DELETE_KEY = "grow_chat_pending_deletes_v1";

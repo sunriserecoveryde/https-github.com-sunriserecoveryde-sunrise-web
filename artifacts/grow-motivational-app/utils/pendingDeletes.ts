@@ -5,7 +5,9 @@
  * yet confirmed by the server (e.g. app force-quit mid-request).  To prevent
  * a failed delete from permanently hiding a conversation, every tombstone
  * carries an `addedAt` timestamp and is automatically discarded after
- * PENDING_DELETE_TTL_MS (24 h).
+ * PENDING_DELETE_TTL_MS (7 days).  Seven days is long enough for the DELETE
+ * to be retried successfully across intermittent outages, but bounded so that
+ * a permanently-rejected DELETE can never suppress a conversation forever.
  *
  * Storage format (v2 — backward-compatible with the legacy plain number[] v1):
  *   JSON array of { id: number, addedAt: number }
@@ -15,7 +17,7 @@
  */
 
 /** Maximum age a tombstone is trusted before being silently discarded. */
-export const PENDING_DELETE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+export const PENDING_DELETE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export interface PendingDeleteEntry {
   id: number;
