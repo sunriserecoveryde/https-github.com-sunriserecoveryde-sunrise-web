@@ -87,6 +87,40 @@ describe("reconcileConversationList", () => {
     expect(clearOptimistic).toBe(false); // keep the ref — still racing
   });
 
+  it("case 2 (pinned transient race): pinned entry carries the in-flight rename title, not the old confirmed title", () => {
+    // Scenario: the PATCH is still in-flight and the server list hasn't
+    // reflected the rename yet (conv 42 is absent from the server response),
+    // but conv 42 is still present in local state.  The optimistic entry was
+    // built from buildOptimisticBackEntry with pendingRenameTitle set.
+    const sorted = [conv(1), conv(2)]; // server missed conv 42
+    const local = [conv(42, "Old confirmed title"), conv(1), conv(2)];
+
+    const NOW = "2026-07-25T12:00:00.000Z";
+    const optimisticEntry = buildOptimisticBackEntry(
+      42,
+      local,
+      "User-typed rename", // pendingRenameTitle — the in-flight value
+      "Old confirmed title",
+      NOW
+    );
+
+    expect(optimisticEntry).not.toBeNull();
+
+    const { baseList, clearOptimistic } = reconcileConversationList(
+      sorted,
+      optimisticEntry,
+      local
+    );
+
+    // Pinned entry must carry the user-typed in-flight title, not the stale
+    // confirmed title that the server hasn't updated yet.
+    expect(baseList[0].id).toBe(42);
+    expect(baseList[0].title).toBe("User-typed rename");
+    expect(baseList[0].title).not.toBe("Old confirmed title");
+    expect(baseList).toHaveLength(sorted.length + 1);
+    expect(clearOptimistic).toBe(false);
+  });
+
   // ----- case 3: ghost scenario (the important one) -------------------------
 
   it("does NOT inject the optimistic entry when the conversation is absent from both the server list and local state", () => {
@@ -190,6 +224,50 @@ describe("buildOptimisticBackEntry", () => {
     const local = [conv(5)];
     const result = buildOptimisticBackEntry(5, local, "Draft title", "Server title", NOW);
     expect(result!.title).toBe("Draft title");
+  });
+
+  // ----- rename-in-flight survives force-quit, conversation still on server ---
+
+  it("rename in-flight title survives a force-quit and shows correctly on resume when the conversation is still on the server", () => {
+    // Scenario:
+    //  • User types a new title and the PATCH fires.
+    //  • App is force-quit before the PATCH response lands.
+    //  • App resumes; the conversation is still on the server (not deleted).
+    //  • goBackToList builds the optimistic entry with pendingRenameTitle.
+    //  • loadConversations reconciles: server confirms → ref cleared.
+
+    const local = [conv(42, "Old server title"), conv(1)];
+    const NOW = "2026-07-25T12:00:00.000Z";
+
+    // Step 1 — goBackToList on resume with an in-flight rename title
+    const optimisticEntry = buildOptimisticBackEntry(
+      42,
+      local,
+      "User-typed rename title", // pendingRenameTitle still set after resume
+      "Old server title",
+      NOW
+    );
+
+    // The entry must exist and carry the user-typed title, not the stale one
+    expect(optimisticEntry).not.toBeNull();
+    expect(optimisticEntry!.id).toBe(42);
+    expect(optimisticEntry!.title).toBe("User-typed rename title");
+
+    // Step 2 — server confirms the conversation is still present (case 1)
+    // Server may not have the renamed title yet if the PATCH hasn't landed
+    const serverList = [conv(42, "Old server title"), conv(1)];
+    const { baseList, clearOptimistic } = reconcileConversationList(
+      serverList,
+      optimisticEntry,
+      local
+    );
+
+    // Server confirmed → ref cleared, server list used
+    // (the PATCH response will update the title once it arrives)
+    expect(clearOptimistic).toBe(true);
+    expect(baseList).toEqual(serverList);
+    // Conversation is present — no ghost, no loss
+    expect(baseList.some((c) => c.id === 42)).toBe(true);
   });
 
   // ----- combined scenario: goBackToList then loadConversations reconcile ----
