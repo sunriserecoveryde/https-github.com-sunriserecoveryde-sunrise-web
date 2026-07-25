@@ -82,10 +82,19 @@ export function About() {
                 <div className="absolute inset-0 mix-blend-overlay z-10 bg-black/20" />
               </div>
               <div className="md:col-span-3 p-10 md:p-16 flex flex-col justify-center">
-                <span className="text-primary font-medium text-sm tracking-wider uppercase mb-2">Founder & Chief Educational Officer</span>
+                <span className="text-primary font-medium text-sm tracking-wider uppercase mb-2">Founder & CEO</span>
                 <h3 className="text-3xl font-heading font-bold mb-6">Jim Collins</h3>
+                <p className="text-muted-foreground mb-5 leading-relaxed">
+                  Jim is an addiction treatment professional, clinical supervisor, entrepreneur, and person in long-term recovery with more than two decades of personal and professional experience. His work combines clinical knowledge, lived experience, ethical leadership, and a genuine commitment to helping people rebuild their lives.
+                </p>
+                <p className="text-muted-foreground mb-5 leading-relaxed">
+                  Throughout his career, Jim has supported individuals and families affected by substance use disorders while helping clinical teams provide structured, accountable, and compassionate care. He believes treatment should go beyond stabilization — helping people develop honesty, responsibility, consistency, practical life skills, and a sustainable foundation for long-term recovery.
+                </p>
+                <p className="text-muted-foreground mb-5 leading-relaxed">
+                  Jim is the founder and visionary behind The Sunrise Group, a developing family of organizations focused on improving addiction treatment, recovery support, clinical operations, and community impact. His vision includes ethical, evidence-informed treatment, accountable recovery housing, innovative technology for treatment providers, and a charitable foundation for people who lack access to care.
+                </p>
                 <p className="text-muted-foreground mb-8 leading-relaxed">
-                  Jim Collins founded Grow Motivational to address a critical gap: individuals leaving treatment without the ongoing educational support needed to sustain recovery. His vision for accessible, science-based behavioral health education has grown into a platform reaching thousands of individuals, families, and clinicians across the country.
+                  Known for being dependable, direct, supportive, and genuine, Jim believes people should never be permanently defined by their past. As a husband and father, he considers time his most valuable asset. His goal is to serve the recovery community, create security for his family, and build a legacy that continues helping others for generations.
                 </p>
                 <div>
                   <button className="text-primary hover:text-gold font-medium flex items-center gap-2 transition-colors">
