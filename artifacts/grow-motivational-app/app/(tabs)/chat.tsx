@@ -532,6 +532,15 @@ export default function ChatScreen() {
   // entry shows the pending title rather than the last confirmed one.
   const pendingRenameTitleRef = useRef<string | null>(null);
 
+  // Holds the last server-confirmed title for the active conversation.
+  // Updated only when a PATCH /conversations/:id returns 2xx, and initialised
+  // when a conversation is opened or cold-start restored. On rename failure,
+  // the rollback target is always this ref — NOT an AsyncStorage snapshot
+  // captured at the start of the call. This prevents rapid successive renames
+  // (where the second call's snapshot already contains the first call's
+  // optimistic/unconfirmed title) from rolling back to an intermediate state.
+  const lastConfirmedTitleRef = useRef<string | null>(null);
+
   // Track online / offline transitions — cross-platform via NetInfo
   useEffect(() => {
     // Set initial connectivity state
@@ -803,6 +812,10 @@ export default function ChatScreen() {
     setStreamingContent("");
     setInput("");
     setChatConvTitle(resolvedTitle);
+    // Record the server-confirmed title baseline. openConversation is called
+    // either with the stored title on cold-start or with the server-returned
+    // title from the list — either way it represents the last known good state.
+    lastConfirmedTitleRef.current = resolvedTitle;
     setView("chat");
     setIsLoadingMessages(true);
 
@@ -895,6 +908,8 @@ export default function ChatScreen() {
       setStreamingContent("");
       setInput("");
       setChatConvTitle("New conversation");
+      // New conversations have no prior confirmed title yet.
+      lastConfirmedTitleRef.current = "New conversation";
       setView("chat");
       setIsLoadingMessages(false);
     } catch (e) {
@@ -946,20 +961,16 @@ export default function ChatScreen() {
   const renameConversation = useCallback(async (convId: number, newTitle: string, originalTitle: string) => {
     if (!deviceId) return;
 
-    // Capture the previous restore snapshot before touching anything so we can
-    // roll back on failure. Only relevant when renaming the active conversation.
-    let previousRestoreJson: string | null = null;
     if (convId === activeConvId) {
-      try {
-        previousRestoreJson = await AsyncStorage.getItem(ACTIVE_CONV_RESTORE_KEY);
-      } catch {
-        // If we can't read the old value we still proceed; rollback will just
-        // remove the key instead of restoring the previous snapshot.
-      }
-
       // Optimistically update UI and the restore key immediately so that a
       // force-quit between now and the PATCH response persists the pending
       // title rather than the stale confirmed one.
+      //
+      // NOTE: we do NOT snapshot AsyncStorage here for rollback. Rapid successive
+      // renames could cause a second call to read an already-optimistic value
+      // from the first call, making the rollback target an intermediate
+      // (unconfirmed) title. Instead, rollback always targets lastConfirmedTitleRef
+      // which is updated only on a server 2xx — see below.
       setChatConvTitle(newTitle);
       AsyncStorage.setItem(
         ACTIVE_CONV_RESTORE_KEY,
@@ -977,14 +988,23 @@ export default function ChatScreen() {
         body: JSON.stringify({ title: newTitle }),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
-      // Rename confirmed — clear the pending ref so goBackToList stops using it.
+      // Rename confirmed by server — advance the confirmed-title baseline so
+      // any subsequent failure rolls back to this newly confirmed title, not
+      // the one that was confirmed before this rename.
+      if (convId === activeConvId) {
+        lastConfirmedTitleRef.current = newTitle;
+      }
+      // Clear the pending ref so goBackToList stops using it.
       pendingRenameTitleRef.current = null;
-      // Optimistically update local state so the list refreshes immediately
+      // Update local state so the list reflects the new title immediately.
       setConversations((prev) =>
         prev.map((c) => (c.id === convId ? { ...c, title: newTitle } : c))
       );
     } catch (e) {
-      // Rename failed — roll back everything to the last confirmed state.
+      // Rename failed — roll back to the last server-confirmed title.
+      // Using lastConfirmedTitleRef (updated only on 2xx) guarantees that rapid
+      // successive renames always roll back to a real server-confirmed state,
+      // not an intermediate optimistic value written by an earlier in-flight call.
       pendingRenameTitleRef.current = null;
       // Restore the list entry so it doesn't keep showing a title that never
       // took effect on the server.
@@ -992,19 +1012,17 @@ export default function ChatScreen() {
         prev.map((c) => (c.id === convId ? { ...c, title: originalTitle } : c))
       );
       if (convId === activeConvId) {
-        // Restore the header title from the previous snapshot (or fall back to
-        // the raw title that was displayed before the user opened the modal).
-        if (previousRestoreJson) {
-          try {
-            const prev = JSON.parse(previousRestoreJson) as { convId: number; title: string };
-            setChatConvTitle(prev.title);
-            AsyncStorage.setItem(ACTIVE_CONV_RESTORE_KEY, previousRestoreJson).catch(() => {});
-          } catch {
-            // Malformed snapshot — clear the key so the next cold-start doesn't
-            // show a corrupt title.
-            AsyncStorage.removeItem(ACTIVE_CONV_RESTORE_KEY).catch(() => {});
-          }
+        const confirmedTitle = lastConfirmedTitleRef.current;
+        if (confirmedTitle !== null) {
+          setChatConvTitle(confirmedTitle);
+          AsyncStorage.setItem(
+            ACTIVE_CONV_RESTORE_KEY,
+            JSON.stringify({ convId, title: confirmedTitle })
+          ).catch(() => {});
         } else {
+          // No confirmed title recorded yet (e.g. a brand-new conversation that
+          // was never successfully renamed) — clear the restore key so a
+          // cold-start doesn't show a stale optimistic title.
           AsyncStorage.removeItem(ACTIVE_CONV_RESTORE_KEY).catch(() => {});
         }
       }
