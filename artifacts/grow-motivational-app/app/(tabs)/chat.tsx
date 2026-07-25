@@ -86,6 +86,51 @@ const LEGACY_PENDING_MIGRATION_KEY = "grow_chat_pending_legacy_conv_v1";
 // successfully loads from the server, then removed.
 const migratedMsgsKey = (convId: number) => `grow_chat_migrated_msgs_${convId}`;
 
+// Persists ids of conversations whose DELETE request has been issued but not
+// yet confirmed by the server (e.g. the app was backgrounded while offline).
+// loadConversations reads this and suppresses any matching id from the server
+// list so a ghost entry cannot reappear on resume.  Cleared once the DELETE
+// settles (HTTP 200 or 404 — both mean the conv is gone from the user's view).
+const PENDING_DELETE_KEY = "grow_chat_pending_deletes_v1";
+
+/** Read the set of pending-delete conversation ids from AsyncStorage. */
+async function readPendingDeletes(): Promise<Set<number>> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_DELETE_KEY);
+    if (!raw) return new Set();
+    const arr: number[] = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+/** Add a conversation id to the pending-delete set. */
+async function addPendingDelete(convId: number): Promise<void> {
+  try {
+    const existing = await readPendingDeletes();
+    existing.add(convId);
+    await AsyncStorage.setItem(PENDING_DELETE_KEY, JSON.stringify([...existing]));
+  } catch {
+    // Non-fatal — worst case the ghost appears once and vanishes on next fetch
+  }
+}
+
+/** Remove a conversation id from the pending-delete set (delete settled). */
+async function removePendingDelete(convId: number): Promise<void> {
+  try {
+    const existing = await readPendingDeletes();
+    existing.delete(convId);
+    if (existing.size === 0) {
+      await AsyncStorage.removeItem(PENDING_DELETE_KEY);
+    } else {
+      await AsyncStorage.setItem(PENDING_DELETE_KEY, JSON.stringify([...existing]));
+    }
+  } catch {
+    // Non-fatal
+  }
+}
+
 // ---------------------------------------------------------------------------
 // API base
 // ---------------------------------------------------------------------------
@@ -699,11 +744,15 @@ export default function ChatScreen() {
   const loadConversations = useCallback(async (dId: string) => {
     setIsLoadingList(true);
 
-    // Read the pending migration marker regardless of network outcome so we can
-    // inject the synthetic entry even on offline / server-error cold starts.
+    // Read both the pending migration marker and pending delete intents in
+    // parallel so we have full awareness before processing the server list.
     let pendingLegacyId: number | null = null;
+    let pendingDeletes: Set<number> = new Set();
     try {
-      const pendingRaw = await AsyncStorage.getItem(LEGACY_PENDING_MIGRATION_KEY);
+      const [pendingRaw] = await Promise.all([
+        AsyncStorage.getItem(LEGACY_PENDING_MIGRATION_KEY),
+        readPendingDeletes().then((s) => { pendingDeletes = s; }),
+      ]);
       if (pendingRaw) {
         const parsed = parseInt(pendingRaw, 10);
         if (!isNaN(parsed)) pendingLegacyId = parsed;
@@ -718,10 +767,13 @@ export default function ChatScreen() {
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data: Array<{ id: number; title: string; createdAt: string; lastMessagePreview?: string | null }> = await res.json();
-      // Newest first
-      const sorted = [...data].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      // Newest first; strip any conversation whose delete is still in-flight so
+      // a background delete that hasn't settled yet doesn't reappear on resume.
+      const sorted = [...data]
+        .filter((c) => !pendingDeletes.has(c.id))
+        .sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
 
       // Reconcile the optimistic back-navigation entry: if the server list
       // doesn't include the conversation yet (e.g. a brief race where the
@@ -1117,20 +1169,36 @@ export default function ChatScreen() {
 
     const doDelete = async () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // Persist the delete intent BEFORE the network request so that if the app
+      // is backgrounded or the request fails mid-flight, loadConversations will
+      // still suppress this id from the server list on the next resume.
+      await addPendingDelete(convId);
+
+      // Optimistically remove from local state immediately.
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      // Clear any optimistic back-nav entry for this conv so loadConversations
+      // doesn't re-inject it after the delete.
+      if (optimisticBackConvRef.current?.id === convId) {
+        optimisticBackConvRef.current = null;
+      }
+      if (fromChat) goBackToList(true /* skipOptimistic */);
+
       try {
-        await fetch(`${getApiBase()}/anthropic/conversations/${convId}`, {
+        const res = await fetch(`${getApiBase()}/anthropic/conversations/${convId}`, {
           method: "DELETE",
           headers: { "X-Device-Id": deviceId },
         });
-        setConversations((prev) => prev.filter((c) => c.id !== convId));
-        // Clear any optimistic back-nav entry for this conv so loadConversations
-        // doesn't re-inject it after the delete.
-        if (optimisticBackConvRef.current?.id === convId) {
-          optimisticBackConvRef.current = null;
+        // 200 or 404 both mean the conversation is gone — clear the intent.
+        if (res.ok || res.status === 404) {
+          await removePendingDelete(convId);
         }
-        if (fromChat) goBackToList(true /* skipOptimistic */);
+        // Any other status (5xx, network error) leaves the intent in place so
+        // the next loadConversations still filters the id out.
       } catch (e) {
-        console.warn("Failed to delete conversation:", e);
+        console.warn("Failed to delete conversation (will retry filter on next load):", e);
+        // Intent remains in AsyncStorage — loadConversations will suppress the
+        // ghost until the DELETE eventually settles.
       }
     };
 
