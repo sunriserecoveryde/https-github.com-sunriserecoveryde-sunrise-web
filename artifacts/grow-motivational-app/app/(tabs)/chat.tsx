@@ -486,9 +486,15 @@ export default function ChatScreen() {
   const [isLoadingList, setIsLoadingList] = useState(true);
 
   // ---------------------------------------------------------------------------
-  // Rename modal state
+  // Rename modal state — list view
   // ---------------------------------------------------------------------------
   const [renamingConv, setRenamingConv] = useState<ConversationSummary | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // Chat view rename state
+  // ---------------------------------------------------------------------------
+  const [chatConvTitle, setChatConvTitle] = useState<string>("New conversation");
+  const [showChatRenameModal, setShowChatRenameModal] = useState(false);
 
   // ---------------------------------------------------------------------------
   // Chat view state
@@ -589,19 +595,6 @@ export default function ChatScreen() {
             // the outer catch aborts migration and legacy keys are preserved.
             await AsyncStorage.setItem(migratedMsgsKey(convId), rawMsgs);
 
-            // Seed the preview from the first user message (best-effort)
-            const firstUser = legacyMsgs.find((m) => m.role === "user");
-            if (firstUser?.content) {
-              const preview =
-                firstUser.content.length > 60
-                  ? firstUser.content.slice(0, 57) + "…"
-                  : firstUser.content;
-              setPreviews((prev) => {
-                const next = { ...prev, [String(convId)]: preview };
-                AsyncStorage.setItem(CONV_PREVIEWS_KEY, JSON.stringify(next)).catch(() => {});
-                return next;
-              });
-            }
           }
         }
 
@@ -740,12 +733,13 @@ export default function ChatScreen() {
   // ---------------------------------------------------------------------------
   // Open a past conversation
   // ---------------------------------------------------------------------------
-  const openConversation = useCallback(async (convId: number) => {
+  const openConversation = useCallback(async (convId: number, initialTitle?: string) => {
     if (!deviceId) return;
     setActiveConvId(convId);
     setChatMessages([]);
     setStreamingContent("");
     setInput("");
+    setChatConvTitle(initialTitle ?? "New conversation");
     setView("chat");
     setIsLoadingMessages(true);
 
@@ -823,6 +817,7 @@ export default function ChatScreen() {
       setChatMessages([]);
       setStreamingContent("");
       setInput("");
+      setChatConvTitle("New conversation");
       setView("chat");
       setIsLoadingMessages(false);
     } catch (e) {
@@ -860,11 +855,16 @@ export default function ChatScreen() {
       setConversations((prev) =>
         prev.map((c) => (c.id === convId ? { ...c, title: newTitle } : c))
       );
+      // If the user renamed the conversation they're currently inside, update
+      // the chat header title immediately without waiting for a list reload.
+      if (convId === activeConvId) {
+        setChatConvTitle(newTitle);
+      }
     } catch (e) {
       console.warn("Failed to rename conversation:", e);
       Alert.alert("Rename failed", "Could not save the new title. Please try again.");
     }
-  }, [deviceId]);
+  }, [deviceId, activeConvId]);
 
   // ---------------------------------------------------------------------------
   // Delete a conversation
@@ -1088,7 +1088,7 @@ export default function ChatScreen() {
               <ConversationListItem
                 conv={item}
                 colors={colors}
-                onOpen={() => openConversation(item.id)}
+                onOpen={() => openConversation(item.id, chatTitle(item))}
                 onDelete={() => deleteConversation(item.id, false)}
                 onRename={() => setRenamingConv(item)}
               />
@@ -1142,8 +1142,7 @@ export default function ChatScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ScreenHeader
-        title="AI Support Chat"
-        subtitle="Empathetic guidance for your recovery"
+        title={chatConvTitle}
         leftElement={
           <TouchableOpacity onPress={goBackToList} activeOpacity={0.7} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={20} color={colors.mutedForeground} />
@@ -1151,13 +1150,23 @@ export default function ChatScreen() {
         }
         rightElement={
           activeConvId !== null ? (
-            <TouchableOpacity
-              onPress={() => deleteConversation(activeConvId, true)}
-              activeOpacity={0.7}
-              style={styles.clearBtn}
-            >
-              <Feather name="trash-2" size={16} color={colors.mutedForeground} />
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                onPress={() => setShowChatRenameModal(true)}
+                activeOpacity={0.7}
+                style={styles.clearBtn}
+                accessibilityLabel="Rename conversation"
+              >
+                <Feather name="edit-2" size={16} color={colors.mutedForeground} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => deleteConversation(activeConvId, true)}
+                activeOpacity={0.7}
+                style={styles.clearBtn}
+              >
+                <Feather name="trash-2" size={16} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </>
           ) : undefined
         }
       />
@@ -1271,6 +1280,20 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Rename modal — floats above the chat view */}
+      <RenameModal
+        visible={showChatRenameModal}
+        initialTitle={chatConvTitle}
+        colors={colors}
+        onConfirm={(newTitle) => {
+          if (activeConvId !== null) {
+            renameConversation(activeConvId, newTitle);
+          }
+          setShowChatRenameModal(false);
+        }}
+        onCancel={() => setShowChatRenameModal(false)}
+      />
     </View>
   );
 }
