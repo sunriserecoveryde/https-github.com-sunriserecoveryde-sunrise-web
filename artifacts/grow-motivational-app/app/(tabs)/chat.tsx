@@ -943,7 +943,7 @@ export default function ChatScreen() {
   // ---------------------------------------------------------------------------
   // Rename a conversation
   // ---------------------------------------------------------------------------
-  const renameConversation = useCallback(async (convId: number, newTitle: string) => {
+  const renameConversation = useCallback(async (convId: number, newTitle: string, originalTitle: string) => {
     if (!deviceId) return;
 
     // Capture the previous restore snapshot before touching anything so we can
@@ -986,6 +986,11 @@ export default function ChatScreen() {
     } catch (e) {
       // Rename failed — roll back everything to the last confirmed state.
       pendingRenameTitleRef.current = null;
+      // Restore the list entry so it doesn't keep showing a title that never
+      // took effect on the server.
+      setConversations((prev) =>
+        prev.map((c) => (c.id === convId ? { ...c, title: originalTitle } : c))
+      );
       if (convId === activeConvId) {
         // Restore the header title from the previous snapshot (or fall back to
         // the raw title that was displayed before the user opened the modal).
@@ -1250,7 +1255,7 @@ export default function ChatScreen() {
           colors={colors}
           onConfirm={(newTitle) => {
             if (renamingConv) {
-              renameConversation(renamingConv.id, newTitle);
+              renameConversation(renamingConv.id, newTitle, chatTitle(renamingConv));
             }
             setRenamingConv(null);
           }}
@@ -1458,7 +1463,7 @@ export default function ChatScreen() {
             // goBackToList can show it in the optimistic entry if the user
             // navigates away before the PATCH response arrives.
             pendingRenameTitleRef.current = newTitle;
-            renameConversation(activeConvId, newTitle);
+            renameConversation(activeConvId, newTitle, chatConvTitle);
           }
           setShowChatRenameModal(false);
         }}
