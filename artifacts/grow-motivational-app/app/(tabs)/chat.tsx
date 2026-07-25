@@ -1006,11 +1006,38 @@ export default function ChatScreen() {
       // successive renames always roll back to a real server-confirmed state,
       // not an intermediate optimistic value written by an earlier in-flight call.
       pendingRenameTitleRef.current = null;
+
+      // The authoritative rollback title.
+      // - When the rename was initiated from the chat view (convId === activeConvId),
+      //   prefer lastConfirmedTitleRef so rapid successive renames always revert
+      //   to a real server-confirmed state rather than an intermediate optimistic
+      //   value from an earlier in-flight call.
+      // - When the rename was initiated from the list view (convId !== activeConvId),
+      //   lastConfirmedTitleRef tracks a different (or no) conversation, so we
+      //   must use originalTitle — the value the caller captured before the rename.
+      const rollbackTitle =
+        convId === activeConvId
+          ? (lastConfirmedTitleRef.current ?? originalTitle)
+          : originalTitle;
+
       // Restore the list entry so it doesn't keep showing a title that never
       // took effect on the server.
       setConversations((prev) =>
-        prev.map((c) => (c.id === convId ? { ...c, title: originalTitle } : c))
+        prev.map((c) => (c.id === convId ? { ...c, title: rollbackTitle } : c))
       );
+
+      // If the optimistic back-nav ref still holds the pending (failed) title,
+      // roll it back too.  Without this, a subsequent loadConversations call
+      // that doesn't find the conversation in the server response will
+      // re-inject the stale pending title from the ref, undoing the rollback
+      // above and leaving the list showing a title the server never accepted.
+      if (optimisticBackConvRef.current?.id === convId) {
+        optimisticBackConvRef.current = {
+          ...optimisticBackConvRef.current,
+          title: rollbackTitle,
+        };
+      }
+
       if (convId === activeConvId) {
         const confirmedTitle = lastConfirmedTitleRef.current;
         if (confirmedTitle !== null) {
