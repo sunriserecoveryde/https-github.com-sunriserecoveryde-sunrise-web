@@ -541,6 +541,13 @@ export default function ChatScreen() {
   // optimistic/unconfirmed title) from rolling back to an intermediate state.
   const lastConfirmedTitleRef = useRef<string | null>(null);
 
+  // Maps conversation id → last server-confirmed title for list-view entries.
+  // Populated whenever loadConversations returns server data and on rename
+  // success. Used by the rename-failure rollback to restore the list entry to
+  // a known-good server title rather than to whatever optimistic value the
+  // conversations array happened to hold when the modal was opened.
+  const confirmedListTitlesRef = useRef<Map<number, string>>(new Map());
+
   // Track online / offline transitions — cross-platform via NetInfo
   useEffect(() => {
     // Set initial connectivity state
@@ -719,6 +726,13 @@ export default function ChatScreen() {
           // Server hasn't returned it yet — keep optimistic entry at top
           baseList = [optimisticBack, ...sorted];
         }
+      }
+
+      // Record the server-confirmed title for every conversation returned so
+      // the rename-failure rollback can restore a known-good value even when
+      // the conversations array temporarily holds an optimistic entry.
+      for (const c of sorted) {
+        confirmedListTitlesRef.current.set(c.id, c.title);
       }
 
       if (pendingLegacyId !== null) {
@@ -994,6 +1008,9 @@ export default function ChatScreen() {
       if (convId === activeConvId) {
         lastConfirmedTitleRef.current = newTitle;
       }
+      // Advance the per-conv confirmed-title map so rollback always targets a
+      // real server-confirmed value, not an intermediate optimistic one.
+      confirmedListTitlesRef.current.set(convId, newTitle);
       // Clear the pending ref so goBackToList stops using it.
       pendingRenameTitleRef.current = null;
       // Update local state so the list reflects the new title immediately.
@@ -1001,24 +1018,22 @@ export default function ChatScreen() {
         prev.map((c) => (c.id === convId ? { ...c, title: newTitle } : c))
       );
     } catch (e) {
-      // Rename failed — roll back to the last server-confirmed title.
-      // Using lastConfirmedTitleRef (updated only on 2xx) guarantees that rapid
-      // successive renames always roll back to a real server-confirmed state,
-      // not an intermediate optimistic value written by an earlier in-flight call.
-      pendingRenameTitleRef.current = null;
-
-      // The authoritative rollback title.
-      // - When the rename was initiated from the chat view (convId === activeConvId),
-      //   prefer lastConfirmedTitleRef so rapid successive renames always revert
-      //   to a real server-confirmed state rather than an intermediate optimistic
-      //   value from an earlier in-flight call.
-      // - When the rename was initiated from the list view (convId !== activeConvId),
-      //   lastConfirmedTitleRef tracks a different (or no) conversation, so we
-      //   must use originalTitle — the value the caller captured before the rename.
+      // Rename failed — determine the authoritative rollback title.
+      // - Chat view (convId === activeConvId): prefer lastConfirmedTitleRef,
+      //   which is updated only on 2xx, so rapid successive renames always
+      //   revert to a real server-confirmed state, not an intermediate value.
+      // - List view (convId !== activeConvId): prefer confirmedListTitlesRef,
+      //   which is populated by loadConversations and rename success for every
+      //   conversation. This prevents the modal from being pre-filled with a
+      //   stale optimistic title (e.g. from a goBackToList back-nav entry) if
+      //   the rename is retried after a failure.
+      // Fall back to originalTitle only when neither ref has a record for this
+      // conversation (e.g. first rename ever on a brand-new conversation).
       const rollbackTitle =
         convId === activeConvId
           ? (lastConfirmedTitleRef.current ?? originalTitle)
-          : originalTitle;
+          : (confirmedListTitlesRef.current.get(convId) ?? originalTitle);
+      pendingRenameTitleRef.current = null;
 
       // Restore the list entry so it doesn't keep showing a title that never
       // took effect on the server.
