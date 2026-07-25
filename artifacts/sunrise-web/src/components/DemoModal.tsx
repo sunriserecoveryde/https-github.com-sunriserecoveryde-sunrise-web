@@ -41,24 +41,29 @@ export const DemoModal: React.FC<DemoModalProps> = ({ open, onClose, defaultPlan
     setErrorMsg('');
 
     try {
-      const body = new URLSearchParams({
-        'form-name': 'demo-request',
-        name: form.name,
-        email: form.email,
-        facility: form.facility,
-        bedCount: form.bedCount,
-        message: form.message,
-        plan: defaultPlan,
-        'bot-field': '',
-      });
-
-      const res = await fetch('/', {
+      const res = await fetch('https://formsubmit.co/ajax/hello@getsunriseos.com', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          facility: form.facility,
+          bedCount: form.bedCount,
+          message: form.message,
+          plan: defaultPlan,
+          _subject: `Demo Request — ${form.name} at ${form.facility}`,
+          _replyto: form.email,
+          _captcha: 'false',
+        }),
       });
 
-      if (!res.ok) throw new Error(`Submission failed (${res.status}). Please try again.`);
+      const data = await res.json();
+      if (data.success !== 'true' && data.success !== true) {
+        throw new Error('Submission failed. Please try again.');
+      }
 
       setStatus('success');
     } catch (err: any) {
