@@ -57,6 +57,7 @@ export const DemoModal: React.FC<DemoModalProps> = ({ open, onClose, defaultPlan
           _subject: `Demo Request — ${form.name} at ${form.facility}`,
           _replyto: form.email,
           _captcha: 'false',
+          _autoresponse: `Hi ${form.name},\n\nThanks for your interest in Sunrise OS!\n\nHere is your private link to explore the live demo:\n\nhttps://site-builder-sunriseos.replit.app/\n\nFeel free to click around — it's the real product. We'll be in touch within one business day to walk through your facility's specific workflow and answer any questions.\n\nBest,\nJim\nSunrise OS\njim@getsunriseos.com`,
         }),
       });
 
@@ -263,9 +264,9 @@ const SuccessView: React.FC<{ onClose: () => void }> = ({ onClose }) => (
         <CheckCircle className="w-7 h-7 text-sunrise-orange" />
       </div>
     </div>
-    <h2 className="text-2xl font-black text-white mb-2">You're on the list!</h2>
+    <h2 className="text-2xl font-black text-white mb-2">Check your email!</h2>
     <p className="text-slate-400 text-sm leading-relaxed max-w-xs mx-auto mb-8">
-      We'll reach out within one business day to schedule your personalized demo.
+      We just sent your private demo link. Click it to explore the live product — we'll follow up within one business day to walk through your workflow.
     </p>
     <button
       onClick={onClose}
