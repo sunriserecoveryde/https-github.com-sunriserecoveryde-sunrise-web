@@ -292,7 +292,7 @@ export function Contact() {
                       </div>
                       <div>
                         <p className="font-medium">Phone</p>
-                        <a href="tel:301-555-0192" className="text-muted-foreground hover:text-primary transition-colors">(301) 555-0192</a>
+                        <a href="tel:410-699-6092" className="text-muted-foreground hover:text-primary transition-colors">(301) 555-0192</a>
                       </div>
                     </div>
                     

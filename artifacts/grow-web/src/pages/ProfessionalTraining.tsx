@@ -56,14 +56,27 @@ function TrainingCard({ course }: { course: (typeof trainingCourses)[0] }) {
 
   return (
     <div className="glass-card rounded-xl p-6 flex flex-col h-full hover-elevate transition-all group">
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-3">
         <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${colorClass}`}>
           {course.delivery}
         </span>
-        <span className={`text-xs font-medium ${levelColor}`}>{course.level}</span>
+        <div className="flex items-center gap-2">
+          {course.cost === 'Free' && (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">FREE</span>
+          )}
+          <span className={`text-xs font-medium ${levelColor}`}>{course.level}</span>
+        </div>
       </div>
 
-      <span className="text-xs text-muted-foreground mb-2">{course.category}</span>
+      <div className="flex items-center gap-1.5 mb-2">
+        <span className="text-xs text-muted-foreground">{course.category}</span>
+        {course.provider && (
+          <>
+            <span className="text-muted-foreground/40 text-xs">·</span>
+            <span className="text-xs text-muted-foreground/70">{course.provider}</span>
+          </>
+        )}
+      </div>
 
       <h3 className="text-base font-heading font-semibold mb-2 group-hover:text-primary transition-colors leading-snug line-clamp-2">
         {course.title}
@@ -93,12 +106,30 @@ function TrainingCard({ course }: { course: (typeof trainingCourses)[0] }) {
             <span className="text-primary font-medium">Next: {course.nextSession}</span>
           </div>
         )}
+        {course.status && (
+          <div className="flex items-center gap-1.5">
+            <CheckCircle className="w-3.5 h-3.5" />
+            <span>{course.status}</span>
+          </div>
+        )}
       </div>
 
       <div className="pt-4 border-t border-white/5 mt-auto">
-        <button className="w-full py-2 text-sm font-medium text-center rounded-lg border border-primary/40 text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2">
-          Learn More <ArrowRight className="w-4 h-4" />
-        </button>
+        {course.url ? (
+          <a
+            href={course.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2 text-sm font-medium text-center rounded-lg border border-primary/40 text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
+          >
+            {course.status === 'Recorded' ? 'Access Recording' : course.status === 'Upcoming' ? 'Register Free' : 'Learn More'}
+            <ArrowRight className="w-4 h-4" />
+          </a>
+        ) : (
+          <button className="w-full py-2 text-sm font-medium text-center rounded-lg border border-primary/40 text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2">
+            Learn More <ArrowRight className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </div>
   );
