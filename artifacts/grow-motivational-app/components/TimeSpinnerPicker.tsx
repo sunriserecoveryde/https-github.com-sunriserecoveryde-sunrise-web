@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
@@ -26,6 +26,11 @@ interface Props {
 export function TimeSpinnerPicker({ hour, minute, onHourChange, onMinuteChange }: Props) {
   const colors = useColors();
 
+  // Track whether a long-press already handled the interaction so the
+  // subsequent onPress (fired on finger-release) is suppressed.
+  const minuteUpLongPressed = useRef(false);
+  const minuteDownLongPressed = useRef(false);
+
   // Derived display values
   const isPM = hour >= 12;
   const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
@@ -35,10 +40,34 @@ export function TimeSpinnerPicker({ hour, minute, onHourChange, onMinuteChange }
     fn();
   };
 
+  const bumpHeavy = (fn: () => void) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    fn();
+  };
+
   const incrementHour = () => bump(() => onHourChange((hour + 1) % 24));
   const decrementHour = () => bump(() => onHourChange((hour - 1 + 24) % 24));
-  const incrementMinute = () => bump(() => onMinuteChange((minute + 1) % 60));
-  const decrementMinute = () => bump(() => onMinuteChange((minute - 1 + 60) % 60));
+
+  // Short tap: ±1 minute, but skip if long-press already fired this gesture
+  const handleMinuteUpPress = () => {
+    if (minuteUpLongPressed.current) { minuteUpLongPressed.current = false; return; }
+    bump(() => onMinuteChange((minute + 1) % 60));
+  };
+  const handleMinuteDownPress = () => {
+    if (minuteDownLongPressed.current) { minuteDownLongPressed.current = false; return; }
+    bump(() => onMinuteChange((minute - 1 + 60) % 60));
+  };
+
+  // Long-press: ±5 minutes, mark flag so the trailing onPress is ignored
+  const handleMinuteUpLongPress = () => {
+    minuteUpLongPressed.current = true;
+    bumpHeavy(() => onMinuteChange((minute + 5) % 60));
+  };
+  const handleMinuteDownLongPress = () => {
+    minuteDownLongPressed.current = true;
+    bumpHeavy(() => onMinuteChange((minute - 5 + 60) % 60));
+  };
+
   const togglePeriod = () => bump(() => onHourChange((hour + 12) % 24));
 
   return (
@@ -98,13 +127,23 @@ export function TimeSpinnerPicker({ hour, minute, onHourChange, onMinuteChange }
 
         {/* Minute column */}
         <View style={styles.spinnerCol}>
-          <TouchableOpacity onPress={incrementMinute} style={[styles.arrowBtn, { backgroundColor: colors.muted }]}>
+          <TouchableOpacity
+            onPress={handleMinuteUpPress}
+            onLongPress={handleMinuteUpLongPress}
+            delayLongPress={300}
+            style={[styles.arrowBtn, { backgroundColor: colors.muted }]}
+          >
             <Feather name="chevron-up" size={18} color={colors.foreground} />
           </TouchableOpacity>
           <Text style={[styles.spinnerValue, { color: colors.foreground }]}>
             {String(minute).padStart(2, '0')}
           </Text>
-          <TouchableOpacity onPress={decrementMinute} style={[styles.arrowBtn, { backgroundColor: colors.muted }]}>
+          <TouchableOpacity
+            onPress={handleMinuteDownPress}
+            onLongPress={handleMinuteDownLongPress}
+            delayLongPress={300}
+            style={[styles.arrowBtn, { backgroundColor: colors.muted }]}
+          >
             <Feather name="chevron-down" size={18} color={colors.foreground} />
           </TouchableOpacity>
           <Text style={[styles.spinnerUnit, { color: colors.mutedForeground }]}>MIN</Text>
