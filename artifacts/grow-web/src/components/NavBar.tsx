@@ -6,10 +6,10 @@ const links = [
   { name: 'Home', href: '/' },
   { name: 'About', href: '/about' },
   { name: 'Education', href: '/education' },
-  { name: 'Recovery Resources', href: '/coming-soon' },
-  { name: 'Professional Training', href: '/coming-soon' },
-  { name: 'Media', href: '/coming-soon' },
-  { name: 'Publishing', href: '/coming-soon' },
+  { name: 'Recovery Resources', href: '/recovery-resources' },
+  { name: 'Professional Training', href: '/professional-training' },
+  { name: 'Media', href: '/media' },
+  { name: 'Publishing', href: '/publishing' },
   { name: 'SunriseOS', href: '/sunriseos' },
   { name: 'The Sunrise Group', href: '/the-sunrise-group' }
 ];

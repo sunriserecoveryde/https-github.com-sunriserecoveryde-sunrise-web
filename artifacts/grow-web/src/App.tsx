@@ -6,6 +6,10 @@ import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { Home } from './pages/Home';
 import { About } from './pages/About';
 import { Education } from './pages/Education';
+import { RecoveryResources } from './pages/RecoveryResources';
+import { ProfessionalTraining } from './pages/ProfessionalTraining';
+import { Media } from './pages/Media';
+import { Publishing } from './pages/Publishing';
 import { SunriseOS } from './pages/SunriseOS';
 import { TheSunriseGroup } from './pages/TheSunriseGroup';
 import { Contact } from './pages/Contact';
@@ -20,6 +24,10 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/about" component={About} />
       <Route path="/education" component={Education} />
+      <Route path="/recovery-resources" component={RecoveryResources} />
+      <Route path="/professional-training" component={ProfessionalTraining} />
+      <Route path="/media" component={Media} />
+      <Route path="/publishing" component={Publishing} />
       <Route path="/sunriseos" component={SunriseOS} />
       <Route path="/the-sunrise-group" component={TheSunriseGroup} />
       <Route path="/contact" component={Contact} />
