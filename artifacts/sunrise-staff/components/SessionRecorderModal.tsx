@@ -25,6 +25,7 @@ import React, {
   useCallback,
 } from 'react';
 import {
+  Alert,
   Animated,
   Easing,
   KeyboardAvoidingView,
@@ -222,9 +223,28 @@ export function SessionRecorderModal({
   }, [editableTranscript, onUseTranscript]);
 
   const handleClose = useCallback(async () => {
+    const hasUnusedTranscript = editableTranscript.trim().length > 0 && !inserted;
+    if (hasUnusedTranscript) {
+      Alert.alert(
+        'Discard transcript?',
+        'You have a transcript that hasn\'t been inserted into the note yet. Closing will discard it.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: async () => {
+              if (isRecording) await stop();
+              onClose();
+            },
+          },
+        ],
+      );
+      return;
+    }
     if (isRecording) await stop();
     onClose();
-  }, [isRecording, stop, onClose]);
+  }, [editableTranscript, inserted, isRecording, stop, onClose]);
 
   const wordCount = editableTranscript.trim().split(/\s+/).filter(Boolean).length;
 
