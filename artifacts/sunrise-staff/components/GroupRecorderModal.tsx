@@ -437,11 +437,13 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
 
   const allSelected = patients.length > 0 && selectedIds.size === patients.length;
 
-  // Compute how many notes each patient already has this shift (patientId → count)
+  // Compute how many group-session notes each patient already has this shift (patientId → count).
+  // Only 'group-session' notes are counted so that manual observation notes don't
+  // trigger the duplicate warning and the badge remains accurate after a cold-start.
   const noteCountByPatient = useMemo<Map<string, number>>(() => {
     const result = new Map<string, number>();
     patients.forEach(p => {
-      const count = getNotesForPatient(p.id).length;
+      const count = getNotesForPatient(p.id).filter(n => n.noteType === 'group-session').length;
       if (count > 0) result.set(p.id, count);
     });
     return result;
