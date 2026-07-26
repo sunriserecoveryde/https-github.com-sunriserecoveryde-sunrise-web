@@ -29,10 +29,27 @@ function Mark({ dark }: { dark: boolean }) {
     [26.1,  41.5,   6.2,  39.4],  // -84°
   ] as const;
 
+  const gradId = dark ? "sunGradDark" : "sunGradLight";
+
   return (
     <svg width="150" height="142" viewBox="0 0 100 98" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Soft aura */}
-      <circle cx="50" cy="44" r="36" fill="#FEF08A" opacity={dark ? "0.11" : "0.08"}/>
+      <defs>
+        <radialGradient id={gradId} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+          {/* Bright lemon-yellow hot centre */}
+          <stop offset="0%"   stopColor="#FFF176" stopOpacity="1"/>
+          {/* Warm yellow */}
+          <stop offset="28%"  stopColor="#FFE033" stopOpacity="1"/>
+          {/* Gold / amber */}
+          <stop offset="55%"  stopColor="#FBBF24" stopOpacity="1"/>
+          {/* Deep amber transition */}
+          <stop offset="76%"  stopColor="#F97316" stopOpacity="1"/>
+          {/* Rich orange at the rim */}
+          <stop offset="100%" stopColor={dark ? "#EA580C" : "#C2500A"} stopOpacity="1"/>
+        </radialGradient>
+      </defs>
+
+      {/* Soft aura glow behind everything */}
+      <circle cx="50" cy="44" r="36" fill="#FEF08A" opacity={dark ? "0.13" : "0.09"}/>
 
       {/* Rays — slender, dense */}
       {rays.map(([x1, y1, x2, y2], i) => (
@@ -44,10 +61,8 @@ function Mark({ dark }: { dark: boolean }) {
       <circle cx="50" cy="44" r="31" fill="none" stroke="#FBBF24"
         strokeWidth="1.4" opacity={dark ? "0.65" : "0.50"}/>
 
-      {/* Sun disc */}
-      <circle cx="50" cy="44" r="24" fill={orange}/>
-      <circle cx="50" cy="44" r="15" fill="#FBBF24" opacity="0.80"/>
-      <circle cx="50" cy="44" r="8"  fill="#FEF9C3" opacity="0.90"/>
+      {/* Sun disc — smooth radial gradient, orange rim → bright yellow centre */}
+      <circle cx="50" cy="44" r="24" fill={`url(#${gradId})`}/>
 
       {/* Horizon */}
       <line x1="0" y1="52" x2="100" y2="52" stroke={hLine} strokeWidth="1.5" strokeLinecap="round"/>
