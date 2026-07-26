@@ -357,6 +357,74 @@ export async function loadWithdrawalFiltersState(
   }
 }
 
+// ─── NursingNotes load ────────────────────────────────────────────────────────
+
+/** Single nursing note — minimal shape needed for rehydration logic. */
+export interface PersistedNote {
+  id: string;
+  text: string;
+  noteType: string;
+  createdAt: string;
+  displayTime: string;
+  groupSessionType?: string;
+  editedAt?: string;
+  editedBy?: string;
+  history?: Array<{ text: string; noteType: string; savedAt: string; editedBy: string }>;
+}
+
+/** Shape written to AsyncStorage by NursingNotesProvider. */
+export interface PersistedNotes {
+  shiftDate: string;
+  notesByPatient: Record<string, PersistedNote[]>;
+}
+
+/**
+ * Mirrors the mount useEffect in NursingNotesProvider:
+ *
+ *   AsyncStorage.getItem(NOTES_KEY)
+ *     .then(raw => {
+ *       if (raw !== null) {
+ *         const saved = JSON.parse(raw) as PersistedNotes;
+ *         if (saved.shiftDate === todayDateString() && saved.notesByPatient) {
+ *           setNotesByPatient(saved.notesByPatient);
+ *         }
+ *         // else stale shift — discard
+ *       }
+ *     })
+ *     .catch(() => {})
+ *     .finally(() => setLoading(false));
+ *
+ * Key property: `loaded: true` (i.e. isRehydrating flipping to false) is ONLY
+ * set after the storage getItem resolves.  While the read is in-flight,
+ * `isRehydrating` remains true and the patient-detail header breakdown chips
+ * (guarded by `!notesIsRehydrating`) stay hidden.
+ *
+ * `shiftDate` must equal `todayString` for the notes to be applied; stale
+ * shift notes are silently discarded (returned as an empty map).
+ *
+ * Errors are swallowed so `loaded: true` is always returned — the notes section
+ * must not stay permanently invisible when storage fails.
+ */
+export async function loadNursingNotesState(
+  storage: StorageAdapter,
+  key: string,
+  todayString: string,
+): Promise<{ notesByPatient: Record<string, PersistedNote[]>; loaded: true }> {
+  try {
+    const raw = await storage.getItem(key);
+    if (raw !== null) {
+      const saved = JSON.parse(raw) as PersistedNotes;
+      if (saved.shiftDate === todayString && saved.notesByPatient) {
+        return { notesByPatient: saved.notesByPatient, loaded: true };
+      }
+      // Stale shift — discard silently
+    }
+  } catch {
+    // Corrupt JSON or storage error — fall through to return empty
+  }
+  return { notesByPatient: {}, loaded: true };
+}
+
 // ─── Handoff load ─────────────────────────────────────────────────────────────
 
 export type Shift = 'day' | 'eve' | 'night';
