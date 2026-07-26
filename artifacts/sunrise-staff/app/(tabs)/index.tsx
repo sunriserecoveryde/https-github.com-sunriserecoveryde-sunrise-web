@@ -383,7 +383,7 @@ function BedCard({
         <View style={styles.cardTopRight}>
           {isAlert && <Ionicons name="warning" size={14} color={colors.critical} style={{ marginBottom: 2 }} />}
           <AcuityPill acuity={patient.acuity} />
-          {noteCount > 0 && (
+          {!isRehydrating && noteCount > 0 && (
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
