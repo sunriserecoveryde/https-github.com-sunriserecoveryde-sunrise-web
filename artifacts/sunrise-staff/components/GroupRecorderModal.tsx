@@ -272,6 +272,8 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
   // Per-patient overrides: patientId → custom transcript text
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [attached, setAttached] = useState(false);
+  // Filter: show only patients without a group note today
+  const [filterUnoted, setFilterUnoted] = useState(false);
 
   // Draft-restore banner: null = hidden, 'pending' = showing offer, 'dismissed' = user declined
   const [draftBanner, setDraftBanner] = useState<'hidden' | 'pending' | 'dismissed'>('hidden');
@@ -329,6 +331,7 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
       setSessionType(GROUP_SESSION_TYPES[0].value);
       setDraftBanner('hidden');
       setPendingDraftText('');
+      setFilterUnoted(false);
       draftClearedRef.current = false;
 
       // Check for a previously saved draft and offer to restore it
@@ -402,10 +405,38 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
     setOverrides(prev => ({ ...prev, [id]: text }));
   }, []);
 
+  // Compute how many GROUP-SESSION notes each patient already has this shift (patientId → count).
+  // Only 'group-session' notes are counted so that manual observation/med-update/incident notes
+  // don't trigger the duplicate warning or hide a patient behind the "Without note today" filter.
+  const noteCountByPatient = useMemo<Map<string, number>>(() => {
+    const result = new Map<string, number>();
+    patients.forEach(p => {
+      const count = getNotesForPatient(p.id).filter(n => n.noteType === 'group-session').length;
+      if (count > 0) result.set(p.id, count);
+    });
+    return result;
+  }, [patients, getNotesForPatient]);
+
+  // Patients shown in the attach checklist (filtered when filterUnoted is on)
+  const displayPatients = useMemo(
+    () => filterUnoted ? patients.filter(p => !noteCountByPatient.has(p.id)) : patients,
+    [filterUnoted, patients, noteCountByPatient],
+  );
+
+  // Count selected patients who already have at least one note today
+  const duplicateCount = useMemo(
+    () => [...selectedIds].filter(id => noteCountByPatient.has(id)).length,
+    [selectedIds, noteCountByPatient],
+  );
+
   const handleSelectAll = useCallback(() => {
-    setSelectedIds(new Set(patients.map(p => p.id)));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      displayPatients.forEach(p => next.add(p.id));
+      return next;
+    });
     Haptics.selectionAsync();
-  }, [patients]);
+  }, [displayPatients]);
 
   const handleClearAll = useCallback(() => {
     setSelectedIds(new Set());
@@ -435,25 +466,7 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
 
   const wordCount = editableTranscript.trim().split(/\s+/).filter(Boolean).length;
 
-  const allSelected = patients.length > 0 && selectedIds.size === patients.length;
-
-  // Compute how many group-session notes each patient already has this shift (patientId → count).
-  // Only 'group-session' notes are counted so that manual observation notes don't
-  // trigger the duplicate warning and the badge remains accurate after a cold-start.
-  const noteCountByPatient = useMemo<Map<string, number>>(() => {
-    const result = new Map<string, number>();
-    patients.forEach(p => {
-      const count = getNotesForPatient(p.id).filter(n => n.noteType === 'group-session').length;
-      if (count > 0) result.set(p.id, count);
-    });
-    return result;
-  }, [patients, getNotesForPatient]);
-
-  // Count selected patients who already have at least one note today
-  const duplicateCount = useMemo(
-    () => [...selectedIds].filter(id => noteCountByPatient.has(id)).length,
-    [selectedIds, noteCountByPatient],
-  );
+  const allSelected = displayPatients.length > 0 && displayPatients.every(p => selectedIds.has(p.id));
 
   return (
     <Modal
@@ -755,11 +768,25 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
         {/* ════════════════ PHASE 2: ATTACH ════════════════ */}
         {phase === 'attach' && (
           <>
-            {/* Select all / clear all */}
+            {/* Toolbar: filter chip + count + select all */}
             <View style={styles.attachToolbar}>
-              <Text style={styles.attachToolbarLabel}>
-                {patients.length} patient{patients.length !== 1 ? 's' : ''} in today's census
-              </Text>
+              <View style={styles.attachToolbarLeft}>
+                <Text style={styles.attachToolbarLabel}>
+                  {filterUnoted
+                    ? `${displayPatients.length} without note today`
+                    : `${patients.length} patient${patients.length !== 1 ? 's' : ''} in census`}
+                </Text>
+                <Pressable
+                  onPress={() => { setFilterUnoted(f => !f); Haptics.selectionAsync(); }}
+                  style={[styles.filterChip, filterUnoted && styles.filterChipActive]}
+                  hitSlop={8}
+                >
+                  {filterUnoted && <Ionicons name="checkmark" size={11} color={WHITE} />}
+                  <Text style={[styles.filterChipText, filterUnoted && styles.filterChipTextActive]}>
+                    Without note today
+                  </Text>
+                </Pressable>
+              </View>
               <Pressable
                 onPress={allSelected ? handleClearAll : handleSelectAll}
                 hitSlop={8}
@@ -780,8 +807,13 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
                   <Ionicons name="people-outline" size={36} color={SLATE} />
                   <Text style={styles.emptyAttachText}>No patients on the census today</Text>
                 </View>
+              ) : displayPatients.length === 0 ? (
+                <View style={styles.emptyAttach}>
+                  <Ionicons name="checkmark-circle-outline" size={36} color={GREEN} />
+                  <Text style={styles.emptyAttachText}>All patients already have a group note today</Text>
+                </View>
               ) : (
-                patients.map(p => (
+                displayPatients.map(p => (
                   <PatientRow
                     key={p.id}
                     patient={p}
@@ -1023,10 +1055,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER,
-    backgroundColor: SLATE_LIGHT,
+    backgroundColor: SLATE_LIGHT, gap: 8,
   },
-  attachToolbarLabel: { fontSize: 13, fontFamily: 'Inter_400Regular', color: SLATE },
+  attachToolbarLeft: { flex: 1, gap: 6 },
+  attachToolbarLabel: { fontSize: 12, fontFamily: 'Inter_400Regular', color: SLATE },
   attachToolbarAction: { fontSize: 13, fontFamily: 'Inter_700Bold', color: TEAL },
+
+  // "Without note today" filter chip
+  filterChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 999, borderWidth: 1,
+    borderColor: BORDER, backgroundColor: WHITE,
+  },
+  filterChipActive: { backgroundColor: TEAL, borderColor: TEAL_DARK },
+  filterChipText: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: SLATE },
+  filterChipTextActive: { color: WHITE },
 
   // Patient rows
   patientRow: {
