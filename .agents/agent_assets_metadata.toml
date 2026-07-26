@@ -77,4 +77,10 @@ title = "V3B Refined — Orange lines"
 id = "QvAwRsy6ond7ycOG7IsJz"
 uri = "file://assets/sunrise-group-final.png"
 type = "image"
-title = "The Sunrise Grp., Inc. — SunriseOS Brand Colors"
+title = "The Sunrise Grp., Inc. — Logo (White Background)"
+
+[[outputs]]
+id = "FvoHMt8quaoLMOV-2KKio"
+uri = "file://assets/sunrise-group-final-transparent.png"
+type = "image"
+title = "The Sunrise Grp., Inc. — Logo (Transparent PNG)"
