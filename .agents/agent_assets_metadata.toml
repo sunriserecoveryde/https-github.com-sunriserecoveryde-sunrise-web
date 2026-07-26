@@ -36,3 +36,15 @@ id = "V5IDJ1TF5N_2DonZ3268o"
 uri = "file://assets/sunrise-group-logo-concept3.png"
 type = "image"
 title = "Concept C — Four-Subsidiary Sunburst (navy + teal + amber + sage)"
+
+[[outputs]]
+id = "9jt4UYShs3wfPKES-lIoP"
+uri = "file://assets/sunrise-group-v2a.png"
+type = "image"
+title = "V2A — Stacked lockup (mark above, name below)"
+
+[[outputs]]
+id = "5k3dytxfO_g-WJdTn6SvB"
+uri = "file://assets/sunrise-group-v2b.png"
+type = "image"
+title = "V2B — Horizontal lockup (mark left, name right)"
