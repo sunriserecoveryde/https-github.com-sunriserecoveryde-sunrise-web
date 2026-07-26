@@ -10,6 +10,7 @@ import Subsidiaries from '@/pages/Subsidiaries';
 import Governance from '@/pages/Governance';
 import Mission from '@/pages/Mission';
 import Contact from '@/pages/Contact';
+import LogoGallery from '@/pages/LogoGallery';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ function Router() {
           <Route path="/governance" component={Governance} />
           <Route path="/mission" component={Mission} />
           <Route path="/contact" component={Contact} />
+          <Route path="/logo-gallery" component={LogoGallery} />
           <Route component={NotFound} />
         </Switch>
       </main>
