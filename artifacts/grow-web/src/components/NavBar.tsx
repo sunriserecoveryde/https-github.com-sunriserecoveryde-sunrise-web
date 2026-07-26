@@ -22,7 +22,7 @@ const mainLinks = [
     ]
   },
   { name: 'SunriseOS', href: '/sunriseos' },
-  { name: 'The Sunrise Group', href: '/the-sunrise-group' },
+  { name: 'The Sunrise Grp., Inc.', href: '/the-sunrise-group' },
   { name: 'Partnership', href: '/partnership' },
 ];
 
@@ -36,7 +36,7 @@ const mobileLinks = [
   { name: 'Media', href: '/media' },
   { name: 'Publishing', href: '/publishing' },
   { name: 'SunriseOS', href: '/sunriseos' },
-  { name: 'The Sunrise Group', href: '/the-sunrise-group' },
+  { name: 'The Sunrise Grp., Inc.', href: '/the-sunrise-group' },
   { name: 'Partnership', href: '/partnership' },
 ];
 

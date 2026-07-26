@@ -72,7 +72,7 @@ export function Footer() {
             <h4 className="font-heading font-semibold mb-5 text-foreground">Company</h4>
             <ul className="space-y-3">
               <li><Link href="/about" className="text-muted-foreground hover:text-primary transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">About</Link></li>
-              <li><Link href="/the-sunrise-group" className="text-muted-foreground hover:text-primary transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">The Sunrise Group</Link></li>
+              <li><Link href="/the-sunrise-group" className="text-muted-foreground hover:text-primary transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">The Sunrise Grp., Inc.</Link></li>
               <li><Link href="/sunriseos" className="text-muted-foreground hover:text-primary transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">SunriseOS</Link></li>
               <li><Link href="/partnership" className="text-muted-foreground hover:text-primary transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">Partner With Us</Link></li>
               <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">Contact</Link></li>

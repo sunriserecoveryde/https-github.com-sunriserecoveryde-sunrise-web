@@ -70,7 +70,7 @@ If and when our affiliated clinical technology entity, SunriseOS, launches servi
   {
     icon: Heart,
     title: "SunriseOS — Under Development",
-    content: `SunriseOS is a clinical operating system currently under active development by The Sunrise Group. References to SunriseOS features, capabilities, screenshots, and demonstrations on this website represent the intended product design and are subject to change.
+    content: `SunriseOS is a clinical operating system currently under active development by The Sunrise Grp., Inc. References to SunriseOS features, capabilities, screenshots, and demonstrations on this website represent the intended product design and are subject to change.
 
 SunriseOS is not yet a certified or cleared medical device. Features described, including AI-assisted clinical documentation, are not FDA-cleared and are not intended to diagnose, treat, cure, or prevent any disease.
 

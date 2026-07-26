@@ -29,7 +29,7 @@ export function FounderStory() {
               Throughout his career, Jim has supported individuals and families affected by substance use disorders while helping clinical teams provide structured, accountable, and compassionate care. He believes treatment should go beyond stabilization — helping people develop honesty, responsibility, consistency, practical life skills, and a sustainable foundation for long-term recovery.
             </p>
             <p>
-              Jim is the founder and visionary behind The Sunrise Group, a developing family of organizations focused on improving addiction treatment, recovery support, clinical operations, and community impact. His vision includes ethical, evidence-informed treatment, accountable recovery housing, innovative technology for treatment providers, and a charitable foundation for people who lack access to care.
+              Jim is the founder and visionary behind The Sunrise Grp., Inc., a developing family of organizations focused on improving addiction treatment, recovery support, clinical operations, and community impact. His vision includes ethical, evidence-informed treatment, accountable recovery housing, innovative technology for treatment providers, and a charitable foundation for people who lack access to care.
             </p>
             <p>
               Known for being dependable, direct, supportive, and genuine, Jim believes people should never be permanently defined by their past. As a husband and father, he considers time his most valuable asset. His goal is to serve the recovery community, create security for his family, and build a legacy that continues helping others for generations.

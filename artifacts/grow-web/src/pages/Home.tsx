@@ -111,7 +111,7 @@ export function Home() {
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4">
           <SectionHeading 
-            title="Part of The Sunrise Group" 
+            title="Part of The Sunrise Grp., Inc." 
             subtitle="Grow Motivational operates within a broader ecosystem of clinical care, technology, and advocacy."
             align="center"
           />

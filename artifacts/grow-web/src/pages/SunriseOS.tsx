@@ -33,7 +33,7 @@ export function SunriseOS() {
             One Intelligent Platform for <span className="text-gradient">Behavioral Health</span>
           </h1>
           <p className="text-xl text-muted-foreground leading-relaxed mb-10">
-            SunriseOS is the technology backbone of The Sunrise Group, powering clinical operations with AI-assisted documentation and seamlessly integrated educational delivery.
+            SunriseOS is the technology backbone of The Sunrise Grp., Inc., powering clinical operations with AI-assisted documentation and seamlessly integrated educational delivery.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/contact" className="px-8 py-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors">

@@ -85,7 +85,7 @@ export function PrivacyPolicy() {
               <p>We do not sell, rent, or trade your personal information. We may share information in limited circumstances:</p>
               <ul className="list-disc list-inside space-y-1">
                 <li><strong className="text-foreground">Service Providers:</strong> We may share data with trusted vendors who assist us in operating the Site, sending communications, or providing services (e.g., email platforms, analytics providers). These vendors are contractually required to protect your data and use it only for the purposes we specify.</li>
-                <li><strong className="text-foreground">The Sunrise Group Affiliates:</strong> We may share information within our affiliated entities (The Sunrise Group, SunriseOS) when relevant to your inquiry or when you have indicated interest in their services.</li>
+                <li><strong className="text-foreground">The Sunrise Grp., Inc. Affiliates:</strong> We may share information within our affiliated entities (The Sunrise Grp., Inc., SunriseOS) when relevant to your inquiry or when you have indicated interest in their services.</li>
                 <li><strong className="text-foreground">Legal Requirements:</strong> We may disclose information if required to do so by law, court order, or to protect the rights, safety, or property of Grow Motivational or others.</li>
               </ul>
             </section>

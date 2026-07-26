@@ -60,8 +60,8 @@ export function TheSunriseGroup() {
   return (
     <Layout>
       <PageMeta
-        title="The Sunrise Group | Behavioral Health Ecosystem"
-        description="The Sunrise Group is an integrated family of organizations tackling behavioral health from every angle — clinical care, technology (SunriseOS), education (Grow Motivational), and philanthropy."
+        title="The Sunrise Grp., Inc. | Behavioral Health Ecosystem"
+        description="The Sunrise Grp., Inc. is an integrated family of organizations tackling behavioral health from every angle — clinical care, technology (SunriseOS), education (Grow Motivational), and philanthropy."
         ogUrl="https://www.growmotivational.com/the-sunrise-group"
       />
       <HeroSection 
@@ -71,9 +71,23 @@ export function TheSunriseGroup() {
             Transforming <span className="text-gradient">Behavioral Health</span>
           </>
         }
-        subheadline="The Sunrise Group is an integrated ecosystem designed to tackle the addiction crisis from every angle: clinical care, empowering technology, accessible education, and philanthropic support."
+        subheadline="The Sunrise Grp., Inc. is an integrated ecosystem designed to tackle the addiction crisis from every angle: clinical care, empowering technology, accessible education, and philanthropic support."
         minHeight="min-h-[60vh]"
       />
+
+      {/* Parent company logo lockup */}
+      <section className="py-14 border-b border-white/5 bg-muted/10">
+        <div className="container mx-auto px-4 flex flex-col items-center gap-4 text-center">
+          <img
+            src="/sunrise-grp-logo.png"
+            alt="The Sunrise Grp., Inc."
+            className="h-28 w-auto object-contain"
+          />
+          <p className="text-sm text-muted-foreground max-w-xl">
+            The Sunrise Grp., Inc. is the parent holding company for Sunrise Recovery, SunriseOS, Grow Motivational, and The Sunrise Foundation.
+          </p>
+        </div>
+      </section>
 
       <section className="py-16 bg-muted/20 border-y border-white/5">
         <div className="container mx-auto px-4">
@@ -122,7 +136,7 @@ export function TheSunriseGroup() {
           <h2 className="text-3xl md:text-4xl font-heading font-bold mb-8">How We Work Together</h2>
           <div className="prose prose-invert prose-lg mx-auto text-muted-foreground">
             <p>
-              The power of The Sunrise Group lies in the synergy between its divisions. Our clinical team at Sunrise Recovery identifies the most pressing challenges patients face daily. This insight flows directly to Grow Motivational, which develops targeted educational resources to address those exact needs.
+              The power of The Sunrise Grp., Inc. lies in the synergy between its divisions. Our clinical team at Sunrise Recovery identifies the most pressing challenges patients face daily. This insight flows directly to Grow Motivational, which develops targeted educational resources to address those exact needs.
             </p>
             <p>
               Those resources are then seamlessly delivered to patients and staff through SunriseOS, our proprietary technology platform, which tracks engagement and correlates it with clinical outcomes. 
