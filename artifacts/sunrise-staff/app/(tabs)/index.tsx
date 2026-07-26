@@ -396,7 +396,7 @@ function BedCard({
               <Text style={styles.noteCountText}>{noteCount}</Text>
             </Pressable>
           )}
-          {showBreakdown ? (
+          {!isRehydrating && showBreakdown ? (
             <View style={styles.noteTypeBreakdownRow}>
               {incidentCount > 0 && (
                 <Pressable
@@ -429,7 +429,7 @@ function BedCard({
                 </Pressable>
               )}
             </View>
-          ) : urgentNoteType != null && (() => {
+          ) : !isRehydrating && urgentNoteType != null && (() => {
             const tc = urgentNoteType === 'incident'
               ? { bg: colors.criticalBg, text: colors.critical }
               : urgentNoteType === 'med-update'
