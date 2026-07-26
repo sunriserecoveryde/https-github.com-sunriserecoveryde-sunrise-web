@@ -5,8 +5,9 @@ import { useSessionChart, SessionNote } from '../context/SessionChartContext';
 import { useAuth } from '../context/AuthContext';
 import {
   Search, Filter, PenTool, CheckCircle, Clock, ChevronDown, ChevronUp,
-  FileText, AlertTriangle, Plus, Download, Eye, Sparkles
+  FileText, AlertTriangle, Plus, Download, Eye, Sparkles, Mic,
 } from 'lucide-react';
+import { SessionRecorderModal } from '../components/ui/SessionRecorderModal';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
@@ -245,8 +246,9 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
   const [type, setType] = useState('Individual');
   const [patient, setPatient] = useState('p_demo');
   const [values, setValues] = useState<Record<string, string>>({});
-  // Signature modal state
+  // Signature + recorder modal state
   const [sigOpen, setSigOpen] = useState(false);
+  const [showRecorder, setShowRecorder] = useState(false);
   const { currentStaff } = useAuth();
   const authorLabel = currentStaff
     ? `${currentStaff.firstName} ${currentStaff.lastName}${(currentStaff.credentials ?? []).length ? ', ' + (currentStaff.credentials ?? []).join(', ') : ''}`
@@ -291,7 +293,15 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
         <h2 className="font-bold text-navy text-lg flex items-center gap-2">
           <PenTool className="w-5 h-5 text-sunrise-blue" /> New Progress Note
         </h2>
-        <button onClick={onClose} className="text-slate hover:text-navy text-sm">Cancel</button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowRecorder(true)}
+            className="flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Mic className="w-3.5 h-3.5" /> Record Session
+          </button>
+          <button onClick={onClose} className="text-slate hover:text-navy text-sm">Cancel</button>
+        </div>
       </div>
 
       {/* Context row */}
@@ -352,6 +362,19 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
         signerName={authorLabel.split(',')[0]}
         signerRole={authorLabel.split(',').slice(1).join(',').trim()}
         onSign={() => { handleSave('Signed'); setSigOpen(false); }}
+      />
+
+      <SessionRecorderModal
+        isOpen={showRecorder}
+        onClose={() => setShowRecorder(false)}
+        format={format}
+        patientName={MOCK_PATIENTS.find(p => p.id === patient)?.firstName + ' ' + MOCK_PATIENTS.find(p => p.id === patient)?.lastName || 'Client'}
+        noteType={type}
+        fields={fields}
+        onGenerate={(newValues) => {
+          setValues(prev => ({ ...prev, ...newValues }));
+          setShowRecorder(false);
+        }}
       />
     </div>
   );

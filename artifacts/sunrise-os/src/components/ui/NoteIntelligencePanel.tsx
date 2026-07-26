@@ -19,8 +19,9 @@ import {
   Sparkles, Zap, Target, BookOpen, ChevronDown, ChevronUp,
   CheckCircle, AlertTriangle, Clock, ArrowRight, Brain,
   TrendingUp, Heart, Shield, PenTool, RotateCcw, Info,
-  Flame, User, Activity,
+  Flame, User, Activity, Mic,
 } from 'lucide-react';
+import { SessionRecorderModal } from './SessionRecorderModal';
 import { TopicPicker } from './TopicPicker';
 import { getTopicById } from '../../lib/topicLibrary';
 import {
@@ -234,6 +235,7 @@ export function NoteIntelligencePanel({
   const [generated, setGenerated] = useState(false);
   const [showTopicPicker, setShowTopicPicker] = useState(false);
   const [showFineTools, setShowFineTools] = useState(false);
+  const [showRecorder, setShowRecorder] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Format suggestion
@@ -328,6 +330,13 @@ export function NoteIntelligencePanel({
           <div className="text-[10px] text-teal-600">Describe the session or pick a topic — note fills automatically</div>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowRecorder(true)}
+            className="flex items-center gap-1 text-[10px] font-bold text-teal-700 hover:text-teal-900 bg-teal-100 hover:bg-teal-200 border border-teal-300 px-2 py-1 rounded-lg transition-colors"
+            title="Record session audio → auto-generate note"
+          >
+            <Mic className="w-3 h-3" /> Record
+          </button>
           {hasContent && (
             <button onClick={handleReset} className="flex items-center gap-1 text-[10px] font-semibold text-slate hover:text-red-500 transition-colors">
               <RotateCcw className="w-3 h-3" /> Reset
@@ -520,6 +529,21 @@ export function NoteIntelligencePanel({
             </div>
           )}
         </details>
+
+        {/* ── Session Recorder Modal ── */}
+        <SessionRecorderModal
+          isOpen={showRecorder}
+          onClose={() => setShowRecorder(false)}
+          format={format}
+          patientName={patient ? `${patient.firstName} ${patient.lastName}` : 'Client'}
+          noteType={noteType}
+          fields={fields}
+          onGenerate={(newValues) => {
+            onValuesChange(newValues);
+            setGenerated(true);
+            setShowRecorder(false);
+          }}
+        />
 
         {/* ── Quality Score ── */}
         {hasContent && <QualityBar quality={quality} />}
