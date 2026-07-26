@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
-export type Role = 'nursing' | 'bht';
+export type Role = 'nursing' | 'bht' | 'counselor';
 
 // ── Persistence ────────────────────────────────────────────────────────────
 //
@@ -20,7 +20,7 @@ export type Role = 'nursing' | 'bht';
 // See mar.tsx for the reference implementation of the shimmer guard.
 
 const ROLE_KEY = '@sunrise_role';
-const VALID_ROLES: Role[] = ['nursing', 'bht'];
+const VALID_ROLES: Role[] = ['nursing', 'bht', 'counselor'];
 
 interface RoleContextType {
   role: Role;

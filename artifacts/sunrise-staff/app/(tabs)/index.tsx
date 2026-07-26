@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { GroupRecorderModal } from '@/components/GroupRecorderModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -249,6 +250,12 @@ function RoleToggle() {
           onPress={() => { Haptics.selectionAsync(); setRole('bht'); }}
         >
           <Text style={[styles.roleBtnText, { color: role === 'bht' ? '#fff' : colors.slateLight }]}>BHT</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.roleBtn, role === 'counselor' && { backgroundColor: '#0d9488' }]}
+          onPress={() => { Haptics.selectionAsync(); setRole('counselor'); }}
+        >
+          <Text style={[styles.roleBtnText, { color: role === 'counselor' ? '#fff' : colors.slateLight }]}>CL</Text>
         </Pressable>
       </View>
       {/* Dev-only: reset swipe hint so testers can replay onboarding */}
@@ -781,6 +788,8 @@ export default function CensusScreen() {
   const { acuityFilter, setAcuityFilter, noteFilter, setNoteFilter, resetFilters } = useCensusFilters();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [admitVisible, setAdmitVisible] = useState(false);
+  const [groupRecorderVisible, setGroupRecorderVisible] = useState(false);
+  const { role } = useRole();
   const [pendingNoticeDismissed, setPendingNoticeDismissed] = useState(false);
   const [shiftEndedToast, setShiftEndedToast] = useState(false);
   const shiftEndedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1095,6 +1104,15 @@ export default function CensusScreen() {
             <Text style={styles.headerSubtitle}>{shiftLabel}</Text>
           </View>
           <View style={styles.headerActions}>
+            {role === 'counselor' && (
+              <Pressable
+                style={[styles.admitBtn, { backgroundColor: '#0d9488' }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setGroupRecorderVisible(true); }}
+              >
+                <Ionicons name="people-outline" size={14} color="#fff" />
+                <Text style={styles.admitBtnText}>Group Rec</Text>
+              </Pressable>
+            )}
             <Pressable
               style={[styles.admitBtn, { backgroundColor: colors.orange }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setAdmitVisible(true); }}
@@ -1340,6 +1358,12 @@ export default function CensusScreen() {
         visible={admitVisible}
         onClose={() => setAdmitVisible(false)}
         availableBeds={availableBedIds}
+      />
+
+      <GroupRecorderModal
+        visible={groupRecorderVisible}
+        onClose={() => setGroupRecorderVisible(false)}
+        patients={residentialPatients}
       />
 
       {/* ─── Discharge undo toast ─── */}
