@@ -137,9 +137,13 @@ function WithdrawalAlertBanner({
   onSelectPatient: (p: Patient) => void;
   onDismiss: () => void;
 }) {
-  const { acknowledge, isAcknowledged, acknowledgments } = useMdAcknowledgment();
+  const { acknowledge, isAcknowledged, acknowledgments, isRehydrating: mdIsRehydrating } = useMdAcknowledgment();
   const alertPatients = patients.filter(isWithdrawalAlert);
   if (alertPatients.length === 0) return null;
+  // Guard: suppress acknowledgment-state-dependent rendering until AsyncStorage
+  // has finished loading, preventing a cold-start flash where every patient
+  // briefly appears un-acknowledged before persisted state is restored.
+  if (mdIsRehydrating) return null;
 
   const pendingCount = alertPatients.filter(p => !isAcknowledged(p.id)).length;
 
