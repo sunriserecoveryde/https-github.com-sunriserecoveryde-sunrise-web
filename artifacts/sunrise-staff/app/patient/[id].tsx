@@ -1175,8 +1175,11 @@ export default function PatientDetailScreen() {
           </View>
         </View>
 
-        {/* Note type breakdown — only when >1 non-observation type exists */}
-        {showNoteBreakdown && (
+        {/* Note type breakdown — only when >1 non-observation type exists.
+            Guard: hide until NursingNotesContext finishes reading from storage
+            so the chips never briefly flash absent (counts at zero) then pop in
+            after rehydration completes on cold start. */}
+        {!notesIsRehydrating && showNoteBreakdown && (
           <View style={s.noteBreakdownRow}>
             <Pressable
               onPress={() => handleBreakdownChipPress('incident')}
