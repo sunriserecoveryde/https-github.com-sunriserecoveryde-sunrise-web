@@ -179,16 +179,18 @@ function SubsidiaryCard({ icon, title, category, description, delay, logo }: { i
   return (
     <FadeIn delay={delay}>
       <Link href="/subsidiaries" className="block group h-full">
-        <div className="relative h-full p-8 md:p-10 border border-border bg-card/30 hover:bg-card hover:border-primary/50 transition-all duration-300">
-          {logo && (
-            <img
-              src={logo}
-              alt={`${title} logo`}
-              className="absolute top-6 right-6 h-10 w-10 object-contain rounded-lg opacity-80 group-hover:opacity-100 transition-opacity"
-            />
-          )}
-          <div className="mb-6 text-primary group-hover:scale-110 transition-transform origin-left">
-            {icon}
+        <div className="h-full p-8 md:p-10 border border-border bg-card/30 hover:bg-card hover:border-primary/50 transition-all duration-300">
+          <div className="flex items-start justify-between mb-6">
+            <div className="text-primary group-hover:scale-110 transition-transform origin-left">
+              {icon}
+            </div>
+            {logo && (
+              <img
+                src={logo}
+                alt={`${title} logo`}
+                className="h-12 w-12 object-contain rounded-lg"
+              />
+            )}
           </div>
           <p className="text-xs font-medium tracking-widest uppercase text-muted-foreground mb-2">{category}</p>
           <h3 className="text-2xl font-serif mb-4 group-hover:text-primary transition-colors">{title}</h3>
