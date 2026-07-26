@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, Building2, Server, GraduationCap, Heart } from 'lucide-react';
 import PageWrapper, { FadeIn, Reveal } from '@/components/animations';
-import { SunriseOSMark } from '@/components/SunriseOSLogo';
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -113,7 +112,7 @@ export default function Home() {
               category="Healthcare Technology"
               description="A proprietary, purpose-built Electronic Health Record and facility management platform deployed across all group facilities."
               delay={0.1}
-              logoNode={<SunriseOSMark size={48} />}
+              logoNode={<img src={`${basePath}/logo-sunriseos-official.png`} alt="SunriseOS" className="h-12 w-auto object-contain" />}
             />
             <SubsidiaryCard 
               icon={<GraduationCap size={32} strokeWidth={1.5} />}

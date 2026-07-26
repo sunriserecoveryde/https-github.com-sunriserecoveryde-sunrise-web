@@ -1,7 +1,6 @@
 import React from 'react';
 import PageWrapper, { FadeIn, Reveal } from '@/components/animations';
 import { Building2, GraduationCap, Heart, ArrowRight } from 'lucide-react';
-import { SunriseOSMark, SunriseOSLogo } from '@/components/SunriseOSLogo';
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -64,8 +63,7 @@ export default function Subsidiaries() {
           {/* SunriseOS */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             <FadeIn className="lg:col-span-5 lg:sticky top-32 lg:order-2">
-              <SunriseOSLogo markSize={56} textSize="text-4xl" className="mb-6" />
-              <h2 className="sr-only">SunriseOS</h2>
+              <img src={`${basePath}/logo-sunriseos-official.png`} alt="SunriseOS" className="h-28 w-auto object-contain mb-6" />
               <p className="text-sm font-medium tracking-widest uppercase text-muted-foreground mb-8">Proprietary Technology</p>
               <p className="text-lg text-muted-foreground leading-relaxed mb-6">
                 A modern, purpose-built Electronic Health Record (EHR) and facility management platform. Born from the operational needs of Sunrise Recovery, SunriseOS eliminates the friction between clinical documentation and administrative workflow.
