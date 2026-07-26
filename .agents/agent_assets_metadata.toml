@@ -18,3 +18,21 @@ id = "S3pFWPXhIMLUck5u8hpf8"
 uri = "file://artifacts/sunrise-video/public/bg-music.mp3"
 type = "audio"
 title = "corporate-tech-bed"
+
+[[outputs]]
+id = "nUhxHBdrDdTojLyX4CTpa"
+uri = "file://assets/sunrise-group-logo-concept1.png"
+type = "image"
+title = "Concept A — Gold Arc Rays (navy + gold)"
+
+[[outputs]]
+id = "QIILb9cm2XsZxmbc26gWd"
+uri = "file://assets/sunrise-group-logo-concept2.png"
+type = "image"
+title = "Concept B — Teal Horizon Rise (teal + amber)"
+
+[[outputs]]
+id = "V5IDJ1TF5N_2DonZ3268o"
+uri = "file://assets/sunrise-group-logo-concept3.png"
+type = "image"
+title = "Concept C — Four-Subsidiary Sunburst (navy + teal + amber + sage)"
