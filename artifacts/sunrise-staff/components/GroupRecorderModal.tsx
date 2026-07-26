@@ -48,6 +48,8 @@ const TEAL       = '#0d9488';
 const TEAL_DARK  = '#0f766e';
 const RED        = '#ef4444';
 const AMBER      = '#f59e0b';
+const AMBER_BG   = '#fffbeb';
+const AMBER_BORDER = '#fcd34d';
 const NAVY       = '#1C2B3A';
 const SLATE      = '#64748b';
 const SLATE_LIGHT = '#f1f5f9';
@@ -118,16 +120,21 @@ interface PatientRowProps {
   patient: Patient;
   selected: boolean;
   transcript: string;
+  hasExistingNote: boolean;
   onToggle: () => void;
   onTranscriptChange: (t: string) => void;
 }
 
-function PatientRow({ patient, selected, transcript, onToggle, onTranscriptChange }: PatientRowProps) {
+function PatientRow({ patient, selected, transcript, hasExistingNote, onToggle, onTranscriptChange }: PatientRowProps) {
   const [expanded, setExpanded] = useState(false);
   const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
 
   return (
-    <View style={[styles.patientRow, selected && styles.patientRowSelected]}>
+    <View style={[
+      styles.patientRow,
+      selected && styles.patientRowSelected,
+      selected && hasExistingNote && styles.patientRowDuplicate,
+    ]}>
       {/* Checkbox + name */}
       <Pressable
         style={styles.patientRowHeader}
@@ -138,9 +145,17 @@ function PatientRow({ patient, selected, transcript, onToggle, onTranscriptChang
           {selected && <Ionicons name="checkmark" size={13} color={WHITE} />}
         </View>
         <View style={styles.patientRowInfo}>
-          <Text style={[styles.patientRowName, !selected && { color: SLATE }]}>
-            {patient.firstName} {patient.lastName}
-          </Text>
+          <View style={styles.patientNameRow}>
+            <Text style={[styles.patientRowName, !selected && { color: SLATE }]}>
+              {patient.firstName} {patient.lastName}
+            </Text>
+            {hasExistingNote && (
+              <View style={styles.duplicateBadge}>
+                <Ionicons name="warning-outline" size={11} color={AMBER} />
+                <Text style={styles.duplicateBadgeText}>Note today</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.patientRowMeta}>
             Bed {patient.bed} · {patient.program}
           </Text>
@@ -160,6 +175,16 @@ function PatientRow({ patient, selected, transcript, onToggle, onTranscriptChang
           </Pressable>
         )}
       </Pressable>
+
+      {/* Duplicate warning — shown when this patient is selected and already has a note */}
+      {selected && hasExistingNote && (
+        <View style={styles.duplicateWarningRow}>
+          <Ionicons name="information-circle-outline" size={14} color={AMBER} />
+          <Text style={styles.duplicateWarningText}>
+            This patient already received a group note this shift. Attaching again will add a second entry.
+          </Text>
+        </View>
+      )}
 
       {/* Per-patient transcript editor */}
       {selected && expanded && (
@@ -211,7 +236,7 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
     resetTranscript,
   } = useSessionRecorder();
 
-  const { addNote } = useNursingNotes();
+  const { addNote, getNotesForPatient } = useNursingNotes();
 
   const [phase, setPhase]       = useState<Phase>('record');
   const [activeTab, setActiveTab] = useState<'record' | 'transcript'>('record');
@@ -329,6 +354,21 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
   const wordCount = editableTranscript.trim().split(/\s+/).filter(Boolean).length;
 
   const allSelected = patients.length > 0 && selectedIds.size === patients.length;
+
+  // Compute which patients already have at least one note this shift
+  const patientsWithNoteToday = useMemo<Set<string>>(() => {
+    const result = new Set<string>();
+    patients.forEach(p => {
+      if (getNotesForPatient(p.id).length > 0) result.add(p.id);
+    });
+    return result;
+  }, [patients, getNotesForPatient]);
+
+  // Count selected patients who already have a note today
+  const duplicateCount = useMemo(
+    () => [...selectedIds].filter(id => patientsWithNoteToday.has(id)).length,
+    [selectedIds, patientsWithNoteToday],
+  );
 
   return (
     <Modal
@@ -606,6 +646,7 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
                     patient={p}
                     selected={selectedIds.has(p.id)}
                     transcript={overrides[p.id] ?? editableTranscript}
+                    hasExistingNote={patientsWithNoteToday.has(p.id)}
                     onToggle={() => togglePatient(p.id)}
                     onTranscriptChange={t => setPatientTranscript(p.id, t)}
                   />
@@ -625,6 +666,20 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
 
             {/* Footer */}
             <View style={styles.footer}>
+              {/* Duplicate summary warning — shown when ≥1 selected patient already has a note today */}
+              {duplicateCount > 0 && !attached && (
+                <View style={styles.duplicateSummaryBanner}>
+                  <Ionicons name="warning-outline" size={16} color={AMBER} />
+                  <View style={styles.flex}>
+                    <Text style={styles.duplicateSummaryTitle}>
+                      {duplicateCount} patient{duplicateCount !== 1 ? 's' : ''} already {duplicateCount !== 1 ? 'have' : 'has'} a group note today
+                    </Text>
+                    <Text style={styles.duplicateSummaryBody}>
+                      You can still attach — a second note will be added. Deselect them to skip.
+                    </Text>
+                  </View>
+                </View>
+              )}
               <Pressable
                 onPress={handleAttach}
                 disabled={selectedIds.size === 0 || attached}
@@ -808,6 +863,7 @@ const styles = StyleSheet.create({
     backgroundColor: WHITE, overflow: 'hidden',
   },
   patientRowSelected: { borderColor: TEAL, backgroundColor: '#f0fdfa' },
+  patientRowDuplicate: { borderColor: AMBER_BORDER, backgroundColor: AMBER_BG },
   patientRowHeader: {
     flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12,
   },
@@ -817,10 +873,35 @@ const styles = StyleSheet.create({
   },
   checkboxSelected: { backgroundColor: TEAL, borderColor: TEAL },
   patientRowInfo: { flex: 1 },
+  patientNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   patientRowName: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: NAVY },
   patientRowMeta: { fontSize: 12, fontFamily: 'Inter_400Regular', color: SLATE, marginTop: 1 },
   expandBtn: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   expandBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: TEAL },
+
+  // Duplicate / existing-note indicators
+  duplicateBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: AMBER_BG, borderWidth: 1, borderColor: AMBER_BORDER,
+    borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  duplicateBadgeText: { fontSize: 10, fontFamily: 'Inter_700Bold', color: AMBER },
+  duplicateWarningRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    paddingHorizontal: 14, paddingBottom: 12,
+  },
+  duplicateWarningText: {
+    flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', color: AMBER, lineHeight: 17,
+  },
+
+  // Duplicate summary banner in footer
+  duplicateSummaryBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: AMBER_BG, borderWidth: 1, borderColor: AMBER_BORDER,
+    borderRadius: 12, padding: 12,
+  },
+  duplicateSummaryTitle: { fontSize: 13, fontFamily: 'Inter_700Bold', color: AMBER, marginBottom: 2 },
+  duplicateSummaryBody: { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#92400e', lineHeight: 17 },
 
   // Per-patient transcript editor
   transcriptEditor: {
