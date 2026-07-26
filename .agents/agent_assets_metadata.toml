@@ -48,3 +48,21 @@ id = "5k3dytxfO_g-WJdTn6SvB"
 uri = "file://assets/sunrise-group-v2b.png"
 type = "image"
 title = "V2B — Horizontal lockup (mark left, name right)"
+
+[[outputs]]
+id = "nylXvV6ibEcU-VYJ5IJHc"
+uri = "file://assets/sunrise-group-v3a.png"
+type = "image"
+title = "V3A — Negative Space Circle Cut"
+
+[[outputs]]
+id = "_gQefsd1xz5KDbmpa8K3T"
+uri = "file://assets/sunrise-group-v3b.png"
+type = "image"
+title = "V3B — Swiss Grid Framed Mark"
+
+[[outputs]]
+id = "S9t6eBrFSfYSYgK0ksTfW"
+uri = "file://assets/sunrise-group-v3c.png"
+type = "image"
+title = "V3C — Bold Horizontal Lockup"
