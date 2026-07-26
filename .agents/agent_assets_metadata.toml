@@ -32,12 +32,6 @@ type = "image"
 title = "V2B — Horizontal lockup (mark left, name right)"
 
 [[outputs]]
-id = "nylXvV6ibEcU-VYJ5IJHc"
-uri = "file://assets/sunrise-group-v3a.png"
-type = "image"
-title = "V3A — Negative Space Circle Cut"
-
-[[outputs]]
 id = "_gQefsd1xz5KDbmpa8K3T"
 uri = "file://assets/sunrise-group-v3b.png"
 type = "image"
