@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Mic, MicOff, Square, Pause, Play, X, Sparkles,
-  FileText, AlertTriangle, Radio, ClipboardEdit,
+  FileText, AlertTriangle, Radio, ClipboardEdit, ShieldAlert,
 } from 'lucide-react';
 import { useSessionRecorder } from '../../hooks/useSessionRecorder';
 import { parseQuickCapture } from '../../lib/quickCaptureParser';
@@ -100,12 +100,14 @@ interface Props {
   noteType: string;
   fields: string[];
   onGenerate: (values: Record<string, string>) => void;
+  /** Current note field values — used to detect overwrite conflicts */
+  currentValues?: Record<string, string>;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SessionRecorderModal({
-  isOpen, onClose, format, patientName, noteType, fields, onGenerate,
+  isOpen, onClose, format, patientName, noteType, fields, onGenerate, currentValues = {},
 }: Props) {
   const {
     isSupported, isRecording, isPaused,
@@ -117,6 +119,8 @@ export function SessionRecorderModal({
   const [editableTranscript, setEditableTranscript] = useState('');
   const [micDenied, setMicDenied] = useState(false);
   const [generated, setGenerated] = useState(false);
+  /** Values waiting for overwrite confirmation */
+  const [pendingValues, setPendingValues] = useState<Record<string, string> | null>(null);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
 
   // Keep editable transcript in sync when recording
@@ -139,6 +143,7 @@ export function SessionRecorderModal({
       setActiveTab('record');
       setMicDenied(false);
       setGenerated(false);
+      setPendingValues(null);
     }
   }, [isOpen, resetTranscript]);
 
@@ -168,9 +173,28 @@ export function SessionRecorderModal({
     const sectionValues = Object.values(sections);
     const newValues: Record<string, string> = {};
     fields.forEach((f, i) => { if (sectionValues[i]) newValues[f] = sectionValues[i]; });
+
+    // Check whether any generated field would overwrite existing typed content
+    const wouldOverwrite = fields.some(f => newValues[f] && currentValues[f]?.trim());
+    if (wouldOverwrite) {
+      setPendingValues(newValues);
+      return;
+    }
+
     onGenerate(newValues);
     setGenerated(true);
-  }, [editableTranscript, patientName, noteType, format, fields, onGenerate]);
+  }, [editableTranscript, patientName, noteType, format, fields, onGenerate, currentValues]);
+
+  const confirmOverwrite = useCallback(() => {
+    if (!pendingValues) return;
+    onGenerate(pendingValues);
+    setPendingValues(null);
+    setGenerated(true);
+  }, [pendingValues, onGenerate]);
+
+  const cancelOverwrite = useCallback(() => {
+    setPendingValues(null);
+  }, []);
 
   const handleClose = useCallback(() => {
     if (isRecording) stop();
@@ -223,6 +247,34 @@ export function SessionRecorderModal({
 
         {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto p-6">
+
+          {/* ── Overwrite confirmation ── */}
+          {pendingValues && (
+            <div className="mb-4 flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-xl p-4 text-sm text-amber-900">
+              <ShieldAlert className="w-5 h-5 flex-none mt-0.5 text-amber-600" />
+              <div className="flex-1">
+                <div className="font-semibold mb-1">This will replace your current draft</div>
+                <div className="text-xs text-amber-700 mb-3">
+                  You have already typed content in one or more note fields. Generating a new note from the recording will overwrite that text. This action cannot be undone.
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={confirmOverwrite}
+                    className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" /> Replace draft
+                  </button>
+                  <button
+                    onClick={cancelOverwrite}
+                    className="text-xs font-semibold text-amber-800 hover:text-amber-900 px-3 py-1.5 rounded-lg border border-amber-300 hover:bg-amber-100 transition-colors"
+                  >
+                    Keep my draft
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
 
           {/* ── Unsupported fallback ── */}
           {!isSupported && (

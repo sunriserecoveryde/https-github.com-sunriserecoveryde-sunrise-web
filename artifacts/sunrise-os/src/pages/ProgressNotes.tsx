@@ -371,6 +371,7 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
         patientName={MOCK_PATIENTS.find(p => p.id === patient)?.firstName + ' ' + MOCK_PATIENTS.find(p => p.id === patient)?.lastName || 'Client'}
         noteType={type}
         fields={fields}
+        currentValues={values}
         onGenerate={(newValues) => {
           setValues(prev => ({ ...prev, ...newValues }));
           setShowRecorder(false);

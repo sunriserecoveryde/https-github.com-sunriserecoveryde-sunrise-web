@@ -19,7 +19,7 @@ import {
   Sparkles, Zap, Target, BookOpen, ChevronDown, ChevronUp,
   CheckCircle, AlertTriangle, Clock, ArrowRight, Brain,
   TrendingUp, Heart, Shield, PenTool, RotateCcw, Info,
-  Flame, User, Activity, Mic,
+  Flame, User, Activity, Mic, ShieldAlert,
 } from 'lucide-react';
 import { SessionRecorderModal } from './SessionRecorderModal';
 import { TopicPicker } from './TopicPicker';
@@ -236,6 +236,7 @@ export function NoteIntelligencePanel({
   const [showTopicPicker, setShowTopicPicker] = useState(false);
   const [showFineTools, setShowFineTools] = useState(false);
   const [showRecorder, setShowRecorder] = useState(false);
+  const [pendingOverwriteInput, setPendingOverwriteInput] = useState<Partial<ProgressNoteInput> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Format suggestion
@@ -283,10 +284,35 @@ export function NoteIntelligencePanel({
     const sectValues = Object.values(sects);
     const newValues: Record<string, string> = {};
     fields.forEach((f, i) => { if (sectValues[i]) newValues[f] = sectValues[i]; });
+
+    // If any field already has typed content that would be overwritten, ask first
+    const wouldOverwrite = fields.some(f => newValues[f] && values[f]?.trim());
+    if (wouldOverwrite) {
+      setPendingOverwriteInput(input);
+      return;
+    }
+
     onValuesChange(newValues);
     setGenerated(true);
     setShowFineTools(false);
-  }, [format, patient, noteType, fields, onValuesChange]);
+  }, [format, patient, noteType, fields, onValuesChange, values]);
+
+  const confirmOverwrite = useCallback(() => {
+    if (!pendingOverwriteInput) return;
+    const sects = generateProgressNote(format, {
+      clientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Client',
+      noteType,
+      ...pendingOverwriteInput,
+      engagementLevel: pendingOverwriteInput.engagementLevel as ProgressNoteInput['engagementLevel'],
+    });
+    const sectValues = Object.values(sects);
+    const newValues: Record<string, string> = {};
+    fields.forEach((f, i) => { if (sectValues[i]) newValues[f] = sectValues[i]; });
+    onValuesChange(newValues);
+    setGenerated(true);
+    setShowFineTools(false);
+    setPendingOverwriteInput(null);
+  }, [pendingOverwriteInput, format, patient, noteType, fields, onValuesChange]);
 
   function handleQuickCaptureFill() {
     if (!parsedInput || Object.keys(parsedInput).length === 0) return;
@@ -530,6 +556,34 @@ export function NoteIntelligencePanel({
           )}
         </details>
 
+        {/* ── Overwrite confirmation (Quick Capture / Topic / Fine-tune) ── */}
+        {pendingOverwriteInput && (
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-xl p-3 text-sm text-amber-900">
+            <ShieldAlert className="w-4 h-4 flex-none mt-0.5 text-amber-600" />
+            <div className="flex-1">
+              <div className="font-semibold text-xs mb-1">This will replace your current draft</div>
+              <div className="text-[11px] text-amber-700 mb-2">
+                You have already typed content in one or more fields. Generating will overwrite that text.
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={confirmOverwrite}
+                  className="flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors"
+                >
+                  <Sparkles className="w-3 h-3" /> Replace draft
+                </button>
+                <button
+                  onClick={() => setPendingOverwriteInput(null)}
+                  className="text-[11px] font-semibold text-amber-800 hover:text-amber-900 px-2.5 py-1 rounded-lg border border-amber-300 hover:bg-amber-100 transition-colors"
+                >
+                  Keep my draft
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+
         {/* ── Session Recorder Modal ── */}
         <SessionRecorderModal
           isOpen={showRecorder}
@@ -538,6 +592,7 @@ export function NoteIntelligencePanel({
           patientName={patient ? `${patient.firstName} ${patient.lastName}` : 'Client'}
           noteType={noteType}
           fields={fields}
+          currentValues={values}
           onGenerate={(newValues) => {
             onValuesChange(newValues);
             setGenerated(true);
