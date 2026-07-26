@@ -48,3 +48,15 @@ id = "NoPFmHDGAjSf7AZyNQO4Q"
 uri = "file://artifacts/sunrise-grp/public/logos/sunrise-recovery-horizon-navy.svg"
 type = "image"
 title = "Sunrise Recovery — Horizon (Navy #0F172A)"
+
+[[outputs]]
+id = "HvvoETXsG7iJNelVGPCTF"
+uri = "file://artifacts/sunrise-grp/public/logos/sunrise-recovery-horizon-transparent.png"
+type = "image"
+title = "Sunrise Recovery — Horizon (Transparent PNG)"
+
+[[outputs]]
+id = "bFpHa6EY7M3GcPurDtBzs"
+uri = "file://artifacts/sunrise-grp/public/logos/sunrise-recovery-horizon-navy.png"
+type = "image"
+title = "Sunrise Recovery — Horizon (Navy PNG)"
