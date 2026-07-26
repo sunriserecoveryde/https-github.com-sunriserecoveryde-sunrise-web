@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="320" viewBox="0 0 600 320">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;family=Outfit:wght@500;700&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- ─── MARK ─────────────────────────────────────── -->
+  <!-- Horizon line (full width, teal) -->
+  <line x1="60" y1="152" x2="540" y2="152" stroke="rgba(20,184,166,0.7)" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- Rays (9, upper hemisphere) -->
+  <!-- a=0  -->  <line x1="300" y1="98"  x2="300" y2="56"  stroke="#F97316" stroke-width="6"   stroke-linecap="round" opacity="1.000"/>
+  <!-- a=20 -->  <line x1="318.5" y1="101.3" x2="332.8" y2="61.8"  stroke="#F97316" stroke-width="6"   stroke-linecap="round" opacity="0.920"/>
+  <!-- a=-20 --> <line x1="281.5" y1="101.3" x2="267.2" y2="61.8"  stroke="#F97316" stroke-width="6"   stroke-linecap="round" opacity="0.920"/>
+  <!-- a=40 -->  <line x1="334.7" y1="110.6" x2="361.7" y2="78.5"  stroke="#F97316" stroke-width="5.4" stroke-linecap="round" opacity="0.840"/>
+  <!-- a=-40 --> <line x1="265.3" y1="110.6" x2="238.3" y2="78.5"  stroke="#F97316" stroke-width="5.4" stroke-linecap="round" opacity="0.840"/>
+  <!-- a=62 -->  <line x1="347.7" y1="126.7" x2="384.8" y2="107.0" stroke="#F97316" stroke-width="4.2" stroke-linecap="round" opacity="0.752"/>
+  <!-- a=-62 --> <line x1="252.3" y1="126.7" x2="215.2" y2="107.0" stroke="#F97316" stroke-width="4.2" stroke-linecap="round" opacity="0.752"/>
+  <!-- a=80 -->  <line x1="353.2" y1="142.6" x2="394.6" y2="135.3" stroke="#F97316" stroke-width="4.2" stroke-linecap="round" opacity="0.680"/>
+  <!-- a=-80 --> <line x1="246.8" y1="142.6" x2="205.4" y2="135.3" stroke="#F97316" stroke-width="4.2" stroke-linecap="round" opacity="0.680"/>
+
+  <!-- Sun disc -->
+  <circle cx="300" cy="152" r="45" fill="#F97316"/>
+  <!-- Inner glow -->
+  <circle cx="300" cy="152" r="27" fill="#FED7AA" opacity="0.45"/>
+
+  <!-- Reflected shimmer (below horizon) -->
+  <line x1="282" y1="164" x2="318" y2="164" stroke="#F97316" stroke-width="3"   stroke-linecap="round" opacity="0.40"/>
+  <line x1="288" y1="176" x2="312" y2="176" stroke="#F97316" stroke-width="2.4" stroke-linecap="round" opacity="0.25"/>
+  <line x1="294" y1="188" x2="306" y2="188" stroke="#F97316" stroke-width="1.8" stroke-linecap="round" opacity="0.15"/>
+
+  <!-- ─── WORDMARK ───────────────────────────────────── -->
+  <text
+    x="300" y="248"
+    font-family="'Playfair Display', Georgia, 'Times New Roman', serif"
+    font-size="52" font-weight="700"
+    fill="#F97316"
+    text-anchor="middle"
+    letter-spacing="4"
+  >SUNRISE RECOVERY</text>
+
+  <!-- Tagline -->
+  <text
+    x="300" y="284"
+    font-family="'Outfit', 'Segoe UI', system-ui, sans-serif"
+    font-size="14" font-weight="500"
+    fill="#14B8A6"
+    text-anchor="middle"
+    letter-spacing="3.5"
+  >TREATMENT PROGRAMS &amp; RECOVERY RESIDENCES</text>
+</svg>

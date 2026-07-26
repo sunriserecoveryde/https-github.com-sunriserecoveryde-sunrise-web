@@ -36,3 +36,15 @@ id = "FvoHMt8quaoLMOV-2KKio"
 uri = "file://assets/sunrise-group-final-transparent.png"
 type = "image"
 title = "The Sunrise Grp., Inc. — Logo (Transparent PNG)"
+
+[[outputs]]
+id = "qAdn0dOscyr9_2SEPyl-C"
+uri = "file://artifacts/sunrise-grp/public/logos/sunrise-recovery-horizon-transparent.svg"
+type = "image"
+title = "Sunrise Recovery — Horizon (Transparent)"
+
+[[outputs]]
+id = "NoPFmHDGAjSf7AZyNQO4Q"
+uri = "file://artifacts/sunrise-grp/public/logos/sunrise-recovery-horizon-navy.svg"
+type = "image"
+title = "Sunrise Recovery — Horizon (Navy #0F172A)"
