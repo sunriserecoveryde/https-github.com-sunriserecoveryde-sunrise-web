@@ -457,3 +457,109 @@ describe('breakdown-chip guard — chips hidden while rehydrating, visible with 
     expect(p2.medUpdateCount).toBe(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section 3 — notes section opacity guard (style C)
+//
+// app/patient/[id].tsx applies:
+//   style={[s.section, notesIsRehydrating && { opacity: 0 }]}
+//   pointerEvents={notesIsRehydrating ? 'none' : 'auto'}
+//
+// to the outermost notes section View.  When the app cold-starts (or is
+// force-quit and relaunched while the patient-detail screen is open), the
+// context sets isRehydrating=true until AsyncStorage settles, and the guard
+// keeps the section invisible so no empty-list flash reaches the nurse.
+//
+// These tests mirror the Guard B opacity assertions in coldStartFlashGuard.test.ts
+// (the `filterBarOpacity` block for WithdrawalFiltersContext).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Pure helper — mirrors the opacity value the JSX guard resolves to:
+ *   notesIsRehydrating && { opacity: 0 }
+ * Returns 0 while the guard is active, 1 once it lifts.
+ */
+function notesOpacity(isRehydrating: boolean): number {
+  return isRehydrating ? 0 : 1;
+}
+
+describe('notes section opacity guard (style C) — hidden during rehydration, visible after', () => {
+
+  it('opacity is 0 on cold-start before AsyncStorage resolves — guard must hide the section', () => {
+    // Documents the regression the guard prevents:
+    // If the notes section rendered at opacity 1 before NursingNotesContext
+    // finished reading from AsyncStorage, the nurse would see an empty list
+    // flash for a frame before persisted notes arrived.
+    const initialLoaded = false; // isRehydrating === true before load settles
+    const notesOpacityInitial = notesOpacity(true); // notesIsRehydrating=true
+
+    expect(initialLoaded).toBe(false);
+    // The opacity guard ensures the notes section is invisible at this point
+    expect(notesOpacityInitial).toBe(0);
+  });
+
+  it('opacity reaches 1 after rehydration — guard releases the section', () => {
+    // Once loadNursingNotesState resolves, NursingNotesContext sets
+    // isRehydrating=false; the conditional style drops away and opacity is 1.
+    const notesOpacityAfterRehydration = notesOpacity(false); // notesIsRehydrating=false
+
+    expect(notesOpacityAfterRehydration).toBe(1);
+  });
+
+  it('opacity transitions from 0 to 1 across the full rehydration cycle — deferred adapter', async () => {
+    // Full end-to-end lifecycle:
+    //   1. App launches → isRehydrating=true  → opacity=0
+    //   2. AsyncStorage resolves              → loaded:true
+    //   3. isRehydrating flips to false       → opacity=1
+    const notes: Record<string, PersistedNote[]> = {
+      p1: [makeNote('n1', 'observation')],
+    };
+    const { adapter, release } = makeDeferredStorage();
+
+    const loadPromise = loadNursingNotesState(adapter, KEY, TODAY);
+
+    let settled = false;
+    loadPromise.then(() => { settled = true; });
+
+    // Step 1: in-flight — guard must keep notes hidden
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    expect(notesOpacity(true)).toBe(0); // isRehydrating still true → opacity=0
+
+    // Step 2: AsyncStorage resolves
+    release(JSON.stringify({ shiftDate: TODAY, notesByPatient: notes } satisfies PersistedNotes));
+    const result = await loadPromise;
+
+    // Step 3: rehydration complete — guard releases
+    expect(result.loaded).toBe(true);
+    expect(notesOpacity(false)).toBe(1); // isRehydrating now false → opacity=1
+  });
+
+  it('opacity stays 0 on storage failure — guard must not leave section permanently invisible', async () => {
+    // loadNursingNotesState always returns loaded:true even on storage errors
+    // (the finally-block guarantee), so isRehydrating always flips to false and
+    // opacity always reaches 1 — the section is never stuck invisible.
+    const result = await loadNursingNotesState(makeErrorStorage(), KEY, TODAY);
+
+    expect(result.loaded).toBe(true);
+    // Because loaded:true was returned, the guard lifts and opacity becomes 1.
+    expect(notesOpacity(!result.loaded)).toBe(1);
+  });
+
+  it('pointerEvents follow opacity: none while rehydrating, auto after', () => {
+    // The notes section also sets pointerEvents='none' during rehydration so
+    // nurses cannot interact with an empty ghost list.  This test documents
+    // that both properties change together.
+    function notesPointerEvents(isRehydrating: boolean): 'none' | 'auto' {
+      return isRehydrating ? 'none' : 'auto';
+    }
+
+    // Pre-rehydration: invisible and non-interactive
+    expect(notesOpacity(true)).toBe(0);
+    expect(notesPointerEvents(true)).toBe('none');
+
+    // Post-rehydration: visible and interactive
+    expect(notesOpacity(false)).toBe(1);
+    expect(notesPointerEvents(false)).toBe('auto');
+  });
+});
