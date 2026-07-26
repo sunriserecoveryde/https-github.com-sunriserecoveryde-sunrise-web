@@ -103,7 +103,7 @@ export default function Home() {
               icon={<Building2 size={32} strokeWidth={1.5} />}
               title="Sunrise Recovery"
               category="Clinical Operations"
-              description="Premier clinical treatment centers across Maryland and Delaware, delivering evidence-based inpatient and outpatient behavioral healthcare."
+              description="Premier clinical treatment centers across Delaware and the Mid-Atlantic, delivering evidence-based inpatient and outpatient behavioral healthcare."
               delay={0}
             />
             <SubsidiaryCard 
@@ -145,7 +145,7 @@ export default function Home() {
             <Stat label="States of Operation" value="2" />
             <Stat label="Operating Entities" value="4" />
             <Stat label="Care Model" value="Integrated" />
-            <Stat label="HQ Location" value="Maryland" />
+            <Stat label="HQ Location" value="Delaware" />
           </div>
         </div>
       </section>

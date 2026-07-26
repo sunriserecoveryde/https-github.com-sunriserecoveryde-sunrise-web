@@ -29,7 +29,7 @@ export default function Navbar() {
       <div className="container mx-auto px-6 md:px-12 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group relative z-50">
           <img 
-            src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sunrise-grp-logo.png`} 
+            src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sunrise-grp-logo-solid.png`} 
             alt="The Sunrise Grp." 
             className="h-10 w-auto"
             onError={(e) => {

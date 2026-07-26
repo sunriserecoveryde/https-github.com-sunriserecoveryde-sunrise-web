@@ -11,7 +11,7 @@ export default function Footer() {
           <div className="md:col-span-2">
             <Link href="/" className="inline-block mb-6">
               <img 
-                src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sunrise-grp-logo.png`} 
+                src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sunrise-grp-logo-solid.png`} 
                 alt="The Sunrise Grp." 
                 className="h-12 w-auto"
                 onError={(e) => {

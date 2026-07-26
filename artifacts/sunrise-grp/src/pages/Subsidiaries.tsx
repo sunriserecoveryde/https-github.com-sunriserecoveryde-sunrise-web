@@ -34,7 +34,7 @@ export default function Subsidiaries() {
               <h2 className="text-4xl font-serif mb-4">Sunrise Recovery</h2>
               <p className="text-sm font-medium tracking-widest uppercase text-muted-foreground mb-8">Clinical Operations</p>
               <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-                The flagship clinical delivery arm of The Sunrise Grp., operating premium treatment facilities across Maryland and Delaware. Sunrise Recovery provides a full continuum of care including Inpatient, Partial Hospitalization (PHP), and Intensive Outpatient (IOP) services.
+                The flagship clinical delivery arm of The Sunrise Grp., operating premium treatment facilities across Delaware and the Mid-Atlantic. Sunrise Recovery provides a full continuum of care including Inpatient, Partial Hospitalization (PHP), and Intensive Outpatient (IOP) services.
               </p>
               <ul className="space-y-4 text-muted-foreground">
                 <li className="flex items-center gap-3">

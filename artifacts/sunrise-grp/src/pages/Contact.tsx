@@ -57,7 +57,7 @@ export default function Contact() {
                     <MapPin className="mt-1 text-primary" size={20} />
                     <p className="text-lg leading-relaxed">
                       The Sunrise Grp., Inc.<br />
-                      Maryland, United States<br />
+                      Delaware, United States<br />
                       <span className="text-sm text-muted-foreground mt-2 block">(Full address provided upon request)</span>
                     </p>
                   </div>
