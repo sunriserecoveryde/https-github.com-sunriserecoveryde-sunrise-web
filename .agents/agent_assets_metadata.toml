@@ -66,3 +66,9 @@ id = "S9t6eBrFSfYSYgK0ksTfW"
 uri = "file://assets/sunrise-group-v3c.png"
 type = "image"
 title = "V3C — Bold Horizontal Lockup"
+
+[[outputs]]
+id = "EO0FzdqWNwQHdhpmdp8Us"
+uri = "file://assets/sunrise-group-v3b-v2.png"
+type = "image"
+title = "V3B Refined — Orange lines"
