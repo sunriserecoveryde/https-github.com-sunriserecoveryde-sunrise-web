@@ -45,7 +45,7 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type NoteType = 'observation' | 'med-update' | 'incident';
+export type NoteType = 'observation' | 'med-update' | 'incident' | 'group-session';
 
 /** A single prior version of a note, captured before each edit */
 export interface NoteHistoryEntry {
@@ -61,6 +61,12 @@ export interface NursingNote {
   id: string;
   text: string;
   noteType: NoteType;
+  /**
+   * Only present when noteType === 'group-session'.
+   * Stores the specific group format chosen by the counselor
+   * (e.g. 'Psychoeducation', 'Process Group', 'DBT Skills', 'Relapse Prevention').
+   */
+  groupSessionType?: string;
   /** ISO timestamp when the note was created */
   createdAt: string;
   /** Formatted display time, e.g. "14:32" */
@@ -99,7 +105,7 @@ function todayDateString(): string {
 interface NursingNotesContextType {
   /** All notes for a given patient, most-recent first */
   getNotesForPatient: (patientId: string) => NursingNote[];
-  addNote: (patientId: string, text: string, noteType: NoteType) => void;
+  addNote: (patientId: string, text: string, noteType: NoteType, groupSessionType?: string) => void;
   /** Update text and/or type of an existing note in-place (preserves id and timestamp) */
   updateNote: (patientId: string, noteId: string, text: string, noteType: NoteType, editedBy: string) => void;
   /** Remove a single note by id from a patient's note list */
@@ -195,7 +201,7 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
     [notesByPatient],
   );
 
-  const addNote = useCallback((patientId: string, text: string, noteType: NoteType) => {
+  const addNote = useCallback((patientId: string, text: string, noteType: NoteType, groupSessionType?: string) => {
     const now = new Date();
     const displayTime = now.toLocaleTimeString([], {
       hour: '2-digit',
@@ -206,6 +212,7 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
       id: `${patientId}-${now.getTime()}`,
       text,
       noteType,
+      ...(groupSessionType ? { groupSessionType } : {}),
       createdAt: now.toISOString(),
       displayTime,
     };

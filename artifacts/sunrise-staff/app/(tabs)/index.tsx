@@ -109,10 +109,11 @@ function trendColor(trend: Trend, colors: ReturnType<typeof useColors>): string 
 
 // ─── Note type label ──────────────────────────────────────────────────────────
 
-function formatNoteType(type: string): string {
-  if (type === 'observation') return 'Observation';
-  if (type === 'med-update')  return 'Med Update';
-  if (type === 'incident')    return 'Incident';
+function formatNoteType(type: string, groupSessionType?: string): string {
+  if (type === 'observation')   return 'Observation';
+  if (type === 'med-update')    return 'Med Update';
+  if (type === 'incident')      return 'Incident';
+  if (type === 'group-session') return groupSessionType ? `Group · ${groupSessionType}` : 'Group Session';
   return type;
 }
 

@@ -815,7 +815,7 @@ export default function PatientDetailScreen() {
     startPendingDelete(id, note, index);
   };
 
-  type NoteType = 'observation' | 'med-update' | 'incident';
+  type NoteType = 'observation' | 'med-update' | 'incident' | 'group-session';
 
   const NOTE_TYPES: { value: NoteType; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
     { value: 'observation', label: 'Observation', icon: 'eye-outline' },
@@ -823,11 +823,20 @@ export default function PatientDetailScreen() {
     { value: 'incident',    label: 'Incident',    icon: 'warning-outline' },
   ];
 
+  /** Returns the human-readable badge label for a note, using groupSessionType when available. */
+  const getNoteLabel = (note: { noteType: NoteType; groupSessionType?: string }): string => {
+    if (note.noteType === 'group-session') {
+      return note.groupSessionType ? `Group · ${note.groupSessionType}` : 'Group Session';
+    }
+    return NOTE_TYPES.find(x => x.value === note.noteType)?.label ?? note.noteType;
+  };
+
   const noteTypeColor = (type: NoteType) => {
     switch (type) {
-      case 'observation': return { bg: colors.routineBg,  text: colors.blue };
-      case 'med-update':  return { bg: colors.moderateBg, text: colors.moderate };
-      case 'incident':    return { bg: colors.criticalBg, text: colors.critical };
+      case 'observation':   return { bg: colors.routineBg,  text: colors.blue };
+      case 'med-update':    return { bg: colors.moderateBg, text: colors.moderate };
+      case 'incident':      return { bg: colors.criticalBg, text: colors.critical };
+      case 'group-session': return { bg: colors.successBg,  text: colors.success };
     }
   };
 
@@ -973,7 +982,7 @@ export default function PatientDetailScreen() {
     sessionNotes.forEach(note => {
       const lastEdit = note.history?.[note.history.length - 1];
       const editSuffix = lastEdit ? ` (edited ${formatEditedTime(lastEdit.savedAt)})` : '';
-      const typeLabel = NOTE_TYPES.find(x => x.value === note.noteType)?.label ?? note.noteType;
+      const typeLabel = getNoteLabel(note);
       lines.push(`[${typeLabel}] ${note.displayTime}${editSuffix}`);
       lines.push(note.text);
       lines.push('');
@@ -1730,7 +1739,10 @@ export default function PatientDetailScreen() {
             // Use the original index so undo-restore lands at the right position
             const index = allNotes.findIndex(n => n.id === note.id);
             const tc = noteTypeColor(note.noteType);
-            const nt = NOTE_TYPES.find(x => x.value === note.noteType)!;
+            const nt = NOTE_TYPES.find(x => x.value === note.noteType) ?? {
+              icon: 'people-outline' as const,
+              label: getNoteLabel(note),
+            };
             const handleLongPress = () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               Alert.alert(
@@ -2005,9 +2017,11 @@ export default function PatientDetailScreen() {
                 return reversed.map((entry, i) => {
                   const tc = (() => {
                     switch (entry.noteType) {
-                      case 'observation': return { bg: colors.routineBg,  text: colors.blue };
-                      case 'med-update':  return { bg: colors.moderateBg, text: colors.moderate };
-                      case 'incident':    return { bg: colors.criticalBg, text: colors.critical };
+                      case 'observation':   return { bg: colors.routineBg,  text: colors.blue };
+                      case 'med-update':    return { bg: colors.moderateBg, text: colors.moderate };
+                      case 'incident':      return { bg: colors.criticalBg, text: colors.critical };
+                      case 'group-session': return { bg: colors.successBg,  text: colors.success };
+                      default:              return { bg: colors.muted,      text: colors.mutedForeground };
                     }
                   })();
                   // reversed is newest-first: reversed[0]=most-recent-prior, reversed[N-1]=original

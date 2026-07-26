@@ -667,10 +667,11 @@ export default function HandoffScreen() {
 
   // ── Note-type filter (#51) ─────────────────────────────────────────────────
   const NOTE_TYPE_CHIPS: { key: 'all' | NoteType; label: string }[] = [
-    { key: 'all',         label: 'All' },
-    { key: 'observation', label: 'Observation' },
-    { key: 'med-update',  label: 'Med Update' },
-    { key: 'incident',    label: 'Incident' },
+    { key: 'all',           label: 'All' },
+    { key: 'observation',   label: 'Observation' },
+    { key: 'med-update',    label: 'Med Update' },
+    { key: 'incident',      label: 'Incident' },
+    { key: 'group-session', label: 'Group Session' },
   ];
 
   const sortedPatients = [...RESIDENTIAL_PATIENTS].sort(
@@ -734,8 +735,10 @@ export default function HandoffScreen() {
         nursingNotes.forEach(note => {
           const editSuffix = note.editedAt ? ` (edited ${formatEditedTime(note.editedAt)})` : '';
           const typeLabel =
-            note.noteType === 'observation' ? 'Observation'
-            : note.noteType === 'med-update' ? 'Med Update'
+            note.noteType === 'observation'   ? 'Observation'
+            : note.noteType === 'med-update'  ? 'Med Update'
+            : note.noteType === 'group-session'
+              ? (note.groupSessionType ? `Group · ${note.groupSessionType}` : 'Group Session')
             : 'Incident';
           lines.push(`  [${typeLabel}] ${note.displayTime}${editSuffix}`);
           lines.push(`  ${note.text}`);

@@ -212,6 +212,21 @@ function PatientRow({ patient, selected, transcript, hasExistingNote, onToggle, 
   );
 }
 
+// ── Group session types ───────────────────────────────────────────────
+
+interface GroupSessionTypeOption {
+  value: string;
+  label: string;
+  icon: string; // Ionicons name
+}
+
+const GROUP_SESSION_TYPES: GroupSessionTypeOption[] = [
+  { value: 'Psychoeducation',    label: 'Psychoeducation',   icon: 'book-outline' },
+  { value: 'Process Group',      label: 'Process Group',     icon: 'chatbubbles-outline' },
+  { value: 'DBT Skills',         label: 'DBT Skills',        icon: 'layers-outline' },
+  { value: 'Relapse Prevention', label: 'Relapse Prevention',icon: 'shield-checkmark-outline' },
+];
+
 // ── Props ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -246,6 +261,7 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
   const [activeTab, setActiveTab] = useState<'record' | 'transcript'>('record');
   const [editableTranscript, setEditableTranscript] = useState('');
   const [micDenied, setMicDenied]   = useState(false);
+  const [sessionType, setSessionType] = useState<string>(GROUP_SESSION_TYPES[0].value);
 
   // Per-patient state for the attach phase
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -306,6 +322,7 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
       setSelectedIds(new Set());
       setOverrides({});
       setAttached(false);
+      setSessionType(GROUP_SESSION_TYPES[0].value);
       setDraftBanner('hidden');
       setPendingDraftText('');
       draftClearedRef.current = false;
@@ -395,7 +412,7 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
     if (selectedIds.size === 0) return;
     selectedIds.forEach(id => {
       const text = (overrides[id] ?? editableTranscript).trim();
-      if (text) addNote(id, text, 'observation');
+      if (text) addNote(id, text, 'group-session', sessionType);
     });
     // Clear the saved draft — cancel any pending debounced write first to avoid a race
     cancelPendingSave();
@@ -405,7 +422,7 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // Close after a brief success moment
     setTimeout(() => { onClose(); }, 1200);
-  }, [selectedIds, overrides, editableTranscript, addNote, onClose, cancelPendingSave]);
+  }, [selectedIds, overrides, editableTranscript, addNote, onClose, sessionType, cancelPendingSave]);
 
   const handleClose = useCallback(async () => {
     if (isRecording) await stop();
@@ -480,6 +497,41 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
         {/* ════════════════ PHASE 1: RECORD ════════════════ */}
         {phase === 'record' && (
           <>
+            {/* ── Session-type picker ── */}
+            <View style={styles.sessionTypePicker}>
+              <Text style={styles.sessionTypeLabel}>SESSION TYPE</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.sessionTypeChips}
+                keyboardShouldPersistTaps="handled"
+              >
+                {GROUP_SESSION_TYPES.map(opt => {
+                  const active = sessionType === opt.value;
+                  return (
+                    <Pressable
+                      key={opt.value}
+                      onPress={() => { setSessionType(opt.value); Haptics.selectionAsync(); }}
+                      style={({ pressed }) => [
+                        styles.sessionTypeChip,
+                        active && styles.sessionTypeChipActive,
+                        { opacity: pressed ? 0.75 : 1 },
+                      ]}
+                    >
+                      <Ionicons
+                        name={opt.icon as any}
+                        size={13}
+                        color={active ? WHITE : SLATE}
+                      />
+                      <Text style={[styles.sessionTypeChipText, active && styles.sessionTypeChipTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
             {/* Tabs */}
             <View style={styles.tabBar}>
               {([
@@ -933,6 +985,31 @@ const styles = StyleSheet.create({
   },
   footerSecondary: { alignItems: 'center', paddingVertical: 4 },
   footerSecondaryText: { fontSize: 13, fontFamily: 'Inter_400Regular', color: SLATE },
+
+  // Session-type picker
+  sessionTypePicker: {
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER,
+    backgroundColor: WHITE, gap: 8,
+  },
+  sessionTypeLabel: {
+    fontSize: 10, fontFamily: 'Inter_700Bold', color: SLATE,
+    letterSpacing: 0.8, textTransform: 'uppercase',
+  },
+  sessionTypeChips: { flexDirection: 'row', gap: 8, paddingBottom: 4 },
+  sessionTypeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 999, backgroundColor: SLATE_LIGHT,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  sessionTypeChipActive: {
+    backgroundColor: TEAL, borderColor: TEAL_DARK,
+  },
+  sessionTypeChipText: {
+    fontSize: 13, fontFamily: 'Inter_600SemiBold', color: SLATE,
+  },
+  sessionTypeChipTextActive: { color: WHITE },
 
   // Attach phase toolbar
   attachToolbar: {
