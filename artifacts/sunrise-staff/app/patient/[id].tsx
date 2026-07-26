@@ -848,12 +848,27 @@ export default function PatientDetailScreen() {
       : null;
   const [activeNoteTypeFilter, setActiveNoteTypeFilter] = useState<NoteType | null>(initialNoteTypeFilter);
 
+  // ── Group session type picker — reused from GroupRecorderModal ───────────────
+  const GROUP_SESSION_TYPES: { value: string; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+    { value: 'Psychoeducation',    label: 'Psychoeducation',    icon: 'book-outline' },
+    { value: 'Process Group',      label: 'Process Group',      icon: 'chatbubbles-outline' },
+    { value: 'DBT Skills',         label: 'DBT Skills',         icon: 'layers-outline' },
+    { value: 'Relapse Prevention', label: 'Relapse Prevention', icon: 'shield-checkmark-outline' },
+  ];
+
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [noteType, setNoteType] = useState<NoteType>('observation');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [originalNoteText, setOriginalNoteText] = useState('');
-  const noteIsDirty = !editingNoteId || noteText !== originalNoteText;
+  /** Tracks the group session sub-type while editing a group-session note. */
+  const [editingGroupSessionType, setEditingGroupSessionType] = useState<string>(GROUP_SESSION_TYPES[0].value);
+  /** Original sub-type when the edit modal opened — used to detect subtype-only changes. */
+  const [originalGroupSessionType, setOriginalGroupSessionType] = useState<string>(GROUP_SESSION_TYPES[0].value);
+  const noteIsDirty =
+    !editingNoteId ||
+    noteText !== originalNoteText ||
+    (noteType === 'group-session' && editingGroupSessionType !== originalGroupSessionType);
   // #52: persist the note-type breakdown-chip filter across navigation using a
   // module-level cache keyed by patient id, so returning to the same patient
   // restores the filter state without needing a context or AsyncStorage round-trip.
@@ -907,12 +922,15 @@ export default function PatientDetailScreen() {
   }, [noteText, noteModalVisible, editingNoteId]);
 
 
-  const openNoteModal = async (prefill?: { id: string; text: string; noteType: NoteType }) => {
+  const openNoteModal = async (prefill?: { id: string; text: string; noteType: NoteType; groupSessionType?: string }) => {
     if (prefill) {
       setEditingNoteId(prefill.id);
       setNoteText(prefill.text);
       setOriginalNoteText(prefill.text);
       setNoteType(prefill.noteType);
+      const gst = prefill.groupSessionType ?? GROUP_SESSION_TYPES[0].value;
+      setEditingGroupSessionType(gst);
+      setOriginalGroupSessionType(gst);
     } else {
       setOriginalNoteText('');
       setEditingNoteId(null);
@@ -949,6 +967,8 @@ export default function PatientDetailScreen() {
       setNoteText('');
       setNoteType('observation');
       setEditingNoteId(null);
+      setEditingGroupSessionType(GROUP_SESSION_TYPES[0].value);
+      setOriginalGroupSessionType(GROUP_SESSION_TYPES[0].value);
     });
   };
 
@@ -956,7 +976,14 @@ export default function PatientDetailScreen() {
     const trimmed = noteText.trim();
     if (!trimmed) return;
     if (editingNoteId) {
-      updateNote(id, editingNoteId, trimmed, noteType, nurseDisplayName);
+      updateNote(
+        id,
+        editingNoteId,
+        trimmed,
+        noteType,
+        nurseDisplayName,
+        noteType === 'group-session' ? editingGroupSessionType : undefined,
+      );
     } else {
       addNoteToStore(id, trimmed, noteType);
       AsyncStorage.removeItem(DRAFT_KEY).catch(() => {});
@@ -1260,6 +1287,39 @@ export default function PatientDetailScreen() {
                 );
               })}
             </View>
+
+            {/* Group session sub-type picker — only shown when editing a group-session note */}
+            {noteType === 'group-session' && (
+              <View style={{ marginBottom: 10 }}>
+                <Text style={[s.noteTypeBtnText, { color: colors.mutedForeground, marginBottom: 6, fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 0.4 }]}>
+                  SESSION TYPE
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {GROUP_SESSION_TYPES.map(gst => {
+                    const selected = editingGroupSessionType === gst.value;
+                    return (
+                      <Pressable
+                        key={gst.value}
+                        onPress={() => { setEditingGroupSessionType(gst.value); Haptics.selectionAsync(); }}
+                        style={[
+                          s.noteTypeBtn,
+                          {
+                            backgroundColor: selected ? colors.successBg : colors.muted,
+                            borderColor: selected ? colors.success : colors.border,
+                            borderWidth: selected ? 1.5 : StyleSheet.hairlineWidth,
+                          },
+                        ]}
+                      >
+                        <Ionicons name={gst.icon} size={13} color={selected ? colors.success : colors.mutedForeground} />
+                        <Text style={[s.noteTypeBtnText, { color: selected ? colors.success : colors.mutedForeground, fontFamily: selected ? 'Inter_700Bold' : 'Inter_400Regular' }]}>
+                          {gst.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
 
             {/* Edit-mode history warning banner */}
             {editingNoteId && noteText.trim().length > 0 && (
@@ -1753,7 +1813,7 @@ export default function PatientDetailScreen() {
                   {
                     text: 'Edit',
                     onPress: () => {
-                      openNoteModal({ id: note.id, text: note.text, noteType: note.noteType });
+                      openNoteModal({ id: note.id, text: note.text, noteType: note.noteType, groupSessionType: note.groupSessionType });
                     },
                   },
                   {

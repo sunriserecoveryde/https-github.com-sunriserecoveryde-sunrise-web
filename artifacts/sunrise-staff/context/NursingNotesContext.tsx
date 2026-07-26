@@ -107,7 +107,7 @@ interface NursingNotesContextType {
   getNotesForPatient: (patientId: string) => NursingNote[];
   addNote: (patientId: string, text: string, noteType: NoteType, groupSessionType?: string) => void;
   /** Update text and/or type of an existing note in-place (preserves id and timestamp) */
-  updateNote: (patientId: string, noteId: string, text: string, noteType: NoteType, editedBy: string) => void;
+  updateNote: (patientId: string, noteId: string, text: string, noteType: NoteType, editedBy: string, groupSessionType?: string) => void;
   /** Remove a single note by id from a patient's note list */
   removeNote: (patientId: string, noteId: string) => void;
   /** Re-insert a previously removed note at a specific index (for undo) */
@@ -223,7 +223,7 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const updateNote = useCallback(
-    (patientId: string, noteId: string, text: string, noteType: NoteType, editedBy: string) => {
+    (patientId: string, noteId: string, text: string, noteType: NoteType, editedBy: string, groupSessionType?: string) => {
       const savedAt = new Date().toISOString();
       setNotesByPatient(prev => ({
         ...prev,
@@ -236,7 +236,7 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
             savedAt,
             editedBy,
           };
-          return {
+          const updated: NursingNote = {
             ...n,
             text,
             noteType,
@@ -244,6 +244,14 @@ export function NursingNotesProvider({ children }: { children: React.ReactNode }
             editedBy,
             history: [...(n.history ?? []), historyEntry],
           };
+          // Persist groupSessionType when editing a group-session note;
+          // clear it if the type was changed away from group-session.
+          if (noteType === 'group-session' && groupSessionType) {
+            updated.groupSessionType = groupSessionType;
+          } else if (noteType !== 'group-session') {
+            delete updated.groupSessionType;
+          }
+          return updated;
         }),
       }));
     },
