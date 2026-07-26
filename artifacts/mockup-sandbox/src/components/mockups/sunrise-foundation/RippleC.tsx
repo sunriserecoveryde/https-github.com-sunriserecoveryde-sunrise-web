@@ -1,7 +1,9 @@
 // Ripple — Iteration C "Corona"
 // 13 slender uniform rays — the densest fan, most solar in feel.
 // A gold prestige ring at r=31 gives the mark a crowned, prestigious quality.
-// Outer rays reach past the frame boundary, anchoring to both blue edges.
+// All rays are exactly the same length: rIn=24 → rOut=44 (20 canvas units).
+// The top ray (0°) ends flush at the viewBox top edge; every other ray is
+// trimmed to that same physical length so they read perfectly uniform.
 
 function Mark({ dark }: { dark: boolean }) {
   const orange  = dark ? "#FF6B1A" : "#EA6C00";
@@ -9,22 +11,22 @@ function Mark({ dark }: { dark: boolean }) {
   const teal    = dark ? "#14B8A6" : "#0D9488";
   const hLine   = dark ? "rgba(20,184,166,0.50)" : "rgba(13,148,136,0.55)";
 
-  // 13 rays — all identical: strokeWidth=2.0, rIn=24, rOut=62
+  // 13 rays — all identical: strokeWidth=2.0, rIn=24, rOut=44 (length = 20 units each)
   // cx=50, cy=44  — angles 0, ±14, ±28, ±42, ±56, ±70, ±84
   const rays = [
-    [50.0,  20.0,  50.0, -18.0],  //  0°
-    [55.8,  20.8,  64.3, -16.5],  // +14°
-    [44.2,  20.8,  35.7, -16.5],  // -14°
-    [61.3,  23.2,  77.4, -10.3],  // +28°
-    [38.7,  23.2,  22.6, -10.3],  // -28°
-    [66.1,  26.8,  89.5,  -1.0],  // +42°
-    [33.9,  26.8,  10.5,  -1.0],  // -42°
-    [69.9,  31.5,  99.8,  10.5],  // +56°
-    [30.1,  31.5,   0.2,  10.5],  // -56°
-    [72.3,  37.5, 106.4,  22.4],  // +70°
-    [27.7,  37.5,  -6.4,  22.4],  // -70°
-    [73.9,  43.4, 109.6,  35.3],  // +84°
-    [26.1,  43.4,  -9.6,  35.3],  // -84°
+    [50.0,  20.0,  50.0,   0.0],  //  0°  — ends exactly at viewBox top
+    [55.8,  20.7,  60.6,   1.3],  // +14°
+    [44.2,  20.7,  39.4,   1.3],  // -14°
+    [61.3,  22.8,  70.7,   5.2],  // +28°
+    [38.7,  22.8,  29.3,   5.2],  // -28°
+    [66.1,  26.2,  79.4,  11.3],  // +42°
+    [33.9,  26.2,  20.6,  11.3],  // -42°
+    [69.9,  30.6,  86.5,  19.4],  // +56°
+    [30.1,  30.6,  13.5,  19.4],  // -56°
+    [72.6,  35.8,  91.3,  29.0],  // +70°
+    [27.4,  35.8,   8.7,  29.0],  // -70°
+    [73.9,  41.5,  93.8,  39.4],  // +84°
+    [26.1,  41.5,   6.2,  39.4],  // -84°
   ] as const;
 
   return (
