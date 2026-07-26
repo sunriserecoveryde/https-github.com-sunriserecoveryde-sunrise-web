@@ -54,8 +54,9 @@ export default function Subsidiaries() {
             <div className="lg:col-span-7 bg-background border border-border h-[600px] relative overflow-hidden">
               <div className="absolute inset-0 bg-muted/20"></div>
               {/* Image placeholder - normally a real photo of the facility */}
-              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/30 font-serif text-2xl">
-                Facility Imagery
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                <span className="text-muted-foreground/30 font-serif text-2xl">Facility Imagery</span>
+                <span className="text-muted-foreground/40 text-sm uppercase tracking-widest">Coming Soon</span>
               </div>
             </div>
           </section>
