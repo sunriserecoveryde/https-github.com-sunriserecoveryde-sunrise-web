@@ -28,6 +28,7 @@ import { usePatients } from '@/context/PatientContext';
 import { useMdAcknowledgment } from '@/context/MdAcknowledgmentContext';
 import { useNursingNotes, NursingNote, NoteHistoryEntry } from '@/context/NursingNotesContext';
 import { useRole } from '@/context/RoleContext';
+import { SessionRecorderModal } from '@/components/SessionRecorderModal';
 import {
   PATIENTS,
   VITALS,
@@ -492,6 +493,9 @@ export default function PatientDetailScreen() {
       }
     };
   }, []);
+
+  // ─── Session recorder ─────────────────────────────────────────────────────
+  const [recorderVisible, setRecorderVisible] = useState(false);
 
   // ─── Add Note state ────────────────────────────────────────────────────────
   const {
@@ -1199,9 +1203,19 @@ export default function PatientDetailScreen() {
 
             <View style={s.sheetHeader}>
               <Text style={[s.sheetTitle, { color: colors.navy }]}>{editingNoteId ? 'Edit Nursing Note' : 'Add Nursing Note'}</Text>
-              <Pressable onPress={closeNoteModal} hitSlop={12}>
-                <Ionicons name="close" size={22} color={colors.mutedForeground} />
-              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Pressable
+                  onPress={() => setRecorderVisible(true)}
+                  hitSlop={12}
+                  style={[s.recorderBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                >
+                  <Ionicons name="mic-outline" size={17} color={colors.teal} />
+                  <Text style={[s.recorderBtnText, { color: colors.teal }]}>Record</Text>
+                </Pressable>
+                <Pressable onPress={closeNoteModal} hitSlop={12}>
+                  <Ionicons name="close" size={22} color={colors.mutedForeground} />
+                </Pressable>
+              </View>
             </View>
 
             <Text style={[s.sheetPatientName, { color: colors.mutedForeground }]}>
@@ -1282,6 +1296,17 @@ export default function PatientDetailScreen() {
           </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* ─── Session Recorder Modal ─── */}
+      <SessionRecorderModal
+        visible={recorderVisible}
+        onClose={() => setRecorderVisible(false)}
+        patientName={`${patient.firstName} ${patient.lastName}`}
+        onUseTranscript={(text) => {
+          setNoteText(prev => prev ? `${prev}\n\n${text}` : text);
+          setRecorderVisible(false);
+        }}
+      />
 
       <ScrollView
         ref={scrollViewRef}
@@ -2331,6 +2356,9 @@ const s = StyleSheet.create({
   sessionNoteText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
   editedTag: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 },
   editedTagText: { fontSize: 10, fontFamily: 'Inter_600SemiBold', fontWeight: '600' },
+  // Recorder button (inside note sheet header)
+  recorderBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth },
+  recorderBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   // Note bottom sheet
   noteOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   bottomSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingTop: 10, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 12 },
