@@ -126,9 +126,13 @@ export function normalizePendingDeletes(
   const map = new Map<number, number>();
   for (const item of parsed) {
     if (typeof item === "number") {
-      // v1 — stamp with nowMs so it expires after one TTL window.
-      // Only add if not already present (idempotent).
-      if (!map.has(item)) map.set(item, nowMs);
+      // v1 — true age unknown (could be months old).  Stamp with epoch 0 so
+      // parsePendingDeletes treats the entry as immediately expired: any real
+      // nowMs is vastly larger than PENDING_DELETE_TTL_MS, so the entry will
+      // be dropped on the very next parsePendingDeletes call.  This prevents a
+      // stale pre-upgrade tombstone from hiding a conversation for another full
+      // TTL window after the upgrade.
+      if (!map.has(item)) map.set(item, 0);
     } else if (
       item !== null &&
       typeof item === "object" &&

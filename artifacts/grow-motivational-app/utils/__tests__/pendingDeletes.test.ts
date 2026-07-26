@@ -210,30 +210,33 @@ describe("normalizePendingDeletes", () => {
     expect(normalizePendingDeletes(raw, NOW)).toBeNull();
   });
 
-  it("stamps v1 plain-number entries with nowMs so they get a bounded lifetime", () => {
+  it("stamps v1 plain-number entries with epoch 0 so they expire immediately on next read", () => {
+    // v1 entries have unknown true age — they could be months old.  Normalizing
+    // stamps addedAt=0 so parsePendingDeletes sees them as already expired.
     const raw = JSON.stringify([42, 99]); // v1
     const result = normalizePendingDeletes(raw, NOW);
+    // The output is non-null (entries written to storage for cleanup), but
+    // parsePendingDeletes immediately considers them expired.
     expect(result).not.toBeNull();
-    // After normalization, reading at NOW should still see both ids
-    expect(parsePendingDeletes(result!, NOW)).toEqual(new Set([42, 99]));
+    expect(parsePendingDeletes(result!, NOW).size).toBe(0);
+    expect(parsePendingDeletes(result!, NOW).has(42)).toBe(false);
+    expect(parsePendingDeletes(result!, NOW).has(99)).toBe(false);
   });
 
-  it("v1 entries stamped at T expire at T + TTL — they cannot hide a conversation forever", () => {
+  it("v1 entries stamped at epoch 0 expire immediately — clean-reinstall regression guard", () => {
+    // Regression: before the fix, v1 entries were stamped with nowMs and
+    // stayed hidden for a full extra TTL window post-upgrade.  Now they are
+    // stamped with addedAt=0 so the tombstone is dropped as soon as
+    // parsePendingDeletes is called on the normalized output.
     const v1Raw = JSON.stringify([7]); // legacy plain number
-    const T = NOW;
-
-    // Normalize at time T: stamps addedAt = T
-    const normalizedAtT = normalizePendingDeletes(v1Raw, T)!;
+    const normalizedAtT = normalizePendingDeletes(v1Raw, NOW)!;
     expect(normalizedAtT).not.toBeNull();
 
-    // Still live at T + TTL - 1
-    expect(parsePendingDeletes(normalizedAtT, T + PENDING_DELETE_TTL_MS - 1).has(7)).toBe(true);
+    // Expired immediately — even at the same millisecond as normalization
+    expect(parsePendingDeletes(normalizedAtT, NOW).has(7)).toBe(false);
 
-    // Expired at exactly T + TTL
-    expect(parsePendingDeletes(normalizedAtT, T + PENDING_DELETE_TTL_MS).has(7)).toBe(false);
-
-    // Definitely gone at T + 8 days
-    expect(parsePendingDeletes(normalizedAtT, T + 8 * DAY).has(7)).toBe(false);
+    // Still expired days later — never hides the conversation again
+    expect(parsePendingDeletes(normalizedAtT, NOW + 8 * DAY).has(7)).toBe(false);
   });
 
   it("preserves original timestamps for live v2 entries (does not reset their clock)", () => {
@@ -254,15 +257,17 @@ describe("normalizePendingDeletes", () => {
     expect(ids).toEqual(new Set([1]));
   });
 
-  it("handles a mix of v1 and v2 entries — v1 gets stamped, expired v2 dropped", () => {
+  it("handles a mix of v1 and v2 entries — v1 stamped epoch 0 (expires immediately), expired v2 dropped, live v2 preserved", () => {
     const raw = JSON.stringify([
-      5,                              // v1 → stamped with nowMs
+      5,                              // v1 → stamped with epoch 0 → immediately expired
       v2Entry(6, NOW - HOUR),         // live v2 → preserved
       v2Entry(7, NOW - 8 * DAY),       // expired v2 → dropped
     ]);
     const result = normalizePendingDeletes(raw, NOW)!;
     const ids = parsePendingDeletes(result, NOW);
-    expect(ids).toEqual(new Set([5, 6]));
+    // Only live v2 entry survives; v1 entry is treated as immediately expired
+    expect(ids).toEqual(new Set([6]));
+    expect(ids.has(5)).toBe(false);
     expect(ids.has(7)).toBe(false);
   });
 });
