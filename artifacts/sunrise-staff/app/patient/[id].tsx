@@ -1747,7 +1747,7 @@ export default function PatientDetailScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               Alert.alert(
                 'Note Options',
-                '',
+                getNoteLabel(note),
                 [
                   { text: 'Cancel', style: 'cancel' },
                   {
@@ -1917,7 +1917,9 @@ export default function PatientDetailScreen() {
             { bottom: Math.max(insets.bottom, 8) + 16, transform: [{ translateY: toastAnim }] },
           ]}
         >
-          <Text style={s.undoToastText}>Note deleted</Text>
+          <Text style={s.undoToastText}>
+            {pendingDelete ? `Deleted · ${getNoteLabel(pendingDelete.note)}` : 'Note deleted'}
+          </Text>
           <Pressable onPress={handleUndo} hitSlop={12} style={s.undoBtn}>
             <Text style={s.undoBtnText}>Undo</Text>
           </Pressable>
