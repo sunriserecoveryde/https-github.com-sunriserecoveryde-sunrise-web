@@ -103,6 +103,21 @@ export function makeHandoffCompletedKey(date: Date): string {
 }
 
 /**
+ * Return the date-scoped draft key for a new note being composed for a patient.
+ * e.g. `@sunrise_note_draft_p1_2026-07-20`
+ *
+ * The key is scoped to both the patient id and the calendar day so that a draft
+ * written just before midnight cannot pre-fill the note modal on the next shift.
+ * When openNoteModal runs on a new day it derives a fresh key from `new Date()`,
+ * finds nothing in storage under that key, and starts with an empty text field.
+ * The previous day's orphaned key is silently ignored and will be pruned by
+ * pruneStaleStorageKeys on the next launch.
+ */
+export function makeDraftNoteKey(patientId: string, date: Date): string {
+  return `@sunrise_note_draft_${patientId}_${formatDateKey(date)}`;
+}
+
+/**
  * Return the crash-safe draft-completed key for a given date.
  * e.g. `@sunrise_handoff_undo_draft_2026-07-20`
  *

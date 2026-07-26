@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Svg, { G, Polyline, Circle, Line, Text as SvgText, Rect } from 'react-native-svg';
+import { makeDraftNoteKey } from '@/lib/coldStartLoadHelpers';
 import { useColors } from '@/hooks/useColors';
 import { useSwipeHint } from '@/hooks/useSwipeHint';
 import { useScrollToSection } from '@/hooks/useScrollToSection';
@@ -912,7 +913,11 @@ export default function PatientDetailScreen() {
     Haptics.selectionAsync();
     setExpandedEditId(prev => (prev === noteId ? null : noteId));
   };
-  const DRAFT_KEY = `@sunrise_note_draft_${id}`;
+  // Date-scoped so a draft written just before midnight is never pre-filled on
+  // the next shift. openNoteModal always derives this key from `new Date()`, so
+  // after a date rollover it finds nothing under the new day's key and starts
+  // with an empty text field. The previous day's key is silently orphaned.
+  const DRAFT_KEY = makeDraftNoteKey(id, new Date());
 
   // Autosave draft for new notes (not edits) so force-quit can't lose typed text
   useEffect(() => {
