@@ -16,8 +16,12 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Platform } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ── Persistence key for background flush ──────────────────────────
+const TRANSCRIPT_BACKUP_KEY = 'sunrise_staff_session_recorder_transcript_backup';
 
 // ── Web Speech API type shims (web-only) ──────────────────────────
 
@@ -80,6 +84,11 @@ export interface SessionRecorderState {
   /** Interim/partial result text shown while the user is still speaking. */
   interimText: string;
   elapsedSeconds: number;
+  /**
+   * True after the app returns from background while a recording was active.
+   * The modal uses this to show a "Paused — app was in background" banner.
+   */
+  wasBackgrounded: boolean;
 }
 
 export interface SessionRecorderControls {
@@ -88,6 +97,8 @@ export interface SessionRecorderControls {
   resume: () => void;
   stop: () => void;
   resetTranscript: () => void;
+  /** Dismiss the wasBackgrounded flag once the user has seen the banner. */
+  clearBackgroundedFlag: () => void;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────
@@ -107,6 +118,7 @@ export function useSessionRecorder(): SessionRecorderState & SessionRecorderCont
   const [transcript, setTranscript] = useState('');
   const [interimText, setInterimText] = useState('');
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [wasBackgrounded, setWasBackgrounded] = useState(false);
 
   // ── Refs ──────────────────────────────────────────────────────
   // Web path
@@ -300,13 +312,68 @@ export function useSessionRecorder(): SessionRecorderState & SessionRecorderCont
     setInterimText('');
   }, [isWeb, stopWebRecognition, stopNativeRecording, clearTimer]);
 
-  // ── resetTranscript ───────────────────────────────────────────
+  // ── AppState — flush transcript to AsyncStorage on background ──
 
-  const resetTranscript = useCallback(() => {
-    transcriptRef.current = '';
-    setTranscript('');
-    setInterimText('');
-    setElapsedSeconds(0);
+  useEffect(() => {
+    const handleAppStateChange = async (nextState: AppStateStatus) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        // Flush whatever transcript we have so far, even if recording is not
+        // active (clinician may have stopped but not yet copied the text).
+        const current = transcriptRef.current;
+        if (current) {
+          try {
+            await AsyncStorage.setItem(TRANSCRIPT_BACKUP_KEY, current);
+          } catch {
+            // Storage failure — silently continue; transcript already in RAM.
+          }
+        }
+
+        // Pause live recognition/recording so the OS doesn't kill the process
+        // while we still have a partial transcript.
+        if (isRecordingRef.current && !isPausedRef.current) {
+          if (isWeb) {
+            recognitionRef.current?.stop();
+            // Don't null it out — we'll restart on foreground.
+          } else {
+            try {
+              await recordingRef.current?.pauseAsync();
+            } catch {
+              // Pause unsupported — ignore; audio will be clipped by OS anyway.
+            }
+          }
+          clearTimer();
+          isPausedRef.current = true;
+          setIsPaused(true);
+          setInterimText('');
+        }
+      } else if (nextState === 'active') {
+        // Restore transcript from AsyncStorage (covers the case where JS
+        // context was reloaded by the OS and the ref was wiped).
+        try {
+          const saved = await AsyncStorage.getItem(TRANSCRIPT_BACKUP_KEY);
+          if (saved && !transcriptRef.current) {
+            transcriptRef.current = saved;
+            setTranscript(saved);
+          }
+        } catch {
+          // Storage read failure — silently continue.
+        }
+
+        // Flag the banner if we were recording when backgrounded.
+        if (isRecordingRef.current) {
+          setWasBackgrounded(true);
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => { subscription.remove(); };
+  }, [isWeb, clearTimer]);
+
+  // ── clearBackgroundedFlag ─────────────────────────────────────
+
+  const clearBackgroundedFlag = useCallback(() => {
+    setWasBackgrounded(false);
   }, []);
 
   // ── Cleanup on unmount ────────────────────────────────────────
@@ -323,6 +390,17 @@ export function useSessionRecorder(): SessionRecorderState & SessionRecorderCont
     };
   }, [clearTimer]);
 
+  // ── Clear backup when transcript is fully reset ───────────────
+
+  const resetTranscript = useCallback(() => {
+    transcriptRef.current = '';
+    setTranscript('');
+    setInterimText('');
+    setElapsedSeconds(0);
+    setWasBackgrounded(false);
+    AsyncStorage.removeItem(TRANSCRIPT_BACKUP_KEY).catch(() => {});
+  }, []);
+
   return {
     isRecordingSupported,
     isTranscriptionSupported,
@@ -331,10 +409,12 @@ export function useSessionRecorder(): SessionRecorderState & SessionRecorderCont
     transcript,
     interimText,
     elapsedSeconds,
+    wasBackgrounded,
     start,
     pause,
     resume,
     stop,
     resetTranscript,
+    clearBackgroundedFlag,
   };
 }

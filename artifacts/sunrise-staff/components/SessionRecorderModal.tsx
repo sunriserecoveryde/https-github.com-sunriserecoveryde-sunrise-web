@@ -48,6 +48,8 @@ const TEAL = '#0d9488';
 const TEAL_DARK = '#0f766e';
 const RED = '#ef4444';
 const AMBER = '#f59e0b';
+const AMBER_BG = '#fffbeb';
+const AMBER_BORDER = '#fde68a';
 const NAVY = '#1C2B3A';
 const SLATE = '#64748b';
 const SLATE_LIGHT = '#f1f5f9';
@@ -152,11 +154,13 @@ export function SessionRecorderModal({
     transcript,
     interimText,
     elapsedSeconds,
+    wasBackgrounded,
     start,
     pause,
     resume,
     stop,
     resetTranscript,
+    clearBackgroundedFlag,
   } = useSessionRecorder();
 
   const [activeTab, setActiveTab] = useState<'record' | 'transcript'>('record');
@@ -312,6 +316,24 @@ export function SessionRecorderModal({
           contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Background-pause banner — shown when app returns from background mid-recording */}
+          {wasBackgrounded && (
+            <View style={[styles.alertBanner, styles.alertAmber]}>
+              <Ionicons name="pause-circle-outline" size={16} color="#b45309" />
+              <View style={styles.flex}>
+                <Text style={[styles.alertTitle, { color: '#b45309' }]}>
+                  Paused — app was in background
+                </Text>
+                <Text style={[styles.alertBody, { color: '#92400e' }]}>
+                  Recording paused while you were away. Your transcript has been saved. Tap Resume to continue, or Stop &amp; Review to finish.
+                </Text>
+              </View>
+              <Pressable onPress={clearBackgroundedFlag} hitSlop={8}>
+                <Ionicons name="close" size={16} color="#b45309" />
+              </Pressable>
+            </View>
+          )}
+
           {/* Mic denied banner */}
           {micDenied && (
             <View style={[styles.alertBanner, styles.alertRed]}>
@@ -591,6 +613,7 @@ const styles = StyleSheet.create({
   alertRed: { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
   alertBlue: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
   alertTeal: { backgroundColor: '#f0fdfa', borderColor: '#99f6e4' },
+  alertAmber: { backgroundColor: AMBER_BG, borderColor: AMBER_BORDER },
   alertTitle: { fontSize: 13, fontFamily: 'Inter_700Bold', marginBottom: 2 },
   alertBody: { fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17 },
 
