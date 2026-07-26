@@ -124,14 +124,20 @@ interface PatientRowProps {
   patient: Patient;
   selected: boolean;
   transcript: string;
-  hasExistingNote: boolean;
+  existingNoteCount: number;
   onToggle: () => void;
   onTranscriptChange: (t: string) => void;
 }
 
-function PatientRow({ patient, selected, transcript, hasExistingNote, onToggle, onTranscriptChange }: PatientRowProps) {
+function PatientRow({ patient, selected, transcript, existingNoteCount, onToggle, onTranscriptChange }: PatientRowProps) {
   const [expanded, setExpanded] = useState(false);
   const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
+  const hasExistingNote = existingNoteCount > 0;
+  const badgeLabel = existingNoteCount >= 2 ? `${existingNoteCount} notes today` : 'Note today';
+  const warningLabel =
+    existingNoteCount >= 2
+      ? `This patient already has ${existingNoteCount} group notes this shift. Attaching again will add another entry.`
+      : 'This patient already received a group note this shift. Attaching again will add a second entry.';
 
   return (
     <View style={[
@@ -156,7 +162,7 @@ function PatientRow({ patient, selected, transcript, hasExistingNote, onToggle, 
             {hasExistingNote && (
               <View style={styles.duplicateBadge}>
                 <Ionicons name="warning-outline" size={11} color={AMBER} />
-                <Text style={styles.duplicateBadgeText}>Note today</Text>
+                <Text style={styles.duplicateBadgeText}>{badgeLabel}</Text>
               </View>
             )}
           </View>
@@ -184,9 +190,7 @@ function PatientRow({ patient, selected, transcript, hasExistingNote, onToggle, 
       {selected && hasExistingNote && (
         <View style={styles.duplicateWarningRow}>
           <Ionicons name="information-circle-outline" size={14} color={AMBER} />
-          <Text style={styles.duplicateWarningText}>
-            This patient already received a group note this shift. Attaching again will add a second entry.
-          </Text>
+          <Text style={styles.duplicateWarningText}>{warningLabel}</Text>
         </View>
       )}
 
@@ -433,19 +437,20 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
 
   const allSelected = patients.length > 0 && selectedIds.size === patients.length;
 
-  // Compute which patients already have at least one note this shift
-  const patientsWithNoteToday = useMemo<Set<string>>(() => {
-    const result = new Set<string>();
+  // Compute how many notes each patient already has this shift (patientId → count)
+  const noteCountByPatient = useMemo<Map<string, number>>(() => {
+    const result = new Map<string, number>();
     patients.forEach(p => {
-      if (getNotesForPatient(p.id).length > 0) result.add(p.id);
+      const count = getNotesForPatient(p.id).length;
+      if (count > 0) result.set(p.id, count);
     });
     return result;
   }, [patients, getNotesForPatient]);
 
-  // Count selected patients who already have a note today
+  // Count selected patients who already have at least one note today
   const duplicateCount = useMemo(
-    () => [...selectedIds].filter(id => patientsWithNoteToday.has(id)).length,
-    [selectedIds, patientsWithNoteToday],
+    () => [...selectedIds].filter(id => noteCountByPatient.has(id)).length,
+    [selectedIds, noteCountByPatient],
   );
 
   return (
@@ -780,7 +785,7 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
                     patient={p}
                     selected={selectedIds.has(p.id)}
                     transcript={overrides[p.id] ?? editableTranscript}
-                    hasExistingNote={patientsWithNoteToday.has(p.id)}
+                    existingNoteCount={noteCountByPatient.get(p.id) ?? 0}
                     onToggle={() => togglePatient(p.id)}
                     onTranscriptChange={t => setPatientTranscript(p.id, t)}
                   />
