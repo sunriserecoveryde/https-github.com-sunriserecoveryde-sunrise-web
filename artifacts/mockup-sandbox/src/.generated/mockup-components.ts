@@ -6,5 +6,10 @@ export const modules: ModuleMap = {
   "./components/mockups/sunrise-logos/FoundationC.tsx": () => import("../components/mockups/sunrise-logos/FoundationC.tsx"),
   "./components/mockups/sunrise-logos/RecoveryA.tsx": () => import("../components/mockups/sunrise-logos/RecoveryA.tsx"),
   "./components/mockups/sunrise-logos/RecoveryB.tsx": () => import("../components/mockups/sunrise-logos/RecoveryB.tsx"),
-  "./components/mockups/sunrise-logos/RecoveryC.tsx": () => import("../components/mockups/sunrise-logos/RecoveryC.tsx")
+  "./components/mockups/sunrise-logos/RecoveryC.tsx": () => import("../components/mockups/sunrise-logos/RecoveryC.tsx"),
+  "./components/mockups/sunrise-recovery/Compass.tsx": () => import("../components/mockups/sunrise-recovery/Compass.tsx"),
+  "./components/mockups/sunrise-recovery/Continuum.tsx": () => import("../components/mockups/sunrise-recovery/Continuum.tsx"),
+  "./components/mockups/sunrise-recovery/Grove.tsx": () => import("../components/mockups/sunrise-recovery/Grove.tsx"),
+  "./components/mockups/sunrise-recovery/Hearth.tsx": () => import("../components/mockups/sunrise-recovery/Hearth.tsx"),
+  "./components/mockups/sunrise-recovery/Horizon.tsx": () => import("../components/mockups/sunrise-recovery/Horizon.tsx")
 };
