@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="460" viewBox="0 0 700 460">
+  <defs>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,600&amp;family=Outfit:wght@500&amp;display=swap');</style>
+    <radialGradient id="sunGrad" cx="350" cy="140" r="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#FFF176"/>
+      <stop offset="28%"  stop-color="#FFE033"/>
+      <stop offset="55%"  stop-color="#FBBF24"/>
+      <stop offset="76%"  stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Soft aura -->
+  <circle cx="350" cy="140" r="144" fill="#FEF08A" opacity="0.13"/>
+
+  <!-- 13 rays — all identical length (rIn=96, rOut=176, sw=8) -->
+  <line x1="350"   y1="44"   x2="350"   y2="-36"  stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="373.2" y1="46.8" x2="392.6" y2="29.2"  stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="326.8" y1="46.8" x2="307.4" y2="29.2"  stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="395.1" y1="55.2" x2="432.6" y2="4.8"   stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="304.9" y1="55.2" x2="267.4" y2="4.8"   stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="414.2" y1="68.7" x2="467.8" y2="9.2"   stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="285.8" y1="68.7" x2="232.2" y2="9.2"   stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="429.6" y1="86.3" x2="496.1" y2="42.4"  stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="270.4" y1="86.3" x2="203.9" y2="42.4"  stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="440.2" y1="107.2" x2="515.4" y2="79.8" stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="259.8" y1="107.2" x2="184.6" y2="79.8" stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="445.5" y1="130"   x2="525.2" y2="121.6" stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+  <line x1="254.5" y1="130"   x2="174.8" y2="121.6" stroke="#FF8533" stroke-width="8" stroke-linecap="round" opacity="0.93"/>
+
+  <!-- Gold corona ring -->
+  <circle cx="350" cy="140" r="124" fill="none" stroke="#FBBF24" stroke-width="5.6" opacity="0.65"/>
+
+  <!-- Sun disc — orange rim → bright lemon-yellow centre -->
+  <circle cx="350" cy="140" r="96" fill="url(#sunGrad)"/>
+
+  <!-- Horizon line -->
+  <line x1="0" y1="172" x2="700" y2="172" stroke="rgba(20,184,166,0.50)" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Ripple 1 — gold shimmer -->
+  <path d="M 10,172 Q 350,211 690,172"  stroke="#FBBF24"  stroke-width="3.6"  fill="none" stroke-linecap="round" opacity="0.50"/>
+  <!-- Ripple 1 — teal main (tight) -->
+  <path d="M 0,172 Q 350,224 700,172"  stroke="#14B8A6"  stroke-width="9.6"  fill="none" stroke-linecap="round" opacity="0.88"/>
+  <!-- Ripple 2 — teal medium -->
+  <path d="M 0,172 Q 350,284 700,172"  stroke="#14B8A6"  stroke-width="6.8"  fill="none" stroke-linecap="round" opacity="0.55"/>
+  <!-- Ripple 3 — sky-blue wide -->
+  <path d="M 0,172 Q 350,340 700,172"  stroke="#38BDF8"  stroke-width="4.4"  fill="none" stroke-linecap="round" opacity="0.44"/>
+
+  <!-- Wordmark -->
+  <text x="350" y="368" font-family="'Playfair Display',Georgia,'Times New Roman',serif" font-size="22" font-weight="600" font-style="italic" fill="#F97316" text-anchor="middle" letter-spacing="6">THE SUNRISE</text>
+  <text x="350" y="425" font-family="'Playfair Display',Georgia,'Times New Roman',serif" font-size="64" font-weight="700" fill="#F8FAFC" text-anchor="middle" letter-spacing="5">FOUNDATION</text>
+  <text x="350" y="450" font-family="'Outfit','Segoe UI',system-ui,sans-serif" font-size="13" font-weight="500" fill="#14B8A6" text-anchor="middle" letter-spacing="4">FUNDING RECOVERY · RESTORING HOPE</text>
+</svg>

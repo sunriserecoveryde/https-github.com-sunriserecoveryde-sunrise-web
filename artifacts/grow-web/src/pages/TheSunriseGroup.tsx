@@ -5,6 +5,8 @@ import { EcosystemDiagram } from '@/components/EcosystemDiagram';
 import { Activity, BrainCircuit, BookOpen, HeartHandshake, ArrowRight } from 'lucide-react';
 import { Link } from 'wouter';
 
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 export function TheSunriseGroup() {
   const entities = [
     {
@@ -53,7 +55,8 @@ export function TheSunriseGroup() {
       desc: "The philanthropic arm dedicated to removing barriers to care. We believe financial constraints should never prevent someone from accessing life-saving treatment.",
       services: ["Treatment Scholarships", "Sober Living Grants", "Community Education", "Advocacy Initiatives", "Research Funding"],
       cta: "Learn About Our Impact",
-      href: "#"
+      href: "#",
+      logoImg: `${basePath}/logos/sunrise-foundation-corona-transparent.png`
     }
   ];
 
@@ -102,7 +105,10 @@ export function TheSunriseGroup() {
               <div key={entity.id} className={`flex flex-col md:flex-row gap-10 items-center ${i % 2 !== 0 ? 'md:flex-row-reverse' : ''}`}>
                 <div className="w-full md:w-1/3 flex justify-center">
                   <div className={`w-40 h-40 rounded-3xl ${entity.bg} ${entity.border} border-2 flex items-center justify-center`}>
-                    <entity.icon className={`w-20 h-20 ${entity.color}`} />
+                    {(entity as any).logoImg
+                      ? <img src={(entity as any).logoImg} alt={entity.title} className="w-32 h-auto object-contain" />
+                      : <entity.icon className={`w-20 h-20 ${entity.color}`} />
+                    }
                   </div>
                 </div>
                 <div className="w-full md:w-2/3">

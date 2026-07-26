@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import { Activity, BrainCircuit, BookOpen, HeartHandshake } from 'lucide-react';
 
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 export function EcosystemDiagram() {
   const nodes = [
     {
@@ -41,7 +43,8 @@ export function EcosystemDiagram() {
       color: 'text-emerald-400',
       bg: 'bg-emerald-400/10',
       border: 'border-emerald-400/20',
-      position: 'md:col-start-2 md:row-start-3'
+      position: 'md:col-start-2 md:row-start-3',
+      logoImg: `${basePath}/logos/sunrise-foundation-corona-transparent.png`
     }
   ];
 
@@ -68,7 +71,10 @@ export function EcosystemDiagram() {
             className={`flex flex-col items-center justify-center p-6 glass-card rounded-2xl border-2 ${node.border} text-center hover:scale-105 transition-transform ${node.position}`}
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${node.bg} ${node.color}`}>
-              <node.icon className="w-8 h-8" />
+              {(node as any).logoImg
+                ? <img src={(node as any).logoImg} alt={node.title} className="w-12 h-auto object-contain" />
+                : <node.icon className="w-8 h-8" />
+              }
             </div>
             <h3 className="font-heading font-bold text-lg mb-1">{node.title}</h3>
             <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">{node.subtitle}</p>

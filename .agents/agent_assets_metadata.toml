@@ -60,3 +60,15 @@ id = "bFpHa6EY7M3GcPurDtBzs"
 uri = "file://artifacts/sunrise-grp/public/logos/sunrise-recovery-horizon-navy.png"
 type = "image"
 title = "Sunrise Recovery — Horizon (Navy PNG)"
+
+[[outputs]]
+id = "vBg5YUG8vKArpedKzueYN"
+uri = "file://artifacts/sunrise-grp/public/logos/sunrise-foundation-corona-transparent.png"
+type = "image"
+title = "The Sunrise Foundation — Corona (Transparent PNG)"
+
+[[outputs]]
+id = "qmfGg0HXpNMhcVzHZXXKf"
+uri = "file://artifacts/sunrise-grp/public/logos/sunrise-foundation-corona-white.png"
+type = "image"
+title = "The Sunrise Foundation — Corona (White Background PNG)"

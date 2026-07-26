@@ -128,6 +128,7 @@ export default function Home() {
               category="Philanthropy"
               description="Our non-profit arm dedicated to removing financial barriers to care and funding community-level behavioral health initiatives."
               delay={0.3}
+              logoNode={<img src={`${basePath}/logos/sunrise-foundation-corona-transparent.png`} alt="The Sunrise Foundation" className="h-12 w-auto object-contain" />}
             />
           </div>
         </div>

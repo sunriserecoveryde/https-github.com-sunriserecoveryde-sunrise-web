@@ -120,9 +120,11 @@ export default function Subsidiaries() {
           {/* The Sunrise Foundation */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             <FadeIn className="lg:col-span-5 lg:sticky top-32 lg:order-2">
-              <div className="p-4 bg-primary/10 w-fit rounded-lg mb-6 text-primary">
-                <Heart size={40} strokeWidth={1.5} />
-              </div>
+              <img
+                src={`${basePath}/logos/sunrise-foundation-corona-transparent.png`}
+                alt="The Sunrise Foundation"
+                className="h-24 w-auto object-contain mb-6"
+              />
               <h2 className="text-4xl font-serif mb-4">The Sunrise Foundation</h2>
               <p className="text-sm font-medium tracking-widest uppercase text-muted-foreground mb-8">Philanthropy</p>
               <p className="text-lg text-muted-foreground leading-relaxed mb-6">

@@ -81,15 +81,18 @@ export default function Governance() {
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 w-full pt-8">
                 {[
-                  { name: "Sunrise Recovery", type: "Clinical" },
-                  { name: "SunriseOS", type: "Technology" },
-                  { name: "Grow Motivational", type: "Education" },
-                  { name: "Sunrise Foundation", type: "Non-Profit" }
+                  { name: "Sunrise Recovery", type: "Clinical", logo: null },
+                  { name: "SunriseOS", type: "Technology", logo: `${basePath}/logo-sunriseos-official.png` },
+                  { name: "Grow Motivational", type: "Education", logo: null },
+                  { name: "Sunrise Foundation", type: "Non-Profit", logo: `${basePath}/logos/sunrise-foundation-corona-transparent.png` }
                 ].map((entity, i) => (
                   <FadeIn key={i} delay={0.2 + (i * 0.1)} className="flex flex-col items-center">
                     <div className="w-px h-8 bg-border mb-0 hidden md:block -mt-8"></div>
                     <div className="w-full h-32 border border-border bg-card p-4 flex flex-col justify-center items-center text-center hover:border-primary/50 transition-colors">
-                      <span className="font-serif text-lg mb-2">{entity.name}</span>
+                      {entity.logo
+                        ? <img src={entity.logo} alt={entity.name} className="h-10 w-auto object-contain mb-1" />
+                        : <span className="font-serif text-lg mb-2">{entity.name}</span>
+                      }
                       <span className="text-xs uppercase tracking-widest text-muted-foreground">{entity.type}</span>
                     </div>
                   </FadeIn>
