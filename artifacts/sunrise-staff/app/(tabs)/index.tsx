@@ -322,7 +322,7 @@ function BedCard({
   isPendingDischarge?: boolean;
 }) {
   const colors = useColors();
-  const { getNotesForPatient } = useNursingNotes();
+  const { getNotesForPatient, isRehydrating } = useNursingNotes();
   const ac = acuityColor(patient.acuity);
   const showCows = patient.cows != null && patient.cows > 0;
   const showCiwa = patient.ciwa != null && patient.ciwa > 0;
@@ -511,7 +511,7 @@ function BedCard({
             );
           })()}
         </View>
-        {groupSessionCount > 0 && (
+        {!isRehydrating && groupSessionCount > 0 && (
           <View style={[styles.groupNoteChip, { backgroundColor: '#ccfbf1', borderColor: '#0d9488' }]}>
             <Ionicons name="people-outline" size={10} color="#0d9488" />
             <Text style={[styles.groupNoteChipText, { color: '#0d9488' }]}>
