@@ -344,8 +344,9 @@ function BedCard({
   const notes = getNotesForPatient(patient.id);
   const noteCount = notes.length;
   // Count non-Observation note types separately
-  const incidentCount  = notes.filter(n => n.noteType === 'incident').length;
-  const medUpdateCount = notes.filter(n => n.noteType === 'med-update').length;
+  const incidentCount    = notes.filter(n => n.noteType === 'incident').length;
+  const medUpdateCount   = notes.filter(n => n.noteType === 'med-update').length;
+  const groupNoteCount   = notes.filter(n => n.noteType === 'group-session').length;
   const nonObsTypes    = (incidentCount > 0 ? 1 : 0) + (medUpdateCount > 0 ? 1 : 0);
   // When >1 non-obs type exists show the per-type breakdown; otherwise fall back to single pill
   const showBreakdown = nonObsTypes > 1;
@@ -494,6 +495,14 @@ function BedCard({
             );
           })()}
         </View>
+        {groupNoteCount > 0 && (
+          <View style={[styles.groupNoteChip, { backgroundColor: '#ccfbf1', borderColor: '#0d9488' }]}>
+            <Ionicons name="people-outline" size={10} color="#0d9488" />
+            <Text style={[styles.groupNoteChipText, { color: '#0d9488' }]}>
+              {groupNoteCount} group {groupNoteCount === 1 ? 'note' : 'notes'}
+            </Text>
+          </View>
+        )}
         <View style={styles.moodSection}>
           <Text style={[styles.moodLabel, { color: colors.mutedForeground }]}>Mood</Text>
           <MoodBar value={patient.mood} colors={colors} />
@@ -1509,6 +1518,8 @@ const styles = StyleSheet.create({
   noteCountText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold', color: '#fff' },
   noteTypeBreakdownRow: { flexDirection: 'row', gap: 4, marginTop: 2 },
   noteTypeChip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2, borderWidth: 1 },
+  groupNoteChip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, alignSelf: 'flex-start' },
+  groupNoteChipText: { fontSize: 10, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   noteTypeChipText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   // Role toggle
   roleToggle: { flexDirection: 'row', borderRadius: 8, overflow: 'hidden', padding: 2 },
