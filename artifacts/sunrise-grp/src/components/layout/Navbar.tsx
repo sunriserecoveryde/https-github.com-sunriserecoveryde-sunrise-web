@@ -31,7 +31,7 @@ export default function Navbar() {
           <img 
             src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sunrise-grp-logo-solid.png`} 
             alt="The Sunrise Grp." 
-            className="h-10 w-auto"
+            className="h-16 w-auto"
             onError={(e) => {
               // Fallback if image not found
               e.currentTarget.style.display = 'none';

@@ -75,39 +75,18 @@ export default function Subsidiaries() {
                 By controlling the software that powers our facilities, The Sunrise Grp. maintains an unprecedented level of data agility, compliance oversight, and operational efficiency.
               </p>
               <div className="pt-4">
-                <a href="#" className="inline-flex items-center text-primary font-medium hover:gap-3 gap-2 transition-all">
-                  Visit SunriseOS <ArrowRight size={16} />
+                <a href="https://getsunriseos.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary font-medium hover:gap-3 gap-2 transition-all">
+                  Visit getsunriseos.com <ArrowRight size={16} />
                 </a>
               </div>
             </FadeIn>
-            <div className="lg:col-span-7 bg-background border border-border h-[600px] relative overflow-hidden lg:order-1 p-12">
-               <div className="w-full h-full border border-border rounded-lg shadow-2xl bg-card overflow-hidden flex flex-col">
-                  {/* Fake App Header */}
-                  <div className="h-12 border-b border-border bg-background flex items-center px-4 gap-4">
-                    <div className="flex gap-2">
-                      <div className="w-3 h-3 rounded-full bg-border" />
-                      <div className="w-3 h-3 rounded-full bg-border" />
-                      <div className="w-3 h-3 rounded-full bg-border" />
-                    </div>
-                    <div className="h-6 w-48 bg-muted rounded" />
-                  </div>
-                  {/* Fake App Body */}
-                  <div className="flex-1 p-6 flex gap-6">
-                    <div className="w-48 h-full bg-background rounded-lg border border-border hidden md:block p-4 space-y-4">
-                      <div className="h-4 w-full bg-muted rounded" />
-                      <div className="h-4 w-3/4 bg-muted rounded" />
-                      <div className="h-4 w-5/6 bg-muted rounded" />
-                    </div>
-                    <div className="flex-1 h-full space-y-6">
-                      <div className="h-32 w-full bg-background rounded-lg border border-border p-6">
-                         <div className="h-6 w-1/3 bg-muted rounded mb-4" />
-                         <div className="h-4 w-full bg-muted/50 rounded mb-2" />
-                         <div className="h-4 w-2/3 bg-muted/50 rounded" />
-                      </div>
-                      <div className="flex-1 w-full bg-background rounded-lg border border-border" />
-                    </div>
-                  </div>
-               </div>
+            <div className="lg:col-span-7 bg-background border border-border h-[600px] relative overflow-hidden lg:order-1 rounded-lg shadow-2xl">
+              <img
+                src={`${basePath}/preview-sunriseos.jpg`}
+                alt="SunriseOS platform screenshot"
+                className="w-full h-full object-cover object-top"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
             </div>
           </section>
 
@@ -122,16 +101,22 @@ export default function Subsidiaries() {
               <p className="text-lg text-muted-foreground leading-relaxed mb-6">
                 The educational arm of The Grp., dedicated to elevating the standard of care across the industry. Grow Motivational provides accredited Continuing Education Units (CEUs) for clinicians, leadership training, and recovery education programs.
               </p>
-              <p className="text-lg text-muted-foreground leading-relaxed">
+              <p className="text-lg text-muted-foreground leading-relaxed mb-6">
                 By investing in the professionals who deliver care, we ensure the behavioral health workforce remains equipped with the latest clinical methodologies.
               </p>
+              <div className="pt-4">
+                <a href="https://growmotivational.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary font-medium hover:gap-3 gap-2 transition-all">
+                  Visit growmotivational.com <ArrowRight size={16} />
+                </a>
+              </div>
             </FadeIn>
-            <div className="lg:col-span-7 bg-background border border-border h-[600px] relative overflow-hidden flex items-center justify-center">
-               <div className="text-center p-12 border border-primary/20 bg-primary/5">
-                 <GraduationCap size={64} className="mx-auto mb-6 text-primary opacity-50" />
-                 <h3 className="text-2xl font-serif mb-2">Grow Motivational Institute</h3>
-                 <p className="text-muted-foreground">Professional Development Portal</p>
-               </div>
+            <div className="lg:col-span-7 bg-background border border-border h-[600px] relative overflow-hidden rounded-lg shadow-2xl">
+              <img
+                src={`${basePath}/preview-growweb.jpg`}
+                alt="Grow Motivational website screenshot"
+                className="w-full h-full object-cover object-top"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
             </div>
           </section>
 
