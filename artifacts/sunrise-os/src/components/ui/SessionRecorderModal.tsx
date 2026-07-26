@@ -6,13 +6,13 @@
  *
  * Tabs:
  *  1. Record  — live waveform + real-time transcript stream
- *  2. Transcript — editable text before generating the note
+ *  2. Transcript — editable text + audio playback before generating the note
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Mic, MicOff, Square, Pause, Play, X, Sparkles,
-  FileText, AlertTriangle, Radio, ClipboardEdit, ShieldAlert,
+  FileText, AlertTriangle, Radio, ClipboardEdit, ShieldAlert, Headphones, Trash2,
 } from 'lucide-react';
 import { useSessionRecorder } from '../../hooks/useSessionRecorder';
 import { parseQuickCapture } from '../../lib/quickCaptureParser';
@@ -90,6 +90,105 @@ function Timer({ seconds }: { seconds: number }) {
   );
 }
 
+// ─── Audio Playback control ───────────────────────────────────────────────────
+
+function AudioPlayback({
+  blobUrl,
+  onDiscard,
+}: {
+  blobUrl: string;
+  onDiscard: () => void;
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const togglePlay = useCallback(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (isPlaying) {
+      el.pause();
+    } else {
+      el.play().catch(() => { /* autoplay policy */ });
+    }
+  }, [isPlaying]);
+
+  const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.currentTime = Number(e.target.value);
+  }, []);
+
+  const fmt = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-4">
+      {/* Hidden native audio element */}
+      <audio
+        ref={audioRef}
+        src={blobUrl}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => { setIsPlaying(false); setCurrentTime(0); }}
+        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+        preload="metadata"
+      />
+
+      <div className="flex items-center gap-3">
+        {/* Play / Pause button */}
+        <button
+          onClick={togglePlay}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-teal-600 hover:bg-teal-700 text-white flex-none transition-colors shadow"
+          aria-label={isPlaying ? 'Pause recording' : 'Play recording'}
+        >
+          {isPlaying
+            ? <Pause className="w-4 h-4" />
+            : <Play className="w-4 h-4 translate-x-0.5" />}
+        </button>
+
+        {/* Seek bar */}
+        <div className="flex-1 flex flex-col gap-1">
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            step={0.1}
+            value={currentTime}
+            onChange={handleSeek}
+            className="w-full h-1.5 accent-teal-600 cursor-pointer"
+            aria-label="Seek recording"
+          />
+          <div className="flex justify-between text-[10px] font-mono text-slate-500">
+            <span>{fmt(currentTime)}</span>
+            <span>{isFinite(duration) ? fmt(duration) : '--:--'}</span>
+          </div>
+        </div>
+
+        {/* Discard button */}
+        <button
+          onClick={onDiscard}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-none"
+          title="Discard recording"
+          aria-label="Discard recording"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-teal-700 uppercase tracking-wider">
+        <Headphones className="w-3 h-3" />
+        Session recording — replay before signing
+      </div>
+    </div>
+  );
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -112,7 +211,8 @@ export function SessionRecorderModal({
   const {
     isSupported, isRecording, isPaused,
     transcript, interimText, elapsedSeconds, analyserNode,
-    start, pause, resume, stop, resetTranscript,
+    audioBlobUrl,
+    start, pause, resume, stop, resetTranscript, clearRecording,
   } = useSessionRecorder();
 
   const [activeTab, setActiveTab] = useState<'record' | 'transcript'>('record');
@@ -183,23 +283,35 @@ export function SessionRecorderModal({
 
     onGenerate(newValues);
     setGenerated(true);
-  }, [editableTranscript, patientName, noteType, format, fields, onGenerate, currentValues]);
+    // Note is now generated — clear the stored recording
+    clearRecording().catch(() => { /* best-effort */ });
+  }, [editableTranscript, patientName, noteType, format, fields, onGenerate, currentValues, clearRecording]);
 
   const confirmOverwrite = useCallback(() => {
     if (!pendingValues) return;
     onGenerate(pendingValues);
     setPendingValues(null);
     setGenerated(true);
-  }, [pendingValues, onGenerate]);
+    // Recording no longer needed after confirming overwrite
+    clearRecording().catch(() => { /* best-effort */ });
+  }, [pendingValues, onGenerate, clearRecording]);
 
   const cancelOverwrite = useCallback(() => {
     setPendingValues(null);
   }, []);
 
   const handleClose = useCallback(() => {
+    // Call clearRecording FIRST — it sets the discard flag synchronously so that
+    // any pending MediaRecorder.onstop callback (fired after stop()) will bail out
+    // before creating a blob URL or writing to IndexedDB.
+    clearRecording().catch(() => { /* best-effort */ });
     if (isRecording) stop();
     onClose();
-  }, [isRecording, stop, onClose]);
+  }, [isRecording, stop, onClose, clearRecording]);
+
+  const handleDiscardRecording = useCallback(() => {
+    clearRecording().catch(() => { /* best-effort */ });
+  }, [clearRecording]);
 
   if (!isOpen) return null;
 
@@ -370,6 +482,15 @@ export function SessionRecorderModal({
           {/* ── Transcript tab ── */}
           {activeTab === 'transcript' && (
             <div className="space-y-4">
+
+              {/* ── Audio playback (shown when a recording blob is available) ── */}
+              {audioBlobUrl && (
+                <AudioPlayback
+                  blobUrl={audioBlobUrl}
+                  onDiscard={handleDiscardRecording}
+                />
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1.5">
                   {isSupported ? 'Edit Transcript' : 'Paste Transcript'}
