@@ -112,6 +112,7 @@ export default function Home() {
               category="Healthcare Technology"
               description="A proprietary, purpose-built Electronic Health Record and facility management platform deployed across all group facilities."
               delay={0.1}
+              logo={`${basePath}/logo-sunriseos.svg`}
             />
             <SubsidiaryCard 
               icon={<GraduationCap size={32} strokeWidth={1.5} />}
@@ -119,6 +120,7 @@ export default function Home() {
               category="Education & Training"
               description="Providing critical CEU training, professional development, and recovery education to clinicians nationwide."
               delay={0.2}
+              logo={`${basePath}/logo-grow.png`}
             />
             <SubsidiaryCard 
               icon={<Heart size={32} strokeWidth={1.5} />}
@@ -173,11 +175,18 @@ export default function Home() {
   );
 }
 
-function SubsidiaryCard({ icon, title, category, description, delay }: { icon: React.ReactNode, title: string, category: string, description: string, delay: number }) {
+function SubsidiaryCard({ icon, title, category, description, delay, logo }: { icon: React.ReactNode, title: string, category: string, description: string, delay: number, logo?: string }) {
   return (
     <FadeIn delay={delay}>
       <Link href="/subsidiaries" className="block group h-full">
-        <div className="h-full p-8 md:p-10 border border-border bg-card/30 hover:bg-card hover:border-primary/50 transition-all duration-300">
+        <div className="relative h-full p-8 md:p-10 border border-border bg-card/30 hover:bg-card hover:border-primary/50 transition-all duration-300">
+          {logo && (
+            <img
+              src={logo}
+              alt={`${title} logo`}
+              className="absolute top-6 right-6 h-10 w-10 object-contain rounded-lg opacity-80 group-hover:opacity-100 transition-opacity"
+            />
+          )}
           <div className="mb-6 text-primary group-hover:scale-110 transition-transform origin-left">
             {icon}
           </div>
