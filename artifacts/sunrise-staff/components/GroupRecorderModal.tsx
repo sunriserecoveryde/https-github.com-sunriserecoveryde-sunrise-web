@@ -39,9 +39,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSessionRecorder } from '@/hooks/useSessionRecorder';
 import { useNursingNotes } from '@/context/NursingNotesContext';
 import type { Patient } from '@/data/mockData';
+
+// ── Draft persistence key ─────────────────────────────────────────────
+const DRAFT_KEY = 'group_recorder_draft_v1';
 
 // ── Colour tokens ────────────────────────────────────────────────────
 const TEAL       = '#0d9488';
@@ -249,7 +253,33 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [attached, setAttached] = useState(false);
 
+  // Draft-restore banner: null = hidden, 'pending' = showing offer, 'dismissed' = user declined
+  const [draftBanner, setDraftBanner] = useState<'hidden' | 'pending' | 'dismissed'>('hidden');
+  const [pendingDraftText, setPendingDraftText] = useState('');
+
   const transcriptScrollRef = useRef<ScrollView>(null);
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set to true once attach/discard clears the draft so no queued save can revive it
+  const draftClearedRef = useRef(false);
+
+  /** Cancel any pending debounced save. Call before every removeItem. */
+  const cancelPendingSave = useCallback(() => {
+    if (saveDebounceRef.current) {
+      clearTimeout(saveDebounceRef.current);
+      saveDebounceRef.current = null;
+    }
+  }, []);
+
+  // ── Auto-save draft on every edit (debounced 800 ms) ─────────────
+  useEffect(() => {
+    cancelPendingSave();
+    saveDebounceRef.current = setTimeout(() => {
+      if (!draftClearedRef.current && editableTranscript.trim()) {
+        AsyncStorage.setItem(DRAFT_KEY, editableTranscript).catch(() => {});
+      }
+    }, 800);
+    return cancelPendingSave;
+  }, [editableTranscript, cancelPendingSave]);
 
   // Sync editable transcript from live transcription (web only)
   useEffect(() => {
@@ -265,7 +295,7 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
     }
   }, [transcript, interimText]);
 
-  // Reset state each time the modal opens
+  // Reset state each time the modal opens; check for saved draft
   useEffect(() => {
     if (visible) {
       resetTranscript();
@@ -276,8 +306,35 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
       setSelectedIds(new Set());
       setOverrides({});
       setAttached(false);
+      setDraftBanner('hidden');
+      setPendingDraftText('');
+      draftClearedRef.current = false;
+
+      // Check for a previously saved draft and offer to restore it
+      AsyncStorage.getItem(DRAFT_KEY)
+        .then(saved => {
+          if (saved && saved.trim()) {
+            setPendingDraftText(saved);
+            setDraftBanner('pending');
+          }
+        })
+        .catch(() => {});
     }
   }, [visible, resetTranscript]);
+
+  const handleRestoreDraft = useCallback(() => {
+    setEditableTranscript(pendingDraftText);
+    setActiveTab('transcript');
+    setDraftBanner('dismissed');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }, [pendingDraftText]);
+
+  const handleDiscardDraft = useCallback(() => {
+    setDraftBanner('dismissed');
+    cancelPendingSave();
+    draftClearedRef.current = true;
+    AsyncStorage.removeItem(DRAFT_KEY).catch(() => {});
+  }, [cancelPendingSave]);
 
   // When entering attach phase, pre-populate per-patient overrides with the shared transcript
   useEffect(() => {
@@ -340,11 +397,15 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
       const text = (overrides[id] ?? editableTranscript).trim();
       if (text) addNote(id, text, 'observation');
     });
+    // Clear the saved draft — cancel any pending debounced write first to avoid a race
+    cancelPendingSave();
+    draftClearedRef.current = true;
+    AsyncStorage.removeItem(DRAFT_KEY).catch(() => {});
     setAttached(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // Close after a brief success moment
     setTimeout(() => { onClose(); }, 1200);
-  }, [selectedIds, overrides, editableTranscript, addNote, onClose]);
+  }, [selectedIds, overrides, editableTranscript, addNote, onClose, cancelPendingSave]);
 
   const handleClose = useCallback(async () => {
     if (isRecording) await stop();
@@ -447,6 +508,27 @@ export function GroupRecorderModal({ visible, onClose, patients }: Props) {
               contentContainerStyle={styles.body}
               keyboardShouldPersistTaps="handled"
             >
+              {/* Draft restore offer */}
+              {draftBanner === 'pending' && (
+                <View style={[styles.alertBanner, styles.alertAmber]}>
+                  <Ionicons name="document-text-outline" size={16} color={AMBER} />
+                  <View style={styles.flex}>
+                    <Text style={[styles.alertTitle, { color: '#92400e' }]}>Unsaved draft found</Text>
+                    <Text style={[styles.alertBody, { color: '#78350f' }]}>
+                      A previous group session draft was saved before the app closed. Would you like to restore it?
+                    </Text>
+                    <View style={styles.draftActions}>
+                      <Pressable onPress={handleRestoreDraft} style={styles.draftBtn}>
+                        <Text style={styles.draftBtnRestore}>Restore draft</Text>
+                      </Pressable>
+                      <Pressable onPress={handleDiscardDraft} hitSlop={8}>
+                        <Text style={styles.draftBtnDiscard}>Discard</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              )}
+
               {/* Mic denied */}
               {micDenied && (
                 <View style={[styles.alertBanner, styles.alertRed]}>
@@ -769,6 +851,11 @@ const styles = StyleSheet.create({
   alertRed: { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
   alertBlue: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
   alertTeal: { backgroundColor: '#f0fdfa', borderColor: '#99f6e4' },
+  alertAmber: { backgroundColor: '#fffbeb', borderColor: '#fde68a' },
+  draftActions: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 },
+  draftBtn: {},
+  draftBtnRestore: { fontSize: 13, fontFamily: 'Inter_700Bold', color: TEAL },
+  draftBtnDiscard: { fontSize: 13, fontFamily: 'Inter_400Regular', color: SLATE },
   alertTitle: { fontSize: 13, fontFamily: 'Inter_700Bold', marginBottom: 2 },
   alertBody: { fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17 },
 
