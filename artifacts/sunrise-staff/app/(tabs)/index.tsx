@@ -313,7 +313,7 @@ function BedCard({
   patient: Patient;
   onPress: () => void;
   onNoteBadgePress?: () => void;
-  onNoteTypeChipPress?: (type: 'incident' | 'med-update') => void;
+  onNoteTypeChipPress?: (type: 'incident' | 'med-update' | 'group-session') => void;
   /** Tapping a COWS/CIWA pill jumps directly to the Scores section. */
   onScorePillPress?: () => void;
   /** Tapping the vitals hint jumps directly to the Vitals section. */
@@ -344,15 +344,15 @@ function BedCard({
   const notes = getNotesForPatient(patient.id);
   const noteCount = notes.length;
   // Count non-Observation note types separately
-  const incidentCount    = notes.filter(n => n.noteType === 'incident').length;
-  const medUpdateCount   = notes.filter(n => n.noteType === 'med-update').length;
-  const groupNoteCount   = notes.filter(n => n.noteType === 'group-session').length;
-  const nonObsTypes    = (incidentCount > 0 ? 1 : 0) + (medUpdateCount > 0 ? 1 : 0);
+  const incidentCount      = notes.filter(n => n.noteType === 'incident').length;
+  const medUpdateCount     = notes.filter(n => n.noteType === 'med-update').length;
+  const groupSessionCount  = notes.filter(n => n.noteType === 'group-session').length;
+  const nonObsTypes = (incidentCount > 0 ? 1 : 0) + (medUpdateCount > 0 ? 1 : 0) + (groupSessionCount > 0 ? 1 : 0);
   // When >1 non-obs type exists show the per-type breakdown; otherwise fall back to single pill
   const showBreakdown = nonObsTypes > 1;
-  // Used for the single-pill fallback (Incident > Med Update > null for obs-only)
-  const urgentNoteType: 'incident' | 'med-update' | null = !showBreakdown
-    ? (incidentCount > 0 ? 'incident' : medUpdateCount > 0 ? 'med-update' : null)
+  // Used for the single-pill fallback (Incident > Med Update > Group > null for obs-only)
+  const urgentNoteType: 'incident' | 'med-update' | 'group-session' | null = !showBreakdown
+    ? (incidentCount > 0 ? 'incident' : medUpdateCount > 0 ? 'med-update' : groupSessionCount > 0 ? 'group-session' : null)
     : null;
 
   return (
@@ -418,15 +418,31 @@ function BedCard({
                   <Text style={[styles.noteTypeChipText, { color: colors.moderate }]}>{medUpdateCount}</Text>
                 </Pressable>
               )}
+              {groupSessionCount > 0 && (
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onNoteTypeChipPress?.('group-session'); }}
+                  hitSlop={6}
+                  style={[styles.noteTypeChip, { backgroundColor: colors.successBg, borderColor: colors.success }]}
+                >
+                  <Ionicons name="people-outline" size={10} color={colors.success} />
+                  <Text style={[styles.noteTypeChipText, { color: colors.success }]}>{groupSessionCount}</Text>
+                </Pressable>
+              )}
             </View>
           ) : urgentNoteType != null && (() => {
             const tc = urgentNoteType === 'incident'
               ? { bg: colors.criticalBg, text: colors.critical }
-              : { bg: colors.moderateBg, text: colors.moderate };
-            const icon = urgentNoteType === 'incident' ? 'warning-outline' : 'medkit-outline';
+              : urgentNoteType === 'med-update'
+              ? { bg: colors.moderateBg, text: colors.moderate }
+              : { bg: colors.successBg, text: colors.success };
+            const icon = urgentNoteType === 'incident'
+              ? 'warning-outline'
+              : urgentNoteType === 'med-update'
+              ? 'medkit-outline'
+              : 'people-outline';
             return (
               <Pressable
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onNoteTypeChipPress?.(urgentNoteType as 'incident' | 'med-update'); }}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onNoteTypeChipPress?.(urgentNoteType); }}
                 hitSlop={6}
                 style={[styles.noteTypePill, { backgroundColor: tc.bg, borderColor: tc.text }]}
               >
@@ -495,11 +511,11 @@ function BedCard({
             );
           })()}
         </View>
-        {groupNoteCount > 0 && (
+        {groupSessionCount > 0 && (
           <View style={[styles.groupNoteChip, { backgroundColor: '#ccfbf1', borderColor: '#0d9488' }]}>
             <Ionicons name="people-outline" size={10} color="#0d9488" />
             <Text style={[styles.groupNoteChipText, { color: '#0d9488' }]}>
-              {groupNoteCount} group {groupNoteCount === 1 ? 'note' : 'notes'}
+              {groupSessionCount} group {groupSessionCount === 1 ? 'note' : 'notes'}
             </Text>
           </View>
         )}
@@ -967,7 +983,7 @@ export default function CensusScreen() {
     router.push(`/patient/${p.id}?scrollTo=notes` as any);
   };
 
-  const openPatientNotesFiltered = (p: Patient, noteType: 'incident' | 'med-update') => {
+  const openPatientNotesFiltered = (p: Patient, noteType: 'incident' | 'med-update' | 'group-session') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/patient/${p.id}?scrollTo=notes&noteFilter=${noteType}` as any);
   };

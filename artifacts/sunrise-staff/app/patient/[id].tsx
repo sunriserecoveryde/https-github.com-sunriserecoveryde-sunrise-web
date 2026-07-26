@@ -841,7 +841,7 @@ export default function PatientDetailScreen() {
   };
 
   // ─── Per-type note filter (seeded from route param when tapping a census chip) ─
-  const validNoteTypes: NoteType[] = ['observation', 'med-update', 'incident'];
+  const validNoteTypes: NoteType[] = ['observation', 'med-update', 'incident', 'group-session'];
   const initialNoteTypeFilter: NoteType | null =
     noteFilterParam && validNoteTypes.includes(noteFilterParam as NoteType)
       ? (noteFilterParam as NoteType)
