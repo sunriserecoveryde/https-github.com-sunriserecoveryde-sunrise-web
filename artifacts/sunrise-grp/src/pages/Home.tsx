@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, Building2, Server, GraduationCap, Heart } from 'lucide-react';
 import PageWrapper, { FadeIn, Reveal } from '@/components/animations';
+import { SunriseOSMark } from '@/components/SunriseOSLogo';
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -112,7 +113,7 @@ export default function Home() {
               category="Healthcare Technology"
               description="A proprietary, purpose-built Electronic Health Record and facility management platform deployed across all group facilities."
               delay={0.1}
-              logo={`${basePath}/logo-sunriseos.svg`}
+              logoNode={<SunriseOSMark size={48} />}
             />
             <SubsidiaryCard 
               icon={<GraduationCap size={32} strokeWidth={1.5} />}
@@ -120,7 +121,7 @@ export default function Home() {
               category="Education & Training"
               description="Providing critical CEU training, professional development, and recovery education to clinicians nationwide."
               delay={0.2}
-              logo={`${basePath}/logo-grow.png`}
+              logoNode={<img src={`${basePath}/logo-grow.png`} alt="Grow Motivational logo" className="h-12 w-12 object-contain rounded-lg" />}
             />
             <SubsidiaryCard 
               icon={<Heart size={32} strokeWidth={1.5} />}
@@ -175,7 +176,7 @@ export default function Home() {
   );
 }
 
-function SubsidiaryCard({ icon, title, category, description, delay, logo }: { icon: React.ReactNode, title: string, category: string, description: string, delay: number, logo?: string }) {
+function SubsidiaryCard({ icon, title, category, description, delay, logoNode }: { icon: React.ReactNode, title: string, category: string, description: string, delay: number, logoNode?: React.ReactNode }) {
   return (
     <FadeIn delay={delay}>
       <Link href="/subsidiaries" className="block group h-full">
@@ -184,12 +185,8 @@ function SubsidiaryCard({ icon, title, category, description, delay, logo }: { i
             <div className="text-primary group-hover:scale-110 transition-transform origin-left">
               {icon}
             </div>
-            {logo && (
-              <img
-                src={logo}
-                alt={`${title} logo`}
-                className="h-12 w-12 object-contain rounded-lg"
-              />
+            {logoNode && (
+              <div className="shrink-0">{logoNode}</div>
             )}
           </div>
           <p className="text-xs font-medium tracking-widest uppercase text-muted-foreground mb-2">{category}</p>
