@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/sunrise-grp/"
+title = "The Sunrise Grp., Inc."
+version = "1.0.0"
+id = "artifacts/sunrise-grp"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/sunrise-grp/" ]
+localPort = 20749
+
+[services.development]
+run = "pnpm --filter @workspace/sunrise-grp run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sunrise-grp", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sunrise-grp/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20749"
+BASE_PATH = "/sunrise-grp/"
