@@ -20,12 +20,6 @@ type = "audio"
 title = "corporate-tech-bed"
 
 [[outputs]]
-id = "QIILb9cm2XsZxmbc26gWd"
-uri = "file://assets/sunrise-group-logo-concept2.png"
-type = "image"
-title = "Concept B — Teal Horizon Rise (teal + amber)"
-
-[[outputs]]
 id = "5k3dytxfO_g-WJdTn6SvB"
 uri = "file://assets/sunrise-group-v2b.png"
 type = "image"
