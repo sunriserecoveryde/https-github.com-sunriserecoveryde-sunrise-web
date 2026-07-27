@@ -19,6 +19,13 @@ export default function HomePage() {
         
         <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <FadeIn>
+            <img
+              src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/logos/foundation-logo-transparent.png`}
+              alt="The Sunrise Foundation"
+              className="h-40 md:h-52 w-auto mx-auto mb-6 drop-shadow-lg"
+            />
+          </FadeIn>
+          <FadeIn delay={0.1}>
             <h1 className="text-5xl md:text-7xl font-serif text-white mb-6 leading-tight max-w-4xl mx-auto">
               Funding the First Light <br/>
               <span className="text-primary-foreground/90 italic font-light">of Recovery.</span>
