@@ -106,7 +106,7 @@ const CURRICULA: Curriculum[] = [
     sessionCount: 14, sessionLength: 60, modality: 'Both',
     primaryDomains: ['Relapse process education', 'Trigger identification & replacement', 'Craving management toolbox', 'Coping skills (behavioral & emotional)', 'Community supports', 'MAT & harm reduction', 'Personalized prevention plan', 'Emergency action planning'],
     description: 'A clinical, motivational workbook developed by The Sunrise Foundation for individuals in early recovery from opiates and stimulants. Covers the full relapse prevention cycle across 14 modules: recovery snapshot, the 3-stage relapse model, trigger mapping, early warning signs, decisional balance, urge surfing, TIPP, cognitive reframing, community engagement, MAT facts, personalized prevention plan, wallet-size emergency card, and progress logs. Includes a complete Facilitator Guide with MI script prompts, functional analysis steps, safety protocols, and documentation notes. Non-12-step and 12-step compatible. Available as an interactive online workbook with printable worksheets.',
-    status: 'Active', facilitatorRequired: 'CPRS, CAC-AD, LPC, LCSW, or trained peer specialist; includes full Facilitator Guide',
+    status: 'Active', facilitatorRequired: 'ADT, CSC-AD, CAC-AD, LCADC, LCPC; includes full Facilitator Guide',
     materialsCost: 0, activeGroups: 0, completedCycles: 0,
     externalUrl: '/sunrise-foundation/curriculum',
   },
