@@ -60,11 +60,25 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <FadeIn>
             <h2 className="text-3xl md:text-4xl font-serif text-foreground mb-8 leading-tight">
-              Hope is not enough when you can't afford the door.
+              Hope is not enough when the door to recovery is financially out of reach.
             </h2>
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed">
-              The Sunrise Foundation stands independent, built around human stories and concrete solutions. We step in during those critical moments—the threshold of a treatment center, the first month of sober living, the return to the workforce—when a small grant changes the trajectory of a life forever.
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-10">
+              The Sunrise Foundation is an independent charitable organization built around real people and practical solutions. We provide targeted financial assistance at the moments that can determine someone's future—the threshold of a treatment center, the first months of recovery housing, and the return to education or employment. A timely grant can remove a critical barrier and change the direction of a life.
             </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/donate"
+                className="inline-flex items-center justify-center px-8 py-3 bg-primary text-white text-sm font-medium rounded-sm hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                Help Open the Door
+              </Link>
+              <Link
+                href="/grants"
+                className="inline-flex items-center justify-center px-8 py-3 border border-foreground/20 text-foreground text-sm font-medium rounded-sm hover:bg-foreground/5 transition-colors"
+              >
+                Apply for Assistance
+              </Link>
+            </div>
           </FadeIn>
         </div>
       </section>
