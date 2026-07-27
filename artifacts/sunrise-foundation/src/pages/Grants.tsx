@@ -176,10 +176,10 @@ export default function GrantsPage() {
               If you meet the criteria and need assistance removing a barrier to your recovery journey, our application portal is open.
             </p>
             <Link 
-              href="/contact" 
+              href="/apply" 
               className="inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-medium rounded-sm text-white bg-primary hover:bg-primary/90 transition-colors shadow-sm"
             >
-              Start Application Inquiry
+              Begin Your Application
             </Link>
           </div>
         </FadeIn>

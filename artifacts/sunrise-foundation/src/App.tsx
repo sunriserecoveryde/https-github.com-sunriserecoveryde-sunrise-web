@@ -13,6 +13,7 @@ import Programs from '@/pages/Programs';
 import Grants from '@/pages/Grants';
 import Donate from '@/pages/Donate';
 import Contact from '@/pages/Contact';
+import Apply from '@/pages/Apply';
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ function Router() {
         <Route path="/grants" component={Grants} />
         <Route path="/donate" component={Donate} />
         <Route path="/contact" component={Contact} />
+        <Route path="/apply" component={Apply} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

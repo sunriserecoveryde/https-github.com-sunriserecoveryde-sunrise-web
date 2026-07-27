@@ -73,7 +73,7 @@ export default function HomePage() {
                 Help Open the Door
               </Link>
               <Link
-                href="/grants"
+                href="/apply"
                 className="inline-flex items-center justify-center px-8 py-3 border border-foreground/20 text-foreground text-sm font-medium rounded-sm hover:bg-foreground/5 transition-colors"
               >
                 Apply for Assistance
