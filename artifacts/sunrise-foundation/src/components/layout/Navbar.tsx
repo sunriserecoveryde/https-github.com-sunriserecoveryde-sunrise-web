@@ -11,6 +11,7 @@ export function Navbar() {
     { label: 'About', href: '/about' },
     { label: 'Programs', href: '/programs' },
     { label: 'Grants', href: '/grants' },
+    { label: 'Curriculum', href: '/curriculum' },
   ];
 
   const isActive = (path: string) => location === path;

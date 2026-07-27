@@ -25,6 +25,7 @@ interface Curriculum {
   materialsCost: number;
   activeGroups: number;
   completedCycles: number;
+  externalUrl?: string;
 }
 
 const CURRICULA: Curriculum[] = [
@@ -97,6 +98,17 @@ const CURRICULA: Curriculum[] = [
     description: 'ACT-A applies third-wave CBT principles to addiction treatment, focusing on psychological flexibility rather than thought elimination. Particularly effective when rigid avoidance of emotions drives substance use. Growing evidence base for opioid use disorder and chronic pain + SUD comorbidity.',
     status: 'Pilot', facilitatorRequired: 'LPC or LCSW with ACT training (ACT Boot Camp or equivalent)',
     materialsCost: 95, activeGroups: 1, completedCycles: 2,
+  },
+  {
+    id: 'RP-001', name: 'Relapse Prevention Curriculum', abbreviation: 'RPC',
+    developer: 'The Sunrise Foundation', evidenceLevel: 'SAMHSA EBP',
+    targetPopulation: 'Adults in early recovery — opiates & stimulants, polysubstance; non-12-step friendly; MAT-inclusive',
+    sessionCount: 14, sessionLength: 60, modality: 'Both',
+    primaryDomains: ['Relapse process education', 'Trigger identification & replacement', 'Craving management toolbox', 'Coping skills (behavioral & emotional)', 'Community supports', 'MAT & harm reduction', 'Personalized prevention plan', 'Emergency action planning'],
+    description: 'A clinical, motivational workbook developed by The Sunrise Foundation for individuals in early recovery from opiates and stimulants. Covers the full relapse prevention cycle across 14 modules: recovery snapshot, the 3-stage relapse model, trigger mapping, early warning signs, decisional balance, urge surfing, TIPP, cognitive reframing, community engagement, MAT facts, personalized prevention plan, wallet-size emergency card, and progress logs. Includes a complete Facilitator Guide with MI script prompts, functional analysis steps, safety protocols, and documentation notes. Non-12-step and 12-step compatible. Available as an interactive online workbook with printable worksheets.',
+    status: 'Active', facilitatorRequired: 'CPRS, CAC-AD, LPC, LCSW, or trained peer specialist; includes full Facilitator Guide',
+    materialsCost: 0, activeGroups: 0, completedCycles: 0,
+    externalUrl: '/sunrise-foundation/curriculum',
   },
   {
     id: 'CB-008', name: 'Gender-Responsive Treatment for Women', abbreviation: 'GRT',
@@ -231,9 +243,14 @@ export function GroupTherapyCurriculum({ navigate: _navigate, readOnly }: Props)
                         <div className="text-xs font-semibold text-slate uppercase mb-1">Facilitator Requirements</div>
                         <p className="text-xs text-navy">{cur.facilitatorRequired}</p>
                       </div>
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 flex-wrap">
                         <button onClick={() => saveGroupAction('Materials downloaded')} className="text-xs border border-border text-slate px-3 py-1.5 rounded-lg hover:bg-white flex items-center gap-1"><Download className="w-3 h-3" />Materials</button>
                         <LockedButton locked={readOnly} onClick={() => saveGroupAction('Group scheduled')} className="text-xs btn-primary px-3 py-1.5 flex items-center gap-1"><Plus className="w-3 h-3" />Schedule Group</LockedButton>
+                        {cur.externalUrl && (
+                          <a href={cur.externalUrl} target="_blank" rel="noopener noreferrer" className="text-xs border border-orange text-orange px-3 py-1.5 rounded-lg hover:bg-orange/5 flex items-center gap-1">
+                            <BookOpen className="w-3 h-3" />Open Full Curriculum
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>

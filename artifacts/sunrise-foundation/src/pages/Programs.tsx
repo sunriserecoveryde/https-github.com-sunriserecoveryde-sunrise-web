@@ -173,6 +173,23 @@ export default function ProgramsPage() {
             </div>
           </FadeIn>
         </div>
+
+        {/* Curriculum CTA */}
+        <FadeIn delay={0.3} className="mt-20">
+          <div className="bg-teal-900 text-white rounded-2xl p-10 text-center">
+            <h2 className="text-2xl font-serif mb-3">Relapse Prevention Curriculum</h2>
+            <p className="text-teal-200 max-w-2xl mx-auto mb-8">
+              A clinical, motivational workbook for individuals in early recovery — covering triggers, cravings, coping skills, community supports, MAT, and a personalized prevention plan. Includes a full facilitator guide for counselors and peer specialists.
+            </p>
+            <Link
+              href="/curriculum"
+              className="inline-flex items-center justify-center px-8 py-3 bg-primary text-white text-sm font-semibold rounded-sm hover:bg-primary/90 transition-colors shadow-sm"
+            >
+              Open Curriculum
+            </Link>
+          </div>
+        </FadeIn>
+
       </div>
     </div>
   );

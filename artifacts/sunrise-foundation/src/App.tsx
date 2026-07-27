@@ -14,6 +14,7 @@ import Grants from '@/pages/Grants';
 import Donate from '@/pages/Donate';
 import Contact from '@/pages/Contact';
 import Apply from '@/pages/Apply';
+import Curriculum from '@/pages/Curriculum';
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ function Router() {
         <Route path="/donate" component={Donate} />
         <Route path="/contact" component={Contact} />
         <Route path="/apply" component={Apply} />
+        <Route path="/curriculum" component={Curriculum} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
