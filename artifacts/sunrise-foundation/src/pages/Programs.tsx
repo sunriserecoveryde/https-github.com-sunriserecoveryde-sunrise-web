@@ -32,7 +32,7 @@ export default function ProgramsPage() {
             {/* Program 1: Recovery Access Grants */}
             <FadeIn className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
               <div className="h-full min-h-[300px] lg:min-h-[400px] relative">
-                <img src="/recovery-community.jpg" alt="Support group" className="absolute inset-0 w-full h-full object-cover" />
+                <img src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/recovery-community.jpg`} alt="Support group" className="absolute inset-0 w-full h-full object-cover" />
               </div>
               <div className="p-8 lg:p-12">
                 <div className="flex items-center gap-3 mb-4">
@@ -87,14 +87,14 @@ export default function ProgramsPage() {
                 </Link>
               </div>
               <div className="order-1 lg:order-2 h-full min-h-[300px] lg:min-h-[400px] relative">
-                <img src="/housing-program.jpg" alt="Clean supportive housing bedroom" className="absolute inset-0 w-full h-full object-cover" />
+                <img src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/housing-bedroom.jpg`} alt="Recovery housing bedroom" className="absolute inset-0 w-full h-full object-cover" />
               </div>
             </FadeIn>
 
             {/* Program 3: Workforce Scholarships */}
             <FadeIn className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
               <div className="h-full min-h-[300px] lg:min-h-[400px] relative">
-                <img src="/workforce.jpg" alt="Person studying for certification" className="absolute inset-0 w-full h-full object-cover" />
+                <img src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/workforce.jpg`} alt="Person studying for certification" className="absolute inset-0 w-full h-full object-cover" />
               </div>
               <div className="p-8 lg:p-12">
                 <div className="flex items-center gap-3 mb-4">
