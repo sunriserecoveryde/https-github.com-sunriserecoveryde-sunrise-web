@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/sunrise-foundation/"
+title = "The Sunrise Foundation"
+version = "1.0.0"
+id = "artifacts/sunrise-foundation"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/sunrise-foundation/" ]
+localPort = 23167
+
+[services.development]
+run = "pnpm --filter @workspace/sunrise-foundation run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sunrise-foundation", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sunrise-foundation/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23167"
+BASE_PATH = "/sunrise-foundation/"
