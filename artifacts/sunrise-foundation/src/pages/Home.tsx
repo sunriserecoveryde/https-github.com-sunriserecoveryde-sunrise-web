@@ -11,8 +11,8 @@ export default function HomePage() {
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-foreground/60 z-10" />
           <img 
-            src="/hero-sunrise.jpg" 
-            alt="Cinematic sunrise over a landscape" 
+            src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/hero-sunrise.png`}
+            alt="Sunrise over water through tree silhouettes" 
             className="w-full h-full object-cover"
           />
         </div>
