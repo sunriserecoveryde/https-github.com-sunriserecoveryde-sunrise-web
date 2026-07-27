@@ -72,7 +72,7 @@ const GOAL_LIBRARY: Record<AsamDim, GoalTemplate[]> = {
       interventions: [
         { modality: 'MAT medication management', frequency: '3× per week', provider: 'MD/DO or APRN' },
         { modality: 'MAT education group', frequency: '2× per week', provider: 'Counselor' },
-        { modality: 'Peer support — MAT recovery', frequency: '1× per week', provider: 'CPRS' },
+        { modality: 'Peer support — MAT recovery', frequency: '1× per week', provider: 'ADT' },
       ],
       tags: ['OUD'],
     },
@@ -136,7 +136,7 @@ const GOAL_LIBRARY: Record<AsamDim, GoalTemplate[]> = {
       shortTerm: 'Client will attend all individual therapy sessions and complete daily mood tracking using the structured mood log.',
       measurableObjective: 'PHQ-9 score decreases by ≥ 5 points by Week 4; zero passive SI episodes requiring safety plan escalation.',
       interventions: [
-        { modality: 'Individual CBT therapy', frequency: '3× per week', provider: 'LPC / LCSW / LMFT' },
+        { modality: 'Individual CBT therapy', frequency: '3× per week', provider: 'LCPC / LCADC / LCADC' },
         { modality: 'Psychiatric evaluation and medication management', frequency: 'Within 72h, then weekly', provider: 'Psychiatrist / APRN' },
         { modality: 'Behavioral activation group', frequency: '2× per week', provider: 'Counselor' },
         { modality: 'Daily mood tracking', frequency: 'Daily self-monitoring', provider: 'Client (facilitated by counselor)' },
@@ -162,7 +162,7 @@ const GOAL_LIBRARY: Record<AsamDim, GoalTemplate[]> = {
       shortTerm: 'Client will practice 4-7-8 breathing or progressive muscle relaxation once daily and report experience in individual session.',
       measurableObjective: 'GAD-7 decreases by ≥ 5 points; panic episode frequency decreases ≥ 50%; group attendance ≥ 80%.',
       interventions: [
-        { modality: 'CBT for anxiety — individual', frequency: '2× per week', provider: 'LPC / LCSW' },
+        { modality: 'CBT for anxiety — individual', frequency: '2× per week', provider: 'LCPC / LCADC' },
         { modality: 'Anxiety management group (mindfulness / DBT skills)', frequency: '3× per week', provider: 'Counselor' },
         { modality: 'Psychiatric medication evaluation', frequency: 'Within 72h', provider: 'Psychiatrist' },
       ],
@@ -191,7 +191,7 @@ const GOAL_LIBRARY: Record<AsamDim, GoalTemplate[]> = {
       interventions: [
         { modality: 'Motivational Interviewing — individual', frequency: '2× per week', provider: 'MI-trained counselor' },
         { modality: 'Change talk group', frequency: '2× per week', provider: 'Counselor' },
-        { modality: 'Peer recovery support — shared experience', frequency: '1× per week', provider: 'CPRS' },
+        { modality: 'Peer recovery support — shared experience', frequency: '1× per week', provider: 'ADT' },
       ],
       tags: ['AUD', 'OUD', 'stimulant', 'polysubstance', 'cannabis'],
     },
@@ -231,7 +231,7 @@ const GOAL_LIBRARY: Record<AsamDim, GoalTemplate[]> = {
         { modality: 'Relapse prevention group (CBT-based)', frequency: '3× per week', provider: 'Counselor' },
         { modality: 'Individual relapse prevention session', frequency: '1× per week', provider: 'Primary counselor' },
         { modality: 'Urinalysis drug screen', frequency: 'Random, minimum 2× per week', provider: 'Nursing / Lab' },
-        { modality: '12-Step or SMART Recovery participation', frequency: '3× per week', provider: 'CPRS / Self-directed' },
+        { modality: '12-Step or SMART Recovery participation', frequency: '3× per week', provider: 'ADT / Self-directed' },
       ],
       tags: ['AUD', 'OUD', 'stimulant', 'polysubstance', 'cannabis'],
     },
@@ -243,7 +243,7 @@ const GOAL_LIBRARY: Record<AsamDim, GoalTemplate[]> = {
       interventions: [
         { modality: 'MBRP (Mindfulness-Based Relapse Prevention)', frequency: '2× per week', provider: 'MBRP-trained counselor' },
         { modality: 'Discharge planning — enhanced aftercare', frequency: 'Begins Day 1', provider: 'Case manager + counselor' },
-        { modality: 'Peer mentorship — long-term recovery model', frequency: '1× per week', provider: 'CPRS with ≥ 2 yrs sobriety' },
+        { modality: 'Peer mentorship — long-term recovery model', frequency: '1× per week', provider: 'ADT with ≥ 2 yrs sobriety' },
       ],
       tags: ['AUD', 'OUD', 'stimulant', 'polysubstance'],
     },
@@ -280,9 +280,9 @@ const GOAL_LIBRARY: Record<AsamDim, GoalTemplate[]> = {
       shortTerm: 'Client will attend at least 2 AA/NA/SMART Recovery meetings this week and introduce themselves at each.',
       measurableObjective: 'Client identifies ≥ 3 sober supports by name; sponsor or recovery coach identified by Week 4; meeting attendance ≥ 3× per week.',
       interventions: [
-        { modality: '12-Step facilitation / SMART Recovery orientation', frequency: '3× per week', provider: 'CPRS / Counselor' },
+        { modality: '12-Step facilitation / SMART Recovery orientation', frequency: '3× per week', provider: 'ADT / Counselor' },
         { modality: 'Social skills and recovery community group', frequency: '2× per week', provider: 'Counselor' },
-        { modality: 'Family therapy (with signed ROI)', frequency: '1× per week', provider: 'Family therapist / LMFT' },
+        { modality: 'Family therapy (with signed ROI)', frequency: '1× per week', provider: 'Family therapist / LCADC' },
       ],
       tags: ['AUD', 'OUD', 'stimulant', 'polysubstance', 'cannabis'],
     },
@@ -292,9 +292,9 @@ const GOAL_LIBRARY: Record<AsamDim, GoalTemplate[]> = {
       shortTerm: 'Client will sign a 42 CFR Part 2 release of information to include their primary support person in treatment planning.',
       measurableObjective: '≥ 2 family sessions completed by discharge; family identifies their role in the aftercare plan; client reports improved family communication.',
       interventions: [
-        { modality: 'Family therapy sessions', frequency: '1× per week', provider: 'LMFT / Family therapist' },
+        { modality: 'Family therapy sessions', frequency: '1× per week', provider: 'LCADC / Family therapist' },
         { modality: 'CRAFT family psychoeducation', frequency: '2× per month', provider: 'CRAFT-trained counselor' },
-        { modality: 'Family recovery support group', frequency: 'Weekly (open to family)', provider: 'CPRS' },
+        { modality: 'Family recovery support group', frequency: 'Weekly (open to family)', provider: 'ADT' },
       ],
       tags: ['AUD', 'OUD', 'stimulant', 'polysubstance'],
     },
@@ -381,7 +381,7 @@ const EXTRA_GOALS: Record<string, ExtGoal[]> = {
   ],
   p7: [
     { id: 'p7-g1', category: 'Substance Use', asamDimension: 'D5', problem: 'Cocaine use disorder — stimulant dependency with high-risk social network', longTerm: 'Client will achieve 90-day abstinence and engage in a structured aftercare plan.', shortTerm: 'Identify 3 high-risk situations and discuss avoidance strategies with counselor', status: 'In Progress', targetDate: '2026-10-01', measurableObjective: 'Negative UDS; high-risk situation list documented; SMART attendance ≥ 2× week.', interventions: [{ modality: 'Relapse prevention group', frequency: '3× per week', provider: 'Counselor' }, { modality: 'Contingency management', frequency: 'Weekly', provider: 'Counselor' }] },
-    { id: 'p7-g2', category: 'Mental Health', asamDimension: 'D3', problem: 'Antisocial personality traits impairing therapeutic engagement', longTerm: 'Client will engage authentically in therapy 3+ sessions/week without manipulative behavior.', shortTerm: 'Complete one journal reflection on interpersonal patterns this week', status: 'In Progress', targetDate: '2026-08-15', measurableObjective: 'Zero staff-documented manipulative incidents per week by Week 3; journaling 5× per week.', interventions: [{ modality: 'Individual therapy — schema-focused', frequency: '2× per week', provider: 'LPC / LCSW' }, { modality: 'Milieu behavioral monitoring', frequency: 'Ongoing', provider: 'All staff' }] },
+    { id: 'p7-g2', category: 'Mental Health', asamDimension: 'D3', problem: 'Antisocial personality traits impairing therapeutic engagement', longTerm: 'Client will engage authentically in therapy 3+ sessions/week without manipulative behavior.', shortTerm: 'Complete one journal reflection on interpersonal patterns this week', status: 'In Progress', targetDate: '2026-08-15', measurableObjective: 'Zero staff-documented manipulative incidents per week by Week 3; journaling 5× per week.', interventions: [{ modality: 'Individual therapy — schema-focused', frequency: '2× per week', provider: 'LCPC / LCADC' }, { modality: 'Milieu behavioral monitoring', frequency: 'Ongoing', provider: 'All staff' }] },
   ],
   p8: [
     { id: 'p8-g1', category: 'Substance Use', asamDimension: 'D1', problem: 'Opioid use disorder — active COWS protocol, Suboxone induction', longTerm: 'Client will stabilize on buprenorphine/naloxone and remain abstinent from illicit opioids for 6 months.', shortTerm: 'COWS assessments Q4H; attend MAT education group; report cravings to nursing', status: 'In Progress', targetDate: '2026-09-15', measurableObjective: 'COWS ≤ 8 for 72h; Suboxone doses taken as prescribed 100%; negative opioid UDS.', interventions: [{ modality: 'COWS monitoring + Suboxone induction', frequency: 'Q4H then daily', provider: 'Nursing / MD' }, { modality: 'MAT education group', frequency: '2× per week', provider: 'Counselor' }] },
@@ -1196,8 +1196,8 @@ export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) =
                   <thead><tr className="border-b border-border text-slate"><th className="text-left py-2 text-[10px] font-bold uppercase">Clinician</th><th className="text-center py-2 text-[10px] font-bold uppercase">Plans</th><th className="text-center py-2 text-[10px] font-bold uppercase">On Time</th><th className="text-center py-2 text-[10px] font-bold uppercase">Overdue</th></tr></thead>
                   <tbody className="divide-y divide-border">
                     {[
-                      { name: 'Sarah Jenkins, LPC', plans: 5, onTime: 5, overdue: 0 },
-                      { name: 'David Odom, LMFT', plans: 4, onTime: 3, overdue: 1 },
+                      { name: 'Sarah Jenkins, LCPC', plans: 5, onTime: 5, overdue: 0 },
+                      { name: 'David Odom, LCADC', plans: 4, onTime: 3, overdue: 1 },
                       { name: 'Marcus Chen, CAC-AD', plans: 4, onTime: 2, overdue: 2 },
                       { name: 'Priya Nair, MSW', plans: 3, onTime: 3, overdue: 0 },
                     ].map(r => (
@@ -1269,13 +1269,13 @@ export function TreatmentPlans({ navigate, readOnly }: { navigate: (s: Screen) =
               <thead><tr className="border-b border-border bg-gray-50">{['Modality', 'Applies To', 'Evidence Level', 'Typical Duration', 'Key Outcomes', 'Who Delivers'].map(h => <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { m: 'Motivational Interviewing (MI)', applies: 'All SUD, ambivalent patients', ev: 'Level I', dur: '1–4 sessions/focus area', out: 'Engagement, retention, readiness to change', who: 'Counselors, CPRS' },
-                  { m: 'Cognitive Behavioral Therapy (CBT)', applies: 'AUD, OUD, stimulant; co-occurring MDD', ev: 'Level I', dur: '12–16 sessions individual/group', out: 'Reduced use, relapse prevention, coping skills', who: 'LPC, LCSW, LMFT' },
+                  { m: 'Motivational Interviewing (MI)', applies: 'All SUD, ambivalent patients', ev: 'Level I', dur: '1–4 sessions/focus area', out: 'Engagement, retention, readiness to change', who: 'Counselors, ADT' },
+                  { m: 'Cognitive Behavioral Therapy (CBT)', applies: 'AUD, OUD, stimulant; co-occurring MDD', ev: 'Level I', dur: '12–16 sessions individual/group', out: 'Reduced use, relapse prevention, coping skills', who: 'LCPC, LCADC, LCADC' },
                   { m: 'Dialectical Behavior Therapy (DBT)', applies: 'BPD, emotional dysregulation, self-harm', ev: 'Level I', dur: '6–12 month program', out: 'Emotion regulation, distress tolerance', who: 'DBT-trained clinicians' },
                   { m: 'Contingency Management (CM)', applies: 'Stimulant, cannabis, polysubstance', ev: 'Level I', dur: '12–24 weeks; incentive-based', out: 'Abstinence rates, treatment attendance', who: 'CM-trained counselors' },
                   { m: 'Seeking Safety', applies: 'Co-occurring PTSD+SUD', ev: 'Level II', dur: '25 session curriculum', out: 'PTSD reduction, substance use reduction', who: 'Trauma-trained counselors' },
                   { m: 'EMDR', applies: 'Trauma history; PTSD with SUD', ev: 'Level I (PTSD)', dur: '8–12 sessions individual', out: 'Trauma resolution, reduced cravings', who: 'EMDR-certified clinicians' },
-                  { m: 'Twelve-Step Facilitation (TSF)', applies: 'All SUD', ev: 'Level I', dur: '12–15 sessions + ongoing AA/NA', out: 'Affiliation, long-term abstinence', who: 'Counselors + CPRS' },
+                  { m: 'Twelve-Step Facilitation (TSF)', applies: 'All SUD', ev: 'Level I', dur: '12–15 sessions + ongoing AA/NA', out: 'Affiliation, long-term abstinence', who: 'Counselors + ADT' },
                 ].map(r => (
                   <tr key={r.m} className="hover:bg-gray-50">
                     <td className="px-3 py-2 font-semibold text-navy">{r.m}</td>

@@ -33,19 +33,19 @@ interface GroupSession {
 
 const SESSIONS: GroupSession[] = [
   {
-    id: 'g1', name: 'Morning Process Group', type: 'Process Group', time: '9:00 AM', location: 'Group Room A', facilitator: 'Sarah Jenkins, LPC',
+    id: 'g1', name: 'Morning Process Group', type: 'Process Group', time: '9:00 AM', location: 'Group Room A', facilitator: 'Sarah Jenkins, LCPC',
     program: 'Residential', expectedCensus: 10, actualAttendance: 9, status: 'Completed', noteStatus: 'Signed',
     topic: 'Coping Skills & Triggers', objectives: ['Identify personal triggers from the past week', 'Share one coping skill that worked', 'Peer support and accountability check-in'],
     note: 'Group was engaged and cohesive today. Marcus W. shared significant trigger around work stress and received strong peer support. Samantha C. disclosed cravings after phone call with ex-partner — safety plan reviewed. Overall therapeutic milieu is positive. One absence (Linda F.) excused — individual session with counselor.', date: '2026-07-18',
   },
   {
-    id: 'g2', name: 'Psychoeducation', type: 'Psychoeducation', time: '10:30 AM', location: 'Group Room B', facilitator: 'David Odom, LMFT',
+    id: 'g2', name: 'Psychoeducation', type: 'Psychoeducation', time: '10:30 AM', location: 'Group Room B', facilitator: 'David Odom, LCADC',
     program: 'Residential', expectedCensus: 10, actualAttendance: 8, status: 'Completed', noteStatus: 'Draft',
     topic: 'Disease Model of Addiction', objectives: ['Review neurobiological basis of substance use disorder', 'Discuss stigma and self-compassion', 'Introduce concept of chronic brain disorder'],
     note: 'Presented slides on dopamine dysregulation and reward pathway changes. Group initially skeptical — challenged "disease vs. choice" framing. Productive discussion emerged. James T. asked about genetic factors — provided psychoeducation on heritability. Two participants disclosed shame around diagnosis for the first time.', date: '2026-07-18',
   },
   {
-    id: 'g3', name: 'Relapse Prevention', type: 'Relapse Prevention', time: '1:00 PM', location: 'Group Room A', facilitator: 'Maria Gonzales, LCSW',
+    id: 'g3', name: 'Relapse Prevention', type: 'Relapse Prevention', time: '1:00 PM', location: 'Group Room A', facilitator: 'Maria Gonzales, LCADC',
     program: 'All Programs', expectedCensus: 14, actualAttendance: 12, status: 'In Progress', noteStatus: 'None',
     topic: 'High-Risk Situations & HALT', objectives: ['Define HALT (Hungry, Angry, Lonely, Tired)', 'Map personal high-risk situations', 'Develop one exit strategy per identified risk'],
     date: '2026-07-18',
@@ -57,19 +57,19 @@ const SESSIONS: GroupSession[] = [
     date: '2026-07-18',
   },
   {
-    id: 'g5', name: 'Family Systems', type: 'Family', time: '11:00 AM', location: 'Group Room A', facilitator: 'David Odom, LMFT',
+    id: 'g5', name: 'Family Systems', type: 'Family', time: '11:00 AM', location: 'Group Room A', facilitator: 'David Odom, LCADC',
     program: 'PHP', expectedCensus: 6, actualAttendance: 5, status: 'Completed', noteStatus: 'Signed',
     topic: 'Communication & Boundaries', objectives: ['Review healthy vs unhealthy communication', 'Role-play boundary-setting scenarios', 'Discuss enabling behaviors'],
     note: 'Strong family engagement today. One spouse shared they had been "enabling without knowing it" — turning point moment. Assigned journaling homework: identify one boundary to set before next session. Group cohesion excellent.', date: '2026-07-18',
   },
   {
-    id: 'g6', name: 'Evening Reflection', type: 'Process Group', time: '7:00 PM', location: 'Group Room A', facilitator: 'Sarah Jenkins, LPC',
+    id: 'g6', name: 'Evening Reflection', type: 'Process Group', time: '7:00 PM', location: 'Group Room A', facilitator: 'Sarah Jenkins, LCPC',
     program: 'Residential', expectedCensus: 14, actualAttendance: 0, status: 'Upcoming', noteStatus: 'None',
     topic: 'Gratitude & Accountability', objectives: ['End-of-day mood and craving check-in', 'Share one win from today', 'Set intention for tomorrow'],
     date: '2026-07-18',
   },
   {
-    id: 'g7', name: 'Morning Process Group', type: 'Process Group', time: '9:00 AM', location: 'Group Room A', facilitator: 'Sarah Jenkins, LPC',
+    id: 'g7', name: 'Morning Process Group', type: 'Process Group', time: '9:00 AM', location: 'Group Room A', facilitator: 'Sarah Jenkins, LCPC',
     program: 'Residential', expectedCensus: 10, actualAttendance: 8, status: 'Completed', noteStatus: 'Signed',
     topic: 'Motivation & Recovery Identity', objectives: ['Check-in on week goals', 'Discuss recovery identity formation', 'Peer encouragement'],
     note: 'Seven of eight participants present. Patricia H. shared she celebrated 35 days sober — group celebrated with her. Robert N. minimized progress; counselor used motivational interviewing to redirect. Good energy.', date: '2026-07-17',
@@ -695,8 +695,8 @@ export function GroupNotes({ navigate, readOnly }: Props) {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {[
-                    { name: 'Sarah Jenkins, LPC', sessions: 14, signed: 13, draft: 1, missing: 0 },
-                    { name: 'David Odom, LMFT', sessions: 12, signed: 10, draft: 1, missing: 1 },
+                    { name: 'Sarah Jenkins, LCPC', sessions: 14, signed: 13, draft: 1, missing: 0 },
+                    { name: 'David Odom, LCADC', sessions: 12, signed: 10, draft: 1, missing: 1 },
                     { name: 'Marcus Chen, CAC-AD', sessions: 10, signed: 8, draft: 2, missing: 0 },
                     { name: 'Priya Nair, MSW', sessions: 6, signed: 4, draft: 1, missing: 1 },
                   ].map(f => {
@@ -776,11 +776,11 @@ export function GroupNotes({ navigate, readOnly }: Props) {
               <tbody className="divide-y divide-border">
                 {[
                   { name: 'T. Jackson, CAC-AD', sessions: 18, avg: 8.4, notes: '100%', onTime: '94%', sat: 4.7, spec: 'CBT / Relapse Prev.' },
-                  { name: 'A. Brooks, LPC', sessions: 14, avg: 7.1, notes: '86%', onTime: '89%', sat: 4.4, spec: 'Trauma / DBT' },
+                  { name: 'A. Brooks, LCPC', sessions: 14, avg: 7.1, notes: '86%', onTime: '89%', sat: 4.4, spec: 'Trauma / DBT' },
                   { name: 'M. Rivera, MS', sessions: 16, avg: 7.9, notes: '94%', onTime: '97%', sat: 4.6, spec: 'Psychoeducation' },
                   { name: 'D. Williams, CAC-AD', sessions: 12, avg: 6.8, notes: '75%', onTime: '83%', sat: 4.1, spec: '12-Step / Spirituality' },
-                  { name: 'P. Chen, LMFT', sessions: 10, avg: 6.2, notes: '100%', onTime: '100%', sat: 4.8, spec: 'Family Systems' },
-                  { name: 'K. Nguyen, CAADC', sessions: 8, avg: 5.9, notes: '88%', onTime: '88%', sat: 4.3, spec: 'Anger Mgmt / Life Skills' },
+                  { name: 'P. Chen, LCADC', sessions: 10, avg: 6.2, notes: '100%', onTime: '100%', sat: 4.8, spec: 'Family Systems' },
+                  { name: 'K. Nguyen, CAC-AD', sessions: 8, avg: 5.9, notes: '88%', onTime: '88%', sat: 4.3, spec: 'Anger Mgmt / Life Skills' },
                 ].map(f => (
                   <tr key={f.name} className="hover:bg-gray-50">
                     <td className="px-3 py-2.5 font-medium text-navy">{f.name}</td>

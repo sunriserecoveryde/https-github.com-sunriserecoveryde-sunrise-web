@@ -17,23 +17,23 @@ const SHIFT_ALERTS = [
 ];
 
 const SHIFT_EVENTS = [
-  { time: '9:00 AM', event: 'Morning Process Group', facilitator: 'Sarah Jenkins, LPC', location: 'Group Room A', census: 10 },
+  { time: '9:00 AM', event: 'Morning Process Group', facilitator: 'Sarah Jenkins, LCPC', location: 'Group Room A', census: 10 },
   { time: '9:30 AM', event: 'Medical Rounds', facilitator: 'Dr. Robert Chen', location: 'Nursing Station', census: null },
-  { time: '10:30 AM', event: 'Psychoeducation — Disease Model', facilitator: 'David Odom, LMFT', location: 'Group Room B', census: 7 },
-  { time: '11:00 AM', event: 'Family Systems Group', facilitator: 'David Odom, LMFT', location: 'Group Room A', census: 5 },
+  { time: '10:30 AM', event: 'Psychoeducation — Disease Model', facilitator: 'David Odom, LCADC', location: 'Group Room B', census: 7 },
+  { time: '11:00 AM', event: 'Family Systems Group', facilitator: 'David Odom, LCADC', location: 'Group Room A', census: 5 },
   { time: '12:00 PM', event: 'Physician: MAT Review Clinic', facilitator: 'Dr. Robert Chen', location: 'Medical Suite', census: 4 },
-  { time: '1:00 PM', event: 'Relapse Prevention Group', facilitator: 'Maria Gonzales, LCSW', location: 'Group Room A', census: 12 },
+  { time: '1:00 PM', event: 'Relapse Prevention Group', facilitator: 'Maria Gonzales, LCADC', location: 'Group Room A', census: 12 },
   { time: '2:30 PM', event: 'Trauma-Informed Care', facilitator: 'Dr. Allen Hughes', location: 'Group Room C', census: 8 },
   { time: '3:00 PM', event: 'Shift Change Handoff', facilitator: 'All Clinical Staff', location: 'Conference Room', census: null },
   { time: '4:00 PM', event: 'Individual Sessions', facilitator: 'Counselor Team', location: 'Offices', census: 6 },
   { time: '5:00 PM', event: 'Visitation Hour', facilitator: 'Kevin Wright', location: 'Family Lounge', census: null },
-  { time: '7:00 PM', event: 'Evening Reflection', facilitator: 'Sarah Jenkins, LPC', location: 'Group Room A', census: 14 },
+  { time: '7:00 PM', event: 'Evening Reflection', facilitator: 'Sarah Jenkins, LCPC', location: 'Group Room A', census: 14 },
 ];
 
 const ON_DUTY_STAFF = [
-  { name: 'Sarah Jenkins, LPC', role: 'Primary Counselor', shift: 'Day (7A–3P)', assignment: 'Residential — 5 clients', status: 'Active' },
-  { name: 'David Odom, LMFT', role: 'Primary Counselor', shift: 'Day (7A–3P)', assignment: 'PHP — 4 clients', status: 'Active' },
-  { name: 'Maria Gonzales, LCSW', role: 'Primary Counselor', shift: 'Day (7A–3P)', assignment: 'IOP — 6 clients', status: 'Active' },
+  { name: 'Sarah Jenkins, LCPC', role: 'Primary Counselor', shift: 'Day (7A–3P)', assignment: 'Residential — 5 clients', status: 'Active' },
+  { name: 'David Odom, LCADC', role: 'Primary Counselor', shift: 'Day (7A–3P)', assignment: 'PHP — 4 clients', status: 'Active' },
+  { name: 'Maria Gonzales, LCADC', role: 'Primary Counselor', shift: 'Day (7A–3P)', assignment: 'IOP — 6 clients', status: 'Active' },
   { name: 'Dr. Robert Chen', role: 'Attending Physician', shift: 'Day (8A–5P)', assignment: 'All Programs — Medical', status: 'Active' },
   { name: 'Dr. Allen Hughes', role: 'Psychiatrist', shift: 'Day (9A–2P)', assignment: 'Psych Consults', status: 'Active' },
   { name: 'Jessica Torres, RN', role: 'Charge Nurse', shift: 'Day (7A–7P)', assignment: 'Nursing Station / MAR', status: 'Active' },
@@ -311,7 +311,7 @@ export function CommandCenter({ navigate, readOnly }: Props) {
 
           {/* Sign-off line */}
           <div className="border-t border-white/20 pt-3 flex items-center justify-between">
-            <div className="text-sm text-white/60">Outgoing Shift Lead: <span className="text-white font-medium">Sarah Jenkins, LPC</span> · Day Team</div>
+            <div className="text-sm text-white/60">Outgoing Shift Lead: <span className="text-white font-medium">Sarah Jenkins, LCPC</span> · Day Team</div>
             <LockedButton locked={readOnly} onClick={() => { setCcActionSaved('handoff'); setTimeout(() => setCcActionSaved(null), 2500); }} className="bg-white text-navy text-sm font-semibold px-4 py-2 rounded hover:bg-white/90 transition-colors">Sign & Hand Off</LockedButton>
           </div>
         </div>
@@ -645,9 +645,9 @@ export function CommandCenter({ navigate, readOnly }: Props) {
               <tbody className="divide-y divide-border">
                 {[
                   { p: 'P1', type: 'CIWA Score ≥18', loc: 'Rm 4B — M. Delgado', gen: '11:42 AM', assign: 'Dr. Chen (on-call)', status: 'Active', action: 'MD bedside eval within 15 min' },
-                  { p: 'P1', type: 'AMA Request', loc: 'Rm 9A — T. Barnes', gen: '12:05 PM', assign: 'S. Jenkins, LPC', status: 'Active', action: 'Counselor contact; AMA form if needed' },
+                  { p: 'P1', type: 'AMA Request', loc: 'Rm 9A — T. Barnes', gen: '12:05 PM', assign: 'S. Jenkins, LCPC', status: 'Active', action: 'Counselor contact; AMA form if needed' },
                   { p: 'P2', type: 'Missed Medication (3 doses)', loc: 'Rm 6C — K. Walsh', gen: '10:30 AM', assign: 'J. Torres, RN', status: 'In Progress', action: 'Nursing assessment; document reason' },
-                  { p: 'P2', type: 'Positive UA (Fentanyl)', loc: 'Rm 11D — R. Patel', gen: '09:15 AM', assign: 'D. Odom, LMFT', status: 'In Progress', action: 'Counselor session; update treatment plan' },
+                  { p: 'P2', type: 'Positive UA (Fentanyl)', loc: 'Rm 11D — R. Patel', gen: '09:15 AM', assign: 'D. Odom, LCADC', status: 'In Progress', action: 'Counselor session; update treatment plan' },
                   { p: 'P3', type: 'Group No-Show (2 sessions)', loc: 'Rm 3A — A. Monroe', gen: '08:00 AM', assign: 'T. Osei, CAC-AD', status: 'Pending', action: 'Check-in and document reason' },
                   { p: 'P3', type: 'Auth Expiring in 48h', loc: 'Rm 7B — L. Carter', gen: '07:00 AM', assign: 'Billing — B. Hughes', status: 'Pending', action: 'Submit concurrent review to BCBS' },
                   { p: 'P3', type: 'Pending Co-sign >24h', loc: 'Progress Note — 3 docs', gen: '06:00 AM', assign: 'Supervisor — D. Reyes', status: 'Pending', action: 'Review and co-sign in ChartReview' },

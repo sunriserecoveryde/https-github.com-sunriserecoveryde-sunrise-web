@@ -330,7 +330,7 @@ export function HelpSupport({ navigate }: Props) {
                     { cert: 'CAC-AD (MD Certified Associate Counselor - Alcohol & Drug)', exp: '2026-09-01', status: 'Expiring Soon' },
                     { cert: 'CPR / BLS (Basic Life Support)', exp: '2026-08-15', status: 'Expiring Soon' },
                     { cert: 'CPI (Crisis Prevention)', exp: '2026-10-01', status: 'Expiring Soon' },
-                    { cert: 'CAADC (Certified Advanced Alcohol & Drug Counselor)', exp: '2027-01-15', status: 'Current' },
+                    { cert: 'CAC-AD (Certified Advanced Alcohol & Drug Counselor)', exp: '2027-01-15', status: 'Current' },
                     { cert: 'Mental Health First Aid', exp: '2027-03-01', status: 'Current' },
                   ].map(c => (
                     <div key={c.cert} className="flex items-center justify-between p-2 border border-border rounded">

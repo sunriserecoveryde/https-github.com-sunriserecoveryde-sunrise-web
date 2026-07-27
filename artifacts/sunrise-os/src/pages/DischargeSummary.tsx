@@ -54,7 +54,7 @@ const DISCHARGE_DATA: DischargeDataType = {
   admissionPresentation: 'Robert Navarro, 45-year-old attorney presenting voluntary for residential treatment for severe alcohol use disorder following second DUI on 6/28/2026 and threat to bar license. Reports 25+ years of daily drinking escalating over 5 years. Alcohol intake 750ml+ bourbon/daily at peak. CIWA 8 at admission. PHQ-9 21 (severe depression). Legal involvement: pretrial diversion program with mandatory treatment completion.',
 
   treatmentReceived: `• 23 days residential treatment (ASAM 3.7)
-• Individual counseling: 22 sessions (Sarah Jenkins, LPC) — motivational interviewing, CBT for depression/AUD, relapse prevention
+• Individual counseling: 22 sessions (Sarah Jenkins, LCPC) — motivational interviewing, CBT for depression/AUD, relapse prevention
 • Group therapy: 85+ group sessions (process, psychoeducation, relapse prevention, trauma-informed)
 • Psychiatric evaluation (Dr. Hughes, 7/3): initiated Lexapro 10mg for MDD
 • Medical management (Dr. Chen): CIWA protocol completed Day 3; acamprosate initiated
@@ -89,7 +89,7 @@ Medications patient is NOT taking at discharge that were discussed:
 • Naltrexone — patient declined; acamprosate chosen
 • Disulfiram — patient declined due to occupational travel concerns`,
 
-  followUpPlan: `1. Outpatient individual therapy: Amanda Curtis, LCSW — weekly x 3 months (appt 7/26, 301-555-1234)
+  followUpPlan: `1. Outpatient individual therapy: Amanda Curtis, LCADC — weekly x 3 months (appt 7/26, 301-555-1234)
 2. Psychiatry follow-up: Dr. Marcus Stone — 8/3/2026 (Lexapro monitoring)
 3. Primary care: Dr. Martinez — 7/31 (med reconciliation, liver function recheck)
 4. AA commitment: Brentwood Sunday 10AM home group (sponsor: David H., 301-555-7890)
@@ -103,8 +103,8 @@ Medications patient is NOT taking at discharge that were discussed:
 • Emergency contacts: wife Emily (301-555-9211), sponsor David H. (301-555-7890), Dr. Chen on-call (pager 4421)
 • Return to ED or call 911 if: seizures, loss of consciousness, severe chest pain, confusion`,
 
-  clinicianSignature: 'Sarah Jenkins, LPC — Primary Counselor — July 24, 2026',
-  cosignature: 'James S. Collins III, CAADC — Clinical Director — July 24, 2026',
+  clinicianSignature: 'Sarah Jenkins, LCPC — Primary Counselor — July 24, 2026',
+  cosignature: 'James S. Collins III, CAC-AD — Clinical Director — July 24, 2026',
   physicianSignature: 'Dr. Robert Chen, MD — Medical Director — July 24, 2026',
 };
 
@@ -293,7 +293,7 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-[10px] font-bold text-slate uppercase tracking-wide">Primary Counselor</div>
-                    <div className="text-sm font-semibold text-navy mt-0.5">Sarah Jenkins, LPC</div>
+                    <div className="text-sm font-semibold text-navy mt-0.5">Sarah Jenkins, LCPC</div>
                   </div>
                   {!clinicianSig && !readOnly && (
                     <button onClick={() => setActiveSigModal('clinician')} className="flex items-center gap-1.5 text-xs font-semibold bg-navy text-white px-3 py-1.5 rounded-lg hover:bg-navy/90">
@@ -311,7 +311,7 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-[10px] font-bold text-slate uppercase tracking-wide">Clinical Director (Co-sign)</div>
-                    <div className="text-sm font-semibold text-navy mt-0.5">James S. Collins III, CAADC</div>
+                    <div className="text-sm font-semibold text-navy mt-0.5">James S. Collins III, CAC-AD</div>
                   </div>
                   {!cosignSig && !readOnly && (
                     <button onClick={() => setActiveSigModal('cosign')} className="flex items-center gap-1.5 text-xs font-semibold bg-navy text-white px-3 py-1.5 rounded-lg hover:bg-navy/90">
@@ -378,8 +378,8 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
               activeSigModal === 'physician' ? 'Dr. Robert Chen' : `${p.firstName} ${p.lastName}`
             }
             signerRole={
-              activeSigModal === 'clinician' ? 'Primary Counselor, LPC' :
-              activeSigModal === 'cosign' ? 'Clinical Director, CAADC' :
+              activeSigModal === 'clinician' ? 'Primary Counselor, LCPC' :
+              activeSigModal === 'cosign' ? 'Clinical Director, CAC-AD' :
               activeSigModal === 'physician' ? 'Medical Director, MD' : ''
             }
             onSign={(record) => {
@@ -528,9 +528,9 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
                 <h3 className="font-semibold text-navy text-sm mb-3">Warm Handoffs Completed</h3>
                 <div className="space-y-2 text-xs">
                   {[
-                    { to: 'Recovery Road Counseling Center', method: 'Phone', date: '2026-07-18', staff: 'Sarah Jenkins, LPC', notes: 'Spoke with intake coordinator; patient\'s biopsychosocial summary faxed with consent.' },
+                    { to: 'Recovery Road Counseling Center', method: 'Phone', date: '2026-07-18', staff: 'Sarah Jenkins, LCPC', notes: 'Spoke with intake coordinator; patient\'s biopsychosocial summary faxed with consent.' },
                     { to: 'Dr. Anita Shah (OBOT)', method: 'Fax + Phone', date: '2026-07-18', staff: 'Dr. Robert Chen, MD', notes: 'MAT summary faxed; buprenorphine dose confirmed; labs forwarded with 42 CFR Part 2 consent.' },
-                    { to: 'MD Behavioral Health Associates', method: 'Fax', date: '2026-07-18', staff: 'Maria Torres, LMFT', notes: 'Referral letter sent; psychiatric eval summary included; patient to call and confirm appt.' },
+                    { to: 'MD Behavioral Health Associates', method: 'Fax', date: '2026-07-18', staff: 'Maria Torres, LCADC', notes: 'Referral letter sent; psychiatric eval summary included; patient to call and confirm appt.' },
                   ].map(h => (
                     <div key={h.to} className="border border-border rounded-lg p-2.5">
                       <div className="font-semibold text-navy mb-0.5">{h.to}</div>

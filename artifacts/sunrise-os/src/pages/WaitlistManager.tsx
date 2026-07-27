@@ -40,7 +40,7 @@ const WAITLIST: WaitlistEntry[] = [
     insuranceVerified: true, payer: 'CareFirst BlueCross BlueShield (auth pending)',
     lastContactDate: '2026-07-22', lastContactOutcome: 'Spoke with patient — motivated, in withdrawal, staying with sister. Wants bed ASAP.',
     notes: 'Referred by Dr. Linda Strauss at Vanderbilt Psych ED. Fentanyl OUD, last use 7/16. CIWA score estimated at 14 at ED. Insurance auth submitted — awaiting decision. P1 — offer next available residential bed.',
-    assignedTo: 'Sarah Jenkins, LPC', preferredAdmitDate: '2026-07-23',
+    assignedTo: 'Sarah Jenkins, LCPC', preferredAdmitDate: '2026-07-23',
   },
   {
     id: 'WL-002', name: 'Anthony Barnes', dob: '1990-08-30', phone: '(615) 555-4412',
@@ -50,7 +50,7 @@ const WAITLIST: WaitlistEntry[] = [
     insuranceVerified: true, payer: 'Cigna (OON benefits — 60% after deductible)',
     lastContactDate: '2026-07-22', lastContactOutcome: 'Confirmed still interested. Working with HR on medical leave.',
     notes: 'Employed software engineer. Currently drinking 10-12 drinks/day, attempting to taper. Liver enzymes elevated (self-reported). Needs residential for medical monitoring during detox.',
-    assignedTo: 'Maria Gonzalez, LSW',
+    assignedTo: 'Maria Gonzalez, LCADC',
   },
   {
     id: 'WL-003', name: 'Michelle Thompson', dob: '1975-11-22', phone: '(615) 555-7834',
@@ -61,7 +61,7 @@ const WAITLIST: WaitlistEntry[] = [
     insuranceVerified: true, payer: 'United HealthCare (in-network)',
     lastContactDate: '2026-07-22', lastContactOutcome: 'Left voicemail about PHP opening — awaiting callback.',
     notes: 'PHP bed available 7/22. Offer made by phone 7/22 — patient requested 24 hours to discuss with family. Follow up 7/23 morning.',
-    assignedTo: 'David Odom, LMFT', preferredAdmitDate: '2026-07-23',
+    assignedTo: 'David Odom, LCADC', preferredAdmitDate: '2026-07-23',
   },
   {
     id: 'WL-004', name: 'James Worthington III', dob: '1965-02-08', phone: '(615) 555-3310',
@@ -72,7 +72,7 @@ const WAITLIST: WaitlistEntry[] = [
     insuranceVerified: false, payer: 'Aetna (verification in progress)',
     lastContactDate: '2026-07-22', lastContactOutcome: 'Spoke with attorney — patient in court proceedings. Hearing today 7/22; admission confirmed for tomorrow.',
     notes: 'Attorney client — BAC of 0.31 at arrest. Court ordered treatment as diversion condition. 7/22 hearing attended — judge granted 48-hour admission window. Must admit by 7/24 or faces incarceration. LAP case manager: Marcus Hall (301-555-2002). Insurance verification urgent.',
-    assignedTo: 'Sarah Jenkins, LPC',
+    assignedTo: 'Sarah Jenkins, LCPC',
   },
   {
     id: 'WL-005', name: 'Destiny Williams', dob: '1998-06-14', phone: '(615) 555-8821',
@@ -83,7 +83,7 @@ const WAITLIST: WaitlistEntry[] = [
     insuranceVerified: true, payer: 'Maryland Medicaid / BlueCare (authorized)',
     lastContactDate: '2026-07-22', lastContactOutcome: 'Spoke via Rockville Interfaith Recovery House staff — patient eager for help. Transportation needed.',
     notes: 'Maryland Medicaid auth approved — 21 days residential covered. Transportation barrier: no car, currently sheltered. Will arrange transport on admission day. 26-year-old with 4-year fentanyl history. High priority given housing instability and OD risk.',
-    assignedTo: 'Maria Gonzalez, LSW', preferredAdmitDate: '2026-07-23',
+    assignedTo: 'Maria Gonzalez, LCADC', preferredAdmitDate: '2026-07-23',
   },
   {
     id: 'WL-006', name: 'Kevin Ostrowski', dob: '1987-09-01', phone: '(615) 555-6641',
@@ -94,7 +94,7 @@ const WAITLIST: WaitlistEntry[] = [
     insuranceVerified: true, payer: 'Vanderbilt Faculty Benefits (BCBS)',
     lastContactDate: '2026-07-22', lastContactOutcome: 'Confirmed IOP schedule preferences — evenings preferred.',
     notes: 'Faculty member. Functional drinker — employer-mandated evaluation after incident. Prefers evening IOP to maintain work schedule. FMLA paperwork in progress with HR.',
-    assignedTo: 'David Odom, LMFT',
+    assignedTo: 'David Odom, LCADC',
   },
   {
     id: 'WL-007', name: 'Sandra Nguyen', dob: '1972-03-28', phone: '(615) 555-2234',
@@ -105,7 +105,7 @@ const WAITLIST: WaitlistEntry[] = [
     insuranceVerified: false, payer: 'Self-pay (sliding fee application pending)',
     lastContactDate: '2026-07-22', lastContactOutcome: 'Spoke with husband — patient not yet willing to engage. Family meeting recommended.',
     notes: 'Husband reached out. Patient currently using daily and not fully motivated. Will need motivational outreach call from peer specialist before formal intake. Sliding fee application submitted by husband.',
-    assignedTo: 'Maria Gonzalez, LSW',
+    assignedTo: 'Maria Gonzalez, LCADC',
   },
   {
     id: 'WL-008', name: 'Robert Greenfield', dob: '1955-10-15', phone: '(615) 555-0093',
@@ -116,7 +116,7 @@ const WAITLIST: WaitlistEntry[] = [
     insuranceVerified: true, payer: 'Medicare + Medigap Plan G',
     lastContactDate: '2026-07-22', lastContactOutcome: 'Offer made for IOP starting 7/23. Considering — will call back today.',
     notes: '71-year-old retired physician. Chronic pain + opioid dependence on Oxycodone 120mg/day (prescribed). Very motivated — embarrassed by situation. Dr. Park providing co-management. Medicare approved.',
-    assignedTo: 'David Odom, LMFT', preferredAdmitDate: '2026-07-22',
+    assignedTo: 'David Odom, LCADC', preferredAdmitDate: '2026-07-22',
   },
 ];
 

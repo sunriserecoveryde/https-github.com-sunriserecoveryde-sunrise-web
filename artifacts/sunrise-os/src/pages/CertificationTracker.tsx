@@ -66,7 +66,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-004', staffName: 'Sarah Jenkins', role: 'Primary Counselor',
     ceuRequired: 30, ceuCompleted: 27, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-013', name: 'Licensed Professional Counselor (LPC)', type: 'License', issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)', issueDate: '2019-07-01', expiryDate: '2025-12-31', status: 'Expired', licenseNumber: 'LPC-MD-11342', notes: 'Expired 12/31/2025 — renewal application submitted 2/1/2026. Awaiting MBPCT processing. Supervised practice only until renewed.' },
+      { id: 'C-013', name: 'Licensed Professional Counselor (LCPC)', type: 'License', issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)', issueDate: '2019-07-01', expiryDate: '2025-12-31', status: 'Expired', licenseNumber: 'LCPC-MD-11342', notes: 'Expired 12/31/2025 — renewal application submitted 2/1/2026. Awaiting MBPCT processing. Supervised practice only until renewed.' },
       { id: 'C-014', name: 'National Certified Counselor', type: 'Certification', issuingBody: 'NBCC', issueDate: '2024-01-20', expiryDate: '2029-01-20', status: 'Current', licenseNumber: 'NCC 201441' },
       { id: 'C-015', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2025-03-01', expiryDate: '2027-03-01', status: 'Current' },
       { id: 'C-016', name: 'ASAM Foundations of Addiction Medicine', type: 'Training', issuingBody: 'ASAM', issueDate: '2025-06-15', expiryDate: '2028-06-15', status: 'Current' },
@@ -76,7 +76,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-005', staffName: 'Maria Gonzalez', role: 'Licensed Social Worker',
     ceuRequired: 30, ceuCompleted: 30, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-017', name: 'Licensed Clinical Social Worker — Clinical (LCSW-C)', type: 'License', issuingBody: 'Maryland Board of Social Work Examiners (MBSWE)', issueDate: '2016-09-01', expiryDate: '2027-09-30', status: 'Current', licenseNumber: 'LCSW-C-MD-4432', notes: 'LCSW-C (Clinical level) qualifies for independent clinical practice and supervision in Maryland.' },
+      { id: 'C-017', name: 'Licensed Clinical Social Worker — Clinical (LCADC)', type: 'License', issuingBody: 'Maryland Board of Social Work Examiners (MBSWE)', issueDate: '2016-09-01', expiryDate: '2027-09-30', status: 'Current', licenseNumber: 'LCADC-MD-4432', notes: 'LCADC (Clinical level) qualifies for independent clinical practice and supervision in Maryland.' },
       { id: 'C-018', name: 'CAC-AD — Certified Associate Counselor, Alcohol & Drug', type: 'Certification', issuingBody: 'Maryland Behavioral Health Administration (MD BHA) / ADAA', issueDate: '2018-04-01', expiryDate: '2026-10-01', status: 'Expiring Soon', licenseNumber: 'MD-CAC-AD-2190', notes: 'Required for SUD services to MD-funded clients. Renewal due 10/1/2026 — submit 40 CEU documentation to MD BHA.' },
       { id: 'C-019', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2024-09-15', expiryDate: '2026-09-15', status: 'Expiring Soon' },
     ],
@@ -95,7 +95,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-007', staffName: 'Kevin Wright', role: 'Behavioral Health Technician',
     ceuRequired: 12, ceuCompleted: 6, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-024', name: 'CAC-AD — Certified Alcohol and Drug Counselor', type: 'Certification', issuingBody: 'IC&RC — Delaware DSAMH recognized', issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'Expired', licenseNumber: 'DE-CAC-AD-7831', notes: 'Expired 3/1/2025 — renewal application submitted 4/2/2025. Awaiting IC&RC processing. 40 CEU hrs completed and submitted. Working toward CAADC upgrade.' },
+      { id: 'C-024', name: 'CAC-AD — Certified Alcohol and Drug Counselor', type: 'Certification', issuingBody: 'IC&RC — Delaware DSAMH recognized', issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'Expired', licenseNumber: 'DE-CAC-AD-7831', notes: 'Expired 3/1/2025 — renewal application submitted 4/2/2025. Awaiting IC&RC processing. 40 CEU hrs completed and submitted. Working toward CAC-AD upgrade.' },
       { id: 'C-025', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2025-06-01', expiryDate: '2027-06-01', status: 'Current' },
       { id: 'C-026', name: 'Mental Health First Aid', type: 'Training', issuingBody: 'MHFA USA', issueDate: '2025-02-15', expiryDate: '2028-02-15', status: 'Current' },
       { id: 'C-027', name: 'Crisis Prevention Institute (CPI) Nonviolent Crisis Intervention', type: 'Training', issuingBody: 'CPI', issueDate: '2025-08-01', expiryDate: '2026-08-01', status: 'Expiring Soon' },
@@ -413,16 +413,16 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
               <tbody className="divide-y divide-border">
                 {[
                   { name: 'James S. Collins III', license: 'CAC-AD + BAS', num: 'MD-CAC-AD-3891 / BAS-MD-441', state: 'MD', issued: '2015-03-01', expires: '2027-03-01', ce: '40 hrs/2yr (MD BHA)', status: 'Active' },
-                  { name: 'Sarah Jenkins', license: 'LPC + CAC-AD', num: 'LPC-MD-11342 / MD-CAC-AD-2218', state: 'MD', issued: '2019-07-01', expires: '2025-12-31', ce: '40 hrs/2yr (MBPCT)', status: 'Renewal Overdue' },
-                  { name: 'David Odom', license: 'LMFT', num: 'LMFT-MD-4421', state: 'MD', issued: '2020-05-01', expires: '2026-04-30', ce: '40 hrs/2yr (MBPCT)', status: 'Renewal Overdue' },
-                  { name: 'Maria Gonzalez', license: 'LCSW-C + CAC-AD', num: 'LCSW-C-MD-4432', state: 'MD', issued: '2016-09-01', expires: '2027-09-30', ce: '30 hrs/2yr (MBSWE)', status: 'Active' },
+                  { name: 'Sarah Jenkins', license: 'LCPC + CAC-AD', num: 'LCPC-MD-11342 / MD-CAC-AD-2218', state: 'MD', issued: '2019-07-01', expires: '2025-12-31', ce: '40 hrs/2yr (MBPCT)', status: 'Renewal Overdue' },
+                  { name: 'David Odom', license: 'LCADC', num: 'LCADC-MD-4421', state: 'MD', issued: '2020-05-01', expires: '2026-04-30', ce: '40 hrs/2yr (MBPCT)', status: 'Renewal Overdue' },
+                  { name: 'Maria Gonzalez', license: 'LCADC + CAC-AD', num: 'LCADC-MD-4432', state: 'MD', issued: '2016-09-01', expires: '2027-09-30', ce: '30 hrs/2yr (MBSWE)', status: 'Active' },
                   { name: 'Dr. Robert Chen', license: 'MD', num: 'MD-18834', state: 'MD', issued: '2015-07-01', expires: '2027-03-31', ce: '50 CME hrs/2yr (MBP)', status: 'Active' },
                   { name: 'Dr. Allen Hughes', license: 'MD + FASAM', num: 'MD-09921', state: 'MD', issued: '2008-06-01', expires: '2028-12-31', ce: '50 CME hrs/2yr (MBP)', status: 'Active' },
                   { name: 'Jessica Torres', license: 'RN + CARN', num: 'RN-MD-44129', state: 'MD', issued: '2015-11-01', expires: '2026-10-31', ce: '30 hrs/2yr (MBON)', status: 'Active' },
                   { name: 'Kevin Wright', license: 'CAC-AD + PRS', num: 'DE-CAC-AD-7831 / DSAMH-PRS-1122', state: 'DE', issued: '2021-03-01', expires: '2025-03-01', ce: '40 hrs/2yr (IC&RC)', status: 'Renewal Overdue' },
                   { name: 'Michael Boyd', license: 'ADT (DSAMH)', num: 'DSAMH-ADT-2023-0447', state: 'DE', issued: '2023-04-15', expires: '2025-04-15', ce: 'Annual renewal (DSAMH)', status: 'Renewal Overdue' },
-                  { name: 'Carlos Rivera', license: 'CAC-AD + CPRS', num: 'DE-CAC-AD-4419 / CPRS-DE-0891', state: 'DE', issued: '2023-05-01', expires: '2027-05-01', ce: '40 hrs/2yr (IC&RC)', status: 'Active' },
-                  { name: 'Marcus Thompson (PSS)', license: 'CPRS', num: 'MD-CPRS-5521', state: 'MD', issued: '2023-03-01', expires: '2025-03-01', ce: '20 hrs/2yr', status: 'Renewal Overdue' },
+                  { name: 'Carlos Rivera', license: 'CAC-AD + ADT', num: 'DE-CAC-AD-4419 / ADT-DE-0891', state: 'DE', issued: '2023-05-01', expires: '2027-05-01', ce: '40 hrs/2yr (IC&RC)', status: 'Active' },
+                  { name: 'Marcus Thompson (PSS)', license: 'ADT', num: 'MD-ADT-5521', state: 'MD', issued: '2023-03-01', expires: '2025-03-01', ce: '20 hrs/2yr', status: 'Renewal Overdue' },
                 ].map(r => (
                   <tr key={r.name} className={`hover:bg-gray-50 ${r.status === 'Renewal Overdue' ? 'bg-red-50/40' : r.status === 'Due Q3' ? 'bg-amber-50/30' : ''}`}>
                     <td className="px-4 py-2.5 font-medium text-navy">{r.name}</td>
@@ -445,9 +445,9 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
             <h3 className="font-semibold text-navy text-sm mb-3">Clinical Supervision Agreements on File</h3>
             <div className="space-y-3">
               {[
-                { supervisee: 'Sandra Kim, LPCA', supervisor: 'Sarah Jenkins, LPC', goal: 'Full LPC licensure', hours: 1240, required: 2000, started: '2024-09-01' },
-                { supervisee: 'Devon Ramos, LMSW', supervisor: 'Maria Gonzales, LCSW', goal: 'Full LCSW licensure', hours: 890, required: 2000, started: '2025-01-15' },
-                { supervisee: 'Priya Mehta, LAMFT', supervisor: 'David Odom, LMFT', goal: 'Full LMFT licensure', hours: 650, required: 3000, started: '2025-03-01' },
+                { supervisee: 'Sandra Kim, LPCA', supervisor: 'Sarah Jenkins, LCPC', goal: 'Full LCPC licensure', hours: 1240, required: 2000, started: '2024-09-01' },
+                { supervisee: 'Devon Ramos, LMSW', supervisor: 'Maria Gonzales, LCADC', goal: 'Full LCADC licensure', hours: 890, required: 2000, started: '2025-01-15' },
+                { supervisee: 'Priya Mehta, LAMFT', supervisor: 'David Odom, LCADC', goal: 'Full LCADC licensure', hours: 650, required: 3000, started: '2025-03-01' },
               ].map(s => (
                 <div key={s.supervisee} className="border border-border rounded-lg p-3 flex items-center gap-4">
                   <div className="flex-1">
@@ -491,7 +491,7 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
             <div className="space-y-4 text-xs">
               {[
                 {
-                  name: 'A. Brooks, LPC', cert: 'MD LPC License', expiry: '2026-09-30', board: 'MHSAB', needed: 20, done: 12, remaining: 8,
+                  name: 'A. Brooks, LCPC', cert: 'MD LCPC License', expiry: '2026-09-30', board: 'MHSAB', needed: 20, done: 12, remaining: 8,
                   plan: [
                     { source: 'AAMFT Online CE — Ethics (3 CEU)', date: 'Jul 2026', cost: '$49', approved: true },
                     { source: 'NAADAC Trauma-Informed Care Workshop (5 CEU)', date: 'Aug 2026', cost: '$89', approved: true },
@@ -556,18 +556,18 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Staff Member *</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>Sarah Jenkins, LPC</option><option>Maria Gonzales, LCSW</option><option>David Odom, LMFT</option><option>Dr. Allen Hughes</option><option>Jessica Torres, RN</option><option>Kevin Wright, BHT</option>
+                    <option>Sarah Jenkins, LCPC</option><option>Maria Gonzales, LCADC</option><option>David Odom, LCADC</option><option>Dr. Allen Hughes</option><option>Jessica Torres, RN</option><option>Kevin Wright, BHT</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Credential Type *</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>LPC — Licensed Professional Counselor</option><option>LCSW — Licensed Clinical Social Worker</option><option>LMFT — Marriage & Family Therapist</option><option>RN — Registered Nurse</option><option>CADC — Certified Alcohol & Drug Counselor</option><option>CPR / First Aid</option><option>EMDR Certification</option><option>CPI Non-Violent Crisis Intervention</option>
+                    <option>LCPC — Licensed Professional Counselor</option><option>LCADC — Licensed Clinical Social Worker</option><option>LCADC — Marriage & Family Therapist</option><option>RN — Registered Nurse</option><option>CADC — Certified Alcohol & Drug Counselor</option><option>CPR / First Aid</option><option>EMDR Certification</option><option>CPI Non-Violent Crisis Intervention</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">License / Cert #</label>
-                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. LPC-12345" />
+                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. LCPC-12345" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Issuing State / Body</label>

@@ -95,35 +95,35 @@ interface ScoreEntry {
 
 const MOCK_SCORES: Record<string, ScoreEntry[]> = {
   p1: [
-    { date: '2026-06-27', phq9: 18, gad7: 14, by: 'Sarah Jenkins, LPC', notes: 'Intake screen — marked anxiety, hopelessness, poor sleep.' },
-    { date: '2026-07-04', phq9: 15, gad7: 12, by: 'Sarah Jenkins, LPC' },
-    { date: '2026-07-11', phq9: 13, gad7: 10, by: 'Sarah Jenkins, LPC' },
-    { date: '2026-07-18', phq9: 11, gad7: 9,  by: 'Sarah Jenkins, LPC', notes: 'Steady improvement. Item 9 (SI) now 0. Continuing IOP.' },
+    { date: '2026-06-27', phq9: 18, gad7: 14, by: 'Sarah Jenkins, LCPC', notes: 'Intake screen — marked anxiety, hopelessness, poor sleep.' },
+    { date: '2026-07-04', phq9: 15, gad7: 12, by: 'Sarah Jenkins, LCPC' },
+    { date: '2026-07-11', phq9: 13, gad7: 10, by: 'Sarah Jenkins, LCPC' },
+    { date: '2026-07-18', phq9: 11, gad7: 9,  by: 'Sarah Jenkins, LCPC', notes: 'Steady improvement. Item 9 (SI) now 0. Continuing IOP.' },
   ],
   p2: [
-    { date: '2026-06-28', phq9: 16, gad7: 17, pcl5: 52, by: 'David Odom, LMFT', notes: 'Intake. Significant PTSD symptom burden — trauma history disclosed.' },
-    { date: '2026-07-05', phq9: 14, gad7: 15, pcl5: 48, by: 'David Odom, LMFT' },
-    { date: '2026-07-12', phq9: 12, gad7: 13, pcl5: 44, by: 'David Odom, LMFT' },
-    { date: '2026-07-19', phq9: 10, gad7: 11, pcl5: 39, by: 'David Odom, LMFT', notes: 'PCL-5 crossing below 40. Discuss trauma-focused therapy transition.' },
+    { date: '2026-06-28', phq9: 16, gad7: 17, pcl5: 52, by: 'David Odom, LCADC', notes: 'Intake. Significant PTSD symptom burden — trauma history disclosed.' },
+    { date: '2026-07-05', phq9: 14, gad7: 15, pcl5: 48, by: 'David Odom, LCADC' },
+    { date: '2026-07-12', phq9: 12, gad7: 13, pcl5: 44, by: 'David Odom, LCADC' },
+    { date: '2026-07-19', phq9: 10, gad7: 11, pcl5: 39, by: 'David Odom, LCADC', notes: 'PCL-5 crossing below 40. Discuss trauma-focused therapy transition.' },
   ],
   p3: [
-    { date: '2026-07-02', phq9: 13, gad7: 9,  by: 'Sarah Jenkins, LPC' },
-    { date: '2026-07-09', phq9: 11, gad7: 8,  by: 'Sarah Jenkins, LPC' },
-    { date: '2026-07-16', phq9: 10, gad7: 7,  by: 'Sarah Jenkins, LPC' },
+    { date: '2026-07-02', phq9: 13, gad7: 9,  by: 'Sarah Jenkins, LCPC' },
+    { date: '2026-07-09', phq9: 11, gad7: 8,  by: 'Sarah Jenkins, LCPC' },
+    { date: '2026-07-16', phq9: 10, gad7: 7,  by: 'Sarah Jenkins, LCPC' },
   ],
   p4: [
-    { date: '2026-07-01', phq9: 17, gad7: 12, pcl5: 41, by: 'David Odom, LMFT', notes: 'Trauma screen positive. PCL-5 added to routine battery.' },
-    { date: '2026-07-08', phq9: 14, gad7: 10, pcl5: 36, by: 'David Odom, LMFT' },
-    { date: '2026-07-15', phq9: 12, gad7: 9,  pcl5: 33, by: 'David Odom, LMFT', notes: 'PCL-5 at threshold. Continue EMDR preparation.' },
+    { date: '2026-07-01', phq9: 17, gad7: 12, pcl5: 41, by: 'David Odom, LCADC', notes: 'Trauma screen positive. PCL-5 added to routine battery.' },
+    { date: '2026-07-08', phq9: 14, gad7: 10, pcl5: 36, by: 'David Odom, LCADC' },
+    { date: '2026-07-15', phq9: 12, gad7: 9,  pcl5: 33, by: 'David Odom, LCADC', notes: 'PCL-5 at threshold. Continue EMDR preparation.' },
   ],
   p5: [
-    { date: '2026-07-04', phq9: 11, gad7: 14, by: 'Maria Gonzales, LCSW' },
-    { date: '2026-07-11', phq9: 9,  gad7: 11, by: 'Maria Gonzales, LCSW' },
-    { date: '2026-07-18', phq9: 7,  gad7: 9,  by: 'Maria Gonzales, LCSW', notes: 'PHQ-9 now below moderate threshold. Good progress.' },
+    { date: '2026-07-04', phq9: 11, gad7: 14, by: 'Maria Gonzales, LCADC' },
+    { date: '2026-07-11', phq9: 9,  gad7: 11, by: 'Maria Gonzales, LCADC' },
+    { date: '2026-07-18', phq9: 7,  gad7: 9,  by: 'Maria Gonzales, LCADC', notes: 'PHQ-9 now below moderate threshold. Good progress.' },
   ],
   p6: [
-    { date: '2026-07-06', phq9: 12, gad7: 10, by: 'Maria Gonzales, LCSW' },
-    { date: '2026-07-13', phq9: 9,  gad7: 8,  by: 'Maria Gonzales, LCSW' },
+    { date: '2026-07-06', phq9: 12, gad7: 10, by: 'Maria Gonzales, LCADC' },
+    { date: '2026-07-13', phq9: 9,  gad7: 8,  by: 'Maria Gonzales, LCADC' },
   ],
   p8: [
     { date: '2026-07-05', phq9: 16, gad7: 18, pcl5: 54, by: 'Dr. Allen Hughes, MD', notes: 'Intake psych eval. Co-occurring ED, PTSD, MDD. High symptom burden.' },
@@ -314,7 +314,7 @@ export function MeasurementBasedCare({ navigate, readOnly }: Props) {
   function handleSaveScore(score: number) {
     const newEntry: ScoreEntry = {
       date: today,
-      by: 'Sarah Jenkins, LPC',
+      by: 'Sarah Jenkins, LCPC',
       ...(adminInstrument === 'PHQ-9' ? { phq9: score } : {}),
       ...(adminInstrument === 'GAD-7' ? { gad7: score } : {}),
       ...(adminInstrument === 'PCL-5' ? { pcl5: score } : {}),

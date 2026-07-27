@@ -184,7 +184,7 @@ function BedCard({ patient, navigate }: { patient: Patient; navigate: (s: Screen
       {expanded && (
         <div className="px-3 pb-3 border-t border-border/50 bg-slate-50/60 space-y-1.5 pt-2">
           <div className="text-[10px] text-slate">
-            <span className="font-semibold text-navy">Counselor:</span> {patient.counselor.replace(', LPC', '').replace(', LMFT', '').replace(', LCSW', '')}
+            <span className="font-semibold text-navy">Counselor:</span> {patient.counselor.replace(', LCPC', '').replace(', LCADC', '').replace(', LCADC', '')}
           </div>
           <div className="text-[10px] text-slate">
             <span className="font-semibold text-navy">Physician:</span> {patient.physician.replace('Dr. ', '')}

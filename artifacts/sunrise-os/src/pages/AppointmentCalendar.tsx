@@ -21,30 +21,30 @@ interface Appointment {
 
 const APPTS: Appointment[] = [
   // Monday 7/14
-  { id: 'a1',  day: 0, startHour: 8,  durationHrs: 1,   type: 'Individual', title: '1:1 Marcus Webb',     subtitle: 'AMA Risk Follow-up', location: 'Room 12', staff: 'Sarah Jenkins, LPC', patientId: 'p1' },
-  { id: 'a2',  day: 0, startHour: 9,  durationHrs: 1.5, type: 'Group',      title: 'Process Group A',     subtitle: 'Residential — 10 enrolled', location: 'Group Room A', staff: 'Maria Gonzales, LCSW' },
+  { id: 'a1',  day: 0, startHour: 8,  durationHrs: 1,   type: 'Individual', title: '1:1 Marcus Webb',     subtitle: 'AMA Risk Follow-up', location: 'Room 12', staff: 'Sarah Jenkins, LCPC', patientId: 'p1' },
+  { id: 'a2',  day: 0, startHour: 9,  durationHrs: 1.5, type: 'Group',      title: 'Process Group A',     subtitle: 'Residential — 10 enrolled', location: 'Group Room A', staff: 'Maria Gonzales, LCADC' },
   { id: 'a3',  day: 0, startHour: 11, durationHrs: 0.5, type: 'Medical',    title: 'Dr. Chen Rounds',     subtitle: 'MAT review + COWS check', location: 'Med Suite', staff: 'Dr. Robert Chen' },
-  { id: 'a4',  day: 0, startHour: 14, durationHrs: 1,   type: 'Family',     title: 'Kowalski Family Mtg', subtitle: 'Brian K. — communication skills', location: 'Room 4', staff: 'David Odom, LMFT', patientId: 'p7' },
+  { id: 'a4',  day: 0, startHour: 14, durationHrs: 1,   type: 'Family',     title: 'Kowalski Family Mtg', subtitle: 'Brian K. — communication skills', location: 'Room 4', staff: 'David Odom, LCADC', patientId: 'p7' },
   // Tuesday 7/15
-  { id: 'a5',  day: 1, startHour: 8,  durationHrs: 1.5, type: 'Group',      title: 'Psychoeducation',     subtitle: 'Disease model of addiction', location: 'Group Room B', staff: 'David Odom, LMFT' },
-  { id: 'a6',  day: 1, startHour: 10, durationHrs: 1,   type: 'Individual', title: '1:1 Samantha Choi',   subtitle: 'DBT distress tolerance', location: 'Room 8', staff: 'Sarah Jenkins, LPC', patientId: 'p2' },
+  { id: 'a5',  day: 1, startHour: 8,  durationHrs: 1.5, type: 'Group',      title: 'Psychoeducation',     subtitle: 'Disease model of addiction', location: 'Group Room B', staff: 'David Odom, LCADC' },
+  { id: 'a6',  day: 1, startHour: 10, durationHrs: 1,   type: 'Individual', title: '1:1 Samantha Choi',   subtitle: 'DBT distress tolerance', location: 'Room 8', staff: 'Sarah Jenkins, LCPC', patientId: 'p2' },
   { id: 'a7',  day: 1, startHour: 14, durationHrs: 1,   type: 'Medical',    title: 'Psych Eval — Choi',   subtitle: 'Dr. Hughes — Seroquel adjustment', location: 'Psych Office', staff: 'Dr. Allen Hughes', patientId: 'p2' },
-  { id: 'a8',  day: 1, startHour: 15, durationHrs: 0.5, type: 'Individual', title: '1:1 Robert Navarro',  subtitle: 'HALT worksheet review', location: 'Room 12', staff: 'Maria Gonzales, LCSW', patientId: 'p5' },
+  { id: 'a8',  day: 1, startHour: 15, durationHrs: 0.5, type: 'Individual', title: '1:1 Robert Navarro',  subtitle: 'HALT worksheet review', location: 'Room 12', staff: 'Maria Gonzales, LCADC', patientId: 'p5' },
   // Wednesday 7/16
-  { id: 'a9',  day: 2, startHour: 8,  durationHrs: 1,   type: 'Individual', title: '1:1 James Thornton',  subtitle: 'Craving management plan', location: 'Room 10', staff: 'Sarah Jenkins, LPC', patientId: 'p3' },
-  { id: 'a10', day: 2, startHour: 9,  durationHrs: 1.5, type: 'Group',      title: 'Relapse Prevention',  subtitle: 'HALT & high-risk situations', location: 'Group Room A', staff: 'Maria Gonzales, LCSW' },
+  { id: 'a9',  day: 2, startHour: 8,  durationHrs: 1,   type: 'Individual', title: '1:1 James Thornton',  subtitle: 'Craving management plan', location: 'Room 10', staff: 'Sarah Jenkins, LCPC', patientId: 'p3' },
+  { id: 'a10', day: 2, startHour: 9,  durationHrs: 1.5, type: 'Group',      title: 'Relapse Prevention',  subtitle: 'HALT & high-risk situations', location: 'Group Room A', staff: 'Maria Gonzales, LCADC' },
   { id: 'a11', day: 2, startHour: 13, durationHrs: 1,   type: 'Intake',     title: 'Admission: K. Torres','subtitle': 'Residential PHP intake', location: 'Intake Suite', staff: 'Amanda Lewis' },
   { id: 'a12', day: 2, startHour: 15, durationHrs: 1,   type: 'Medical',    title: 'Dr. Stone Rounds',    subtitle: 'Lab review + med reconciliation', location: 'Med Suite', staff: 'Dr. Emily Stone' },
   // Thursday 7/17
   { id: 'a13', day: 3, startHour: 9,  durationHrs: 1.5, type: 'Group',      title: 'Trauma Group',        subtitle: 'PTSD & co-occurring disorders', location: 'Group Room C', staff: 'Dr. Allen Hughes' },
-  { id: 'a14', day: 3, startHour: 11, durationHrs: 1,   type: 'Individual', title: '1:1 Patricia Holloway','subtitle': 'Treatment plan signature', location: 'Room 8', staff: 'Sarah Jenkins, LPC', patientId: 'p4' },
-  { id: 'a15', day: 3, startHour: 14, durationHrs: 1,   type: 'Discharge',  title: 'DC Planning: Kowalski','subtitle': 'Brian K. — discharge Jul 22', location: 'Room 4', staff: 'David Odom, LMFT', patientId: 'p7' },
+  { id: 'a14', day: 3, startHour: 11, durationHrs: 1,   type: 'Individual', title: '1:1 Patricia Holloway','subtitle': 'Treatment plan signature', location: 'Room 8', staff: 'Sarah Jenkins, LCPC', patientId: 'p4' },
+  { id: 'a15', day: 3, startHour: 14, durationHrs: 1,   type: 'Discharge',  title: 'DC Planning: Kowalski','subtitle': 'Brian K. — discharge Jul 22', location: 'Room 4', staff: 'David Odom, LCADC', patientId: 'p7' },
   { id: 'a16', day: 3, startHour: 15, durationHrs: 0.5, type: 'Medical',    title: 'Naltrexone Injection',  subtitle: 'Monthly Vivitrol — Navarro', location: 'Med Suite', staff: 'Dr. Robert Chen', patientId: 'p5' },
   // Friday 7/18
-  { id: 'a17', day: 4, startHour: 8,  durationHrs: 1.5, type: 'Group',      title: 'Process Group A',     subtitle: 'Morning — mood & goal check-in', location: 'Group Room A', staff: 'Sarah Jenkins, LPC' },
-  { id: 'a18', day: 4, startHour: 10, durationHrs: 1,   type: 'Family',     title: 'Webb Family Session',  subtitle: 'Marcus W. + spouse', location: 'Room 4', staff: 'David Odom, LMFT', patientId: 'p1' },
-  { id: 'a19', day: 4, startHour: 13, durationHrs: 1,   type: 'Individual', title: '1:1 Linda Farris',    subtitle: 'Insurance auth + aftercare', location: 'Room 12', staff: 'Maria Gonzales, LCSW', patientId: 'p8' },
-  { id: 'a20', day: 4, startHour: 15, durationHrs: 0.5, type: 'Discharge',  title: 'DC Summary: Holloway','subtitle': 'Patricia H. — PHP transition', location: 'Conf Room', staff: 'Sarah Jenkins, LPC', patientId: 'p4' },
+  { id: 'a17', day: 4, startHour: 8,  durationHrs: 1.5, type: 'Group',      title: 'Process Group A',     subtitle: 'Morning — mood & goal check-in', location: 'Group Room A', staff: 'Sarah Jenkins, LCPC' },
+  { id: 'a18', day: 4, startHour: 10, durationHrs: 1,   type: 'Family',     title: 'Webb Family Session',  subtitle: 'Marcus W. + spouse', location: 'Room 4', staff: 'David Odom, LCADC', patientId: 'p1' },
+  { id: 'a19', day: 4, startHour: 13, durationHrs: 1,   type: 'Individual', title: '1:1 Linda Farris',    subtitle: 'Insurance auth + aftercare', location: 'Room 12', staff: 'Maria Gonzales, LCADC', patientId: 'p8' },
+  { id: 'a20', day: 4, startHour: 15, durationHrs: 0.5, type: 'Discharge',  title: 'DC Summary: Holloway','subtitle': 'Patricia H. — PHP transition', location: 'Conf Room', staff: 'Sarah Jenkins, LCPC', patientId: 'p4' },
 ];
 
 const TYPE_STYLE: Record<Appointment['type'], { bg: string; label: string }> = {
@@ -433,11 +433,11 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
                   { patient: 'Marcus Webb', type: 'Psychiatric Eval', provider: 'Dr. Emma Hughes', requested: '2026-07-17', days: 5, priority: 'Urgent', status: 'Pending' },
                   { patient: 'Elena Vasquez', type: 'Psychiatric Eval', provider: 'Dr. Emma Hughes', requested: '2026-07-16', days: 6, priority: 'Urgent', status: 'Pending' },
                   { patient: 'James Thornton', type: 'Medical (Pre-DC)', provider: 'Dr. Robert Chen', requested: '2026-07-20', days: 2, priority: 'Urgent', status: 'Scheduling' },
-                  { patient: 'Ava Simmons', type: 'Individual Counseling', provider: 'Sarah Jenkins, LPC', requested: '2026-07-15', days: 7, priority: 'Routine', status: 'Pending' },
+                  { patient: 'Ava Simmons', type: 'Individual Counseling', provider: 'Sarah Jenkins, LCPC', requested: '2026-07-15', days: 7, priority: 'Routine', status: 'Pending' },
                   { patient: 'Robert Navarro', type: 'Psychiatric Eval', provider: 'Dr. Emma Hughes', requested: '2026-07-14', days: 8, priority: 'High', status: 'Scheduling' },
-                  { patient: 'Patricia Holloway', type: 'Family Therapy', provider: 'David Odom, LMFT', requested: '2026-07-16', days: 6, priority: 'Routine', status: 'Pending' },
+                  { patient: 'Patricia Holloway', type: 'Family Therapy', provider: 'David Odom, LCADC', requested: '2026-07-16', days: 6, priority: 'Routine', status: 'Pending' },
                   { patient: 'Brian Kowalski', type: 'MAT Consult', provider: 'Dr. Robert Chen', requested: '2026-07-13', days: 9, priority: 'High', status: 'Pending' },
-                  { patient: 'Kevin Hughes', type: 'Individual Counseling', provider: 'Maria Gonzales, LCSW', requested: '2026-07-15', days: 7, priority: 'Routine', status: 'Pending' },
+                  { patient: 'Kevin Hughes', type: 'Individual Counseling', provider: 'Maria Gonzales, LCADC', requested: '2026-07-15', days: 7, priority: 'Routine', status: 'Pending' },
                   { patient: 'Sandra Kim', type: 'Dietitian Consult', provider: 'Dietitian (Ext. Referral)', requested: '2026-07-12', days: 10, priority: 'Routine', status: 'Pending' },
                 ].map(r => (
                   <tr key={`${r.patient}-${r.type}`} className={`hover:bg-gray-50 ${r.days >= 5 ? 'bg-amber-50/30' : ''}`}>
@@ -491,10 +491,10 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'A. Brooks, LPC', role: 'Primary Therapist', mon: '8a–4p', tue: '8a–4p', wed: '10a–6p', thu: '8a–4p', fri: '8a–12p', cap: 18, curr: 16, open: 2 },
-                  { name: 'R. Torres, LPC-MHSP', role: 'Primary Therapist', mon: '9a–5p', tue: '9a–5p', wed: 'OFF', thu: '9a–5p', fri: '9a–5p', cap: 18, curr: 15, open: 3 },
+                  { name: 'A. Brooks, LCPC', role: 'Primary Therapist', mon: '8a–4p', tue: '8a–4p', wed: '10a–6p', thu: '8a–4p', fri: '8a–12p', cap: 18, curr: 16, open: 2 },
+                  { name: 'R. Torres, LCPC', role: 'Primary Therapist', mon: '9a–5p', tue: '9a–5p', wed: 'OFF', thu: '9a–5p', fri: '9a–5p', cap: 18, curr: 15, open: 3 },
                   { name: 'T. Jackson, CAC-AD', role: 'Counselor', mon: '7a–3p', tue: '7a–3p', wed: '7a–3p', thu: '7a–3p', fri: '7a–3p', cap: 14, curr: 13, open: 1 },
-                  { name: 'M. Rivera, CAADC', role: 'Counselor', mon: '12p–8p', tue: '12p–8p', wed: '12p–8p', thu: '12p–8p', fri: 'OFF', cap: 12, curr: 11, open: 1 },
+                  { name: 'M. Rivera, CAC-AD', role: 'Counselor', mon: '12p–8p', tue: '12p–8p', wed: '12p–8p', thu: '12p–8p', fri: 'OFF', cap: 12, curr: 11, open: 1 },
                   { name: 'L. Nguyen, MSW', role: 'Case Manager', mon: '8a–4p', tue: '8a–4p', wed: '8a–4p', thu: '8a–4p', fri: '8a–4p', cap: 22, curr: 19, open: 3 },
                   { name: 'Dr. M. Chen', role: 'Medical Director', mon: 'AM rounds', tue: 'AM rounds', wed: 'AM rounds', thu: 'AM rounds', fri: 'AM rounds', cap: 24, curr: 24, open: 0 },
                   { name: 'K. Santos, RN', role: 'Charge Nurse', mon: '7a–7p', tue: '7a–7p', wed: 'OFF', thu: '7a–7p', fri: '7a–7p', cap: 44, curr: 36, open: 8 },
@@ -625,7 +625,7 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Clinician / Staff</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newAppt.staff} onChange={e => setNewAppt(a => ({ ...a, staff: e.target.value }))}>
                     <option value="">— select staff —</option>
-                    {['Sarah Jenkins, LPC','Maria Gonzales, LCSW','David Odom, LMFT','Dr. Robert Chen','Dr. Emily Stone','Dr. Allen Hughes','Jessica Torres, RN'].map(s => <option key={s} value={s}>{s}</option>)}
+                    {['Sarah Jenkins, LCPC','Maria Gonzales, LCADC','David Odom, LCADC','Dr. Robert Chen','Dr. Emily Stone','Dr. Allen Hughes','Jessica Torres, RN'].map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>

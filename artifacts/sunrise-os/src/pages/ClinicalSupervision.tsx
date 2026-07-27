@@ -6,7 +6,7 @@ import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
-type SuperviseeRole = 'LPC-A (MD)' | 'CSC-AD (MD)' | 'ADT (DE)' | '__DE_CAC-AD_TYPE__' | 'BHT';
+type SuperviseeRole = 'LCPC-A (MD)' | 'CSC-AD (MD)' | 'ADT (DE)' | '__DE_CAC-AD_TYPE__' | 'BHT';
 type NoteStatus = 'Draft' | 'Signed' | 'Co-signed' | 'Pending Review';
 
 interface SuperviseeRecord {
@@ -48,7 +48,7 @@ interface SupervisionNote {
 
 const SUPERVISEES: SuperviseeRecord[] = [
   {
-    id: 'SV-001', name: 'Sarah Jenkins', role: 'LPC-A (MD)', supervisor: 'James S. Collins III, CAC-AD, BAS',
+    id: 'SV-001', name: 'Sarah Jenkins', role: 'LCPC-A (MD)', supervisor: 'James S. Collins III, CAC-AD, BAS',
     hoursRequiredMonthly: 2, hoursCompletedThisMonth: 2, licenseExpiry: '2028-06-30',
     supervisionType: 'Both', nextSession: '2026-07-22', caseload: 8, pendingCosigns: 2,
     competencyScores: { assessment: 4.2, treatmentPlanning: 4.5, documentation: 3.8, therapeuticAlliance: 4.7, ethicsCompliance: 5.0, culturalHumility: 4.1 },
@@ -59,7 +59,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Excellent rapport with high-acuity patients. PHQ-9 screening consistently done and documented. Strong family engagement skills noted by Collins in chart review.',
         growthAreas: 'BIRP notes occasionally lack objective data in the B (behavior) field. Review: behavioral observations are NOT interpretations. Practice: write the B before the I.',
         goals: 'By 7/22: submit two BIRP notes for supervisor review with complete behavioral observations. Continue weekly 1:1 with p1 Marcus Webb given AMA risk.',
-        supervisorSignature: 'James S. Collins III, CAC-AD, BAS, 7/1/2026', superviseeSignature: 'Sarah Jenkins, LPC, CAC-AD, 7/1/2026',
+        supervisorSignature: 'James S. Collins III, CAC-AD, BAS, 7/1/2026', superviseeSignature: 'Sarah Jenkins, LCPC, CAC-AD, 7/1/2026',
       },
       {
         id: 'SN-002', date: '2026-07-15', type: 'Individual', duration: 60, status: 'Signed',
@@ -67,7 +67,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Excellent clinical instincts — identified passive SI in Marcus Webb and escalated appropriately. C-SSRS documentation was complete and timely. Safety plan well-written.',
         growthAreas: 'After crisis situations: practice self-care protocols. Vicarious trauma is real. Reviewed organizational EAP resources.',
         goals: 'By 7/22: attend peer consultation group. Read assigned article on clinician vicarious trauma.',
-        supervisorSignature: 'James S. Collins III, CAC-AD, BAS, 7/15/2026', superviseeSignature: 'Sarah Jenkins, LPC, CAC-AD, 7/15/2026',
+        supervisorSignature: 'James S. Collins III, CAC-AD, BAS, 7/15/2026', superviseeSignature: 'Sarah Jenkins, LCPC, CAC-AD, 7/15/2026',
       },
     ],
   },
@@ -99,7 +99,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Outstanding biopsychosocial assessments — among the most thorough on the team. Cultural humility practice is exemplary. Patients from underserved communities report high satisfaction.',
         growthAreas: 'Build comfort with confrontational interventions. Natural style is supportive — some patients need therapeutic challenge. Practice motivational confrontation technique.',
         goals: 'By 7/20: role-play confrontational intervention with supervisor. Identify 1 patient case for therapeutic challenge intervention.',
-        supervisorSignature: 'James S. Collins III, 7/10/2026', superviseeSignature: 'Aisha Thompson, LCSW-A, 7/10/2026',
+        supervisorSignature: 'James S. Collins III, 7/10/2026', superviseeSignature: 'Aisha Thompson, LCADC, 7/10/2026',
       },
     ],
   },
@@ -379,8 +379,8 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
 
           {[
             {
-              supervisee: 'Sarah Jenkins, LPC',
-              credential: 'LPC · CAADC · 6 yrs exp',
+              supervisee: 'Sarah Jenkins, LCPC',
+              credential: 'LCPC · CAC-AD · 6 yrs exp',
               supervisor: 'James S. Collins III, CAC-AD, BAS',
               date: '2026-07-14',
               type: 'Individual Supervision',
@@ -392,8 +392,8 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
               hours: { individual: 1, group: 0.5, total: 1.5 },
             },
             {
-              supervisee: 'David Odom, LMFT',
-              credential: 'LMFT · CAC-AD · 4 yrs exp',
+              supervisee: 'David Odom, LCADC',
+              credential: 'LCADC · CAC-AD · 4 yrs exp',
               supervisor: 'James S. Collins III, CAC-AD, BAS',
               date: '2026-07-10',
               type: 'Individual Supervision',
@@ -405,9 +405,9 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
               hours: { individual: 1, group: 0, total: 1 },
             },
             {
-              supervisee: 'Maria Chen, LSW',
-              credential: 'LSW (toward LCSW) · 2 yrs exp',
-              supervisor: 'Sarah Jenkins, LPC',
+              supervisee: 'Maria Chen, LCADC',
+              credential: 'LCADC (toward LCADC) · 2 yrs exp',
+              supervisor: 'Sarah Jenkins, LCPC',
               date: '2026-07-12',
               type: 'Individual Supervision',
               rating: 4,
@@ -523,11 +523,11 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'A. Brooks, LPC', score: 94, low: 'Documentation', status: 'Exceeds', next: '2027-06', ok: true },
+                  { name: 'A. Brooks, LCPC', score: 94, low: 'Documentation', status: 'Exceeds', next: '2027-06', ok: true },
                   { name: 'T. Jackson, CAC-AD', score: 88, low: 'MAT Knowledge', status: 'Meets', next: '2027-06', ok: true },
                   { name: 'M. Rivera, MS', score: 71, low: 'Documentation', status: 'PIP', next: '2026-10', ok: false },
-                  { name: 'R. Torres, LPC-MHSP', score: 96, low: 'None', status: 'Exceeds', next: '2027-06', ok: true },
-                  { name: 'K. Nguyen, CAADC', score: 79, low: 'Group Facilitation', status: 'Probationary', next: '2026-10', ok: false },
+                  { name: 'R. Torres, LCPC', score: 96, low: 'None', status: 'Exceeds', next: '2027-06', ok: true },
+                  { name: 'K. Nguyen, CAC-AD', score: 79, low: 'Group Facilitation', status: 'Probationary', next: '2026-10', ok: false },
                 ].map(s => (
                   <tr key={s.name} className={`hover:bg-gray-50 ${!s.ok ? 'bg-amber-50/40' : ''}`}>
                     <td className="py-2 font-medium text-navy">{s.name}</td>
@@ -557,7 +557,7 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Supervisee *</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>Sarah Jenkins, LPC</option><option>Maria Gonzales, LCSW</option><option>David Odom, LMFT</option><option>Kevin Wright, BHT</option>
+                    <option>Sarah Jenkins, LCPC</option><option>Maria Gonzales, LCADC</option><option>David Odom, LCADC</option><option>Kevin Wright, BHT</option>
                   </select>
                 </div>
                 <div>

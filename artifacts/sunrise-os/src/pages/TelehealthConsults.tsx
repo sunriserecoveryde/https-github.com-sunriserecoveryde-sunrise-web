@@ -31,7 +31,7 @@ interface TelehealthSession {
 const SESSIONS: TelehealthSession[] = [
   {
     id: 'TH-001', patientId: 'p5', date: '2026-07-22', time: '9:00 AM', duration: 50,
-    modality: 'Individual Therapy', provider: 'David Odom, LMFT',
+    modality: 'Individual Therapy', provider: 'David Odom, LCADC',
     status: 'Completed', platform: 'Doxy.me',
     joinUrl: 'https://doxy.me/davidodom', techCheckDone: true, insuranceAuth: true, consentOnFile: true,
     sessionNotes: 'Patient connected on time. Discussed court date anxiety and relapse triggers. Reviewed safety plan. Assigned Step 3 worksheet.',
@@ -46,7 +46,7 @@ const SESSIONS: TelehealthSession[] = [
   },
   {
     id: 'TH-003', patientId: 'p7', date: '2026-07-22', time: '1:00 PM', duration: 50,
-    modality: 'Individual Therapy', provider: 'Sarah Jenkins, LPC',
+    modality: 'Individual Therapy', provider: 'Sarah Jenkins, LCPC',
     status: 'Scheduled', platform: 'Doxy.me',
     joinUrl: 'https://doxy.me/sarahjenkins', techCheckDone: true, insuranceAuth: true, consentOnFile: true,
     billingCode: '90837-GT', location: 'Home (Franklin, MD)',
@@ -60,14 +60,14 @@ const SESSIONS: TelehealthSession[] = [
   },
   {
     id: 'TH-005', patientId: 'p15', date: '2026-07-22', time: '4:00 PM', duration: 30,
-    modality: 'Case Management', provider: 'Maria Gonzalez, LSW',
+    modality: 'Case Management', provider: 'Maria Gonzalez, LCADC',
     status: 'Scheduled', platform: 'Doxy.me',
     joinUrl: 'https://doxy.me/mariagonzalez', techCheckDone: true, insuranceAuth: false, consentOnFile: true,
     billingCode: 'T1017-GT', location: 'Sober Living (Rockville, MD)',
   },
   {
     id: 'TH-006', patientId: 'p20', date: '2026-07-18', time: '11:00 AM', duration: 50,
-    modality: 'Individual Therapy', provider: 'David Odom, LMFT',
+    modality: 'Individual Therapy', provider: 'David Odom, LCADC',
     status: 'No Show', platform: 'Doxy.me',
     techCheckDone: true, insuranceAuth: true, consentOnFile: true,
     sessionNotes: 'Patient did not connect. Called cell — no answer. Left voicemail. Will follow up per no-show protocol. Two consecutive no-shows — outreach to emergency contact warranted.',
@@ -75,7 +75,7 @@ const SESSIONS: TelehealthSession[] = [
   },
   {
     id: 'TH-007', patientId: 'p8', date: '2026-07-18', time: '3:00 PM', duration: 50,
-    modality: 'Family Session', provider: 'Sarah Jenkins, LPC',
+    modality: 'Family Session', provider: 'Sarah Jenkins, LCPC',
     status: 'Completed', platform: 'Zoom for Healthcare',
     joinUrl: 'https://zoom.us/j/sunrise-jenkins', techCheckDone: true, insuranceAuth: true, consentOnFile: true,
     sessionNotes: 'Patient and wife attended. Discussed communication patterns, enabling behaviors, and family recovery plan. Wife to attend Al-Anon. Next family session in 2 weeks.',
@@ -83,7 +83,7 @@ const SESSIONS: TelehealthSession[] = [
   },
   {
     id: 'TH-008', patientId: 'p16', date: '2026-07-17', time: '10:00 AM', duration: 50,
-    modality: 'Individual Therapy', provider: 'Maria Gonzalez, LSW',
+    modality: 'Individual Therapy', provider: 'Maria Gonzalez, LCADC',
     status: 'Tech Failure', platform: 'Doxy.me',
     techCheckDone: false, insuranceAuth: true, consentOnFile: true,
     sessionNotes: 'Patient connected but audio failed both sides. Session conducted by phone (modifier applied). Audio issue linked to patient\'s outdated device — tech support email sent.',

@@ -8,7 +8,7 @@ import { LockedButton } from '../components/common/LockedButton';
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 // Counselor assignments from mock data
-const MY_COUNSELOR = 'Sarah Jenkins, LPC';
+const MY_COUNSELOR = 'Sarah Jenkins, LCPC';
 
 const MY_PATIENTS = MOCK_PATIENTS.filter(p => p.counselor === MY_COUNSELOR);
 
@@ -365,7 +365,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
             {[
               { label: 'Total Supervision Hours (YTD)', value: '42 hrs', sub: 'Individual + group', color: 'text-navy' },
               { label: 'Next Supervision Session', value: 'Jul 28', sub: '2:00 PM with Collins', color: 'text-amber-600' },
-              { label: 'Licensure Goal Progress', value: '67%', sub: '1,240 / 2,000 hrs toward LPC', color: 'text-green-600' },
+              { label: 'Licensure Goal Progress', value: '67%', sub: '1,240 / 2,000 hrs toward LCPC', color: 'text-green-600' },
             ].map(k => (
               <div key={k.label} className="card">
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
@@ -444,7 +444,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
               { label: 'Active Goals', value: 5, color: 'text-navy', sub: 'Current review period' },
               { label: 'On Track', value: 4, color: 'text-green-600', sub: '80% of active goals' },
               { label: 'CEU Hours Completed', value: 18, color: 'text-blue-600', sub: 'Of 40 required by Nov 2026' },
-              { label: 'Supervision Hours (YTD)', value: 24, color: 'text-teal-600', sub: 'Toward CAADC requirement' },
+              { label: 'Supervision Hours (YTD)', value: 24, color: 'text-teal-600', sub: 'Toward CAC-AD requirement' },
             ].map(k => (
               <div key={k.label} className="card">
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
@@ -459,7 +459,7 @@ export function MyCaseload({ navigate, readOnly }: Props) {
             <div className="space-y-3 text-xs">
               {[
                 {
-                  goal: 'Earn CAADC Certification', type: 'Credentialing', owner: 'Self', due: '2026-11-15',
+                  goal: 'Earn CAC-AD Certification', type: 'Credentialing', owner: 'Self', due: '2026-11-15',
                   progress: 45, milestones: ['Complete 40 CEU hours (18/40)', 'Log 100 supervision hours (24/100)', 'Pass written exam', 'Submit ethics documentation'],
                   status: 'In Progress', sColor: 'bg-blue-100 text-blue-700'
                 },

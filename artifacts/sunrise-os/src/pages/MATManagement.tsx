@@ -38,7 +38,7 @@ const MAT_DATA: MATRecord[] = [
 
 // Patients needing MAT evaluation (not yet on MAT but indicated)
 const MAT_PENDING = [
-  { patientId: 'p9', name: 'Devon Patel', indication: 'Meth OUD — evaluate for naltrexone or contingency management', requestedBy: 'Maria Gonzales, LCSW', date: '2026-07-16' },
+  { patientId: 'p9', name: 'Devon Patel', indication: 'Meth OUD — evaluate for naltrexone or contingency management', requestedBy: 'Maria Gonzales, LCADC', date: '2026-07-16' },
   { patientId: 'p14', name: 'Nicole Washington', indication: 'Cocaine OUD — evaluate for modafinil or naltrexone', requestedBy: 'Dr. Allen Hughes', date: '2026-07-17' },
 ];
 

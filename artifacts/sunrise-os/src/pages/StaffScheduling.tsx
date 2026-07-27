@@ -6,7 +6,7 @@ import { LockedButton } from '../components/common/LockedButton';
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
 type ShiftType = 'Day' | 'Evening' | 'Night';
-type StaffRole = 'Physician' | 'Psychiatrist' | 'Nurse' | 'Counselor' | 'LCSW' | 'BHT' | 'Admin';
+type StaffRole = 'Physician' | 'Psychiatrist' | 'Nurse' | 'Counselor' | 'LCADC' | 'BHT' | 'Admin';
 
 interface StaffMember {
   id: string;
@@ -28,9 +28,9 @@ const STAFF: StaffMember[] = [
   { id: 's4',  name: 'Jessica Torres',          role: 'Nurse',       credential: 'RN', color: 'bg-blue-600 text-white' },
   { id: 's5',  name: 'Michael Boyd',            role: 'Nurse',       credential: 'RN', color: 'bg-blue-600 text-white' },
   { id: 's6',  name: 'Rachel Kim',              role: 'Nurse',       credential: 'RN', color: 'bg-blue-600 text-white' },
-  { id: 's7',  name: 'Sarah Jenkins',           role: 'Counselor',   credential: 'LPC', color: 'bg-teal-600 text-white' },
-  { id: 's8',  name: 'David Odom',              role: 'Counselor',   credential: 'LMFT', color: 'bg-teal-600 text-white' },
-  { id: 's9',  name: 'Maria Gonzales',          role: 'LCSW',        credential: 'LCSW', color: 'bg-teal-600 text-white' },
+  { id: 's7',  name: 'Sarah Jenkins',           role: 'Counselor',   credential: 'LCPC', color: 'bg-teal-600 text-white' },
+  { id: 's8',  name: 'David Odom',              role: 'Counselor',   credential: 'LCADC', color: 'bg-teal-600 text-white' },
+  { id: 's9',  name: 'Maria Gonzales',          role: 'LCADC',        credential: 'LCADC', color: 'bg-teal-600 text-white' },
   { id: 's10', name: 'Kevin Wright',            role: 'BHT',         credential: 'BHT Sup', color: 'bg-gray-600 text-white' },
   { id: 's11', name: 'Darnell Hughes',          role: 'BHT',         credential: 'BHT', color: 'bg-gray-600 text-white' },
   { id: 's12', name: 'Tamika Ross',             role: 'BHT',         credential: 'BHT', color: 'bg-gray-600 text-white' },
@@ -78,7 +78,7 @@ STAFF.forEach(s => {
         SCHEDULE[s.id][day].Night = { staffId: s.id, status: 'Scheduled' };
         if (di === 4) SCHEDULE[s.id][day].Night = { staffId: s.id, status: 'Overtime' };
       }
-    } else if (s.role === 'Counselor' || s.role === 'LCSW') {
+    } else if (s.role === 'Counselor' || s.role === 'LCADC') {
       if (!isWeekend) SCHEDULE[s.id][day].Day = { staffId: s.id, status: 'Scheduled' };
       else SCHEDULE[s.id][day].Day = { staffId: s.id, status: s.id === 's7' && di === 5 ? 'PTO' : 'On Call' };
     } else if (s.role === 'BHT') {
@@ -108,7 +108,7 @@ const SHIFT_STATUS_STYLE: Record<string, string> = {
   Overtime:  'bg-amber-100 border-amber-200 text-amber-700',
 };
 
-const ROLE_ORDER: StaffRole[] = ['Physician', 'Psychiatrist', 'Nurse', 'Counselor', 'LCSW', 'BHT', 'Admin'];
+const ROLE_ORDER: StaffRole[] = ['Physician', 'Psychiatrist', 'Nurse', 'Counselor', 'LCADC', 'BHT', 'Admin'];
 
 export function StaffScheduling({ navigate, readOnly }: Props) {
   const [view, setView] = useState<'Weekly' | 'Staff' | 'Coverage' | 'PTO Requests' | 'Overtime & Fatigue' | 'Labor Analytics'>('Weekly');
@@ -392,9 +392,9 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
               <tbody className="divide-y divide-border">
                 {[
                   { name: 'Jessica Torres, RN', role: 'Nurse', type: 'Vacation', dates: 'Jul 28 – Aug 1', days: 5, coverage: 'A. Patel covers Day / Per diem hired for Eve', status: 'Pending' },
-                  { name: 'David Odom, LMFT', role: 'Counselor', type: 'Personal', dates: 'Jul 25', days: 1, coverage: 'Group re-assigned to Sarah Jenkins', status: 'Pending' },
+                  { name: 'David Odom, LCADC', role: 'Counselor', type: 'Personal', dates: 'Jul 25', days: 1, coverage: 'Group re-assigned to Sarah Jenkins', status: 'Pending' },
                   { name: 'Marcus Davis, BHT', role: 'BHT', type: 'Sick Leave', dates: 'Jul 24 – 25', days: 2, coverage: 'Kevin Smith covers both days', status: 'Pending' },
-                  { name: 'Sarah Jenkins, LPC', role: 'Counselor', type: 'Vacation', dates: 'Aug 4 – 8', days: 5, coverage: 'Temp counselor scheduled. Caseload split 3-way.', status: 'Approved' },
+                  { name: 'Sarah Jenkins, LCPC', role: 'Counselor', type: 'Vacation', dates: 'Aug 4 – 8', days: 5, coverage: 'Temp counselor scheduled. Caseload split 3-way.', status: 'Approved' },
                   { name: 'Anita Patel, RN', role: 'Nurse', type: 'FMLA', dates: 'Jul 21 – Aug 15', days: 18, coverage: 'Per diem staff + agency coverage approved', status: 'Approved' },
                   { name: 'Kevin Smith, BHT', role: 'BHT', type: 'Vacation', dates: 'Aug 11 – 12', days: 2, coverage: 'Marcus Davis / per diem', status: 'Approved' },
                   { name: 'Robert Davis, BHT', role: 'BHT', type: 'Vacation', dates: 'Jul 22 – 23', days: 2, coverage: 'Denied — insufficient BHT coverage per ratio policy', status: 'Denied' },
@@ -462,8 +462,8 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
                   { name: 'Jessica Torres', role: 'DON / RN', shifts: 5, hours: 46, ot: 6, consec: 5, risk: 'High' },
                   { name: 'Michael Boyd', role: 'RN', shifts: 4, hours: 42, ot: 2, consec: 4, risk: 'Med' },
                   { name: 'James S. Collins III', role: 'Clinical Supervisor', shifts: 5, hours: 43, ot: 3, consec: 3, risk: 'Med' },
-                  { name: 'Sarah Jenkins', role: 'LPC', shifts: 5, hours: 40, ot: 0, consec: 5, risk: 'Low' },
-                  { name: 'Maria Gonzales', role: 'LCSW', shifts: 5, hours: 40, ot: 0, consec: 3, risk: 'Low' },
+                  { name: 'Sarah Jenkins', role: 'LCPC', shifts: 5, hours: 40, ot: 0, consec: 5, risk: 'Low' },
+                  { name: 'Maria Gonzales', role: 'LCADC', shifts: 5, hours: 40, ot: 0, consec: 3, risk: 'Low' },
                   { name: 'Marcus Thompson', role: 'PSS', shifts: 4, hours: 32, ot: 0, consec: 4, risk: 'Low' },
                   { name: 'Dr. Robert Chen', role: 'Medical Director', shifts: 3, hours: 24, ot: 0, consec: 2, risk: 'Low' },
                   { name: 'Float RN (Agency)', role: 'RN — Agency', shifts: 3, hours: 36, ot: 0, consec: 3, risk: 'N/A' },
@@ -590,7 +590,7 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Staff Member *</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>Jessica Torres, RN</option><option>Michael Boyd, RN</option><option>Kevin Wright, BHT</option><option>Sarah Jenkins, LPC</option><option>Maria Gonzales, LCSW</option>
+                    <option>Jessica Torres, RN</option><option>Michael Boyd, RN</option><option>Kevin Wright, BHT</option><option>Sarah Jenkins, LCPC</option><option>Maria Gonzales, LCADC</option>
                   </select>
                 </div>
                 <div>

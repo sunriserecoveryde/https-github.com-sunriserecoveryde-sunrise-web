@@ -20,11 +20,11 @@ import { NoteIntelligencePanel } from '../components/ui/NoteIntelligencePanel';
 const EXTRA_NOTES: Record<string, ProgressNote[]> = {
   p3: [
     {
-      id: 'n3a', date: '2026-07-19 09:30', type: 'Individual', author: 'Sarah Jenkins, LPC', status: 'Signed', format: 'BIRP',
+      id: 'n3a', date: '2026-07-19 09:30', type: 'Individual', author: 'Sarah Jenkins, LCPC', status: 'Signed', format: 'BIRP',
       content: 'B: Client presented as guarded and slightly irritable. Made eye contact intermittently. Reports poor sleep and "feeling watched." No overt paranoid ideation expressed in session. I: Explored experiences of paranoia using Socratic questioning. Validated distress while reality-testing content. Discussed sleep hygiene. R: Client engaged in reality-testing with prompting. Denied SI/HI. Declined group today citing anxiety. P: Continue daily individual contact. Coordinate with psychiatry re: dose/med adjustment for sleep and anxiety.',
     },
     {
-      id: 'n3b', date: '2026-07-18 14:00', type: 'Group', author: 'Maria Gonzales, LCSW', status: 'Awaiting Co-sign', format: 'DAP',
+      id: 'n3b', date: '2026-07-18 14:00', type: 'Group', author: 'Maria Gonzales, LCADC', status: 'Awaiting Co-sign', format: 'DAP',
       content: 'D: Client attended Relapse Prevention group. Participated minimally — two brief verbal contributions. Appeared distracted. A: Client demonstrating difficulty with group engagement, likely related to ongoing substance-induced psychiatric symptoms. Interaction with peers adequate — no conflicts this session. P: Encourage 1 group interaction per session as short-term goal; follow up in 1:1 re: barriers to group engagement.',
     },
   ],
@@ -34,7 +34,7 @@ const EXTRA_NOTES: Record<string, ProgressNote[]> = {
       content: 'D: Patient seen at bedside for dual withdrawal protocol review. COWS 10 (down from 14 yesterday), CIWA 8 (down from 12). BP 144/92 — improved. Wound site left arm assessed — dressing changed, no signs of re-infection. A: COWS and CIWA responding to protocol. Wound healing on track. BP trending toward target. P: Continue Suboxone 8/2mg BID, Lorazepam Q6H PRN CIWA ≥ 8. Wound care daily. Repeat BMP tomorrow morning. Reassess for MAT dose adjustment at rounds tomorrow.',
     },
     {
-      id: 'n4b', date: '2026-07-19 11:00', type: 'Individual', author: 'David Odom, LMFT', status: 'Awaiting Co-sign', format: 'BIRP',
+      id: 'n4b', date: '2026-07-19 11:00', type: 'Individual', author: 'David Odom, LCADC', status: 'Awaiting Co-sign', format: 'BIRP',
       content: 'B: Client appeared more alert than recent sessions. Cooperative and made sustained eye contact. Reports feeling "a little less sick today." I: Explored client motivation for treatment given court-mandated context — used MI to identify internal motivation beyond legal pressure. Client identified desire to "be present" for 3-year-old daughter as intrinsic motivator. R: Moderate motivation — external/legal driver primary but internal motivation emerging. Not yet at Contemplation per TTM. P: Continue MI approach; assign journaling exercise on "what recovery would change in my life." Drug court ROI signed and submitted.',
     },
   ],
@@ -46,7 +46,7 @@ const EXTRA_NOTES: Record<string, ProgressNote[]> = {
   ],
   p6: [
     {
-      id: 'n6a', date: '2026-07-19 10:00', type: 'Individual', author: 'Maria Gonzales, LCSW', status: 'Signed', format: 'BIRP',
+      id: 'n6a', date: '2026-07-19 10:00', type: 'Individual', author: 'Maria Gonzales, LCADC', status: 'Signed', format: 'BIRP',
       content: "B: Client engaged and articulate in session. Reports mood 6/10, improved from 4 yesterday. Appetite returned. Denies cravings for alcohol currently but expresses fear of cravings returning upon discharge. I: Processed client's fears around discharge using Motivational Interviewing. Explored recovery environment — supportive spouse; minimal alcohol in household. Reviewed relapse warning signs and response plan. R: Client demonstrating Preparation stage per TTM. Excellent insight. Expressed interest in outpatient IOP post-residential. P: Begin discharge planning this week. Schedule IOP intake evaluation. Introduce AA/SMART meeting schedule.",
     },
   ],

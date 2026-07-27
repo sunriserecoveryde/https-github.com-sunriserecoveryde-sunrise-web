@@ -30,15 +30,15 @@ interface DischargeEntry {
 }
 
 const UPCOMING: DischargeEntry[] = [
-  { patientId: 'p3', name: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', los: 31, expectedDate: '2026-07-22', daysUntil: 0, counselor: 'Maria Gonzales, LCSW', disposition: 'Sober Living', aftercarePlan: true, rxOrdered: false, followUpScheduled: true, transportArranged: false, summaryDictated: false, amaRisk: 'Med', notes: 'Sober living placement confirmed at Sunrise House. Vivitrol injection needed before discharge. Transport TBD — arrange before 4 PM today.' },
-  { patientId: 'p4', name: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', los: 36, expectedDate: '2026-07-23', daysUntil: 1, counselor: 'Sarah Jenkins, LPC', disposition: 'Step-Down PHP', aftercarePlan: true, rxOrdered: true, followUpScheduled: true, transportArranged: true, summaryDictated: false, amaRisk: 'Low', notes: 'Transitioning to our PHP program Mon–Fri. Family meeting completed 7/21.' },
-  { patientId: 'p7', name: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', los: 21, expectedDate: '2026-07-25', daysUntil: 3, counselor: 'David Odom, LMFT', disposition: 'Home with Family', aftercarePlan: true, rxOrdered: true, followUpScheduled: false, transportArranged: true, summaryDictated: false, amaRisk: 'Low', notes: 'Wife is engaged and supportive. AA sponsor identified. Outpatient therapy referral to Dr. Patel pending.' },
-  { patientId: 'p5', name: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', los: 42, expectedDate: '2026-07-28', daysUntil: 6, counselor: 'Maria Gonzales, LCSW', disposition: 'CJS / Probation', aftercarePlan: false, rxOrdered: false, followUpScheduled: false, transportArranged: false, summaryDictated: false, amaRisk: 'High', notes: 'Probation officer contact required before discharge. Drug court reporting starts 7/31. Aftercare plan in progress.' },
+  { patientId: 'p3', name: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', los: 31, expectedDate: '2026-07-22', daysUntil: 0, counselor: 'Maria Gonzales, LCADC', disposition: 'Sober Living', aftercarePlan: true, rxOrdered: false, followUpScheduled: true, transportArranged: false, summaryDictated: false, amaRisk: 'Med', notes: 'Sober living placement confirmed at Sunrise House. Vivitrol injection needed before discharge. Transport TBD — arrange before 4 PM today.' },
+  { patientId: 'p4', name: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', los: 36, expectedDate: '2026-07-23', daysUntil: 1, counselor: 'Sarah Jenkins, LCPC', disposition: 'Step-Down PHP', aftercarePlan: true, rxOrdered: true, followUpScheduled: true, transportArranged: true, summaryDictated: false, amaRisk: 'Low', notes: 'Transitioning to our PHP program Mon–Fri. Family meeting completed 7/21.' },
+  { patientId: 'p7', name: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', los: 21, expectedDate: '2026-07-25', daysUntil: 3, counselor: 'David Odom, LCADC', disposition: 'Home with Family', aftercarePlan: true, rxOrdered: true, followUpScheduled: false, transportArranged: true, summaryDictated: false, amaRisk: 'Low', notes: 'Wife is engaged and supportive. AA sponsor identified. Outpatient therapy referral to Dr. Patel pending.' },
+  { patientId: 'p5', name: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', los: 42, expectedDate: '2026-07-28', daysUntil: 6, counselor: 'Maria Gonzales, LCADC', disposition: 'CJS / Probation', aftercarePlan: false, rxOrdered: false, followUpScheduled: false, transportArranged: false, summaryDictated: false, amaRisk: 'High', notes: 'Probation officer contact required before discharge. Drug court reporting starts 7/31. Aftercare plan in progress.' },
 ];
 
 const AMA_RECENT = [
-  { name: 'Daniel Cruz', mrn: 'MRN-81043', program: 'Residential', amaDate: '2026-07-15', los: 9, counselor: 'Sarah Jenkins, LPC', followedUp: true },
-  { name: 'Tanya Morton', mrn: 'MRN-77290', program: 'PHP', amaDate: '2026-07-10', los: 6, counselor: 'David Odom, LMFT', followedUp: false },
+  { name: 'Daniel Cruz', mrn: 'MRN-81043', program: 'Residential', amaDate: '2026-07-15', los: 9, counselor: 'Sarah Jenkins, LCPC', followedUp: true },
+  { name: 'Tanya Morton', mrn: 'MRN-77290', program: 'PHP', amaDate: '2026-07-10', los: 6, counselor: 'David Odom, LCADC', followedUp: false },
 ];
 
 const FOLLOWUP_30 = [

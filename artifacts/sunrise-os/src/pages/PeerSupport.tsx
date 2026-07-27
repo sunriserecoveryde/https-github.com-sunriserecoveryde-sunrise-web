@@ -36,15 +36,15 @@ interface PeerContact {
 
 const PEER_SPECIALISTS: PeerSpecialist[] = [
   {
-    id: 'PS-001', name: 'Marcus Thomas', credential: 'CPRS (Certified Peer Recovery Specialist)',
+    id: 'PS-001', name: 'Marcus Thomas', credential: 'ADT (Certified Peer Recovery Specialist)',
     soberDate: '2018-04-15', primarySUD: 'Opioid Use Disorder',
     assignedPatients: ['p1', 'p5', 'p9', 'p12', 'p16'],
     specialties: ['Veterans', 'Opioid Recovery', 'MAT Support', 'Job Readiness'],
     scheduledHours: 32, contactedThisWeek: 4, engagementScore: 4.7,
-    bio: 'Marcus brings 8 years of personal recovery from OUD to his work. Army veteran, he specializes in supporting fellow veterans navigating the VA system alongside addiction recovery. CPRS certified 2021. Speaks openly about his experience with Suboxone and reducing stigma around MAT.',
+    bio: 'Marcus brings 8 years of personal recovery from OUD to his work. Army veteran, he specializes in supporting fellow veterans navigating the VA system alongside addiction recovery. ADT certified 2021. Speaks openly about his experience with Suboxone and reducing stigma around MAT.',
   },
   {
-    id: 'PS-002', name: 'Keisha Brown', credential: 'CPRS, CPS (Certified Peer Specialist)',
+    id: 'PS-002', name: 'Keisha Brown', credential: 'ADT, CPS (Certified Peer Specialist)',
     soberDate: '2020-09-01', primarySUD: 'Alcohol Use Disorder / MDD',
     assignedPatients: ['p3', 'p7', 'p11', 'p15', 'p18'],
     specialties: ['Women\'s Recovery', 'Co-occurring Disorders', 'Trauma-informed Peer Support', 'Family Reunification'],
@@ -52,7 +52,7 @@ const PEER_SPECIALISTS: PeerSpecialist[] = [
     bio: 'Keisha understands the intersection of mental health and addiction recovery first-hand. After years of struggling with depression and alcohol, she found recovery and made it her mission to help others — especially women — feel seen and not alone. Passionate about breaking cycles of family trauma.',
   },
   {
-    id: 'PS-003', name: 'James "Jimmy" Rodriguez', credential: 'CPRS',
+    id: 'PS-003', name: 'James "Jimmy" Rodriguez', credential: 'ADT',
     soberDate: '2019-11-22', primarySUD: 'Methamphetamine Use Disorder',
     assignedPatients: ['p2', 'p6', 'p10', 'p14', 'p20'],
     specialties: ['Methamphetamine Recovery', 'Re-entry (Justice-involved)', 'LGBTQ+ Affirming Support', 'Spanish-speaking'],
@@ -118,7 +118,7 @@ const OUTCOME_COLOR = {
 };
 
 export function PeerSupport({ navigate, readOnly }: Props) {
-  const [tab, setTab] = useState<'Specialists' | 'Contacts' | 'Groups' | 'Outcomes' | 'Training' | 'Impact Stories' | 'CPRS Standards'>('Specialists');
+  const [tab, setTab] = useState<'Specialists' | 'Contacts' | 'Groups' | 'Outcomes' | 'Training' | 'Impact Stories' | 'ADT Standards'>('Specialists');
   const [selectedPeer, setSelectedPeer] = useState<string>('PS-001');
   const [contactLogOpen, setContactLogOpen] = useState(false);
   const [contactSaved, setContactSaved] = useState(false);
@@ -140,7 +140,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
 
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'Peer Specialists', value: PEER_SPECIALISTS.length, sub: 'CPRS credentialed', color: 'text-navy' },
+          { label: 'Peer Specialists', value: PEER_SPECIALISTS.length, sub: 'ADT credentialed', color: 'text-navy' },
           { label: 'Contacts This Week', value: totalContactsWeek, sub: 'Individual + group', color: 'text-navy' },
           { label: 'Peer Groups Running', value: PEER_GROUPS.length, sub: 'Weekly schedule', color: 'text-navy' },
           { label: 'Avg Engagement', value: `${(PEER_SPECIALISTS.reduce((a,p)=>a+p.engagementScore,0)/PEER_SPECIALISTS.length).toFixed(1)}/5`, sub: 'Patient-rated', color: 'text-green-600' },
@@ -154,7 +154,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(['Specialists', 'Contacts', 'Groups', 'Outcomes', 'Training', 'Impact Stories', 'CPRS Standards'] as const).map(t => (
+        {(['Specialists', 'Contacts', 'Groups', 'Outcomes', 'Training', 'Impact Stories', 'ADT Standards'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -320,7 +320,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
         <div className="space-y-5">
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: 'Certified PSS on Staff', value: 4, sub: 'MHFA + CPRS certified', color: 'text-navy' },
+              { label: 'Certified PSS on Staff', value: 4, sub: 'MHFA + ADT certified', color: 'text-navy' },
               { label: 'Training Hours YTD', value: 62, sub: 'Across all peer staff', color: 'text-blue-600' },
               { label: 'Avg Competency Score', value: '88%', sub: 'Post-training assessment', color: 'text-green-600' },
               { label: 'Continuing Ed Due', value: 1, sub: 'Within 30 days', color: 'text-amber-600' },
@@ -339,7 +339,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
               <thead>
                 <tr className="border-b border-border bg-bg text-slate">
                   <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Specialist</th>
-                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">CPRS</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">ADT</th>
                   <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">MHFA</th>
                   <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Motivational Int.</th>
                   <th className="text-center px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider">Boundaries & Ethics</th>
@@ -397,7 +397,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
           <div className="grid grid-cols-2 gap-5">
             {[
               {
-                initials: 'M.W.', prog: 'Men\'s Residential → IOP', ps: 'R. Caldwell, CPRS', months: 14,
+                initials: 'M.W.', prog: 'Men\'s Residential → IOP', ps: 'R. Caldwell, ADT', months: 14,
                 story: '"I didn\'t trust anyone when I walked in. My peer specialist was the first person in recovery I actually believed. He had the same story — different chapter. I\'m 14 months sober, working again, and my daughter talks to me."',
                 outcome: '14 months continuous sobriety, employed, family reconnected',
               },
@@ -407,12 +407,12 @@ export function PeerSupport({ navigate, readOnly }: Props) {
                 outcome: '9 months sobriety, enrolled in college, sober living graduate',
               },
               {
-                initials: 'J.T.', prog: 'PHP Step-down', ps: 'M. Osei, CPRS', months: 18,
+                initials: 'J.T.', prog: 'PHP Step-down', ps: 'M. Osei, ADT', months: 18,
                 story: '"My peer specialist helped me navigate the court system and MAT stigma at work. Nobody else could have done that. He spoke both languages — recovery and the real world."',
                 outcome: '18 months sobriety, case dismissed, promoted at job',
               },
               {
-                initials: 'D.P.', prog: 'IOP + Alumni', ps: 'R. Caldwell, CPRS', months: 7,
+                initials: 'D.P.', prog: 'IOP + Alumni', ps: 'R. Caldwell, ADT', months: 7,
                 story: '"I almost left AMA twice. Both times, my peer met me at the door. Not to stop me — just to sit with me. That was enough. Seven months later I sponsor two guys in my home group."',
                 outcome: '7 months sobriety, active 12-step sponsor, community volunteer',
               },
@@ -433,12 +433,12 @@ export function PeerSupport({ navigate, readOnly }: Props) {
         </div>
       )}
 
-      {tab === 'CPRS Standards' && (
+      {tab === 'ADT Standards' && (
         <div className="space-y-5">
-          <div className="text-sm text-slate">Certified Peer Recovery Specialist (CPRS) scope of practice, ethics standards, and Maryland certification requirements.</div>
+          <div className="text-sm text-slate">Certified Peer Recovery Specialist (ADT) scope of practice, ethics standards, and Maryland certification requirements.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: 'CPRS Certification Body', value: 'TDAMHSAS', color: 'text-navy', sub: 'Maryland state certification' },
+              { label: 'ADT Certification Body', value: 'TDAMHSAS', color: 'text-navy', sub: 'Maryland state certification' },
               { label: 'CE Required (2yr renewal)', value: '40 hrs', color: 'text-blue-600', sub: '12h ethics required' },
               { label: 'Supervised Hours (initial)', value: '500 hrs', color: 'text-teal-600', sub: 'Under qualified supervisor' },
               { label: 'Recovery Requirement', value: '2 years', color: 'text-green-600', sub: 'Self-identified lived experience' },
@@ -452,7 +452,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-5">
             <div className="card">
-              <h3 className="font-semibold text-navy text-sm mb-3">CPRS Scope of Practice — What CPRS Can and Cannot Do</h3>
+              <h3 className="font-semibold text-navy text-sm mb-3">ADT Scope of Practice — What ADT Can and Cannot Do</h3>
               <div className="space-y-1.5 text-xs">
                 <div className="font-semibold text-green-700 uppercase text-[10px] tracking-wider mb-1">Within Scope</div>
                 {[
@@ -477,14 +477,14 @@ export function PeerSupport({ navigate, readOnly }: Props) {
               </div>
             </div>
             <div className="card">
-              <h3 className="font-semibold text-navy text-sm mb-3">CPRS Ethics Standards — Maryland TDAMHSAS</h3>
+              <h3 className="font-semibold text-navy text-sm mb-3">ADT Ethics Standards — Maryland TDAMHSAS</h3>
               <div className="space-y-2 text-xs">
                 {[
                   { principle: 'Dignity and Respect', detail: 'Honor the rights, dignity, and self-determination of all individuals. Treat peers without judgment regarding their substance use, mental health, or personal choices.' },
-                  { principle: 'Confidentiality', detail: 'Maintain confidentiality of peer information. CPRS are bound by HIPAA and 42 CFR Part 2 the same as other staff. Share only on a need-to-know basis.' },
+                  { principle: 'Confidentiality', detail: 'Maintain confidentiality of peer information. ADT are bound by HIPAA and 42 CFR Part 2 the same as other staff. Share only on a need-to-know basis.' },
                   { principle: 'Boundaries', detail: 'Maintain appropriate professional boundaries. Do not engage in dual relationships (e.g., employing peers, entering romantic relationships, financial transactions).' },
                   { principle: 'Lived Experience Integrity', detail: 'Share personal recovery narrative authentically and appropriately. Avoid embellishment or fabrication. Protect your own recovery while supporting others.' },
-                  { principle: 'Scope of Practice Adherence', detail: 'Operate only within CPRS scope. Immediately refer clinical, safety, or medical concerns to the supervising licensed clinician.' },
+                  { principle: 'Scope of Practice Adherence', detail: 'Operate only within ADT scope. Immediately refer clinical, safety, or medical concerns to the supervising licensed clinician.' },
                   { principle: 'Cultural Humility', detail: 'Recognize and respect cultural, linguistic, and identity diversity. Approach peers with humility and openness rather than making assumptions.' },
                 ].map(p => (
                   <div key={p.principle} className="border border-border rounded-lg p-2">
@@ -510,7 +510,7 @@ export function PeerSupport({ navigate, readOnly }: Props) {
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Peer Specialist *</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>Marcus Thompson, CPRS</option><option>Elena Rodriguez, CPRS</option><option>James Carter, CPRS</option>
+                    <option>Marcus Thompson, ADT</option><option>Elena Rodriguez, ADT</option><option>James Carter, ADT</option>
                   </select>
                 </div>
                 <div>

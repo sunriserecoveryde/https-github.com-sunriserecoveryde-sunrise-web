@@ -48,8 +48,8 @@ const FAMILY_DATA: FamilyRecord[] = [
       { name: 'Darnell Webb', relationship: 'Brother', phone: '(615) 555-0142', consentOnFile: true, hipaaAuth: false, lastContact: '2026-07-10', notes: 'Wants updates but patient has not authorized. Counseled on 42 CFR Part 2 limitations.' },
     ],
     log: [
-      { date: '2026-07-14', type: 'Family Session', with: 'Sheila Webb (spouse)', conductedBy: 'Sarah Jenkins, LPC', summary: 'Communication patterns explored. Spouse expressed fear of relapse after discharge. Codependency education delivered. Next session 7/22.', duration: '50 min' },
-      { date: '2026-07-10', type: 'Phone Call', with: 'Sheila Webb (spouse)', conductedBy: 'Sarah Jenkins, LPC', summary: 'Check-in re: patient progress. Encouraged spouse to attend Al-Anon. Consent on file confirmed.', duration: '12 min' },
+      { date: '2026-07-14', type: 'Family Session', with: 'Sheila Webb (spouse)', conductedBy: 'Sarah Jenkins, LCPC', summary: 'Communication patterns explored. Spouse expressed fear of relapse after discharge. Codependency education delivered. Next session 7/22.', duration: '50 min' },
+      { date: '2026-07-10', type: 'Phone Call', with: 'Sheila Webb (spouse)', conductedBy: 'Sarah Jenkins, LCPC', summary: 'Check-in re: patient progress. Encouraged spouse to attend Al-Anon. Consent on file confirmed.', duration: '12 min' },
     ],
   },
   {
@@ -63,9 +63,9 @@ const FAMILY_DATA: FamilyRecord[] = [
       { name: 'Lydia Choi', relationship: 'Mother', phone: '(615) 555-0202', email: 'lchoi@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-17', notes: 'Empathetic. Working on not enabling through over-accommodation of food restrictions.' },
     ],
     log: [
-      { date: '2026-07-17', type: 'Family Session', with: 'David & Lydia Choi (parents)', conductedBy: 'David Odom, LMFT', summary: 'Excellent session. Parents demonstrating healthy boundary-setting. Patient very emotional but grateful. Family dynamics shifting positively.', duration: '60 min' },
-      { date: '2026-07-14', type: 'Phone Call', with: 'David Choi (father)', conductedBy: 'David Odom, LMFT', summary: 'Pre-session check-in. Father concerned about patient weight. Reassured re: treatment team monitoring.', duration: '15 min' },
-      { date: '2026-07-10', type: 'Family Session', with: 'David & Lydia Choi (parents)', conductedBy: 'David Odom, LMFT', summary: 'Session 3. Discussed enabling behaviors. Both parents receptive. Assigned homework: "sober support" vs. "rescue" distinction.', duration: '55 min' },
+      { date: '2026-07-17', type: 'Family Session', with: 'David & Lydia Choi (parents)', conductedBy: 'David Odom, LCADC', summary: 'Excellent session. Parents demonstrating healthy boundary-setting. Patient very emotional but grateful. Family dynamics shifting positively.', duration: '60 min' },
+      { date: '2026-07-14', type: 'Phone Call', with: 'David Choi (father)', conductedBy: 'David Odom, LCADC', summary: 'Pre-session check-in. Father concerned about patient weight. Reassured re: treatment team monitoring.', duration: '15 min' },
+      { date: '2026-07-10', type: 'Family Session', with: 'David & Lydia Choi (parents)', conductedBy: 'David Odom, LCADC', summary: 'Session 3. Discussed enabling behaviors. Both parents receptive. Assigned homework: "sober support" vs. "rescue" distinction.', duration: '55 min' },
     ],
   },
   {
@@ -77,7 +77,7 @@ const FAMILY_DATA: FamilyRecord[] = [
       { name: 'Maria Thornton', relationship: 'Mother', phone: '(615) 555-0301', consentOnFile: false, hipaaAuth: false, lastContact: '2026-07-07', notes: 'Patient requested no contact with family. 42 CFR Part 2 consent not signed. No disclosures made.' },
     ],
     log: [
-      { date: '2026-07-07', type: 'Phone Call', with: 'Maria Thornton (mother)', conductedBy: 'Sarah Jenkins, LPC', summary: 'Mother called inquiring about patient. Confirmed admission ONLY (per patient limited disclosure). No clinical information shared.', duration: '5 min' },
+      { date: '2026-07-07', type: 'Phone Call', with: 'Maria Thornton (mother)', conductedBy: 'Sarah Jenkins, LCPC', summary: 'Mother called inquiring about patient. Confirmed admission ONLY (per patient limited disclosure). No clinical information shared.', duration: '5 min' },
     ],
   },
   {
@@ -101,8 +101,8 @@ const FAMILY_DATA: FamilyRecord[] = [
       { name: 'Cpl. Ryan Brooks', relationship: 'Brother (active duty)', phone: '(615) 555-0192', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-12', notes: 'Called from base. Emotionally supportive but limited availability due to deployment.' },
     ],
     log: [
-      { date: '2026-07-15', type: 'Phone Call', with: 'Jessica Brooks (mother)', conductedBy: 'Maria Gonzales, LCSW', summary: 'Patient\'s disclosure of overdose history in group discussed. Mother aware of history. Discussed family naloxone education. Mother very engaged.', duration: '20 min' },
-      { date: '2026-07-10', type: 'Family Session', with: 'Jessica Brooks (mother)', conductedBy: 'Maria Gonzales, LCSW', summary: 'First family session. Focused on trauma (combat) and substance use connection. Mother tearful but engaged. Plans to attend Al-Anon.', duration: '50 min' },
+      { date: '2026-07-15', type: 'Phone Call', with: 'Jessica Brooks (mother)', conductedBy: 'Maria Gonzales, LCADC', summary: 'Patient\'s disclosure of overdose history in group discussed. Mother aware of history. Discussed family naloxone education. Mother very engaged.', duration: '20 min' },
+      { date: '2026-07-10', type: 'Family Session', with: 'Jessica Brooks (mother)', conductedBy: 'Maria Gonzales, LCADC', summary: 'First family session. Focused on trauma (combat) and substance use connection. Mother tearful but engaged. Plans to attend Al-Anon.', duration: '50 min' },
     ],
   },
   {
@@ -114,7 +114,7 @@ const FAMILY_DATA: FamilyRecord[] = [
       { name: 'Rachel Park', relationship: 'Sister', phone: '(615) 555-0201', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-17', notes: 'Sister is primary support. DV protective order in place from ex-partner. NO contact to be facilitated with ex-partner under any circumstances.' },
     ],
     log: [
-      { date: '2026-07-17', type: 'Phone Call', with: 'Rachel Park (sister)', conductedBy: 'Sarah Jenkins, LPC', summary: 'Confirmed patient\'s new address and safety plan. Sister confirmed willingness to provide transitional support. DV safety protocols reviewed.', duration: '15 min' },
+      { date: '2026-07-17', type: 'Phone Call', with: 'Rachel Park (sister)', conductedBy: 'Sarah Jenkins, LCPC', summary: 'Confirmed patient\'s new address and safety plan. Sister confirmed willingness to provide transitional support. DV safety protocols reviewed.', duration: '15 min' },
     ],
   },
 ];
@@ -450,7 +450,7 @@ export function FamilyEngagement({ navigate, readOnly }: Props) {
               <div>
                 <label className="block text-xs font-semibold text-slate uppercase mb-1">Conducted By</label>
                 <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                  {['Sarah Jenkins, LPC', 'David Odom, LMFT', 'Maria Gonzales, LCSW', 'Dr. Allen Hughes'].map(s => <option key={s}>{s}</option>)}
+                  {['Sarah Jenkins, LCPC', 'David Odom, LCADC', 'Maria Gonzales, LCADC', 'Dr. Allen Hughes'].map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
               <div>
@@ -766,7 +766,7 @@ export function FamilyEngagement({ navigate, readOnly }: Props) {
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Therapist</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>Sarah Jenkins, LPC</option><option>Maria Gonzales, LCSW</option><option>David Odom, LMFT</option>
+                    <option>Sarah Jenkins, LCPC</option><option>Maria Gonzales, LCADC</option><option>David Odom, LCADC</option>
                   </select>
                 </div>
                 <div>

@@ -109,7 +109,7 @@ function KanbanCard({ item }: { item: typeof PIPELINE[0] }) {
 
 const OUTREACH_LOG = [
   { id: 'o1', source: 'Vanderbilt ER', contact: 'Dr. Aaron West', type: 'Call', date: '2026-07-18', note: 'Discussed Q3 capacity. Confirmed 2 pending referrals. Strong relationship.', outcome: 'Positive' },
-  { id: 'o2', source: 'Cumberland Heights', contact: 'Emily Nguyen, LCSW', type: 'Email', date: '2026-07-16', note: 'Sent updated program brochure and IOP schedule.', outcome: 'Positive' },
+  { id: 'o2', source: 'Cumberland Heights', contact: 'Emily Nguyen, LCADC', type: 'Email', date: '2026-07-16', note: 'Sent updated program brochure and IOP schedule.', outcome: 'Positive' },
   { id: 'o3', source: "Dr. Peterson's Clinic", contact: 'Dr. M. Peterson, MD', type: 'Call', date: '2026-06-02', note: 'No answer — left voicemail. Clinic went 47 days without a referral.', outcome: 'At Risk' },
   { id: 'o4', source: 'TriStar Health ER', contact: 'Case Mgmt Team', type: 'Visit', date: '2026-07-14', note: 'In-person lunch & learn with ER case management team. Distributed FAQs and contact cards.', outcome: 'Positive' },
   { id: 'o5', source: 'Drug Court', contact: 'Judge Wallace Office', type: 'Email', date: '2026-07-17', note: 'Sent 2026 Q3 program capacity summary and court-required documentation packet.', outcome: 'Positive' },

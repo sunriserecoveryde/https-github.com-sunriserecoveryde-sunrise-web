@@ -39,7 +39,7 @@ const ROI_REQUESTS: ROIRequest[] = [
     requestDate: '2026-07-01', expiryDate: '2027-01-01', status: 'Active',
     requires42CFR: true,
     auditLog: [
-      { date: '2026-07-01', action: 'ROI signed by patient in office', user: 'Sarah Jenkins, LPC' },
+      { date: '2026-07-01', action: 'ROI signed by patient in office', user: 'Sarah Jenkins, LCPC' },
       { date: '2026-07-02', action: 'Records prepared — 42 CFR Notice to Accompany included', user: 'Medical Records (Admin)' },
       { date: '2026-07-02', action: 'Records transmitted via secure fax to VA (301-687-XXXX)', user: 'Medical Records (Admin)' },
     ],
@@ -53,7 +53,7 @@ const ROI_REQUESTS: ROIRequest[] = [
     requestDate: '2026-07-10', expiryDate: '2027-01-10', status: 'Active',
     requires42CFR: true, sentDate: '2026-07-11',
     auditLog: [
-      { date: '2026-07-10', action: 'ROI signed by patient — specific to LAP report format', user: 'David Odom, LMFT' },
+      { date: '2026-07-10', action: 'ROI signed by patient — specific to LAP report format', user: 'David Odom, LCADC' },
       { date: '2026-07-11', action: 'LAP compliance report generated; records attached', user: 'Medical Records (Admin)' },
       { date: '2026-07-11', action: 'Sent via certified mail + secure fax to LAP (301-XXX-XXXX)', user: 'Medical Records (Admin)' },
     ],
@@ -83,7 +83,7 @@ const ROI_REQUESTS: ROIRequest[] = [
     auditLog: [
       { date: '2026-07-12', action: 'ROI received — reviewed by compliance officer', user: 'James S. Collins III' },
       { date: '2026-07-13', action: 'DENIED: 42 CFR Part 2 — insurer cannot receive SUD records for non-treatment purposes', user: 'James S. Collins III' },
-      { date: '2026-07-13', action: 'Patient notified; 42 CFR rights explained; redacted version offered', user: 'David Odom, LMFT' },
+      { date: '2026-07-13', action: 'Patient notified; 42 CFR rights explained; redacted version offered', user: 'David Odom, LCADC' },
     ],
   },
   {
@@ -108,7 +108,7 @@ const ROI_REQUESTS: ROIRequest[] = [
     requestDate: '2026-07-17', expiryDate: '2026-10-17', status: 'Active',
     requires42CFR: true,
     auditLog: [
-      { date: '2026-07-17', action: 'Limited ROI signed — specific to treatment summary only, NOT raw notes', user: 'Sarah Jenkins, LPC' },
+      { date: '2026-07-17', action: 'Limited ROI signed — specific to treatment summary only, NOT raw notes', user: 'Sarah Jenkins, LCPC' },
       { date: '2026-07-18', action: 'Treatment summary letter generated and mailed per patient preference', user: 'Medical Records (Admin)' },
     ],
   },

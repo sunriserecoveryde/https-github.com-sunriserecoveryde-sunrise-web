@@ -36,7 +36,7 @@ const CURRICULA: Curriculum[] = [
     sessionCount: 12, sessionLength: 60, modality: 'Both',
     primaryDomains: ['Functional analysis', 'Coping with craving', 'Thought challenging', 'Relapse prevention', 'Emotion regulation'],
     description: 'CBT-SUD is one of the most extensively researched and validated approaches to addiction treatment. It targets the learning processes underlying addictive behavior. Patients learn to identify high-risk situations, develop coping strategies, and restructure distorted thinking patterns related to substance use.',
-    status: 'Active', facilitatorRequired: 'LPC, LCSW-C, CAADC or higher (with CBT competency training)',
+    status: 'Active', facilitatorRequired: 'LCPC, LCADC, CAC-AD or higher (with CBT competency training)',
     materialsCost: 180, activeGroups: 2, completedCycles: 14,
   },
   {
@@ -46,7 +46,7 @@ const CURRICULA: Curriculum[] = [
     sessionCount: 24, sessionLength: 90, modality: 'Group',
     primaryDomains: ['Mindfulness', 'Distress tolerance', 'Emotion regulation', 'Interpersonal effectiveness', 'Walking the middle path'],
     description: 'DBT Skills Training provides a structured curriculum for building psychological skills across four modules. Particularly effective for patients with co-occurring BPD, PTSD, and substance use disorders where emotional dysregulation is a central driver of use. Skills are directly practiced in group format.',
-    status: 'Active', facilitatorRequired: 'LPC, LCSW with DBT Intensive Training (3-day minimum)',
+    status: 'Active', facilitatorRequired: 'LCPC, LCADC with DBT Intensive Training (3-day minimum)',
     materialsCost: 380, activeGroups: 1, completedCycles: 6,
   },
   {
@@ -76,7 +76,7 @@ const CURRICULA: Curriculum[] = [
     sessionCount: 36, sessionLength: 60, modality: 'Both',
     primaryDomains: ['Stimulant use education', 'Early recovery skills', 'Relapse prevention', '12-Step facilitation', 'Family education'],
     description: 'The Matrix Model is a 16-week structured outpatient program originally developed for stimulant use disorders. Combines individual therapy, group therapy, family education, 12-step facilitation, and urine testing in an integrated framework. SAMHSA NREPP listed.',
-    status: 'Active', facilitatorRequired: 'CAADC or licensed clinician with Matrix training',
+    status: 'Active', facilitatorRequired: 'CAC-AD or licensed clinician with Matrix training',
     materialsCost: 220, activeGroups: 1, completedCycles: 5,
   },
   {
@@ -96,7 +96,7 @@ const CURRICULA: Curriculum[] = [
     sessionCount: 8, sessionLength: 75, modality: 'Both',
     primaryDomains: ['Psychological flexibility', 'Defusion from addiction thoughts', 'Values clarification', 'Committed action', 'Acceptance of discomfort'],
     description: 'ACT-A applies third-wave CBT principles to addiction treatment, focusing on psychological flexibility rather than thought elimination. Particularly effective when rigid avoidance of emotions drives substance use. Growing evidence base for opioid use disorder and chronic pain + SUD comorbidity.',
-    status: 'Pilot', facilitatorRequired: 'LPC or LCSW with ACT training (ACT Boot Camp or equivalent)',
+    status: 'Pilot', facilitatorRequired: 'LCPC or LCADC with ACT training (ACT Boot Camp or equivalent)',
     materialsCost: 95, activeGroups: 1, completedCycles: 2,
   },
   {
@@ -136,14 +136,14 @@ const STATUS_BADGE: Record<CurriculumStatus, string> = {
 };
 
 const WEEKLY_SCHEDULE = [
-  { day: 'Monday', time: '10:00 AM', curriculum: 'CBT-SUD (Group 1)', facilitator: 'Sarah Jenkins, LPC', room: 'Sunrise Room', enrolled: 8 },
-  { day: 'Monday', time: '2:00 PM', curriculum: 'TSF (Group A)', facilitator: 'David Odom, LMFT', room: 'Hope Room', enrolled: 10 },
-  { day: 'Tuesday', time: '9:30 AM', curriculum: 'Seeking Safety', facilitator: 'Aisha Thompson, LCSW-A', room: 'Serenity Room', enrolled: 7 },
-  { day: 'Tuesday', time: '2:30 PM', curriculum: 'GRT — Women\'s Group', facilitator: 'Keisha Brown, CPRS', room: 'Sunrise Room', enrolled: 6 },
-  { day: 'Wednesday', time: '10:00 AM', curriculum: 'DBT Skills Training', facilitator: 'Sarah Jenkins, LPC', room: 'Sunrise Room', enrolled: 9 },
-  { day: 'Wednesday', time: '2:00 PM', curriculum: 'Matrix Model', facilitator: 'Maria Gonzalez, LSW', room: 'Hope Room', enrolled: 5 },
-  { day: 'Thursday', time: '10:00 AM', curriculum: 'CBT-SUD (Group 2)', facilitator: 'David Odom, LMFT', room: 'Serenity Room', enrolled: 7 },
-  { day: 'Thursday', time: '3:00 PM', curriculum: 'ACT-A (Pilot)', facilitator: 'Aisha Thompson, LCSW-A', room: 'Hope Room', enrolled: 6 },
+  { day: 'Monday', time: '10:00 AM', curriculum: 'CBT-SUD (Group 1)', facilitator: 'Sarah Jenkins, LCPC', room: 'Sunrise Room', enrolled: 8 },
+  { day: 'Monday', time: '2:00 PM', curriculum: 'TSF (Group A)', facilitator: 'David Odom, LCADC', room: 'Hope Room', enrolled: 10 },
+  { day: 'Tuesday', time: '9:30 AM', curriculum: 'Seeking Safety', facilitator: 'Aisha Thompson, LCADC', room: 'Serenity Room', enrolled: 7 },
+  { day: 'Tuesday', time: '2:30 PM', curriculum: 'GRT — Women\'s Group', facilitator: 'Keisha Brown, ADT', room: 'Sunrise Room', enrolled: 6 },
+  { day: 'Wednesday', time: '10:00 AM', curriculum: 'DBT Skills Training', facilitator: 'Sarah Jenkins, LCPC', room: 'Sunrise Room', enrolled: 9 },
+  { day: 'Wednesday', time: '2:00 PM', curriculum: 'Matrix Model', facilitator: 'Maria Gonzalez, LCADC', room: 'Hope Room', enrolled: 5 },
+  { day: 'Thursday', time: '10:00 AM', curriculum: 'CBT-SUD (Group 2)', facilitator: 'David Odom, LCADC', room: 'Serenity Room', enrolled: 7 },
+  { day: 'Thursday', time: '3:00 PM', curriculum: 'ACT-A (Pilot)', facilitator: 'Aisha Thompson, LCADC', room: 'Hope Room', enrolled: 6 },
   { day: 'Friday', time: '11:00 AM', curriculum: 'TSF (Group B)', facilitator: '__DE_CAC-AD_WRIGHT_I__', room: 'Sunrise Room', enrolled: 9 },
 ];
 

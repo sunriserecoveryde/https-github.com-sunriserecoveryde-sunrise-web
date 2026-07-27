@@ -42,7 +42,7 @@ const FINDINGS: Finding[] = [
     description: '3 of 18 audited charts are missing a signed Biopsychosocial Assessment within 72 hours of admission.',
     level: 'Major',
     status: 'In Progress',
-    owner: 'Sarah Jenkins, LPC',
+    owner: 'Sarah Jenkins, LCPC',
     due: '2026-07-25',
     notes: 'BPS templates updated. Counselors notified. Supervisor review scheduled 7/22.',
   },
@@ -82,7 +82,7 @@ const FINDINGS: Finding[] = [
     description: 'Aftercare plans completed but not reviewed with client and documented as acknowledged in chart for 2 cases.',
     level: 'Minor',
     status: 'Resolved',
-    owner: 'Maria Gonzales, LCSW',
+    owner: 'Maria Gonzales, LCADC',
     due: '2026-07-05',
     notes: 'Client acknowledgment form added to discharge checklist. Completed 7/4.',
   },
@@ -338,7 +338,7 @@ export function AuditCompliance({ navigate: _navigate, readOnly }: Props) {
                     <div className="mt-3 p-3 bg-gray-50 border border-border rounded-lg space-y-2">
                       <div className="text-xs font-semibold text-slate mb-1">Assign remediation owner</div>
                       <select className="w-full border border-border rounded-lg px-3 py-2 text-xs">
-                        <option>James S. Collins III, CD</option><option>Dr. Allen Hughes</option><option>Sarah Jenkins, LPC</option><option>Jessica Torres, RN</option><option>Kevin Wright, BHT</option>
+                        <option>James S. Collins III, CD</option><option>Dr. Allen Hughes</option><option>Sarah Jenkins, LCPC</option><option>Jessica Torres, RN</option><option>Kevin Wright, BHT</option>
                       </select>
                       <div className="flex gap-2">
                         <button onClick={() => { setAssignOwnerFor(null); setAuditActionSaved(f.id); setTimeout(() => setAuditActionSaved(null), 2500); }} className="text-xs bg-navy text-white px-3 py-1.5 rounded-lg">Assign</button>
@@ -563,12 +563,12 @@ export function AuditCompliance({ navigate: _navigate, readOnly }: Props) {
                 <tbody className="divide-y divide-border">
                   {[
                     { name: 'Dr. Robert Chen', role: 'Medical Director', hipaa: true, cpr: true, suicide: true, trauma: true, ethics: true, mat: true },
-                    { name: 'Sarah Jenkins, LPC', role: 'Counselor', hipaa: true, cpr: true, suicide: true, trauma: true, ethics: true, mat: true },
-                    { name: 'Maria Gonzales, LCSW', role: 'Counselor', hipaa: true, cpr: true, suicide: true, trauma: true, ethics: false, mat: true },
+                    { name: 'Sarah Jenkins, LCPC', role: 'Counselor', hipaa: true, cpr: true, suicide: true, trauma: true, ethics: true, mat: true },
+                    { name: 'Maria Gonzales, LCADC', role: 'Counselor', hipaa: true, cpr: true, suicide: true, trauma: true, ethics: false, mat: true },
                     { name: 'Dr. Emma Hughes', role: 'Psychiatrist', hipaa: true, cpr: false, suicide: true, trauma: true, ethics: true, mat: true },
                     { name: 'Jessica Park, RN', role: 'Charge Nurse', hipaa: true, cpr: true, suicide: true, trauma: false, ethics: true, mat: true },
                     { name: 'Marcus Thompson', role: 'Peer Support Spec.', hipaa: true, cpr: true, suicide: true, trauma: true, ethics: true, mat: false },
-                    { name: 'David Odom, LMFT', role: 'Family Therapist', hipaa: true, cpr: false, suicide: false, trauma: true, ethics: true, mat: false },
+                    { name: 'David Odom, LCADC', role: 'Family Therapist', hipaa: true, cpr: false, suicide: false, trauma: true, ethics: true, mat: false },
                     { name: 'Linda Vance', role: 'Utilization Review', hipaa: true, cpr: false, suicide: false, trauma: false, ethics: true, mat: false },
                     { name: 'Kevin Rivera, BHT', role: 'Behavioral Health Tech', hipaa: false, cpr: true, suicide: true, trauma: false, ethics: false, mat: false },
                     { name: 'Amanda Foster', role: 'Case Manager', hipaa: true, cpr: false, suicide: true, trauma: true, ethics: true, mat: true },

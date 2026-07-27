@@ -126,7 +126,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
   {
     id: 's1',
     firstName: 'Sarah', lastName: 'Jenkins',
-    credentials: ['LPC', 'CAC-AD'],
+    credentials: ['LCPC', 'CAC-AD'],
     title: 'Primary Counselor',
     roleId: 'certified_clinician',
     department: 'Clinical',
@@ -134,7 +134,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
     email: 's.jenkins@sunriserecovery.org', phone: '(301) 555-0102',
     photoInitials: 'SJ', avatarBg: 'bg-blue-500',
     npi: '1034567890',
-    licenseNumber: 'LPC-MD-11342', licenseState: 'MD',
+    licenseNumber: 'LCPC-MD-11342', licenseState: 'MD',
     licenseType: 'Licensed Professional Counselor',
     licenseExpiry: '2025-12-31',
     supervisorId: 's8',   // supervised by James S. Collins III (BAS)
@@ -143,12 +143,12 @@ export const STAFF_MEMBERS: StaffMember[] = [
     certifications: [
       {
         id: 'c4',
-        name: 'Licensed Professional Counselor (LPC)',
+        name: 'Licensed Professional Counselor (LCPC)',
         issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)',
-        number: 'LPC-MD-11342',
+        number: 'LCPC-MD-11342',
         issueDate: '2019-07-01', expiryDate: '2025-12-31', status: 'pending-renewal',
         ceuRequired: 40, ceuCompleted: 38,
-        notes: 'LPC requires 2 years post-master\'s supervised experience (3,000 hrs) before LCPC upgrade. Renews biennially — renewal due 12/31/2025.',
+        notes: 'LCPC requires 2 years post-master\'s supervised experience (3,000 hrs) before LCPC upgrade. Renews biennially — renewal due 12/31/2025.',
       },
       {
         id: 'c4b',
@@ -181,14 +181,14 @@ export const STAFF_MEMBERS: StaffMember[] = [
   {
     id: 's2',
     firstName: 'David', lastName: 'Odom',
-    credentials: ['LMFT'],
+    credentials: ['LCADC'],
     title: 'Mental Health Therapist',
     roleId: 'mh_therapist',
     department: 'Clinical',
     facility: 'Sunrise Recovery Center — Rockville, MD',
     email: 'd.odom@sunriserecovery.org', phone: '(301) 555-0103',
     photoInitials: 'DO', avatarBg: 'bg-purple-500',
-    licenseNumber: 'LMFT-MD-4421', licenseState: 'MD',
+    licenseNumber: 'LCADC-MD-4421', licenseState: 'MD',
     licenseType: 'Licensed Marriage & Family Therapist',
     licenseExpiry: '2026-04-30',
     hireDate: '2022-01-10', lastLogin: '2026-07-18 16:22',
@@ -196,9 +196,9 @@ export const STAFF_MEMBERS: StaffMember[] = [
     certifications: [
       {
         id: 'c7',
-        name: 'Licensed Marriage & Family Therapist (LMFT)',
+        name: 'Licensed Marriage & Family Therapist (LCADC)',
         issuingBody: 'Maryland Board of Professional Counselors and Therapists (MBPCT)',
-        number: 'LMFT-MD-4421',
+        number: 'LCADC-MD-4421',
         issueDate: '2020-05-01', expiryDate: '2026-04-30', status: 'active',
         ceuRequired: 40, ceuCompleted: 34,
         notes: 'Renews biennially. 40 CEUs required. MBPCT licenses LMFTs alongside LPCs and LCPCs under same board.',
@@ -393,7 +393,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
   // ─────────────────────────────────────────────────────────────────────────────
   // DELAWARE — Sunrise Recovery Center, Wilmington, DE
   // Licensing: Delaware Division of Professional Regulation / DSAMH
-  // SUD Credentialing: IC&RC (via DSAMH) — CAC-AD, CAADC, CAC-AD
+  // SUD Credentialing: IC&RC (via DSAMH) — CAC-AD, CAC-AD, CAC-AD
   // Medicaid: Delaware Medicaid — Diamond State Health Plan (Highmark)
   // State oversight: DSAMH (Division of Substance Abuse and Mental Health)
   // ─────────────────────────────────────────────────────────────────────────────
@@ -460,7 +460,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
         number: 'DE-CAC-AD-7831',
         issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'pending-renewal',
         ceuRequired: 40, ceuCompleted: 39,
-        notes: 'Delaware DSAMH recognizes IC&RC CAC-AD as required credential for SUD counselors. Working toward CAADC (advanced). Renewal application submitted 2/10/2025.',
+        notes: 'Delaware DSAMH recognizes IC&RC CAC-AD as required credential for SUD counselors. Working toward CAC-AD (advanced). Renewal application submitted 2/10/2025.',
       },
       {
         id: 'c22b',
@@ -532,7 +532,7 @@ export const STAFF_MEMBERS: StaffMember[] = [
   {
     id: 's14',
     firstName: 'Carlos', lastName: 'Rivera',
-    credentials: ['CAC-AD', 'CPRS'],
+    credentials: ['CAC-AD', 'ADT'],
     title: 'Aftercare Coordinator',
     roleId: 'aftercare_staff',
     department: 'Aftercare',
@@ -553,12 +553,12 @@ export const STAFF_MEMBERS: StaffMember[] = [
       },
       {
         id: 'c35',
-        name: 'CPRS — Certified Peer Recovery Specialist',
+        name: 'ADT — Certified Peer Recovery Specialist',
         issuingBody: 'Delaware Division of Substance Abuse and Mental Health (DSAMH)',
-        number: 'CPRS-DE-0891',
+        number: 'ADT-DE-0891',
         issueDate: '2023-01-01', expiryDate: '2027-01-01', status: 'active',
         ceuRequired: 20, ceuCompleted: 12,
-        notes: 'Delaware CPRS credential. Recognizes lived experience + formal training. Required for peer support roles in DSAMH-licensed programs.',
+        notes: 'Delaware ADT credential. Recognizes lived experience + formal training. Required for peer support roles in DSAMH-licensed programs.',
       },
     ],
     specializations: ['Step-Down Planning', 'Alumni Outreach', 'Peer Recovery Support', 'DSAMH Aftercare Documentation'],

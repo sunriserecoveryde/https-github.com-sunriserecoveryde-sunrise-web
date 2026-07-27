@@ -36,10 +36,10 @@ const PENDING: PendingAdmission[] = [
 ];
 
 const RECENT_ADMITS = [
-  { name: 'Marcus Odom', mrn: 'MRN-91002', admitted: '2026-07-16', program: 'Residential', counselor: 'Sarah Jenkins, LPC', bed: '3C' },
-  { name: 'Priya Mehta', mrn: 'MRN-90871', admitted: '2026-07-14', program: 'IOP', counselor: 'Maria Gonzales, LCSW', bed: 'N/A' },
-  { name: 'Devon Price', mrn: 'MRN-90754', admitted: '2026-07-12', program: 'PHP', counselor: 'David Odom, LMFT', bed: 'N/A' },
-  { name: 'Carol Sutton', mrn: 'MRN-90622', admitted: '2026-07-10', program: 'Residential', counselor: 'Sarah Jenkins, LPC', bed: '2B' },
+  { name: 'Marcus Odom', mrn: 'MRN-91002', admitted: '2026-07-16', program: 'Residential', counselor: 'Sarah Jenkins, LCPC', bed: '3C' },
+  { name: 'Priya Mehta', mrn: 'MRN-90871', admitted: '2026-07-14', program: 'IOP', counselor: 'Maria Gonzales, LCADC', bed: 'N/A' },
+  { name: 'Devon Price', mrn: 'MRN-90754', admitted: '2026-07-12', program: 'PHP', counselor: 'David Odom, LCADC', bed: 'N/A' },
+  { name: 'Carol Sutton', mrn: 'MRN-90622', admitted: '2026-07-10', program: 'Residential', counselor: 'Sarah Jenkins, LCPC', bed: '2B' },
 ];
 
 const STATUS_COLORS: Record<AdmitStatus, string> = {

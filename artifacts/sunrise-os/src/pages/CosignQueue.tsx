@@ -35,7 +35,7 @@ interface CosignItem {
 const QUEUE: CosignItem[] = [
   {
     id: 'cs1', patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential',
-    noteDate: '2026-07-17', noteType: 'BIRP', author: 'Sarah Jenkins, LPC', authorRole: 'Primary Counselor',
+    noteDate: '2026-07-17', noteType: 'BIRP', author: 'Sarah Jenkins, LCPC', authorRole: 'Primary Counselor',
     supervisor: 'James S. Collins III, Clinical Director', daysWaiting: 1, priority: 'Urgent',
     format: 'BIRP',
     preview: 'Client verbalized high AMA risk during individual session. Safety planning completed.',
@@ -58,7 +58,7 @@ const QUEUE: CosignItem[] = [
   },
   {
     id: 'cs3', patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP',
-    noteDate: '2026-07-17', noteType: 'DAP', author: 'David Odom, LMFT', authorRole: 'Primary Counselor',
+    noteDate: '2026-07-17', noteType: 'DAP', author: 'David Odom, LCADC', authorRole: 'Primary Counselor',
     supervisor: 'James S. Collins III, Clinical Director', daysWaiting: 1, priority: 'Routine',
     format: 'DAP',
     preview: 'Client engaged in discharge planning. Identified aftercare resources. Family meeting scheduled.',
@@ -174,8 +174,8 @@ export function CosignQueue({ navigate, readOnly }: Props) {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {[
-                    { name: 'Sarah Jenkins, LPC', notes: 52, avg: '3.1h', late: 0, pct: 100 },
-                    { name: 'David Odom, LMFT', notes: 44, avg: '5.8h', late: 2, pct: 95 },
+                    { name: 'Sarah Jenkins, LCPC', notes: 52, avg: '3.1h', late: 0, pct: 100 },
+                    { name: 'David Odom, LCADC', notes: 44, avg: '5.8h', late: 2, pct: 95 },
                     { name: 'Marcus Chen, CAC-AD', notes: 38, avg: '4.4h', late: 1, pct: 97 },
                     { name: 'Priya Nair, MSW', notes: 31, avg: '6.2h', late: 0, pct: 100 },
                     { name: 'Kevin Walsh, CAC-AD', notes: 22, avg: '9.1h', late: 3, pct: 86 },
@@ -353,21 +353,21 @@ export function CosignQueue({ navigate, readOnly }: Props) {
             <div className="space-y-4">
               {[
                 {
-                  supervisee: 'A. Brooks, LPC-Associate', supervisor: 'Dr. R. Okafor, LPC-S', date: '2026-07-15', type: 'Individual Supervision',
+                  supervisee: 'A. Brooks, LCPC-A', supervisor: 'Dr. R. Okafor, LCPC-S', date: '2026-07-15', type: 'Individual Supervision',
                   caseload: 8, topics: 'Reviewed trauma-informed approaches with dual-diagnosis patient (rm 3A). Discussed countertransference with AMA-risk patient. CBT homework compliance strategies.',
                   plan: 'Brooks to complete 2-hour MI refresher by Jul 30. Shared exemplary progress note from peers as model. Next session: July 29.',
                   rating: 'On Track', rColor: 'bg-green-100 text-green-700'
                 },
                 {
-                  supervisee: 'D. Williams, CAC-AD-II', supervisor: 'A. Simms, LCSW', date: '2026-07-14', type: 'Group Supervision',
+                  supervisee: 'D. Williams, CAC-AD-II', supervisor: 'A. Simms, LCADC', date: '2026-07-14', type: 'Group Supervision',
                   caseload: 10, topics: 'Group reviewed documentation standards for treatment plan objectives. Case presentation: chronic relapse patient with ambivalence about MAT.',
                   plan: 'Williams to revise two treatment plans flagged in peer review by 7/22. Schedule make-up session for missed July 1 group.',
                   rating: 'Needs Support', rColor: 'bg-amber-100 text-amber-700'
                 },
                 {
-                  supervisee: 'T. Jackson, CAC-AD', supervisor: 'A. Simms, LCSW', date: '2026-07-12', type: 'Individual Supervision',
-                  caseload: 11, topics: 'High-performing supervisee — discussed pathway to LPC licensure. Case consultation on patient with complex trauma and SUD. Reviewed family therapy engagement strategies.',
-                  plan: 'Jackson pursuing LPC-A application; supervisor endorsement signed. Exploring group co-facilitation opportunities.',
+                  supervisee: 'T. Jackson, CAC-AD', supervisor: 'A. Simms, LCADC', date: '2026-07-12', type: 'Individual Supervision',
+                  caseload: 11, topics: 'High-performing supervisee — discussed pathway to LCPC licensure. Case consultation on patient with complex trauma and SUD. Reviewed family therapy engagement strategies.',
+                  plan: 'Jackson pursuing LCPC-A application; supervisor endorsement signed. Exploring group co-facilitation opportunities.',
                   rating: 'Exemplary', rColor: 'bg-teal-100 text-teal-700'
                 },
               ].map(s => (
@@ -407,7 +407,7 @@ export function CosignQueue({ navigate, readOnly }: Props) {
               { label: 'Cosign Rate (30d)', value: '96%', color: 'text-green-600', sub: 'Of all notes requiring cosign' },
               { label: 'Avg Time to Cosign', value: '18h', color: 'text-blue-600', sub: 'From note submission to approval' },
               { label: 'Notes Overdue (>72h)', value: 3, color: 'text-amber-600', sub: 'Currently awaiting cosignature' },
-              { label: 'Provisional Staff (CAADC eligible)', value: 2, color: 'text-navy', sub: 'Require 100% cosign rate' },
+              { label: 'Provisional Staff (CAC-AD eligible)', value: 2, color: 'text-navy', sub: 'Require 100% cosign rate' },
             ].map(k => (
               <div key={k.label} className="card">
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
@@ -430,9 +430,9 @@ export function CosignQueue({ navigate, readOnly }: Props) {
                 {[
                   { name: 'T. Jackson', cred: 'CAC-AD (Provisional)', submitted: 48, ontime: 47, rate: '98%', wait: '12h', overdue: 1, flag: false },
                   { name: 'M. Rivera', cred: 'MS, Intern', submitted: 36, ontime: 33, rate: '92%', wait: '24h', overdue: 2, flag: true },
-                  { name: 'K. Nguyen', cred: 'CAADC (Provisional)', submitted: 42, ontime: 42, rate: '100%', wait: '10h', overdue: 0, flag: false },
-                  { name: 'A. Brooks', cred: 'LPC (Licensed)', submitted: 61, ontime: 61, rate: 'N/A (licensed)', wait: '—', overdue: 0, flag: false },
-                  { name: 'R. Torres', cred: 'LPC-MHSP (Licensed)', submitted: 55, ontime: 55, rate: 'N/A (licensed)', wait: '—', overdue: 0, flag: false },
+                  { name: 'K. Nguyen', cred: 'CAC-AD (Provisional)', submitted: 42, ontime: 42, rate: '100%', wait: '10h', overdue: 0, flag: false },
+                  { name: 'A. Brooks', cred: 'LCPC (Licensed)', submitted: 61, ontime: 61, rate: 'N/A (licensed)', wait: '—', overdue: 0, flag: false },
+                  { name: 'R. Torres', cred: 'LCPC (Licensed)', submitted: 55, ontime: 55, rate: 'N/A (licensed)', wait: '—', overdue: 0, flag: false },
                 ].map(r => (
                   <tr key={r.name} className={`hover:bg-gray-50 ${r.flag ? 'bg-amber-50/30' : ''}`}>
                     <td className="px-3 py-2 font-medium text-navy">{r.name}</td>
@@ -483,11 +483,11 @@ export function CosignQueue({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { status: 'Past Deadline', doc: 'Individual Progress Note', clin: 'M. Gonzales, LCSW', pt: 'R. Coleman', written: 'Jul 18 09:00', deadline: 'Jul 19 09:00', over: '3d 14h', sup: 'D. Reyes, LPC-S' },
-                  { status: 'Past Deadline', doc: 'Group Note (AM Session)', clin: 'T. Osei, CAC-AD', pt: 'Group — 7 pts', written: 'Jul 18 11:00', deadline: 'Jul 19 11:00', over: '3d 12h', sup: 'S. Jenkins, LPC-S' },
-                  { status: 'Past Deadline', doc: 'BPS Assessment — New Admit', clin: 'R. Patel, CAADC', pt: 'M. Torres', written: 'Jul 17 16:00', deadline: 'Jul 18 16:00', over: '4d 7h', sup: 'D. Reyes, LPC-S' },
-                  { status: 'Due in 2h', doc: 'Individual Progress Note', clin: 'L. Washington, LCAS', pt: 'K. Walsh', written: 'Jul 22 10:15', deadline: 'Jul 23 10:15', over: '—', sup: 'S. Jenkins, LPC-S' },
-                  { status: 'Due in 3h', doc: 'Discharge Summary Draft', clin: 'M. Gonzales, LCSW', pt: 'A. Santos', written: 'Jul 22 09:30', deadline: 'Jul 23 09:30', over: '—', sup: 'D. Reyes, LPC-S' },
+                  { status: 'Past Deadline', doc: 'Individual Progress Note', clin: 'M. Gonzales, LCADC', pt: 'R. Coleman', written: 'Jul 18 09:00', deadline: 'Jul 19 09:00', over: '3d 14h', sup: 'D. Reyes, LCPC-S' },
+                  { status: 'Past Deadline', doc: 'Group Note (AM Session)', clin: 'T. Osei, CAC-AD', pt: 'Group — 7 pts', written: 'Jul 18 11:00', deadline: 'Jul 19 11:00', over: '3d 12h', sup: 'S. Jenkins, LCPC-S' },
+                  { status: 'Past Deadline', doc: 'BPS Assessment — New Admit', clin: 'R. Patel, CAC-AD', pt: 'M. Torres', written: 'Jul 17 16:00', deadline: 'Jul 18 16:00', over: '4d 7h', sup: 'D. Reyes, LCPC-S' },
+                  { status: 'Due in 2h', doc: 'Individual Progress Note', clin: 'L. Washington, LCAS', pt: 'K. Walsh', written: 'Jul 22 10:15', deadline: 'Jul 23 10:15', over: '—', sup: 'S. Jenkins, LCPC-S' },
+                  { status: 'Due in 3h', doc: 'Discharge Summary Draft', clin: 'M. Gonzales, LCADC', pt: 'A. Santos', written: 'Jul 22 09:30', deadline: 'Jul 23 09:30', over: '—', sup: 'D. Reyes, LCPC-S' },
                 ].map(r => (
                   <tr key={r.doc + r.clin} className="hover:bg-gray-50">
                     <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.status === 'Past Deadline' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{r.status}</span></td>
@@ -521,8 +521,8 @@ export function CosignQueue({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'D. Reyes, LPC-S', cred: 'LPC-MHSP, NCC', signs: 'LPC, CAADC, MS Interns', queue: 5, avg: '3.2h', status: 'On Site' },
-                  { name: 'S. Jenkins, LPC-S', cred: 'LPC-MHSP', signs: 'CAC-AD, CAADC, Counseling Interns', queue: 4, avg: '2.8h', status: 'On Site' },
+                  { name: 'D. Reyes, LCPC-S', cred: 'LCPC, NCC', signs: 'LCPC, CAC-AD, MS Interns', queue: 5, avg: '3.2h', status: 'On Site' },
+                  { name: 'S. Jenkins, LCPC-S', cred: 'LCPC', signs: 'CAC-AD, CAC-AD, Counseling Interns', queue: 4, avg: '2.8h', status: 'On Site' },
                   { name: 'Dr. R. Chen, MD', cred: 'MD, ABAM', signs: 'Nursing notes, MAT orders, Medical notes', queue: 2, avg: '1.1h', status: 'On Site' },
                   { name: 'Dr. A. Hughes, MD', cred: 'MD, Psychiatry', signs: 'Psychiatric notes, medication orders', queue: 1, avg: '0.9h', status: 'Off Site (On-Call)' },
                 ].map(r => (

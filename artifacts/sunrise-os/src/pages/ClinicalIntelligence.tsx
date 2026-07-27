@@ -101,7 +101,7 @@ const CDS_ALERTS = [
     id: 'a2', severity: 'high', type: 'Safety Plan Required', patient: 'Jordan Hayes', timestamp: 'Today 09:02',
     title: 'PHQ-9 Item 9 positive — no active safety plan on file',
     detail: 'PHQ-9 item 9 scored 2 ("More than half the days"). Per COMAR 10.47.03.08B and the Maryland BHA Zero Suicide Initiative protocol, a Columbia Protocol Safety Planning Intervention (SPI) is required whenever suicidal ideation is endorsed. A formal written safety plan must be completed and co-signed before the client\'s next service encounter. No active safety plan found in chart.',
-    recommendation: 'Primary counselor (CAC-AD or higher) must complete Columbia SPI safety plan before end of current shift. Document in progress note and co-sign with BAS or LCPC/LCSW-C supervisor within 24 hours per COMAR 10.47.03. Notify medical director if imminent risk is assessed.',
+    recommendation: 'Primary counselor (CAC-AD or higher) must complete Columbia SPI safety plan before end of current shift. Document in progress note and co-sign with BAS or LCPC/LCADC supervisor within 24 hours per COMAR 10.47.03. Notify medical director if imminent risk is assessed.',
     ack: false,
   },
   {

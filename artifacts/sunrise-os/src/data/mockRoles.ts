@@ -52,7 +52,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'clinical_supervisor',
     label: 'Clinical Supervisor',
     shortLabel: 'Clinical Supervisor',
-    description: 'LCPC or LCSW-C (Maryland) / CAADC or LPCMH (Delaware). Must hold Board Approved Supervisor (BAS) designation per COMAR 10.47.01.22E (MD) or DSAMH-recognized supervisor status (DE). Required on-site whenever ADT or CSC-AD staff are providing direct services. Co-signs notes; documents required supervision hours in MD BHA supervision log.',
+    description: 'LCPC or LCADC (Maryland) / CAC-AD or LPCMH (Delaware). Must hold Board Approved Supervisor (BAS) designation per COMAR 10.47.01.22E (MD) or DSAMH-recognized supervisor status (DE). Required on-site whenever ADT or CSC-AD staff are providing direct services. Co-signs notes; documents required supervision hours in MD BHA supervision log.',
     color: 'bg-amber-500/20', textColor: 'text-amber-300', borderColor: 'border-amber-500/40', dotColor: 'bg-amber-400',
     category: 'Clinical',
     permissions: perms(
@@ -86,7 +86,7 @@ export const ROLES: RoleDefinition[] = [
     id: 'mh_therapist',
     label: 'Mental Health Therapist',
     shortLabel: 'MH Therapist',
-    description: 'LMFT, LCPC, or LCSW-C (MD) / LPCMH or LCSW (DE). Co-occurring MH focus. Licensed by MBPCT (MD) or DE Board of Mental Health & Chemical Dependency Professionals.',
+    description: 'LCADC, LCPC, or LCADC (MD) / LPCMH or LCADC (DE). Co-occurring MH focus. Licensed by MBPCT (MD) or DE Board of Mental Health & Chemical Dependency Professionals.',
     color: 'bg-purple-500/20', textColor: 'text-purple-300', borderColor: 'border-purple-500/40', dotColor: 'bg-purple-400',
     category: 'Clinical',
     permissions: perms(

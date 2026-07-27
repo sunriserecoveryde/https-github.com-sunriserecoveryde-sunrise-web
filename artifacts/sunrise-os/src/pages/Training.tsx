@@ -70,7 +70,7 @@ const SCHEDULED: ScheduledTraining[] = [
   { id: 'st1', title: 'HIPAA & 42 CFR Part 2 Annual Refresher', date: '2026-07-22', time: '9:00 AM – 11:00 AM', instructor: 'James S. Collins III', location: 'Conference Room A', registeredCount: 8, capacity: 20, category: 'Compliance', ceuHours: 2 },
   { id: 'st2', title: 'CPI Crisis De-escalation Recertification', date: '2026-07-29', time: '8:00 AM – 4:00 PM', instructor: 'Kevin Wright (CPI Certified)', location: 'Main Group Room', registeredCount: 6, capacity: 12, category: 'Clinical', ceuHours: 8 },
   { id: 'st3', title: 'Trauma-Informed Care — Level 2', date: '2026-08-05', time: '1:00 PM – 4:00 PM', instructor: 'Dr. Allen Hughes', location: 'Conference Room A', registeredCount: 4, capacity: 15, category: 'Clinical', ceuHours: 3 },
-  { id: 'st4', title: 'Motivational Interviewing (MI) Foundations', date: '2026-08-12', time: '9:00 AM – 12:00 PM', instructor: 'Maria Gonzales, LCSW', location: 'Group Room B', registeredCount: 7, capacity: 12, category: 'Clinical', ceuHours: 3 },
+  { id: 'st4', title: 'Motivational Interviewing (MI) Foundations', date: '2026-08-12', time: '9:00 AM – 12:00 PM', instructor: 'Maria Gonzales, LCADC', location: 'Group Room B', registeredCount: 7, capacity: 12, category: 'Clinical', ceuHours: 3 },
   { id: 'st5', title: 'Fire Safety & Emergency Evacuation Drill', date: '2026-08-19', time: '10:00 AM – 11:00 AM', instructor: 'Kevin Wright', location: 'Full Facility', registeredCount: 12, capacity: 30, category: 'Safety', ceuHours: 1 },
 ];
 
@@ -441,7 +441,7 @@ export function Training({ navigate, readOnly }: Props) {
             <div className="space-y-4">
               {[
                 {
-                  name: 'K. Nguyen, CAADC', role: 'Primary Counselor', startDate: '2026-07-07', preceptor: 'T. Jackson, CAC-AD',
+                  name: 'K. Nguyen, CAC-AD', role: 'Primary Counselor', startDate: '2026-07-07', preceptor: 'T. Jackson, CAC-AD',
                   modules: [
                     { name: 'Orientation & HR Policies', done: true, dueDate: 'Day 1' },
                     { name: 'HIPAA & 42 CFR Part 2 Training', done: true, dueDate: 'Day 2' },
@@ -515,7 +515,7 @@ export function Training({ navigate, readOnly }: Props) {
             <div className="grid grid-cols-2 gap-3 text-xs">
               {[
                 { title: 'ASAM Criteria & LOC Decision-Making', cat: 'Clinical', duration: '2.0 CEU', format: 'Self-paced video + quiz', level: 'All clinical staff', new: false },
-                { title: 'Motivational Interviewing — Foundations (MI-1)', cat: 'Clinical', duration: '6.0 CEU', format: 'Video series + role-play', level: 'Counselors, CPRS', new: false },
+                { title: 'Motivational Interviewing — Foundations (MI-1)', cat: 'Clinical', duration: '6.0 CEU', format: 'Video series + role-play', level: 'Counselors, ADT', new: false },
                 { title: 'Trauma-Informed Care in SUD Settings', cat: 'Clinical', duration: '3.0 CEU', format: 'Self-paced video + quiz', level: 'All clinical staff', new: true },
                 { title: 'MAT Basics: Buprenorphine, Naltrexone, Methadone', cat: 'Clinical', duration: '2.5 CEU', format: 'Video + case studies', level: 'All clinical staff', new: false },
                 { title: 'CIWA-Ar / COWS Assessment Proficiency', cat: 'Nursing', duration: '1.5 CEU', format: 'Video + competency check', level: 'Nursing staff', new: false },

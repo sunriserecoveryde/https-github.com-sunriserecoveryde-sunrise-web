@@ -24,14 +24,14 @@ interface Deficiency {
 }
 
 const DEFICIENCIES: Deficiency[] = [
-  { id: 'd1', patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential', counselor: 'Sarah Jenkins, LPC', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 5, detail: 'BIRP note 7/17 — Awaiting co-sign from James S. Collins III, Clinical Director.', priority: 'Critical' },
-  { id: 'd2', patientId: 'p2', patientName: 'Samantha Choi', mrn: 'MRN-74563', program: 'Residential', counselor: 'David Odom, LMFT', type: 'Missing Co-sign', dueDate: '2026-07-16', daysOverdue: 6, detail: 'Psychiatric evaluation 7/15 — awaiting co-sign from Dr. Allen Hughes.', priority: 'Critical' },
-  { id: 'd3', patientId: 'p3', patientName: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', counselor: 'Maria Gonzales, LCSW', type: 'Overdue Note', dueDate: '2026-07-16', daysOverdue: 6, detail: 'Daily progress note missing for 7/16. Required within 24 hours per policy.', priority: 'High' },
-  { id: 'd4', patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', counselor: 'Maria Gonzales, LCSW', type: 'Incomplete ASAM', dueDate: '2026-07-15', daysOverdue: 7, detail: 'Dimension 4 (Readiness to Change) and Dimension 5 (Relapse Potential) not scored.', priority: 'High' },
-  { id: 'd5', patientId: 'p6', patientName: 'Destiny Williams', mrn: 'MRN-55129', program: 'PHP', counselor: 'Sarah Jenkins, LPC', type: 'Missing UA', dueDate: '2026-07-14', daysOverdue: 8, detail: 'Chain of custody form missing for UA collected 7/13. Re-collection scheduled.', priority: 'High' },
-  { id: 'd6', patientId: 'p4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', counselor: 'Sarah Jenkins, LPC', type: 'Unsigned Treatment Plan', dueDate: '2026-07-14', daysOverdue: 8, detail: 'Treatment plan updated 7/12 — patient signature still pending.', priority: 'Moderate' },
-  { id: 'd7', patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', counselor: 'David Odom, LMFT', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 5, detail: 'DAP group note 7/17 — awaiting James S. Collins III co-sign.', priority: 'Critical' },
-  { id: 'd8', patientId: 'p8', patientName: 'Linda Farris', mrn: 'MRN-39018', program: 'IOP', counselor: 'Maria Gonzales, LCSW', type: 'Expired Auth', dueDate: '2026-07-12', daysOverdue: 10, detail: 'Aetna authorization expired 7/12. Continued stay request not yet submitted.', priority: 'Critical' },
+  { id: 'd1', patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential', counselor: 'Sarah Jenkins, LCPC', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 5, detail: 'BIRP note 7/17 — Awaiting co-sign from James S. Collins III, Clinical Director.', priority: 'Critical' },
+  { id: 'd2', patientId: 'p2', patientName: 'Samantha Choi', mrn: 'MRN-74563', program: 'Residential', counselor: 'David Odom, LCADC', type: 'Missing Co-sign', dueDate: '2026-07-16', daysOverdue: 6, detail: 'Psychiatric evaluation 7/15 — awaiting co-sign from Dr. Allen Hughes.', priority: 'Critical' },
+  { id: 'd3', patientId: 'p3', patientName: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', counselor: 'Maria Gonzales, LCADC', type: 'Overdue Note', dueDate: '2026-07-16', daysOverdue: 6, detail: 'Daily progress note missing for 7/16. Required within 24 hours per policy.', priority: 'High' },
+  { id: 'd4', patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', counselor: 'Maria Gonzales, LCADC', type: 'Incomplete ASAM', dueDate: '2026-07-15', daysOverdue: 7, detail: 'Dimension 4 (Readiness to Change) and Dimension 5 (Relapse Potential) not scored.', priority: 'High' },
+  { id: 'd5', patientId: 'p6', patientName: 'Destiny Williams', mrn: 'MRN-55129', program: 'PHP', counselor: 'Sarah Jenkins, LCPC', type: 'Missing UA', dueDate: '2026-07-14', daysOverdue: 8, detail: 'Chain of custody form missing for UA collected 7/13. Re-collection scheduled.', priority: 'High' },
+  { id: 'd6', patientId: 'p4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', counselor: 'Sarah Jenkins, LCPC', type: 'Unsigned Treatment Plan', dueDate: '2026-07-14', daysOverdue: 8, detail: 'Treatment plan updated 7/12 — patient signature still pending.', priority: 'Moderate' },
+  { id: 'd7', patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', counselor: 'David Odom, LCADC', type: 'Missing Co-sign', dueDate: '2026-07-17', daysOverdue: 5, detail: 'DAP group note 7/17 — awaiting James S. Collins III co-sign.', priority: 'Critical' },
+  { id: 'd8', patientId: 'p8', patientName: 'Linda Farris', mrn: 'MRN-39018', program: 'IOP', counselor: 'Maria Gonzales, LCADC', type: 'Expired Auth', dueDate: '2026-07-12', daysOverdue: 10, detail: 'Aetna authorization expired 7/12. Continued stay request not yet submitted.', priority: 'Critical' },
 ];
 
 const CHART_COMPLETENESS = MOCK_PATIENTS.slice(0, 8).map((p, i) => {
@@ -76,9 +76,9 @@ const COMPLETENESS_TREND = [
 ];
 
 const COUNSELOR_PERF = [
-  { name: 'Sarah Jenkins, LPC',     on_time: 92, avg_days: 0.9, deficiencies: 3, notes_month: 48 },
-  { name: 'Maria Gonzales, LCSW',   on_time: 85, avg_days: 1.4, deficiencies: 3, notes_month: 42 },
-  { name: 'David Odom, LMFT',       on_time: 91, avg_days: 1.0, deficiencies: 2, notes_month: 39 },
+  { name: 'Sarah Jenkins, LCPC',     on_time: 92, avg_days: 0.9, deficiencies: 3, notes_month: 48 },
+  { name: 'Maria Gonzales, LCADC',   on_time: 85, avg_days: 1.4, deficiencies: 3, notes_month: 42 },
+  { name: 'David Odom, LCADC',       on_time: 91, avg_days: 1.0, deficiencies: 2, notes_month: 39 },
   { name: 'Dr. Allen Hughes',       on_time: 97, avg_days: 0.5, deficiencies: 0, notes_month: 18 },
 ];
 
@@ -375,11 +375,11 @@ export function ChartReview({ navigate, readOnly }: Props) {
               <tbody className="divide-y divide-border">
                 {[
                   { clinician: 'T. Jackson, CAC-AD', type: 'Progress Note', score: 92, strength: 'Excellent CBT language', improve: 'Goal linkage', reviewer: 'Dr. Okafor', outcome: 'Exemplary', oColor: 'bg-green-100 text-green-700' },
-                  { clinician: 'M. Rivera, MS', type: 'Biopsychosocial', score: 88, strength: 'Thorough psychosocial hx', improve: 'SUD history detail', reviewer: 'A. Simms, LCSW', outcome: 'Satisfactory', oColor: 'bg-blue-100 text-blue-700' },
-                  { clinician: 'A. Brooks, LPC', type: 'Group Note', score: 74, strength: 'Good attendance tracking', improve: 'Individualized observations', reviewer: 'Dr. Okafor', outcome: 'Action Plan', oColor: 'bg-amber-100 text-amber-700' },
+                  { clinician: 'M. Rivera, MS', type: 'Biopsychosocial', score: 88, strength: 'Thorough psychosocial hx', improve: 'SUD history detail', reviewer: 'A. Simms, LCADC', outcome: 'Satisfactory', oColor: 'bg-blue-100 text-blue-700' },
+                  { clinician: 'A. Brooks, LCPC', type: 'Group Note', score: 74, strength: 'Good attendance tracking', improve: 'Individualized observations', reviewer: 'Dr. Okafor', outcome: 'Action Plan', oColor: 'bg-amber-100 text-amber-700' },
                   { clinician: 'K. Santos, RN', type: 'Nursing Note', score: 95, strength: 'CIWA documentation thorough', improve: '—', reviewer: 'J. Martinez, DON', outcome: 'Exemplary', oColor: 'bg-green-100 text-green-700' },
-                  { clinician: 'D. Williams, CAC-AD', type: 'Treatment Plan', score: 71, strength: 'Goal clarity', improve: 'Measurable objectives needed', reviewer: 'A. Simms, LCSW', outcome: 'Action Plan', oColor: 'bg-amber-100 text-amber-700' },
-                  { clinician: 'P. Chen, LMFT', type: 'Family Session Note', score: 90, strength: 'Systems lens applied well', improve: 'Follow-up documentation', reviewer: 'Dr. Okafor', outcome: 'Satisfactory', oColor: 'bg-blue-100 text-blue-700' },
+                  { clinician: 'D. Williams, CAC-AD', type: 'Treatment Plan', score: 71, strength: 'Goal clarity', improve: 'Measurable objectives needed', reviewer: 'A. Simms, LCADC', outcome: 'Action Plan', oColor: 'bg-amber-100 text-amber-700' },
+                  { clinician: 'P. Chen, LCADC', type: 'Family Session Note', score: 90, strength: 'Systems lens applied well', improve: 'Follow-up documentation', reviewer: 'Dr. Okafor', outcome: 'Satisfactory', oColor: 'bg-blue-100 text-blue-700' },
                 ].map(r => (
                   <tr key={r.clinician} className="hover:bg-gray-50">
                     <td className="px-3 py-2.5 font-medium text-navy">{r.clinician}</td>
@@ -482,11 +482,11 @@ export function ChartReview({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'S. Jenkins', cred: 'LPC', notes: 48, ontime: '96%', def: '4%', cosign: '100%', quality: 94, top: 'Missing TP link', trend: '↑' },
-                  { name: 'D. Odom', cred: 'LMFT', notes: 41, ontime: '93%', def: '7%', cosign: '100%', quality: 91, top: 'Vague response content', trend: '→' },
-                  { name: 'M. Gonzales', cred: 'LCSW', notes: 55, ontime: '89%', def: '11%', cosign: '87%', quality: 83, top: 'Missing co-sign + late notes', trend: '↓' },
+                  { name: 'S. Jenkins', cred: 'LCPC', notes: 48, ontime: '96%', def: '4%', cosign: '100%', quality: 94, top: 'Missing TP link', trend: '↑' },
+                  { name: 'D. Odom', cred: 'LCADC', notes: 41, ontime: '93%', def: '7%', cosign: '100%', quality: 91, top: 'Vague response content', trend: '→' },
+                  { name: 'M. Gonzales', cred: 'LCADC', notes: 55, ontime: '89%', def: '11%', cosign: '87%', quality: 83, top: 'Missing co-sign + late notes', trend: '↓' },
                   { name: 'T. Osei', cred: 'CAC-AD', notes: 32, ontime: '100%', def: '3%', cosign: '100%', quality: 97, top: 'None identified', trend: '↑' },
-                  { name: 'R. Patel', cred: 'CAADC', notes: 29, ontime: '97%', def: '3%', cosign: '100%', quality: 95, top: 'Missing crisis plan link', trend: '↑' },
+                  { name: 'R. Patel', cred: 'CAC-AD', notes: 29, ontime: '97%', def: '3%', cosign: '100%', quality: 95, top: 'Missing crisis plan link', trend: '↑' },
                   { name: 'L. Washington', cred: 'LCAS', notes: 44, ontime: '86%', def: '14%', cosign: '91%', quality: 79, top: 'Late entries + vague content', trend: '↓' },
                   { name: 'J. Torres', cred: 'RN, CARN', notes: 67, ontime: '98%', def: '2%', cosign: 'N/A', quality: 96, top: 'Rare: missing VS reference', trend: '→' },
                 ].map(r => (

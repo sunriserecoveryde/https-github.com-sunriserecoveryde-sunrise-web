@@ -87,12 +87,12 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   // ── Group attendance generated from LOS ──────────────────────────────────
   const groupSessions = (() => {
     const groups = [
-      { name: 'Morning Process Group', facilitator: 'Sarah Jenkins, LPC', topic: 'Coping Skills & Triggers', time: '9:00 AM' },
-      { name: 'Psychoeducation', facilitator: 'David Odom, LMFT', topic: 'Disease Model of Addiction', time: '10:30 AM' },
-      { name: 'Relapse Prevention', facilitator: 'Maria Gonzales, LCSW', topic: 'High-Risk Situations', time: '1:00 PM' },
-      { name: 'Evening Reflection', facilitator: 'Sarah Jenkins, LPC', topic: 'Gratitude & Accountability', time: '7:00 PM' },
+      { name: 'Morning Process Group', facilitator: 'Sarah Jenkins, LCPC', topic: 'Coping Skills & Triggers', time: '9:00 AM' },
+      { name: 'Psychoeducation', facilitator: 'David Odom, LCADC', topic: 'Disease Model of Addiction', time: '10:30 AM' },
+      { name: 'Relapse Prevention', facilitator: 'Maria Gonzales, LCADC', topic: 'High-Risk Situations', time: '1:00 PM' },
+      { name: 'Evening Reflection', facilitator: 'Sarah Jenkins, LCPC', topic: 'Gratitude & Accountability', time: '7:00 PM' },
       { name: 'Trauma-Informed Care', facilitator: 'Dr. Allen Hughes', topic: 'PTSD & Co-occurring Disorders', time: '2:30 PM' },
-      { name: 'Family Systems', facilitator: 'David Odom, LMFT', topic: 'Communication & Boundaries', time: '11:00 AM' },
+      { name: 'Family Systems', facilitator: 'David Odom, LCADC', topic: 'Communication & Boundaries', time: '11:00 AM' },
     ];
     const statuses: Array<'Present' | 'Absent' | 'Excused'> = ['Present', 'Present', 'Present', 'Absent', 'Present', 'Excused', 'Present', 'Present'];
     const sessions: Array<{ id: string; date: string; name: string; facilitator: string; topic: string; time: string; status: 'Present' | 'Absent' | 'Excused'; note: string }> = [];

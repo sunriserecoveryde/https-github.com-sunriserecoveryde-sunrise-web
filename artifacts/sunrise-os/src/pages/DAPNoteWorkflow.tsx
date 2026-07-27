@@ -437,7 +437,7 @@ export function DAPNoteWorkflow({ navigate: _navigate }: DAPNoteWorkflowProps) {
     deliveryMethod: 'In-person',
     levelOfCare: '',
     serviceType: 'Individual Counseling',
-    participants: 'Jordan Rivera, LCSW',
+    participants: 'Jordan Rivera, LCADC',
   });
   const [goal, setGoal] = useState<TestTreatmentGoal | null>(null);
   const [input, setInput] = useState<ClinicianInput>({
@@ -1105,7 +1105,7 @@ export function DAPNoteWorkflow({ navigate: _navigate }: DAPNoteWorkflowProps) {
             </label>
             <input value={svc.participants}
               onChange={e => setSvc(p => ({ ...p, participants: e.target.value }))}
-              placeholder="e.g. Jordan Rivera, LCSW, CADC-II"
+              placeholder="e.g. Jordan Rivera, LCADC, CADC-II"
               className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] text-navy focus:outline-none focus:ring-2 focus:ring-sunrise-orange/30" />
           </div>
           <div>

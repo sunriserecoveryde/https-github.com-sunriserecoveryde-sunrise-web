@@ -540,7 +540,7 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
                   { name: 'Monica Delgado', milestone: '90 Days Sober', date: '2026-07-15', program: 'PHP alum', note: 'Living with family. Outpatient therapy continuing.' },
                   { name: 'Stuart Fink', milestone: '1 Year Sober', date: '2026-07-10', program: 'IOP alum', note: 'Peer support volunteer at Sunrise. Leading alumni group.' },
                   { name: 'Jasmine Hayward', milestone: '30 Days (Re-entry)', date: '2026-07-05', program: 'Residential — readmit alum', note: 'Returned after relapse. Now 30 days clean in current admission.' },
-                  { name: 'David Okafor', milestone: '2 Years Sober', date: '2026-06-28', program: 'Residential alum', note: 'Pursuing CPRS certification. Mentors 2 current patients.' },
+                  { name: 'David Okafor', milestone: '2 Years Sober', date: '2026-06-28', program: 'Residential alum', note: 'Pursuing ADT certification. Mentors 2 current patients.' },
                 ].map(a => (
                   <div key={a.name} className="flex items-start gap-3 p-2.5 border border-border rounded-lg">
                     <div className="w-9 h-9 rounded-full bg-navy text-white text-sm font-bold flex items-center justify-center shrink-0">{a.name.split(' ').map(n=>n[0]).join('')}</div>
@@ -584,8 +584,8 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
                 <h3 className="font-semibold text-navy text-sm mb-3">Alumni Meeting Schedule</h3>
                 <div className="space-y-2 text-xs">
                   {[
-                    { day: 'Every Tuesday', time: '6:00 PM – 7:30 PM', name: 'Sunrise Alumni Group', location: 'Main Conference Room, Building A', facilitator: 'Marcus Thompson, CPRS (PSS)' },
-                    { day: 'First Sunday/month', time: '2:00 PM – 4:00 PM', name: 'Family & Alumni Reunion Meeting', location: 'Outdoor Pavilion / Rain: Main Hall', facilitator: 'Sarah Jenkins, LPC' },
+                    { day: 'Every Tuesday', time: '6:00 PM – 7:30 PM', name: 'Sunrise Alumni Group', location: 'Main Conference Room, Building A', facilitator: 'Marcus Thompson, ADT (PSS)' },
+                    { day: 'First Sunday/month', time: '2:00 PM – 4:00 PM', name: 'Family & Alumni Reunion Meeting', location: 'Outdoor Pavilion / Rain: Main Hall', facilitator: 'Sarah Jenkins, LCPC' },
                     { day: 'Third Friday/month', time: '5:30 PM – 6:30 PM', name: 'Milestone Celebration (chips & share)', location: 'Sunrise Café', facilitator: 'David Okafor (2-year alum volunteer)' },
                   ].map(m => (
                     <div key={m.name} className="p-2.5 border border-border rounded-lg">
@@ -684,10 +684,10 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
 
       {tab === 'Peer Support Network' && (
         <div className="space-y-5">
-          <div className="text-sm text-slate">Certified Peer Recovery Specialists (CPRS) and mutual aid network connections — available to support patients during treatment and post-discharge.</div>
+          <div className="text-sm text-slate">Certified Peer Recovery Specialists (ADT) and mutual aid network connections — available to support patients during treatment and post-discharge.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label: 'CPRS on Staff', value: 3, color: 'text-navy', sub: 'Employed at Sunrise' },
+              { label: 'ADT on Staff', value: 3, color: 'text-navy', sub: 'Employed at Sunrise' },
               { label: 'Active Peer Mentors', value: 14, color: 'text-blue-600', sub: 'Alumni volunteers engaged' },
               { label: 'Patients with Peer Match', value: 24, color: 'text-green-600', sub: 'Of 36 current patients' },
               { label: 'Peer Touchpoints (30d)', value: 87, color: 'text-teal-600', sub: 'Calls, visits, texts combined' },
@@ -701,12 +701,12 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-5">
             <div className="card">
-              <h3 className="font-semibold text-navy text-sm mb-3">CPRS Team — Sunrise Staff</h3>
+              <h3 className="font-semibold text-navy text-sm mb-3">ADT Team — Sunrise Staff</h3>
               <div className="space-y-3 text-xs">
                 {[
-                  { name: 'Derrick Hampton, CPRS', spec: 'OUD/MAT, Criminal Justice', exp: '6 yr recovery, 3 yr CPRS', cases: 9, avail: 'Mon–Fri 9a–5p', type: 'OUD' },
-                  { name: 'Tamika Powell, CPRS', spec: 'Women\'s issues, Co-occurring', exp: '8 yr recovery, 4 yr CPRS', cases: 8, avail: 'Mon–Thu 10a–6p', type: 'Women' },
-                  { name: 'Carlos Ramos, CPRS', spec: 'Family recovery, Stimulant use', exp: '5 yr recovery, 2 yr CPRS', cases: 7, avail: 'Tue–Sat 8a–4p', type: 'Stimulant' },
+                  { name: 'Derrick Hampton, ADT', spec: 'OUD/MAT, Criminal Justice', exp: '6 yr recovery, 3 yr ADT', cases: 9, avail: 'Mon–Fri 9a–5p', type: 'OUD' },
+                  { name: 'Tamika Powell, ADT', spec: 'Women\'s issues, Co-occurring', exp: '8 yr recovery, 4 yr ADT', cases: 8, avail: 'Mon–Thu 10a–6p', type: 'Women' },
+                  { name: 'Carlos Ramos, ADT', spec: 'Family recovery, Stimulant use', exp: '5 yr recovery, 2 yr ADT', cases: 7, avail: 'Tue–Sat 8a–4p', type: 'Stimulant' },
                 ].map(p => (
                   <div key={p.name} className="border border-border rounded-xl p-3">
                     <div className="font-semibold text-navy mb-0.5">{p.name}</div>

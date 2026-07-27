@@ -301,12 +301,12 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
               <h3 className="font-semibold text-navy text-sm mb-3">Groups by Type & Facilitator</h3>
               <div className="space-y-3">
                 {[
-                  { type: 'Process Group', count: 3, facilitator: 'S. Jenkins, LPC', color: 'bg-blue-100 text-blue-800' },
-                  { type: 'Psychoeducation', count: 4, facilitator: 'D. Odom, LMFT', color: 'bg-purple-100 text-purple-800' },
-                  { type: 'CBT / DBT Skills', count: 2, facilitator: 'S. Jenkins, LPC', color: 'bg-green-100 text-green-800' },
-                  { type: 'Relapse Prevention', count: 2, facilitator: 'M. Chen, LSW', color: 'bg-amber-100 text-amber-800' },
-                  { type: 'Trauma-Informed', count: 1, facilitator: 'S. Jenkins, LPC', color: 'bg-red-100 text-red-800' },
-                  { type: 'Family Education', count: 1, facilitator: 'D. Odom, LMFT', color: 'bg-teal-100 text-teal-800' },
+                  { type: 'Process Group', count: 3, facilitator: 'S. Jenkins, LCPC', color: 'bg-blue-100 text-blue-800' },
+                  { type: 'Psychoeducation', count: 4, facilitator: 'D. Odom, LCADC', color: 'bg-purple-100 text-purple-800' },
+                  { type: 'CBT / DBT Skills', count: 2, facilitator: 'S. Jenkins, LCPC', color: 'bg-green-100 text-green-800' },
+                  { type: 'Relapse Prevention', count: 2, facilitator: 'M. Chen, LCADC', color: 'bg-amber-100 text-amber-800' },
+                  { type: 'Trauma-Informed', count: 1, facilitator: 'S. Jenkins, LCPC', color: 'bg-red-100 text-red-800' },
+                  { type: 'Family Education', count: 1, facilitator: 'D. Odom, LCADC', color: 'bg-teal-100 text-teal-800' },
                 ].map(r => (
                   <div key={r.type} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -492,8 +492,8 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
                 <h3 className="font-semibold text-navy text-sm mb-3">Facilitator Qualification Requirements</h3>
                 <div className="space-y-2 text-xs">
                   {[
-                    { group: 'CBT / Trauma Groups', quals: 'LMFT, LPC, LCSW, or licensed psychologist. Must have CBT/trauma-specific training documentation.' },
-                    { group: 'Process Groups', quals: 'CAC-AD, CAADC, or licensed clinician. Minimum 2 years group facilitation experience.' },
+                    { group: 'CBT / Trauma Groups', quals: 'LCADC, LCPC, LCADC, or licensed psychologist. Must have CBT/trauma-specific training documentation.' },
+                    { group: 'Process Groups', quals: 'CAC-AD, CAC-AD, or licensed clinician. Minimum 2 years group facilitation experience.' },
                     { group: 'Medication Education', quals: 'RN, MD, NP, or PA. CAC-AD co-facilitation recommended.' },
                     { group: 'Psychoeducation / Life Skills', quals: 'CSC-AD, CAC-AD, or supervised intern with co-facilitator approval.' },
                     { group: 'Mindfulness / Yoga', quals: 'Certified instructor (MBRP, 200hr Yoga, or equivalent) plus CAC-AD oversight.' },
@@ -614,7 +614,7 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: 'Avg Groups / Clinician / Week', value: 6.2, color: 'text-navy', sub: 'Target: ≤8' },
-              { label: 'Highest Load', value: 9, color: 'text-amber-600', sub: 'S. Jenkins, LPC — monitor' },
+              { label: 'Highest Load', value: 9, color: 'text-amber-600', sub: 'S. Jenkins, LCPC — monitor' },
               { label: 'Lowest Load', value: 4, color: 'text-green-600', sub: 'T. Osei, CAC-AD — capacity' },
               { label: 'Facilitators at or Over Target', value: 2, color: 'text-red-600', sub: 'Need redistribution review' },
             ].map(k => (
@@ -637,11 +637,11 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'S. Jenkins', cred: 'LPC', groups: 9, att: 7.2, cases: 14, hrs: 38, status: 'At Limit' },
-                  { name: 'D. Odom', cred: 'LMFT', groups: 7, att: 6.8, cases: 12, hrs: 34, status: 'Normal' },
-                  { name: 'M. Gonzales', cred: 'LCSW', groups: 8, att: 7.0, cases: 13, hrs: 36, status: 'High' },
+                  { name: 'S. Jenkins', cred: 'LCPC', groups: 9, att: 7.2, cases: 14, hrs: 38, status: 'At Limit' },
+                  { name: 'D. Odom', cred: 'LCADC', groups: 7, att: 6.8, cases: 12, hrs: 34, status: 'Normal' },
+                  { name: 'M. Gonzales', cred: 'LCADC', groups: 8, att: 7.0, cases: 13, hrs: 36, status: 'High' },
                   { name: 'T. Osei', cred: 'CAC-AD', groups: 4, att: 8.1, cases: 8, hrs: 24, status: 'Under' },
-                  { name: 'R. Patel', cred: 'CAADC', groups: 5, att: 7.5, cases: 9, hrs: 28, status: 'Normal' },
+                  { name: 'R. Patel', cred: 'CAC-AD', groups: 5, att: 7.5, cases: 9, hrs: 28, status: 'Normal' },
                   { name: 'L. Washington', cred: 'LCAS', groups: 9, att: 6.4, cases: 15, hrs: 40, status: 'At Limit' },
                 ].map(r => (
                   <tr key={r.name} className="hover:bg-gray-50">
@@ -707,7 +707,7 @@ export function GroupSchedule({ navigate, readOnly }: { navigate: (s: Screen) =>
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Facilitator</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>Sarah Jenkins, LPC</option><option>Maria Gonzales, LCSW</option><option>David Odom, LMFT</option>
+                    <option>Sarah Jenkins, LCPC</option><option>Maria Gonzales, LCADC</option><option>David Odom, LCADC</option>
                   </select>
                 </div>
               </div>

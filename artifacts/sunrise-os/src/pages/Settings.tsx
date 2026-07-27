@@ -244,9 +244,9 @@ export function Settings({ navigate, readOnly }: Props) {
                   { name: 'Dr. Robert Chen', role: 'Attending Physician', dept: 'Medical', access: 'Physician', active: true },
                   { name: 'Dr. Emily Stone', role: 'Medical Director', dept: 'Medical', access: 'Physician', active: true },
                   { name: 'Dr. Allen Hughes', role: 'Psychiatrist', dept: 'Medical', access: 'Physician', active: true },
-                  { name: 'Sarah Jenkins, LPC', role: 'Primary Counselor', dept: 'Clinical', access: 'Clinician', active: true },
-                  { name: 'David Odom, LMFT', role: 'Primary Counselor', dept: 'Clinical', access: 'Clinician', active: true },
-                  { name: 'Maria Gonzales, LCSW', role: 'Primary Counselor', dept: 'Clinical', access: 'Clinician', active: true },
+                  { name: 'Sarah Jenkins, LCPC', role: 'Primary Counselor', dept: 'Clinical', access: 'Clinician', active: true },
+                  { name: 'David Odom, LCADC', role: 'Primary Counselor', dept: 'Clinical', access: 'Clinician', active: true },
+                  { name: 'Maria Gonzales, LCADC', role: 'Primary Counselor', dept: 'Clinical', access: 'Clinician', active: true },
                   { name: 'Jessica Torres, RN', role: 'Charge Nurse', dept: 'Nursing', access: 'Nursing', active: true },
                   { name: 'Michael Boyd, RN', role: 'Nurse', dept: 'Nursing', access: 'Nursing', active: true },
                   { name: 'Amanda Lewis', role: 'Intake Coordinator', dept: 'Admissions', access: 'Coordinator', active: true },
@@ -525,7 +525,7 @@ export function Settings({ navigate, readOnly }: Props) {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Credential</label>
-                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. LCSW, RN, MD" />
+                  <input type="text" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. LCADC, RN, MD" />
                 </div>
               </div>
             </div>

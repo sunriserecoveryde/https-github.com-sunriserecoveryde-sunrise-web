@@ -33,19 +33,19 @@ const INCIDENTS: Incident[] = [
   {
     id: 'INC-2026-041', date: '2026-07-17', time: '14:22', type: 'AMA Attempt', severity: 'High',
     patientName: 'Devon Price', patientId: 'p17', program: 'Residential', location: 'Common Area / Front Door',
-    reportedBy: 'Kevin Wright, BHT', assignedTo: 'David Odom, LMFT', status: 'Under Review',
+    reportedBy: 'Kevin Wright, BHT', assignedTo: 'David Odom, LCADC', status: 'Under Review',
     summary: 'Client verbalized intent to leave AMA. Escorted back to common area by BHT.',
     narrative: 'At approximately 14:22, client Devon Price was observed by BHT Kevin Wright approaching the front door with his personal bag. Client stated, "I\'m done. I\'m leaving." BHT calmly engaged client using de-escalation techniques. Client agreed to speak with primary counselor David Odom. Safety plan reviewed and updated. Client agreed to remain through the weekend pending housing update from social worker.',
     immediateActions: ['BHT de-escalation initiated', 'Primary counselor notified', 'Physician notified', 'Safety plan reviewed and signed', 'Family/contact NOT notified per 42 CFR Part 2'],
     followUps: [
-      { date: '2026-07-18', note: 'David Odom met with client. Housing referral submitted. Client mood improved.', by: 'David Odom, LMFT', done: true },
+      { date: '2026-07-18', note: 'David Odom met with client. Housing referral submitted. Client mood improved.', by: 'David Odom, LCADC', done: true },
       { date: '2026-07-19', note: 'Clinical director review required', by: 'James S. Collins III, CD', done: false },
     ],
   },
   {
     id: 'INC-2026-040', date: '2026-07-16', time: '09:45', type: 'Behavioral Escalation', severity: 'Moderate',
     patientName: 'Devon Patel', patientId: 'p9', program: 'Residential', location: 'Group Therapy Room B',
-    reportedBy: 'Maria Gonzales, LCSW', assignedTo: 'Dr. Allen Hughes', status: 'Documented',
+    reportedBy: 'Maria Gonzales, LCADC', assignedTo: 'Dr. Allen Hughes', status: 'Documented',
     summary: 'Client became agitated during group, exhibiting paranoid ideation. Required redirection and removed from group.',
     narrative: 'During morning process group, Devon Patel became increasingly agitated, making statements suggesting another client was "recording him." Therapist Maria Gonzales calmly redirected client, using grounding techniques. Client was escorted from group to private room with BHT. Psych Dr. Hughes notified and conducted same-day evaluation. Medication adjustment (Risperdal 1mg PRN) ordered. Group resumed without further incident.',
     immediateActions: ['Removed from group (non-disruptive manner)', 'BHT escort to cool-down room', 'Dr. Hughes notified', 'Medication PRN administered (Risperdal 0.5mg)', 'Other clients debriefed by co-facilitator'],
@@ -83,7 +83,7 @@ const INCIDENTS: Incident[] = [
   {
     id: 'INC-2026-029', date: '2026-07-02', time: '11:30', type: 'Self-Harm Ideation', severity: 'High',
     patientName: 'Marcus Webb', patientId: 'p1', program: 'Residential', location: 'Individual Therapy Office',
-    reportedBy: 'Sarah Jenkins, LPC', assignedTo: 'Dr. Allen Hughes', status: 'Closed',
+    reportedBy: 'Sarah Jenkins, LCPC', assignedTo: 'Dr. Allen Hughes', status: 'Closed',
     summary: 'Client disclosed passive SI during individual session. No plan or intent. Safety contract signed. Psych evaluated same day.',
     narrative: 'During individual therapy session on 07/02, Marcus Webb disclosed passive suicidal ideation ("sometimes I wonder if it would be easier not to be here anymore"). No specific plan, intent, or means identified. Columbia protocol administered (score: 1). Client able to engage safety plan discussion and agreed to safeguards. Dr. Hughes notified and conducted same-day evaluation. No inpatient recommendation. Heightened monitoring protocol initiated (30-minute checks). Client remained engaged in treatment.',
     immediateActions: ['Columbia Protocol administered', 'Dr. Hughes psychiatric evaluation same day', 'Safety plan updated and signed by client', '30-minute observation checks initiated', 'Family notification declined by client per right to privacy'],
@@ -334,7 +334,7 @@ export function IncidentReporting({ navigate, readOnly }: Props) {
               <div>
                 <label className="block text-xs font-semibold text-slate uppercase mb-1">Reported By *</label>
                 <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                  {['Jessica Torres, RN', 'Michael Boyd, RN', 'Kevin Wright, BHT', 'Sarah Jenkins, LPC', 'David Odom, LMFT', 'Maria Gonzales, LCSW', 'Dr. Robert Chen', 'Dr. Emily Stone', 'Dr. Allen Hughes'].map(s => <option key={s}>{s}</option>)}
+                  {['Jessica Torres, RN', 'Michael Boyd, RN', 'Kevin Wright, BHT', 'Sarah Jenkins, LCPC', 'David Odom, LCADC', 'Maria Gonzales, LCADC', 'Dr. Robert Chen', 'Dr. Emily Stone', 'Dr. Allen Hughes'].map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
             </div>
@@ -353,7 +353,7 @@ export function IncidentReporting({ navigate, readOnly }: Props) {
             <div>
               <label className="block text-xs font-semibold text-slate uppercase mb-1">Assign To</label>
               <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                {['James S. Collins III (Clinical Supervisor)', 'Dr. Robert Chen', 'Dr. Emily Stone', 'Dr. Allen Hughes', 'Sarah Jenkins, LPC', 'David Odom, LMFT'].map(s => <option key={s}>{s}</option>)}
+                {['James S. Collins III (Clinical Supervisor)', 'Dr. Robert Chen', 'Dr. Emily Stone', 'Dr. Allen Hughes', 'Sarah Jenkins, LCPC', 'David Odom, LCADC'].map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
             <div className="flex gap-3">

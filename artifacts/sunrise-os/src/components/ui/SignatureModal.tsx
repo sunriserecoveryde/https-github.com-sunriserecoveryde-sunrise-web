@@ -131,7 +131,7 @@ export function SignatureModal({
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder={
-                signerType === 'client' ? 'Full legal name…' : 'Jane Smith, LPC, CAADC…'
+                signerType === 'client' ? 'Full legal name…' : 'Jane Smith, LCPC, CAC-AD…'
               }
               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20"
             />
