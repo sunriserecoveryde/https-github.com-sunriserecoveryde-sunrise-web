@@ -22,7 +22,7 @@ export function Navbar() {
           <div className="flex items-center">
             <Link href="/" className="flex-shrink-0 flex items-center">
               <img
-                src="/logos/sunrise-foundation-corona-white.png"
+                src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/logos/foundation-logo-light.png`}
                 alt="The Sunrise Foundation"
                 className="h-16 w-auto object-contain"
               />

@@ -9,7 +9,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8 mb-12">
           <div className="col-span-1 md:col-span-2">
             <img
-              src="/logos/sunrise-foundation-corona-transparent.png"
+              src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/logos/foundation-logo-transparent.png`}
               alt="The Sunrise Foundation"
               className="h-20 w-auto mb-6 opacity-90"
             />
