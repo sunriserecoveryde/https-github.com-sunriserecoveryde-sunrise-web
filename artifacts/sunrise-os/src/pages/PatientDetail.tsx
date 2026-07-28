@@ -82,6 +82,13 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
     { id: 'History', icon: <BookOpen className="w-3.5 h-3.5" /> },
     { id: 'Discharge Plan', icon: <ClipboardList className="w-3.5 h-3.5" /> },
     { id: 'Documents', icon: <FolderOpen className="w-3.5 h-3.5" /> },
+    { id: 'Consents', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+    { id: 'Contacts', icon: <Users className="w-3.5 h-3.5" /> },
+    { id: 'Allergies', icon: <AlertCircle className="w-3.5 h-3.5" /> },
+    { id: 'Drug Testing', icon: <FlaskConical className="w-3.5 h-3.5" /> },
+    { id: 'Incidents', icon: <AlertCircle className="w-3.5 h-3.5" /> },
+    { id: 'Case Management', icon: <ClipboardList className="w-3.5 h-3.5" /> },
+    { id: 'Audit History', icon: <Eye className="w-3.5 h-3.5" /> },
   ];
 
   // ── Group attendance generated from LOS ──────────────────────────────────
@@ -1220,6 +1227,412 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── Consents ────────────────────────────────────────────────────────── */}
+        {activeTab === 'Consents' && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-navy">Consents &amp; Authorizations</h2>
+                <p className="text-slate text-sm">Signed disclosures, release of information, and treatment consents on file</p>
+              </div>
+              <LockedButton locked={readOnly} onClick={() => saveChartAction('Consent request sent to patient')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Add Consent
+              </LockedButton>
+            </div>
+            {[
+              { name: 'Consent to Treatment', signed: patient.admitDate, by: 'Amanda Lewis', status: 'Signed', expires: 'N/A', type: '42 CFR / Standard', notes: 'Initial admission consent covering all therapeutic services, group participation, and medication management.' },
+              { name: '42 CFR Part 2 — Confidentiality Disclosure', signed: patient.admitDate, by: 'Amanda Lewis', status: 'Signed', expires: 'N/A', type: '42 CFR', notes: 'Federal SUD confidentiality disclosure — signed prior to any information sharing with third parties.' },
+              { name: 'Release of Information — Primary Physician', signed: patient.admitDate, by: 'Amanda Lewis', status: 'Active', expires: '2026-12-31', type: 'ROI', notes: `Authorized release to ${patient.physician} for coordination of care and medication reconciliation.` },
+              { name: 'Release of Information — Family Member', signed: patient.admitDate, by: 'Amanda Lewis', status: 'Active', expires: '2026-12-31', type: 'ROI', notes: 'Limited release to designated family member for discharge planning updates only.' },
+              { name: 'Grievance Procedure Acknowledgment', signed: patient.admitDate, by: 'Amanda Lewis', status: 'Signed', expires: 'N/A', type: 'Admin', notes: 'Patient acknowledges receipt of grievance process and rights information per COMAR 10.47.03.' },
+              { name: 'Photography / Social Media Opt-Out', signed: patient.admitDate, by: 'Amanda Lewis', status: 'Signed', expires: 'N/A', type: 'Admin', notes: 'Patient opted out of any photography or testimonial use during their episode of care.' },
+            ].map((c, i) => (
+              <div key={i} className="border border-border rounded-xl p-4 flex items-start gap-4 hover:bg-gray-50 transition-colors">
+                <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="w-5 h-5 text-success" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-navy text-sm">{c.name}</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${c.status === 'Signed' || c.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{c.status}</span>
+                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">{c.type}</span>
+                  </div>
+                  <div className="text-xs text-slate mt-1">{c.notes}</div>
+                  <div className="flex gap-4 mt-1.5 text-[10px] text-slate">
+                    <span>Signed: <strong className="text-navy">{c.signed}</strong></span>
+                    <span>By: <strong className="text-navy">{c.by}</strong></span>
+                    {c.expires !== 'N/A' && <span>Expires: <strong className="text-navy">{c.expires}</strong></span>}
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button onClick={() => saveChartAction('Document viewed')} className="text-xs text-slate hover:text-sunrise-blue flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> View</button>
+                  <button onClick={() => saveChartAction('Document downloaded')} className="text-xs text-slate hover:text-sunrise-blue flex items-center gap-1"><Download className="w-3.5 h-3.5" /> Print</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Contacts ────────────────────────────────────────────────────────── */}
+        {activeTab === 'Contacts' && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-navy">Emergency Contacts &amp; Designated Persons</h2>
+                <p className="text-slate text-sm">Family members, legal representatives, and persons authorized for communication</p>
+              </div>
+              <LockedButton locked={readOnly} onClick={() => saveChartAction('Contact form opened')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Add Contact
+              </LockedButton>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { name: 'Patricia Webb', relation: 'Spouse', phone: '(301) 555-2841', email: 'p.webb@email.com', priority: 1, roiOnFile: true, notify: 'Discharge planning, emergencies', address: '4421 River Rd, Bethesda, MD 20816' },
+                { name: 'Marcus Webb Jr.', relation: 'Adult Child', phone: '(240) 555-9134', email: 'mwebb.jr@email.com', priority: 2, roiOnFile: false, notify: 'Emergency only (no ROI on file)', address: 'Same household' },
+                { name: 'Dr. Linda Osei', relation: 'PCP / Physician', phone: '(301) 555-0092', email: 'osei@capitolmedmd.com', priority: 3, roiOnFile: true, notify: 'Medication, discharge, care coordination', address: 'Capitol Primary Care, Rockville, MD' },
+              ].map((c, i) => (
+                <div key={i} className={`border rounded-xl p-4 ${c.priority === 1 ? 'border-sunrise-blue/30 bg-blue-50/20' : 'border-border'}`}>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-semibold text-navy flex items-center gap-2">
+                        {c.name}
+                        {c.priority === 1 && <span className="text-[10px] bg-orange text-white px-1.5 py-0.5 rounded font-bold">Primary</span>}
+                        {c.roiOnFile && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">ROI ✓</span>}
+                        {!c.roiOnFile && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">No ROI</span>}
+                      </div>
+                      <div className="text-xs text-slate mt-0.5">{c.relation}</div>
+                    </div>
+                    {!readOnly && <button onClick={() => saveChartAction('Contact updated')} className="text-xs text-slate hover:text-navy px-2 py-1 border border-border rounded hover:bg-gray-50">Edit</button>}
+                  </div>
+                  <div className="mt-3 space-y-1 text-xs text-slate">
+                    <div>📞 <span className="text-navy font-medium">{c.phone}</span></div>
+                    <div>✉ <span className="text-navy">{c.email}</span></div>
+                    <div>📍 <span className="text-navy">{c.address}</span></div>
+                    <div className="mt-2 text-[10px] bg-slate-50 border border-border rounded px-2 py-1 text-slate">
+                      <span className="font-semibold">Notify for:</span> {c.notify}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Allergies ───────────────────────────────────────────────────────── */}
+        {activeTab === 'Allergies' && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-navy">Allergy &amp; Adverse Reaction Record</h2>
+                <p className="text-slate text-sm">Medication, food, and environmental allergens — verified at admission</p>
+              </div>
+              <LockedButton locked={readOnly} onClick={() => saveChartAction('New allergy added')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Add Allergy
+              </LockedButton>
+            </div>
+            <div className="overflow-hidden border border-border rounded-xl">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-border">
+                    {['Allergen', 'Type', 'Reaction', 'Severity', 'Onset', 'Verified By', 'Status'].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { allergen: 'Penicillin', type: 'Medication', reaction: 'Hives, throat tightening', severity: 'Severe', onset: '2009 (approx)', verifiedBy: 'Jessica Torres, RN', status: 'Active', sColor: 'bg-red-100 text-red-700' },
+                    { allergen: 'Sulfonamides', type: 'Medication', reaction: 'Rash, fever', severity: 'Moderate', onset: '2017', verifiedBy: 'Dr. Robert Chen', status: 'Active', sColor: 'bg-amber-100 text-amber-700' },
+                    { allergen: 'Shellfish', type: 'Food', reaction: 'GI distress, hives', severity: 'Moderate', onset: 'Childhood', verifiedBy: 'Jessica Torres, RN', status: 'Active', sColor: 'bg-amber-100 text-amber-700' },
+                    { allergen: 'Latex', type: 'Environmental', reaction: 'Contact dermatitis', severity: 'Mild', onset: '2015', verifiedBy: 'Jessica Torres, RN', status: 'Active', sColor: 'bg-blue-100 text-blue-700' },
+                    { allergen: 'Codeine', type: 'Medication', reaction: 'Nausea, excessive sedation', severity: 'Mild', onset: '2021', verifiedBy: 'Dr. Robert Chen', status: 'Inactive — resolved?', sColor: 'bg-slate-100 text-slate' },
+                  ].map((a, i) => (
+                    <tr key={i} className={`hover:bg-gray-50 ${a.severity === 'Severe' ? 'bg-red-50/20' : ''}`}>
+                      <td className="px-4 py-3 font-semibold text-navy">{a.allergen}</td>
+                      <td className="px-4 py-3"><span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">{a.type}</span></td>
+                      <td className="px-4 py-3 text-slate">{a.reaction}</td>
+                      <td className="px-4 py-3"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${a.sColor}`}>{a.severity}</span></td>
+                      <td className="px-4 py-3 text-slate">{a.onset}</td>
+                      <td className="px-4 py-3 text-slate text-xs">{a.verifiedBy}</td>
+                      <td className="px-4 py-3"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${a.status === 'Active' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate'}`}>{a.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-none mt-0.5" />
+              <div className="text-xs text-red-800">
+                <span className="font-bold">ALLERGY ALERT:</span> Penicillin (Severe) — do not administer any beta-lactam antibiotics without physician override and allergy consultation.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Drug Testing ─────────────────────────────────────────────────────── */}
+        {activeTab === 'Drug Testing' && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-navy">Drug Testing — UA &amp; Toxicology History</h2>
+                <p className="text-slate text-sm">Urinalysis results per shift protocol and random schedule</p>
+              </div>
+              <LockedButton locked={readOnly} onClick={() => saveChartAction('UA order placed')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Order UA
+              </LockedButton>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { label: 'Total UAs This Episode', value: 7, sub: 'Since admit', color: 'text-navy' },
+                { label: 'Negative', value: 6, sub: 'Clean results', color: 'text-green-600' },
+                { label: 'Positive', value: 1, sub: 'Documented', color: 'text-red-600' },
+                { label: 'Refused', value: 0, sub: 'This episode', color: 'text-slate' },
+              ].map(k => (
+                <div key={k.label} className="card">
+                  <div className="text-[10px] font-bold text-slate uppercase tracking-wide">{k.label}</div>
+                  <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                  <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div className="overflow-hidden border border-border rounded-xl">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-border">
+                    {['Date', 'Time', 'Type', 'Panel', 'Substances Tested', 'Result', 'Ordered By', 'Collected By', 'Notes'].map(h => (
+                      <th key={h} className="text-left px-3 py-3 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { date: patient.admitDate, time: '09:14', type: 'Admission', panel: '12-Panel', substances: 'Opioids, Alcohol, Benzo, Meth, Cocaine, THC, Barb, Amp, MDMA, PCP, Fent, K2', result: 'Positive — EtOH, THC', rColor: 'bg-red-100 text-red-700', ordered: 'Dr. Robert Chen', collected: 'Jessica Torres, RN', notes: 'Point-of-care + send-out confirmation ordered' },
+                    { date: '2026-07-12', time: '07:30', type: 'Random', panel: '12-Panel', substances: 'Same 12-panel', result: 'Negative', rColor: 'bg-green-100 text-green-700', ordered: 'Jessica Torres, RN', collected: 'BHT C. Watts', notes: '' },
+                    { date: '2026-07-15', time: '07:00', type: 'Random', panel: '12-Panel', substances: 'Same 12-panel', result: 'Negative', rColor: 'bg-green-100 text-green-700', ordered: 'Jessica Torres, RN', collected: 'BHT C. Watts', notes: '' },
+                    { date: '2026-07-17', time: '13:45', type: 'Cause', panel: '12-Panel', substances: 'Same 12-panel', result: 'Negative', rColor: 'bg-green-100 text-green-700', ordered: patient.counselor, collected: 'Jessica Torres, RN', notes: 'Ordered after behavioral change noted in group' },
+                    { date: '2026-07-19', time: '07:15', type: 'Random', panel: '12-Panel', substances: 'Same 12-panel', result: 'Negative', rColor: 'bg-green-100 text-green-700', ordered: 'Jessica Torres, RN', collected: 'BHT C. Watts', notes: '' },
+                    { date: '2026-07-22', time: '07:00', type: 'Scheduled', panel: '12-Panel', substances: 'Same 12-panel', result: 'Negative', rColor: 'bg-green-100 text-green-700', ordered: 'Dr. Robert Chen', collected: 'Jessica Torres, RN', notes: 'Weekly lab draw — add CBC, CMP sent same time' },
+                    { date: '2026-07-26', time: '07:10', type: 'Random', panel: '12-Panel', substances: 'Same 12-panel', result: 'Negative', rColor: 'bg-green-100 text-green-700', ordered: 'Jessica Torres, RN', collected: 'BHT C. Watts', notes: '' },
+                  ].map((r, i) => (
+                    <tr key={i} className={`hover:bg-gray-50 ${r.result.startsWith('Positive') ? 'bg-red-50/30' : ''}`}>
+                      <td className="px-3 py-2.5 font-medium text-navy text-xs">{r.date}</td>
+                      <td className="px-3 py-2.5 text-slate text-xs font-mono">{r.time}</td>
+                      <td className="px-3 py-2.5"><span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">{r.type}</span></td>
+                      <td className="px-3 py-2.5 text-slate text-xs">{r.panel}</td>
+                      <td className="px-3 py-2.5 text-slate text-[10px] max-w-[160px] truncate">{r.substances}</td>
+                      <td className="px-3 py-2.5"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.rColor}`}>{r.result}</span></td>
+                      <td className="px-3 py-2.5 text-slate text-xs">{r.ordered}</td>
+                      <td className="px-3 py-2.5 text-slate text-xs">{r.collected}</td>
+                      <td className="px-3 py-2.5 text-slate text-[10px] italic">{r.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── Incidents ───────────────────────────────────────────────────────── */}
+        {activeTab === 'Incidents' && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-navy">Incident Reports</h2>
+                <p className="text-slate text-sm">Safety events, behavioral incidents, and near-misses involving this patient</p>
+              </div>
+              <LockedButton locked={readOnly} onClick={() => saveChartAction('Incident report form opened')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+                <Plus className="w-4 h-4" /> File Incident
+              </LockedButton>
+            </div>
+            {patient.flags.some(f => f.type === 'AMA') || patient.amaRisk === 'High' ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-xs text-red-800">
+                <AlertCircle className="w-4 h-4 flex-none" />
+                <span>This patient is flagged as <strong>High AMA Risk</strong> — document any elopement attempts or behavioral escalations immediately.</span>
+              </div>
+            ) : null}
+            <div className="space-y-3">
+              {[
+                { date: '2026-07-16', time: '11:45 PM', type: 'Behavioral', subtype: 'Verbal Altercation', severity: 'Moderate', status: 'Closed — Reviewed', statusColor: 'bg-slate-100 text-slate', reportedBy: 'BHT Carlos Watts', summary: 'Patient had a verbal altercation with a roommate regarding noise levels. BHT de-escalated. No physical contact. Counselor notified by phone. 1:1 session scheduled for morning. Safety plan reviewed with patient.', followUp: 'Behavioral plan updated. Room reassignment evaluated and declined by patient.' },
+                { date: '2026-07-20', time: '06:20 AM', type: 'Safety', subtype: 'Near-Fall', severity: 'Minor', status: 'Closed — No Injury', statusColor: 'bg-green-100 text-green-700', reportedBy: 'Jessica Torres, RN', summary: "Patient slipped exiting shower — caught themselves on grab bar. No fall, no injury. Reported to nurse during morning vitals. Facilities notified for bathroom floor inspection.", followUp: 'Facilities applied non-slip adhesive strips to bathroom floor 2026-07-20.' },
+              ].map((inc, i) => (
+                <div key={i} className="border border-border rounded-xl p-4 space-y-2">
+                  <div className="flex items-start justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-navy text-sm">{inc.type} — {inc.subtype}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${inc.severity === 'Moderate' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{inc.severity}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${inc.statusColor}`}>{inc.status}</span>
+                    </div>
+                    <div className="text-xs text-slate">{inc.date} · {inc.time}</div>
+                  </div>
+                  <p className="text-sm text-slate leading-relaxed">{inc.summary}</p>
+                  <div className="text-xs text-slate border-t border-border pt-2">
+                    <span className="font-semibold">Reported by:</span> {inc.reportedBy} &nbsp;|&nbsp; <span className="font-semibold">Follow-up:</span> {inc.followUp}
+                  </div>
+                </div>
+              ))}
+              <div className="text-center py-6 border border-dashed border-border rounded-xl text-slate text-sm">
+                No additional incidents on file for this episode of care.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Case Management ──────────────────────────────────────────────────── */}
+        {activeTab === 'Case Management' && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-navy">Case Management</h2>
+                <p className="text-slate text-sm">Care coordination, referrals, housing, and community linkage notes</p>
+              </div>
+              <LockedButton locked={readOnly} onClick={() => saveChartAction('Case management note added')} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Add Note
+              </LockedButton>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { label: 'Case Manager', value: 'David Odom, LCADC', sub: 'Primary CM assigned' },
+                { label: 'Housing Status', value: 'Stable — Family home', sub: 'Discharge destination confirmed' },
+                { label: 'Insurance Navigator', value: 'Linda Vance', sub: 'Benefits / auth liaison' },
+              ].map(k => (
+                <div key={k.label} className="card">
+                  <div className="text-[10px] font-bold text-slate uppercase tracking-wide">{k.label}</div>
+                  <div className="font-semibold text-navy mt-1 text-sm">{k.value}</div>
+                  <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-3">
+              {[
+                { date: '2026-07-27', by: 'David Odom, LCADC', type: 'Discharge Planning', note: "Met with patient to review discharge plan and housing arrangement. Patient confirmed family home is stable and supportive. Spouse has attended one family session and is committed to participation in family program post-discharge. Referred to Oxford House registry as backup — patient declined but will keep contact info.", actions: ['Discharge checklist updated', 'ROI signed for family session notes', 'PHP schedule emailed to patient'] },
+                { date: '2026-07-24', by: 'David Odom, LCADC', type: 'Community Linkage', note: "Contacted Bright Harbor Counseling for individual therapy post-discharge. Appointment scheduled for 8/5 at 3 PM with Dr. Jennifer Choi, LPC. Verified they accept CareFirst PPO. Patient expressed enthusiasm — reports Dr. Choi was recommended by a peer in recovery group.", actions: ['Appointment confirmed', 'ROI faxed to Bright Harbor', 'Auth request initiated for OP sessions'] },
+                { date: '2026-07-21', by: 'Linda Vance', type: 'Insurance / Benefits', note: 'Spoke with CareFirst Behavioral Health UM — concurrent review approved through 8/2/2026. Next review call scheduled for 8/1. Estimated co-pay for PHP step-down: $35/day. Patient notified and provided financial counseling worksheet.', actions: ['Auth extended through 8/2', 'PHP pre-auth initiated', 'Financial worksheet provided'] },
+                { date: '2026-07-18', by: 'David Odom, LCADC', type: 'Initial Assessment', note: "Initial CM assessment completed. Housing confirmed stable. Employment: patient is on FMLA leave from employer (Federal contractor — eligible for EAP counseling post-discharge). No active legal involvement. SSI/SSDI not applicable. No pending CPS or DCF cases.", actions: ['CM assessment filed in chart', 'EAP contact info provided', 'Employment coordinator contact logged'] },
+              ].map((entry, i) => (
+                <div key={i} className="border border-border rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-navy">{entry.date}</span>
+                      <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">{entry.type}</span>
+                    </div>
+                    <span className="text-xs text-slate">{entry.by}</span>
+                  </div>
+                  <p className="text-sm text-navy leading-relaxed">{entry.note}</p>
+                  {entry.actions.length > 0 && (
+                    <div className="mt-3 border-t border-border pt-2">
+                      <div className="text-[10px] font-bold text-slate uppercase tracking-wide mb-1">Actions Taken</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {entry.actions.map(a => (
+                          <span key={a} className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> {a}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-navy mb-3">Community Referrals &amp; Linkages</h3>
+              <div className="overflow-hidden border border-border rounded-xl">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-border">
+                      {['Organization', 'Service Type', 'Contact', 'Referral Date', 'Status'].map(h => (
+                        <th key={h} className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {[
+                      { org: 'Bright Harbor Counseling', service: 'Individual Therapy', contact: 'Dr. Jennifer Choi, LPC', date: '2026-07-24', status: 'Confirmed', sColor: 'bg-green-100 text-green-700' },
+                      { org: 'AA — Bethesda Group', service: 'Peer Support / 12-Step', contact: 'Open meeting', date: '2026-07-22', status: 'Patient Accepted', sColor: 'bg-green-100 text-green-700' },
+                      { org: 'Sunrise PHP (Internal)', service: 'Step-Down PHP', contact: 'Amanda Lewis', date: '2026-07-27', status: 'Auth Pending', sColor: 'bg-amber-100 text-amber-700' },
+                      { org: 'MAT Clinic — Shady Grove', service: 'Medication-Assisted Treatment', contact: '(301) 555-4400', date: '2026-07-26', status: 'Referral Sent', sColor: 'bg-blue-100 text-blue-700' },
+                    ].map((r, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="px-4 py-2.5 font-medium text-navy">{r.org}</td>
+                        <td className="px-4 py-2.5 text-slate">{r.service}</td>
+                        <td className="px-4 py-2.5 text-slate">{r.contact}</td>
+                        <td className="px-4 py-2.5 text-slate">{r.date}</td>
+                        <td className="px-4 py-2.5"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.sColor}`}>{r.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Audit History ────────────────────────────────────────────────────── */}
+        {activeTab === 'Audit History' && (
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-lg font-bold text-navy">Chart Audit History</h2>
+              <p className="text-slate text-sm">Read-only log of all chart access, edits, and clinical actions for this patient — HIPAA compliance record</p>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { label: 'Total Access Events', value: 48, sub: 'This episode', color: 'text-navy' },
+                { label: 'Unique Staff', value: 9, sub: 'Who accessed chart', color: 'text-blue-600' },
+                { label: 'Edit Events', value: 23, sub: 'Notes, meds, vitals', color: 'text-teal-600' },
+                { label: 'Export / Print', value: 3, sub: 'Document actions', color: 'text-amber-600' },
+              ].map(k => (
+                <div key={k.label} className="card">
+                  <div className="text-[10px] font-bold text-slate uppercase tracking-wide">{k.label}</div>
+                  <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+                  <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div className="overflow-hidden border border-border rounded-xl">
+              <div className="px-4 py-3 bg-gray-50 border-b border-border flex items-center justify-between">
+                <span className="text-sm font-semibold text-navy">Recent Audit Log</span>
+                <button onClick={() => saveChartAction('Audit log exported')} className="text-xs text-slate hover:text-navy flex items-center gap-1.5 border border-border rounded px-2 py-1">
+                  <Download className="w-3 h-3" /> Export Log
+                </button>
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50/50">
+                    {['Timestamp', 'Staff Member', 'Role', 'Action', 'Section', 'IP / Device', 'Notes'].map(h => (
+                      <th key={h} className="text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[
+                    { ts: '2026-07-28 08:14', staff: 'Sarah Jenkins', role: 'Counselor', action: 'Viewed', section: 'Progress Notes', ip: 'iPad · 192.168.1.12', notes: '' },
+                    { ts: '2026-07-28 08:16', staff: 'Sarah Jenkins', role: 'Counselor', action: 'Added Note', section: 'Progress Notes', ip: 'iPad · 192.168.1.12', notes: 'BIRP note — session 07/28' },
+                    { ts: '2026-07-28 07:02', staff: 'Jessica Torres', role: 'Nurse', action: 'Recorded Vitals', section: 'Vitals', ip: 'Workstation · 192.168.1.5', notes: 'Morning vitals — BP, HR, Temp, O2' },
+                    { ts: '2026-07-28 07:05', staff: 'Jessica Torres', role: 'Nurse', action: 'MAR Updated', section: 'Medications', ip: 'Workstation · 192.168.1.5', notes: 'Morning medication administration documented' },
+                    { ts: '2026-07-27 16:48', staff: 'David Odom', role: 'Case Manager', action: 'Added Note', section: 'Case Management', ip: 'Desktop · 192.168.1.8', notes: 'Discharge planning CM note' },
+                    { ts: '2026-07-27 14:22', staff: 'Dr. Robert Chen', role: 'Physician', action: 'Viewed', section: 'Labs', ip: 'Mobile · 192.168.1.20', notes: '' },
+                    { ts: '2026-07-27 14:25', staff: 'Dr. Robert Chen', role: 'Physician', action: 'Ordered Labs', section: 'Labs', ip: 'Mobile · 192.168.1.20', notes: 'CMP, CBC, LFT ordered' },
+                    { ts: '2026-07-26 09:55', staff: 'Amanda Lewis', role: 'Admissions', action: 'Viewed', section: 'Documents', ip: 'Desktop · 192.168.1.3', notes: '' },
+                    { ts: '2026-07-26 09:57', staff: 'Amanda Lewis', role: 'Admissions', action: 'Uploaded Document', section: 'Documents', ip: 'Desktop · 192.168.1.3', notes: 'Insurance auth letter uploaded' },
+                    { ts: '2026-07-25 18:30', staff: 'BHT C. Watts', role: 'BHT', action: 'Viewed', section: 'Overview', ip: 'iPad · 192.168.1.14', notes: 'Evening handoff review' },
+                    { ts: '2026-07-24 11:10', staff: 'Linda Vance', role: 'UR Coordinator', action: 'Exported', section: 'Documents', ip: 'Desktop · 192.168.1.6', notes: 'UR documentation package exported for payer' },
+                    { ts: '2026-07-23 10:02', staff: 'Sarah Jenkins', role: 'Counselor', action: 'Co-Signed Note', section: 'Progress Notes', ip: 'Desktop · 192.168.1.2', notes: 'Intern note co-signature' },
+                  ].map((r, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-3 py-2.5 font-mono text-[10px] text-slate whitespace-nowrap">{r.ts}</td>
+                      <td className="px-3 py-2.5 font-medium text-navy">{r.staff}</td>
+                      <td className="px-3 py-2.5 text-slate">{r.role}</td>
+                      <td className="px-3 py-2.5"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${r.action === 'Exported' ? 'bg-amber-100 text-amber-700' : r.action.includes('Added') || r.action.includes('Recorded') || r.action.includes('Updated') || r.action.includes('Uploaded') || r.action.includes('Ordered') || r.action.includes('Co-Signed') ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate'}`}>{r.action}</span></td>
+                      <td className="px-3 py-2.5 text-slate">{r.section}</td>
+                      <td className="px-3 py-2.5 text-[10px] font-mono text-slate-400">{r.ip}</td>
+                      <td className="px-3 py-2.5 text-slate italic text-[10px]">{r.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

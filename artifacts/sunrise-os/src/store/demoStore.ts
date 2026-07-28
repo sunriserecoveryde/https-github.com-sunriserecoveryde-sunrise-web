@@ -64,6 +64,51 @@ export interface DocVersion {
   isAutosave: boolean;
 }
 
+// ── Bed state ─────────────────────────────────────────────────────────────────
+export type BedStatus = 'Occupied' | 'Available' | 'Hold' | 'Blocked' | 'Cleaning' | 'Pending Discharge';
+
+export interface BedState {
+  bedId: string;
+  status: BedStatus;
+  holdReason?: string;
+  heldBy?: string;
+  blockReason?: string;
+  scheduledDischargeDate?: string;
+  patientId?: string;
+}
+
+export interface BedAuditEvent {
+  id: string;
+  bedId: string;
+  timestamp: string;
+  staffName: string;
+  action: string;
+  detail: string;
+}
+
+// ── Intake / Admissions ───────────────────────────────────────────────────────
+export interface IntakePatient {
+  id: string;
+  name: string;
+  dob: string;
+  gender: string;
+  phone: string;
+  referralSource: string;
+  primaryDx: string;
+  program: string;
+  insurance: string;
+  insuranceStatus: 'Verified' | 'Pending' | 'Denied' | 'Self-Pay';
+  asamRec?: string;
+  assignedBed?: string;
+  admissionDecision?: 'Approved' | 'Waitlist' | 'Deferred' | 'Declined';
+  decisionReason?: string;
+  convertedToPatient?: boolean;
+  createdAt: string;
+  completedSteps: number;
+  notes?: string;
+  mrn?: string;
+}
+
 export interface DemoState {
   notificationReadIds: string[];
   auditLog: AuditEntry[];
@@ -72,6 +117,11 @@ export interface DemoState {
   pendingDocs: PendingDoc[];
   correctionEvents: CorrectionEvent[];
   docVersions: DocVersion[];
+  // Bed management
+  bedStates: Record<string, BedState>;
+  bedAuditEvents: BedAuditEvent[];
+  // Intake patients (created via 10-step wizard)
+  intakePatients: IntakePatient[];
 }
 
 const INITIAL_STATE: DemoState = {
@@ -81,6 +131,9 @@ const INITIAL_STATE: DemoState = {
   pendingDocs: [],
   correctionEvents: [],
   docVersions: [],
+  bedStates: {},
+  bedAuditEvents: [],
+  intakePatients: [],
 };
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
@@ -288,6 +341,89 @@ export function useDemoStore() {
     [state.correctionEvents],
   );
 
+  // ── Bed mutations ────────────────────────────────────────────────────────────
+
+  const getBedState = useCallback((bedId: string): BedState => {
+    return state.bedStates[bedId] ?? { bedId, status: 'Available' };
+  }, [state.bedStates]);
+
+  const setBedStatus = useCallback((
+    bedId: string,
+    status: BedStatus,
+    staffName: string,
+    action: string,
+    detail: string,
+    extra?: Partial<BedState>,
+  ) => {
+    _setState(s => {
+      const event: BedAuditEvent = {
+        id: `ba-${Date.now()}`,
+        bedId,
+        timestamp: new Date().toISOString(),
+        staffName,
+        action,
+        detail,
+      };
+      return {
+        ...s,
+        bedStates: {
+          ...s.bedStates,
+          [bedId]: { ...(s.bedStates[bedId] ?? { bedId, status: 'Available' }), status, ...extra },
+        },
+        bedAuditEvents: [event, ...s.bedAuditEvents.slice(0, 499)],
+      };
+    });
+  }, []);
+
+  const releaseBed = useCallback((bedId: string, staffName: string) => {
+    setBedStatus(bedId, 'Cleaning', staffName, 'Released', 'Bed released — queued for housekeeping turnover', { holdReason: undefined, heldBy: undefined, blockReason: undefined });
+  }, [setBedStatus]);
+
+  const placeBedHold = useCallback((bedId: string, reason: string, staffName: string) => {
+    setBedStatus(bedId, 'Hold', staffName, 'Hold Placed', `Hold reason: ${reason}`, { holdReason: reason, heldBy: staffName });
+  }, [setBedStatus]);
+
+  const blockBed = useCallback((bedId: string, reason: string, staffName: string) => {
+    setBedStatus(bedId, 'Blocked', staffName, 'Blocked', `Blocked for maintenance: ${reason}`, { blockReason: reason });
+  }, [setBedStatus]);
+
+  const scheduleBedDischarge = useCallback((bedId: string, date: string, staffName: string) => {
+    setBedStatus(bedId, 'Pending Discharge', staffName, 'Discharge Scheduled', `Discharge scheduled for ${date}`, { scheduledDischargeDate: date });
+  }, [setBedStatus]);
+
+  const getBedAuditEvents = useCallback((bedId: string): BedAuditEvent[] => {
+    return state.bedAuditEvents.filter(e => e.bedId === bedId);
+  }, [state.bedAuditEvents]);
+
+  // ── Intake patient mutations ──────────────────────────────────────────────────
+
+  const addIntakePatient = useCallback((patient: Omit<IntakePatient, 'createdAt'> & { id?: string }) => {
+    const id = patient.id ?? `ip-${Date.now()}`;
+    _setState(s => ({
+      ...s,
+      intakePatients: [
+        { ...patient, id, createdAt: new Date().toISOString() },
+        ...s.intakePatients,
+      ],
+    }));
+  }, []);
+
+  const updateIntakePatient = useCallback((id: string, updates: Partial<IntakePatient>) => {
+    _setState(s => ({
+      ...s,
+      intakePatients: s.intakePatients.map(p => p.id === id ? { ...p, ...updates } : p),
+    }));
+  }, []);
+
+  const convertIntakeToPatient = useCallback((id: string, mrn: string) => {
+    _setState(s => ({
+      ...s,
+      intakePatients: s.intakePatients.map(p =>
+        p.id === id ? { ...p, convertedToPatient: true, mrn } : p
+      ),
+    }));
+  }, []);
+
   return {
     state,
     markRead,
@@ -302,6 +438,21 @@ export function useDemoStore() {
     addDocVersion,
     getDocVersions,
     isDeficiencyFlagged,
+    // Bed management
+    getBedState,
+    setBedStatus,
+    releaseBed,
+    placeBedHold,
+    blockBed,
+    scheduleBedDischarge,
+    getBedAuditEvents,
+    allBedStates: state.bedStates,
+    allBedAuditEvents: state.bedAuditEvents,
+    // Intake patients
+    addIntakePatient,
+    updateIntakePatient,
+    convertIntakeToPatient,
+    intakePatients: state.intakePatients,
     // Exposed state slices (read-only via useSyncExternalStore)
     correctionEvents: state.correctionEvents,
   };

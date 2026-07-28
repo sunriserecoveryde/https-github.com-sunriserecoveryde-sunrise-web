@@ -3,12 +3,14 @@ import { MOCK_PATIENTS, Patient } from '../data/mockPatients';
 import { FlagBadge } from '../components/ui/FlagBadge';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { Screen } from '../App';
+import { useDemoStore, BedStatus } from '../store/demoStore';
 import {
   AlertTriangle, Activity, BedDouble, Users, Clock, ChevronDown, ChevronUp,
-  TrendingDown, TrendingUp, Minus, Filter,
+  TrendingDown, TrendingUp, Minus, Filter, MoreVertical, X, ShieldAlert,
+  Wrench, LogOut, Calendar, ArrowRightLeft, History, CheckCircle2,
 } from 'lucide-react';
 
-// ─── Local Enrichment Maps (nursing clinical data not on Patient type) ──────────
+// ─── Local Enrichment Maps ───────────────────────────────────────────────────
 
 type Acuity = 'Critical' | 'High' | 'Moderate' | 'Routine';
 
@@ -26,7 +28,6 @@ const WITHDRAWAL: Record<string, { cows?: number; ciwa?: number; trend: 'down' |
   p9:  { cows: 3,  trend: 'stable' },
 };
 
-// Last BP and recent vital signs per patient
 const VITALS_SUMMARY: Record<string, { bp: string; hr: number; lastChecked: string }> = {
   p1:  { bp: '138/88', hr: 92,  lastChecked: '06:00' },
   p5:  { bp: '144/92', hr: 96,  lastChecked: '06:00' },
@@ -43,8 +44,6 @@ const NEXT_APPT_LABEL: Record<string, string> = {
   p6: 'Tomorrow 2:00 PM', p8: 'Today 3:30 PM', p9: 'Today 2:30 PM',
   p11: 'Today 10:00 AM', p12: 'Tomorrow 11:00 AM',
 };
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const ACUITY_STYLES: Record<Acuity, { ring: string; label: string; dot: string; text: string }> = {
   Critical: { ring: 'border-l-critical', label: 'bg-red-100 text-red-800',   dot: 'bg-critical', text: 'text-critical' },
@@ -67,24 +66,233 @@ function TrendIcon({ t }: { t: 'down' | 'stable' | 'up' }) {
   return <Minus className="w-3 h-3 text-amber-600" />;
 }
 
+const BED_STATUS_STYLE: Record<BedStatus, string> = {
+  Occupied: 'bg-blue-50 border-blue-200 text-blue-700',
+  Available: 'bg-green-50 border-green-200 text-green-700',
+  Hold: 'bg-amber-50 border-amber-200 text-amber-700',
+  Blocked: 'bg-red-50 border-red-200 text-red-700',
+  Cleaning: 'bg-slate-50 border-slate-200 text-slate-600',
+  'Pending Discharge': 'bg-purple-50 border-purple-200 text-purple-700',
+};
+
+// ─── Bed Action Modal ─────────────────────────────────────────────────────────
+
+type BedAction = 'hold' | 'block' | 'release' | 'discharge' | 'move' | 'audit';
+
+function BedActionModal({
+  bedId,
+  action,
+  onClose,
+  onConfirm,
+}: {
+  bedId: string;
+  action: BedAction;
+  onClose: () => void;
+  onConfirm: (bedId: string, action: BedAction, payload: Record<string, string>) => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [date, setDate] = useState('2026-07-30');
+  const [targetBed, setTargetBed] = useState('');
+
+  const titles: Record<BedAction, string> = {
+    hold: 'Place Hold on Bed',
+    block: 'Block for Maintenance',
+    release: 'Release Bed',
+    discharge: 'Schedule Discharge',
+    move: 'Move Patient',
+    audit: 'Bed Audit Trail',
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-[440px] mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h2 className="text-base font-bold text-navy">{titles[action]} — Bed {bedId}</h2>
+          <button onClick={onClose} className="text-slate hover:text-navy p-1"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          {action === 'hold' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Hold Reason *</label>
+                <input
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue"
+                  placeholder="e.g. Incoming transfer pending auth, VIP hold..."
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-slate">Bed will be marked as held and unavailable for new admissions until released.</p>
+            </>
+          )}
+          {action === 'block' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Maintenance Reason *</label>
+                <select
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue"
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                >
+                  <option value="">Select reason...</option>
+                  <option>Deep cleaning required</option>
+                  <option>Plumbing / HVAC repair</option>
+                  <option>Bed frame replacement</option>
+                  <option>Mold / pest inspection</option>
+                  <option>Renovation / painting</option>
+                  <option>Other maintenance</option>
+                </select>
+              </div>
+              <p className="text-xs text-slate">Bed will be unavailable until manually unblocked by facilities staff.</p>
+            </>
+          )}
+          {action === 'release' && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-sm text-amber-800 font-medium">Release this bed from its current hold or block?</p>
+              <p className="text-xs text-amber-700 mt-1">Bed will be set to "Cleaning" and queued for housekeeping turnover before re-admission.</p>
+            </div>
+          )}
+          {action === 'discharge' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Target Discharge Date</label>
+                <input
+                  type="date"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Discharge Destination</label>
+                <select
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue"
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                >
+                  <option value="">Select destination...</option>
+                  <option>PHP Step-Down (Sunrise)</option>
+                  <option>IOP Step-Down (Sunrise)</option>
+                  <option>Sober Living — Oxford House</option>
+                  <option>Family Home + Outpatient</option>
+                  <option>AMA — Against Medical Advice</option>
+                  <option>Hospital Transfer (Higher LOC)</option>
+                  <option>Unknown / Pending</option>
+                </select>
+              </div>
+            </>
+          )}
+          {action === 'move' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Move Patient to Bed</label>
+                <select
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue"
+                  value={targetBed}
+                  onChange={e => setTargetBed(e.target.value)}
+                >
+                  <option value="">Select target bed...</option>
+                  {['1A','1B','2A','2B','3A','3B','4A','4B','5A','5B'].filter(b => b !== bedId).map(b => (
+                    <option key={b} value={b}>Bed {b}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Reason for Move</label>
+                <input
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue"
+                  placeholder="Clinical or administrative reason..."
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+        </div>
+        {action !== 'audit' && (
+          <div className="px-6 pb-6 flex gap-3">
+            <button onClick={onClose} className="flex-1 border border-border rounded-xl py-2 text-sm text-slate hover:bg-gray-50">Cancel</button>
+            <button
+              disabled={action === 'hold' || action === 'block' ? !reason : action === 'move' ? !targetBed : false}
+              onClick={() => onConfirm(bedId, action, { reason, date, targetBed })}
+              className="flex-1 bg-navy text-white rounded-xl py-2 text-sm font-semibold hover:bg-navy-mid disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Confirm
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Bed Audit Drawer ─────────────────────────────────────────────────────────
+
+function BedAuditDrawer({ bedId, events, onClose }: {
+  bedId: string;
+  events: { id: string; timestamp: string; staffName: string; action: string; detail: string }[];
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[70vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <h2 className="text-base font-bold text-navy flex items-center gap-2">
+            <History className="w-4 h-4 text-sunrise-blue" /> Audit Trail — Bed {bedId}
+          </h2>
+          <button onClick={onClose}><X className="w-4 h-4 text-slate" /></button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-4 space-y-2">
+          {events.length === 0 ? (
+            <div className="text-center py-8 text-slate text-sm">No audit events yet for this bed.</div>
+          ) : events.map(ev => (
+            <div key={ev.id} className="flex gap-3 text-sm border-b border-border/50 pb-2">
+              <div className="text-xs text-slate whitespace-nowrap font-mono">{new Date(ev.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+              <div className="flex-1">
+                <span className="font-semibold text-navy">{ev.action}</span>
+                <span className="text-slate ml-2">{ev.detail}</span>
+                <div className="text-[10px] text-slate-400 mt-0.5">by {ev.staffName}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Bed Card ─────────────────────────────────────────────────────────────────
 
-function BedCard({ patient, navigate }: { patient: Patient; navigate: (s: Screen, id?: string) => void }) {
+function BedCard({ patient, bedId, navigate, bedStatus, onAction }: {
+  patient: Patient;
+  bedId: string;
+  navigate: (s: Screen, id?: string) => void;
+  bedStatus?: BedStatus;
+  onAction: (bedId: string, action: BedAction) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const acuity = ACUITY[patient.id] ?? 'Routine';
   const wd = WITHDRAWAL[patient.id];
   const vs = VITALS_SUMMARY[patient.id];
   const s = ACUITY_STYLES[acuity];
   const hasAlert = wd && ((wd.cows != null && wd.cows >= 13) || (wd.ciwa != null && wd.ciwa >= 15));
+  const effectiveStatus = bedStatus ?? 'Occupied';
 
   return (
-    <div className={`bg-white border-l-4 ${s.ring} rounded-r-lg shadow-sm hover:shadow-md transition-all ${hasAlert ? 'ring-1 ring-red-300' : ''}`}>
+    <div className={`bg-white border-l-4 ${s.ring} rounded-r-lg shadow-sm hover:shadow-md transition-all ${hasAlert ? 'ring-1 ring-red-300' : ''} relative`}>
+      {/* Status badge overlay */}
+      {effectiveStatus !== 'Occupied' && (
+        <div className={`absolute top-2 right-2 z-10 text-[9px] font-bold px-1.5 py-0.5 rounded border ${BED_STATUS_STYLE[effectiveStatus]}`}>
+          {effectiveStatus}
+        </div>
+      )}
+
       {/* Main card area */}
       <div
         className="p-3 cursor-pointer group"
         onClick={() => navigate('PatientDetail', patient.id)}
       >
-        {/* Top row: bed badge + acuity + AMA risk */}
         <div className="flex items-start justify-between mb-2 gap-1">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-bold bg-slate-100 text-slate px-1.5 py-0.5 rounded">{patient.bed}</span>
@@ -96,7 +304,6 @@ function BedCard({ patient, navigate }: { patient: Patient; navigate: (s: Screen
           {hasAlert && <AlertTriangle className="w-3.5 h-3.5 text-critical flex-none animate-pulse" />}
         </div>
 
-        {/* Patient info */}
         <div className="flex items-center gap-2 mb-2">
           <PatientAvatar first={patient.firstName} last={patient.lastName} program={patient.program} size="sm" />
           <div className="min-w-0 flex-1">
@@ -107,21 +314,15 @@ function BedCard({ patient, navigate }: { patient: Patient; navigate: (s: Screen
           </div>
         </div>
 
-        {/* LOS — BestNotes-inspired: flag patients approaching or exceeding expected LOS */}
         {(() => {
-          // Expected LOS benchmarks per program (ASAM LOC guidelines)
           const LOS_BENCHMARKS: Record<string, { target: number; max: number }> = {
             Residential: { target: 21, max: 35 },
             PHP: { target: 10, max: 21 },
-            IOP: { target: 30, max: 60 }, // IOP measured in calendar days
+            IOP: { target: 30, max: 60 },
           };
           const bench = LOS_BENCHMARKS[patient.program];
           const losStatus = bench
-            ? patient.los > bench.max
-              ? 'exceeded'
-              : patient.los >= bench.target
-                ? 'approaching'
-                : 'normal'
+            ? patient.los > bench.max ? 'exceeded' : patient.los >= bench.target ? 'approaching' : 'normal'
             : 'normal';
           return (
             <div className="text-[10px] text-slate mb-2 flex items-center gap-1 flex-wrap">
@@ -141,7 +342,6 @@ function BedCard({ patient, navigate }: { patient: Patient; navigate: (s: Screen
           );
         })()}
 
-        {/* CIWA/COWS scores */}
         {wd && (
           <div className="flex gap-1.5 mb-2">
             {wd.cows != null && (
@@ -159,13 +359,45 @@ function BedCard({ patient, navigate }: { patient: Patient; navigate: (s: Screen
           </div>
         )}
 
-        {/* Flags */}
         {patient.flags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-1">
             {patient.flags.slice(0, 2).map((f, i) => <FlagBadge key={i} type={f.type} />)}
             {patient.flags.length > 2 && (
               <span className="text-[10px] text-slate">+{patient.flags.length - 2}</span>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Action menu button */}
+      <div className="absolute bottom-2 right-2">
+        <button
+          onClick={e => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+          className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 transition-colors"
+        >
+          <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+        </button>
+        {menuOpen && (
+          <div className="absolute bottom-7 right-0 bg-white border border-border rounded-xl shadow-xl z-20 w-44 py-1" onClick={e => e.stopPropagation()}>
+            <button onClick={() => { setMenuOpen(false); onAction(bedId, 'hold'); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 text-amber-700">
+              <ShieldAlert className="w-3.5 h-3.5" /> Place Hold
+            </button>
+            <button onClick={() => { setMenuOpen(false); onAction(bedId, 'move'); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 text-blue-700">
+              <ArrowRightLeft className="w-3.5 h-3.5" /> Move Patient
+            </button>
+            <button onClick={() => { setMenuOpen(false); onAction(bedId, 'discharge'); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 text-purple-700">
+              <Calendar className="w-3.5 h-3.5" /> Schedule Discharge
+            </button>
+            <button onClick={() => { setMenuOpen(false); onAction(bedId, 'block'); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 text-red-700">
+              <Wrench className="w-3.5 h-3.5" /> Block for Maintenance
+            </button>
+            <button onClick={() => { setMenuOpen(false); onAction(bedId, 'release'); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 text-green-700">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Release / Discharge
+            </button>
+            <hr className="my-1 border-border" />
+            <button onClick={() => { setMenuOpen(false); onAction(bedId, 'audit'); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 text-slate">
+              <History className="w-3.5 h-3.5" /> Audit Trail
+            </button>
           </div>
         )}
       </div>
@@ -180,11 +412,10 @@ function BedCard({ patient, navigate }: { patient: Patient; navigate: (s: Screen
           : <ChevronDown className="w-3 h-3 text-slate-400" />}
       </button>
 
-      {/* Expanded detail */}
       {expanded && (
         <div className="px-3 pb-3 border-t border-border/50 bg-slate-50/60 space-y-1.5 pt-2">
           <div className="text-[10px] text-slate">
-            <span className="font-semibold text-navy">Counselor:</span> {patient.counselor.replace(', LCPC', '').replace(', LCADC', '').replace(', LCADC', '')}
+            <span className="font-semibold text-navy">Counselor:</span> {patient.counselor.replace(', LCPC', '').replace(', LCADC', '')}
           </div>
           <div className="text-[10px] text-slate">
             <span className="font-semibold text-navy">Physician:</span> {patient.physician.replace('Dr. ', '')}
@@ -213,12 +444,70 @@ function BedCard({ patient, navigate }: { patient: Patient; navigate: (s: Screen
   );
 }
 
-function EmptyBed({ id }: { id: string }) {
+function EmptyBed({ id, bedStatus, onAction }: {
+  id: string;
+  bedStatus?: BedStatus;
+  onAction: (bedId: string, action: BedAction) => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const status: BedStatus = bedStatus ?? 'Available';
+
+  const bgStyle =
+    status === 'Hold' ? 'bg-amber-50 border-amber-300 border-dashed' :
+    status === 'Blocked' ? 'bg-red-50 border-red-300 border-dashed' :
+    status === 'Cleaning' ? 'bg-slate-50 border-slate-300 border-dashed' :
+    'border border-dashed border-border hover:bg-slate-50 hover:border-slate-300';
+
+  const statusLabel =
+    status === 'Hold' ? '🔒 On Hold' :
+    status === 'Blocked' ? '🔧 Blocked' :
+    status === 'Cleaning' ? '🧹 Cleaning' :
+    '✓ Available';
+
+  const statusColor =
+    status === 'Hold' ? 'text-amber-700' :
+    status === 'Blocked' ? 'text-red-700' :
+    status === 'Cleaning' ? 'text-slate-500' :
+    'text-green-600';
+
   return (
-    <div className="border border-dashed border-border rounded-lg p-3 flex flex-col items-center justify-center min-h-[120px] text-slate-300 hover:bg-slate-50 hover:border-slate-300 transition-colors">
-      <BedDouble className="w-6 h-6 mb-1" />
-      <span className="text-xs font-bold">{id}</span>
-      <span className="text-[10px] mt-0.5">Available</span>
+    <div className={`rounded-lg p-3 flex flex-col items-center justify-center min-h-[120px] transition-colors relative ${bgStyle}`}>
+      <BedDouble className={`w-5 h-5 mb-1 ${status === 'Available' ? 'text-slate-300' : status === 'Hold' ? 'text-amber-400' : status === 'Blocked' ? 'text-red-400' : 'text-slate-400'}`} />
+      <span className="text-xs font-bold text-slate">{id}</span>
+      <span className={`text-[10px] mt-0.5 font-semibold ${statusColor}`}>{statusLabel}</span>
+
+      {/* Action menu */}
+      <div className="absolute top-1.5 right-1.5">
+        <button
+          onClick={e => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+          className="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-100 transition-colors"
+        >
+          <MoreVertical className="w-3 h-3 text-slate-400" />
+        </button>
+        {menuOpen && (
+          <div className="absolute top-5 right-0 bg-white border border-border rounded-xl shadow-xl z-20 w-44 py-1" onClick={e => e.stopPropagation()}>
+            {status !== 'Hold' && (
+              <button onClick={() => { setMenuOpen(false); onAction(id, 'hold'); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 text-amber-700">
+                <ShieldAlert className="w-3.5 h-3.5" /> Place Hold
+              </button>
+            )}
+            {status !== 'Blocked' && (
+              <button onClick={() => { setMenuOpen(false); onAction(id, 'block'); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 text-red-700">
+                <Wrench className="w-3.5 h-3.5" /> Block for Maintenance
+              </button>
+            )}
+            {(status === 'Hold' || status === 'Blocked' || status === 'Cleaning') && (
+              <button onClick={() => { setMenuOpen(false); onAction(id, 'release'); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 text-green-700">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Release Bed
+              </button>
+            )}
+            <hr className="my-1 border-border" />
+            <button onClick={() => { setMenuOpen(false); onAction(id, 'audit'); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 text-slate">
+              <History className="w-3.5 h-3.5" /> Audit Trail
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -230,22 +519,59 @@ type AcuityFilter = 'All' | Acuity;
 export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string) => void }) {
   const [acuityFilter, setAcuityFilter] = useState<AcuityFilter>('All');
   const [boardTab, setBoardTab] = useState<'Bed Board' | 'Occupancy Analytics' | 'Discharge Forecast' | 'Bed Utilization Report' | 'Admission Queue' | 'Transfer Coordination'>('Bed Board');
+  const [activeAction, setActiveAction] = useState<{ bedId: string; action: BedAction } | null>(null);
+  const [auditBedId, setAuditBedId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const { placeBedHold, blockBed, releaseBed, scheduleBedDischarge, getBedState, getBedAuditEvents, allBedStates } = useDemoStore();
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }
+
+  function handleBedAction(bedId: string, action: BedAction) {
+    if (action === 'audit') {
+      setAuditBedId(bedId);
+      return;
+    }
+    setActiveAction({ bedId, action });
+  }
+
+  function handleConfirmAction(bedId: string, action: BedAction, payload: Record<string, string>) {
+    const staff = 'Amanda Lewis (Admissions)';
+    if (action === 'hold') {
+      placeBedHold(bedId, payload.reason, staff);
+      showToast(`Bed ${bedId} placed on hold`);
+    } else if (action === 'block') {
+      blockBed(bedId, payload.reason, staff);
+      showToast(`Bed ${bedId} blocked for maintenance`);
+    } else if (action === 'release') {
+      releaseBed(bedId, staff);
+      showToast(`Bed ${bedId} released — queued for cleaning`);
+    } else if (action === 'discharge') {
+      scheduleBedDischarge(bedId, payload.date, staff);
+      showToast(`Discharge scheduled for Bed ${bedId} on ${payload.date}`);
+    } else if (action === 'move') {
+      showToast(`Patient move request logged — Bed ${bedId} → ${payload.targetBed}`);
+    }
+    setActiveAction(null);
+  }
 
   const residentialPatients = MOCK_PATIENTS.filter(p => p.program === 'Residential' && p.bed);
   const phpPatients        = MOCK_PATIENTS.filter(p => p.program === 'PHP' && p.bed);
   const iopPatients        = MOCK_PATIENTS.filter(p => p.program === 'IOP' && p.bed);
 
-  // Build static bed arrays
   const makeResidentialBed = (id: string) =>
     residentialPatients.find(p => p.bed === id) ?? null;
 
   const residentialBedIds = ['1A', '1B', '2A', '2B', '3A', '3B', '4A', '4B', '5A', '5B'];
 
   const allResidential = residentialBedIds.map(id => ({
-    id, patient: makeResidentialBed(id)
+    id, patient: makeResidentialBed(id),
+    bedStatus: (allBedStates[id]?.status) as BedStatus | undefined,
   }));
 
-  // Filter by acuity
   const filteredResidential = acuityFilter === 'All'
     ? allResidential
     : allResidential.map(b => ({
@@ -254,9 +580,10 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
         dimmed: b.patient && (ACUITY[b.patient.id] ?? 'Routine') !== acuityFilter,
       }));
 
-  // KPIs
   const totalOccupied = residentialPatients.length;
   const totalBeds = residentialBedIds.length;
+  const heldBeds = Object.values(allBedStates).filter(b => b.status === 'Hold').length;
+  const blockedBeds = Object.values(allBedStates).filter(b => b.status === 'Blocked').length;
   const alertCount = residentialPatients.filter(p =>
     WITHDRAWAL[p.id] && ((WITHDRAWAL[p.id].cows ?? 0) >= 13 || (WITHDRAWAL[p.id].ciwa ?? 0) >= 15)
   ).length;
@@ -265,6 +592,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
   const onWithdrawal  = Object.keys(WITHDRAWAL).filter(id =>
     residentialPatients.some(p => p.id === id)
   ).length;
+  const availableBeds = totalBeds - totalOccupied - heldBeds - blockedBeds;
 
   return (
     <div className="space-y-5">
@@ -307,7 +635,6 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
               </div>
             ))}
           </div>
-
           <div className="grid grid-cols-2 gap-5">
             <div className="card">
               <h3 className="font-semibold text-navy text-sm mb-3">Occupancy by Program — Last 6 Weeks</h3>
@@ -318,7 +645,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                   { week: 'Jun 23', res: 13, php: 11, iop: 10 },
                   { week: 'Jun 30', res: 15, php: 10, iop: 12 },
                   { week: 'Jul 7', res: 16, php: 11, iop: 11 },
-                  { week: 'Jul 20', res: totalOccupied, php: phpPatients.length, iop: iopPatients.length },
+                  { week: 'Jul 28', res: totalOccupied, php: phpPatients.length, iop: iopPatients.length },
                 ].map(r => (
                   <div key={r.week} className="flex items-center gap-3 text-xs">
                     <span className="w-14 text-slate shrink-0">{r.week}</span>
@@ -336,7 +663,6 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-teal-400 inline-block" /> IOP</span>
               </div>
             </div>
-
             <div className="card">
               <h3 className="font-semibold text-navy text-sm mb-3">Discharge Disposition — Last 30 Days</h3>
               <div className="space-y-3">
@@ -358,20 +684,6 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                   </div>
                 ))}
               </div>
-              <div className="mt-4 pt-3 border-t border-border text-xs">
-                <div className="font-semibold text-navy mb-2">Average LOS by Primary Substance</div>
-                {[
-                  { substance: 'Opioid (IV)', los: '21.2 days' },
-                  { substance: 'Alcohol', los: '15.8 days' },
-                  { substance: 'Methamphetamine', los: '19.4 days' },
-                  { substance: 'Polysubstance', los: '22.7 days' },
-                ].map(r => (
-                  <div key={r.substance} className="flex justify-between text-slate py-0.5">
-                    <span>{r.substance}</span>
-                    <span className="font-bold text-navy">{r.los}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -379,7 +691,6 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
 
       {boardTab === 'Bed Board' && (
       <>
-      {/* Alert strip */}
       {alertCount > 0 && (
         <div className="bg-red-50 border border-red-300 rounded-lg px-4 py-3 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-red-600 flex-none" />
@@ -396,7 +707,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
         {[
           { label: 'Occupied', value: `${totalOccupied}/${totalBeds}`, sub: 'Residential', color: 'text-navy', border: 'border-navy/20' },
-          { label: 'Available', value: totalBeds - totalOccupied, sub: 'Open beds', color: 'text-success', border: 'border-success/30' },
+          { label: 'Available', value: availableBeds, sub: 'Open beds', color: 'text-success', border: 'border-success/30' },
           { label: 'Critical', value: criticalCount, sub: 'Acuity', color: 'text-critical', border: 'border-critical/30' },
           { label: 'High', value: highCount, sub: 'Acuity', color: 'text-high', border: 'border-high/30' },
           { label: 'WD Protocol', value: onWithdrawal, sub: 'Active', color: 'text-purple-700', border: 'border-purple-300' },
@@ -410,10 +721,10 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
         ))}
       </div>
 
-      {/* Acuity filter */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* Bed status legend */}
+      <div className="flex items-center gap-4 text-xs flex-wrap">
         <Filter className="w-4 h-4 text-slate" />
-        <span className="text-sm text-slate font-medium">Filter acuity:</span>
+        <span className="font-medium text-slate">Filter acuity:</span>
         {(['All', 'Critical', 'High', 'Moderate', 'Routine'] as AcuityFilter[]).map(f => (
           <button
             key={f}
@@ -431,19 +742,11 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
             {f}
           </button>
         ))}
-      </div>
-
-      {/* Legend */}
-      <div className="flex gap-4 text-xs text-slate flex-wrap">
-        {([['Critical', 'bg-critical'], ['High', 'bg-high'], ['Moderate', 'bg-moderate'], ['Routine', 'bg-success']] as const).map(([l, c]) => (
-          <div key={l} className="flex items-center gap-1.5">
-            <div className={`w-2.5 h-2.5 rounded-sm ${c}`} />
-            {l}
-          </div>
-        ))}
-        <div className="ml-2 text-slate-400">|</div>
-        <div className="flex items-center gap-1"><AlertTriangle className="w-3 h-3 text-critical" /> WD alert</div>
-        <div className="flex items-center gap-1"><TrendingDown className="w-3 h-3 text-success" /> WD improving</div>
+        <div className="ml-auto flex items-center gap-3 text-[10px] text-slate flex-wrap">
+          {([['Available', 'bg-green-400'], ['Hold', 'bg-amber-400'], ['Blocked', 'bg-red-400'], ['Cleaning', 'bg-slate-300'], ['Pending Discharge', 'bg-purple-400']] as const).map(([l, c]) => (
+            <span key={l} className="flex items-center gap-1"><span className={`w-2 h-2 rounded-sm ${c} inline-block`} />{l}</span>
+          ))}
+        </div>
       </div>
 
       {/* Residential Section */}
@@ -455,54 +758,49 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
             <span className="bg-slate-100 text-slate text-xs px-2 py-0.5 rounded-full font-semibold">
               {totalOccupied}/{totalBeds} occupied
             </span>
+            {heldBeds > 0 && <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold">{heldBeds} on hold</span>}
+            {blockedBeds > 0 && <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-semibold">{blockedBeds} blocked</span>}
           </h2>
-          <span className="text-xs text-slate">Beds 1A – 5B</span>
+          <span className="text-xs text-slate">Beds 1A – 5B · Click ⋮ for bed actions</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {filteredResidential.map(b => (
             b.patient
-              ? <BedCard key={b.id} patient={b.patient} navigate={navigate} />
-              : <EmptyBed key={b.id} id={b.id} />
+              ? <BedCard key={b.id} patient={b.patient} bedId={b.id} navigate={navigate} bedStatus={b.bedStatus} onAction={handleBedAction} />
+              : <EmptyBed key={b.id} id={b.id} bedStatus={b.bedStatus} onAction={handleBedAction} />
           ))}
         </div>
       </div>
 
       {/* PHP & IOP sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* PHP */}
         <div className="bg-white rounded-xl shadow-sm border border-border p-5">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
             <h2 className="text-base font-bold text-navy flex items-center gap-2">
               <Users className="w-4 h-4 text-sunrise-blue" />
               Partial Hospitalization (PHP)
-              <span className="bg-slate-100 text-slate text-xs px-2 py-0.5 rounded-full font-semibold">
-                {phpPatients.length} enrolled
-              </span>
+              <span className="bg-slate-100 text-slate text-xs px-2 py-0.5 rounded-full font-semibold">{phpPatients.length} enrolled</span>
             </h2>
           </div>
           {phpPatients.length > 0
             ? <div className="grid grid-cols-2 gap-3">
-                {phpPatients.map(p => <BedCard key={p.id} patient={p} navigate={navigate} />)}
+                {phpPatients.map(p => <BedCard key={p.id} patient={p} bedId={p.bed ?? p.id} navigate={navigate} onAction={handleBedAction} />)}
               </div>
-            : <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate"><Users className="w-8 h-8 text-slate-200" /><span className="text-sm italic">No PHP patients with assigned beds.</span><span className="text-xs text-slate-light">Patients enroll via Admissions once a bed is assigned.</span></div>}
+            : <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate"><Users className="w-8 h-8 text-slate-200" /><span className="text-sm italic">No PHP patients with assigned beds.</span></div>}
         </div>
-
-        {/* IOP */}
         <div className="bg-white rounded-xl shadow-sm border border-border p-5">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
             <h2 className="text-base font-bold text-navy flex items-center gap-2">
               <Users className="w-4 h-4 text-sunrise-blue" />
               Intensive Outpatient (IOP)
-              <span className="bg-slate-100 text-slate text-xs px-2 py-0.5 rounded-full font-semibold">
-                {iopPatients.length} enrolled
-              </span>
+              <span className="bg-slate-100 text-slate text-xs px-2 py-0.5 rounded-full font-semibold">{iopPatients.length} enrolled</span>
             </h2>
           </div>
           {iopPatients.length > 0
             ? <div className="grid grid-cols-2 gap-3">
-                {iopPatients.map(p => <BedCard key={p.id} patient={p} navigate={navigate} />)}
+                {iopPatients.map(p => <BedCard key={p.id} patient={p} bedId={p.bed ?? p.id} navigate={navigate} onAction={handleBedAction} />)}
               </div>
-            : <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate"><Users className="w-8 h-8 text-slate-200" /><span className="text-sm italic">No IOP patients with assigned beds.</span><span className="text-xs text-slate-light">Patients enroll via Admissions once a bed is assigned.</span></div>}
+            : <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate"><Users className="w-8 h-8 text-slate-200" /><span className="text-sm italic">No IOP patients with assigned beds.</span></div>}
         </div>
       </div>
       </>
@@ -525,19 +823,14 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
               </div>
             ))}
           </div>
-
           <div className="card">
             <h3 className="font-semibold text-navy text-sm mb-3">14-Day Discharge Schedule</h3>
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border text-slate">
-                  <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Patient</th>
-                  <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Bed</th>
-                  <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Program</th>
-                  <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Projected Discharge</th>
-                  <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">LOS</th>
-                  <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Discharge Destination</th>
-                  <th className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">Status</th>
+                  {['Patient', 'Bed', 'Program', 'Projected Discharge', 'LOS', 'Discharge Destination', 'Status'].map(h => (
+                    <th key={h} className="text-left py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -557,64 +850,11 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                     <td className="py-2 font-medium text-navy">{r.date}</td>
                     <td className="py-2 text-slate">Day {r.los}</td>
                     <td className="py-2 text-slate">{r.dest}</td>
-                    <td className="py-2">
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.statusColor}`}>{r.status}</span>
-                    </td>
+                    <td className="py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.statusColor}`}>{r.status}</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-
-          <div className="grid grid-cols-2 gap-5">
-            <div className="card">
-              <h3 className="font-semibold text-navy text-sm mb-3">Bed Turnover Timeline (Next 14 Days)</h3>
-              <div className="space-y-2 text-xs">
-                {[
-                  { date: 'Jul 22', beds: ['1A'], opens: 1 },
-                  { date: 'Jul 24', beds: ['2B'], opens: 1 },
-                  { date: 'Jul 26', beds: ['3A'], opens: 1 },
-                  { date: 'Jul 28', beds: ['4B'], opens: 1 },
-                  { date: 'Jul 30', beds: ['1B'], opens: 1 },
-                  { date: 'Aug 2', beds: ['3B'], opens: 1 },
-                  { date: 'Aug 4', beds: ['5A'], opens: 1 },
-                ].map(d => (
-                  <div key={d.date} className="flex items-center gap-3 border border-border rounded p-2">
-                    <span className="font-semibold text-navy w-14 shrink-0">{d.date}</span>
-                    <div className="flex gap-1">
-                      {d.beds.map(b => (
-                        <span key={b} className="bg-teal-100 text-teal-700 text-[10px] font-bold px-1.5 py-0.5 rounded">Bed {b}</span>
-                      ))}
-                    </div>
-                    <span className="text-slate ml-auto">{d.opens} bed opening</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="card">
-              <h3 className="font-semibold text-navy text-sm mb-3">Discharge Destination Summary (Last 30 Days)</h3>
-              <div className="space-y-2 text-xs">
-                {[
-                  { dest: 'Sober Living / Recovery Residence', n: 6, pct: 35, color: 'bg-green-500' },
-                  { dest: 'PHP Step-Down (Sunrise)', n: 4, pct: 24, color: 'bg-blue-500' },
-                  { dest: 'Family Home + Outpatient', n: 3, pct: 18, color: 'bg-teal-500' },
-                  { dest: 'Against Medical Advice (AMA)', n: 2, pct: 12, color: 'bg-red-500' },
-                  { dest: 'Hospital / Higher Level of Care', n: 1, pct: 6, color: 'bg-amber-500' },
-                  { dest: 'Unknown / Pending', n: 1, pct: 6, color: 'bg-gray-400' },
-                ].map(d => (
-                  <div key={d.dest}>
-                    <div className="flex justify-between mb-0.5">
-                      <span className="text-slate">{d.dest}</span>
-                      <span className="font-semibold text-navy">{d.n} ({d.pct}%)</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full">
-                      <div className={`h-2 rounded-full ${d.color}`} style={{ width: `${d.pct}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -658,9 +898,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                     <td className="px-3 py-2 font-medium text-navy">{r.prog}</td>
                     <td className="px-3 py-2 text-center text-slate">{r.beds}</td>
                     <td className="px-3 py-2 text-center text-navy">{r.census}</td>
-                    <td className="px-3 py-2 text-center">
-                      <span className={`font-bold ${r.occ >= 85 ? 'text-green-600' : r.occ >= 80 ? 'text-blue-600' : 'text-amber-600'}`}>{r.occ}%</span>
-                    </td>
+                    <td className="px-3 py-2 text-center"><span className={`font-bold ${r.occ >= 85 ? 'text-green-600' : r.occ >= 80 ? 'text-blue-600' : 'text-amber-600'}`}>{r.occ}%</span></td>
                     <td className="px-3 py-2 text-center text-slate">{r.los}d</td>
                     <td className="px-3 py-2 text-center text-slate">{r.dc}</td>
                     <td className="px-3 py-2 text-center text-slate">{r.turn > 0 ? `${r.turn}h` : '—'}</td>
@@ -714,9 +952,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                     <td className="px-3 py-2 text-slate">{r.sud}</td>
                     <td className="px-3 py-2 text-slate">{r.loc}</td>
                     <td className="px-3 py-2 text-slate">{r.source}</td>
-                    <td className="px-3 py-2">
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.auth === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{r.auth}</span>
-                    </td>
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.auth === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{r.auth}</span></td>
                     <td className="px-3 py-2 font-semibold text-navy">{r.eta}</td>
                     <td className="px-3 py-2 text-slate">{r.bed}</td>
                     <td className="px-3 py-2 text-slate italic text-[10px]">{r.notes}</td>
@@ -746,7 +982,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
             ))}
           </div>
           <div className="card">
-            <h3 className="font-semibold text-navy text-sm mb-3">Transfer Log — Active & Recent</h3>
+            <h3 className="font-semibold text-navy text-sm mb-3">Transfer Log — Active &amp; Recent</h3>
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-gray-50">
@@ -767,9 +1003,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                     <td className="px-3 py-2 font-semibold text-navy">{r.name}</td>
                     <td className="px-3 py-2 text-slate">{r.from}</td>
                     <td className="px-3 py-2 text-slate">{r.to}</td>
-                    <td className="px-3 py-2">
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.dir === 'Step-Up' ? 'bg-red-100 text-red-700' : r.dir === 'Transfer Out' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>{r.dir}</span>
-                    </td>
+                    <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.dir === 'Step-Up' ? 'bg-red-100 text-red-700' : r.dir === 'Transfer Out' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>{r.dir}</span></td>
                     <td className="px-3 py-2 text-slate">{r.reason}</td>
                     <td className="px-3 py-2"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.auth === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{r.auth}</span></td>
                     <td className="px-3 py-2 text-slate">{r.date}</td>
@@ -780,6 +1014,28 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      {activeAction && (
+        <BedActionModal
+          bedId={activeAction.bedId}
+          action={activeAction.action}
+          onClose={() => setActiveAction(null)}
+          onConfirm={handleConfirmAction}
+        />
+      )}
+      {auditBedId && (
+        <BedAuditDrawer
+          bedId={auditBedId}
+          events={getBedAuditEvents(auditBedId)}
+          onClose={() => setAuditBedId(null)}
+        />
+      )}
+      {toast && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <LogOut className="w-4 h-4" /> {toast}
         </div>
       )}
     </div>

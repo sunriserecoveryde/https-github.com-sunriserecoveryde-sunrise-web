@@ -80,6 +80,8 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
   const [searchTerm, setSearchTerm] = useState('');
   const [program, setProgram]       = useState<Program>('All');
   const [risk, setRisk]             = useState<RiskLevel>('All');
+  const [clinician, setClinician]   = useState<string>('All');
+  const [admitStatus, setAdmitStatus] = useState<'All' | 'Active' | 'Pending Discharge' | 'Discharged'>('All');
   const [sort, setSort]             = useState<{ field: SortField; dir: SortDir }>({ field: 'name', dir: 'asc' });
   const [plTab, setPlTab]           = useState<'Census' | 'Risk Summary' | 'LOC Distribution' | 'Flags Overview' | 'Payer Mix' | 'Discharge Pipeline'>('Census');
   const [showBookingPreview, setShowBookingPreview] = useState(false);
@@ -95,13 +97,28 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
     setSort(prev => prev.field === field ? { field, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'asc' });
   }
 
+  // Distinct counselors for the clinician filter dropdown
+  const allClinicians = useMemo(() => {
+    const s = new Set<string>();
+    MOCK_PATIENTS.forEach(p => { if (p.counselor) s.add(p.counselor); });
+    return ['All', ...Array.from(s).sort()];
+  }, []);
+
+  // Simulate admit status by LOS bucket (no status field in model)
+  function getAdmitStatus(los: number): 'Active' | 'Pending Discharge' | 'Discharged' {
+    if (los >= 28) return 'Pending Discharge';
+    return 'Active';
+  }
+
   const filtered = useMemo(() => {
     let list = MOCK_PATIENTS.filter(p => {
       const term = searchTerm.toLowerCase();
       const nameMatch = `${p.firstName} ${p.lastName}`.toLowerCase().includes(term) || p.mrn.toLowerCase().includes(term);
       const progMatch = program === 'All' || p.program === program;
       const riskMatch = risk === 'All' || p.amaRisk === risk || (risk === 'Low' && p.amaRisk !== 'High' && p.amaRisk !== 'Med');
-      return nameMatch && progMatch && riskMatch;
+      const clinicianMatch = clinician === 'All' || p.counselor === clinician;
+      const statusMatch = admitStatus === 'All' || getAdmitStatus(p.los) === admitStatus;
+      return nameMatch && progMatch && riskMatch && clinicianMatch && statusMatch;
     });
 
     list = [...list].sort((a, b) => {
@@ -116,7 +133,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
     });
 
     return list;
-  }, [searchTerm, program, risk, sort]);
+  }, [searchTerm, program, risk, clinician, admitStatus, sort]);
 
   const highRisk  = MOCK_PATIENTS.filter(p => p.amaRisk === 'High').length;
   const avgLos    = Math.round(MOCK_PATIENTS.reduce((s, p) => s + p.los, 0) / MOCK_PATIENTS.length);
@@ -325,6 +342,30 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
                 {r === 'All' ? 'All Risk' : `${r} Risk`}
               </button>
             ))}
+          </div>
+          {/* Clinician filter */}
+          <div className="ml-2 border-l border-border pl-3">
+            <select
+              value={clinician}
+              onChange={e => setClinician(e.target.value)}
+              className="text-xs border border-border rounded-full px-3 py-1.5 bg-bg text-slate focus:outline-none focus:border-sunrise-blue"
+            >
+              {allClinicians.map(c => (
+                <option key={c} value={c}>{c === 'All' ? 'All Clinicians' : c.replace(', LCPC', '').replace(', LCADC', '')}</option>
+              ))}
+            </select>
+          </div>
+          {/* Status filter */}
+          <div>
+            <select
+              value={admitStatus}
+              onChange={e => setAdmitStatus(e.target.value as typeof admitStatus)}
+              className="text-xs border border-border rounded-full px-3 py-1.5 bg-bg text-slate focus:outline-none focus:border-sunrise-blue"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Active">Active</option>
+              <option value="Pending Discharge">Pending Discharge</option>
+            </select>
           </div>
           <span className="ml-auto text-xs text-slate">{filtered.length} of {MOCK_PATIENTS.length} clients</span>
         </div>

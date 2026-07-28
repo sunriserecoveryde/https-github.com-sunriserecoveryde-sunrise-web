@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { X } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Check, AlertCircle } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
+import { useDemoStore } from '../store/demoStore';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -113,18 +114,569 @@ const MONTHLY_ADMITS = [
   { month: 'Jul', residential: 8, php: 5, iop: 4 },
 ];
 
+// ─── 10-Step Intake Wizard ────────────────────────────────────────────────────
+
+const WIZARD_STEPS = [
+  'Referral Info',
+  'Eligibility Check',
+  'Insurance Verification',
+  'Clinical Screening',
+  'Risk Screening',
+  'ASAM Recommendation',
+  'Required Documents',
+  'Admission Decision',
+  'Bed Assignment',
+  'Complete',
+];
+
+interface WizardState {
+  // Step 1
+  name: string; dob: string; gender: string; phone: string;
+  referralSource: string; referralType: string;
+  // Step 2
+  primaryDx: string; coOccurring: string; program: string; legalInvolvement: string;
+  // Step 3
+  insurance: string; insuranceId: string; insuranceStatus: string; authNotes: string;
+  // Step 4
+  d1: string; d2: string; d3: string; d4: string; d5: string; d6: string;
+  clinicalNotes: string;
+  // Step 5
+  suicideRisk: string; violenceRisk: string; withdrawalRisk: string; amaRisk: string;
+  // Step 6
+  asamRec: string; locRationale: string;
+  // Step 7
+  idOnFile: boolean; insuranceCardOnFile: boolean; consentSigned: boolean;
+  cfr42Signed: boolean; medHistoryCollected: boolean;
+  // Step 8
+  decision: string; decisionReason: string; waitlistNotes: string;
+  // Step 9
+  assignedBed: string; admitDate: string; assignedCounselor: string;
+  // Step 10 — filled automatically
+}
+
+const INITIAL_WIZARD: WizardState = {
+  name: '', dob: '', gender: 'M', phone: '',
+  referralSource: '', referralType: 'Self',
+  primaryDx: '', coOccurring: '', program: 'Residential', legalInvolvement: 'None',
+  insurance: '', insuranceId: '', insuranceStatus: 'Pending', authNotes: '',
+  d1: '2', d2: '1', d3: '2', d4: '2', d5: '2', d6: '2',
+  clinicalNotes: '',
+  suicideRisk: 'Low', violenceRisk: 'Low', withdrawalRisk: 'Moderate', amaRisk: 'Low',
+  asamRec: 'Residential (3.5)', locRationale: '',
+  idOnFile: false, insuranceCardOnFile: false, consentSigned: false,
+  cfr42Signed: false, medHistoryCollected: false,
+  decision: 'Approved', decisionReason: '', waitlistNotes: '',
+  assignedBed: '', admitDate: '2026-07-28', assignedCounselor: 'Sarah Jenkins, LCPC',
+};
+
+function IntakeWizard({ onClose, readOnly }: { onClose: () => void; readOnly?: boolean }) {
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState<WizardState>(INITIAL_WIZARD);
+  const [converted, setConverted] = useState(false);
+  const [savedMrn, setSavedMrn] = useState('');
+  const { addIntakePatient, convertIntakeToPatient, addAuditEntry } = useDemoStore();
+  const [savedId, setSavedId] = useState<string | null>(null);
+
+  function update(key: keyof WizardState, val: string | boolean) {
+    setForm(f => ({ ...f, [key]: val }));
+  }
+
+  function canAdvance(): boolean {
+    if (step === 0) return form.name.trim().length > 0 && form.dob.length > 0 && form.phone.length > 0;
+    if (step === 1) return form.primaryDx.trim().length > 0 && form.program.length > 0;
+    if (step === 7) return form.decision.length > 0;
+    return true;
+  }
+
+  function handleNext() {
+    if (step < WIZARD_STEPS.length - 1) setStep(s => s + 1);
+    if (step === WIZARD_STEPS.length - 2) {
+      // Save to store on reaching "Complete"
+      const newId = `ip-${Date.now()}`;
+      addIntakePatient({
+        id: newId,
+        name: form.name,
+        dob: form.dob,
+        gender: form.gender,
+        phone: form.phone,
+        referralSource: form.referralSource,
+        primaryDx: form.primaryDx,
+        program: form.program,
+        insurance: form.insurance,
+        insuranceStatus: form.insuranceStatus as 'Verified' | 'Pending' | 'Denied' | 'Self-Pay',
+        asamRec: form.asamRec,
+        assignedBed: form.assignedBed,
+        admissionDecision: form.decision as 'Approved' | 'Waitlist' | 'Deferred' | 'Declined',
+        decisionReason: form.decisionReason,
+        completedSteps: WIZARD_STEPS.length,
+        notes: form.clinicalNotes,
+      });
+      setSavedId(newId);
+      addAuditEntry({ staffName: 'Amanda Lewis', action: 'Intake Completed', entity: 'Admissions', detail: `New intake for ${form.name} — decision: ${form.decision}` });
+    }
+  }
+
+  function handleConvert() {
+    const mrn = `MRN-${90000 + Math.floor(Math.random() * 9000)}`;
+    setSavedMrn(mrn);
+    if (savedId) convertIntakeToPatient(savedId, mrn);
+    addAuditEntry({ staffName: 'Amanda Lewis', action: 'Converted to Patient', entity: 'Admissions', detail: `${form.name} converted → ${mrn}` });
+    setConverted(true);
+  }
+
+  const pct = Math.round(((step + 1) / WIZARD_STEPS.length) * 100);
+
+  function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+    return (
+      <div>
+        <label className="block text-xs font-semibold text-slate uppercase mb-1">{label}{required && <span className="text-critical ml-0.5">*</span>}</label>
+        {children}
+      </div>
+    );
+  }
+
+  const inputCls = "w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue";
+  const selectCls = "w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue bg-white";
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-[680px] max-h-[92vh] overflow-hidden flex flex-col mx-4" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-navy">New Patient Intake</h2>
+            <p className="text-xs text-slate">Step {step + 1} of {WIZARD_STEPS.length} — {WIZARD_STEPS[step]}</p>
+          </div>
+          <button onClick={onClose}><X className="w-5 h-5 text-slate hover:text-navy" /></button>
+        </div>
+
+        {/* Progress */}
+        <div className="px-6 py-3 border-b border-border flex-shrink-0">
+          <div className="flex gap-1 mb-2">
+            {WIZARD_STEPS.map((s, i) => (
+              <div
+                key={i}
+                className={`flex-1 h-1.5 rounded-full transition-all ${i < step ? 'bg-success' : i === step ? 'bg-sunrise-blue' : 'bg-slate-100'}`}
+              />
+            ))}
+          </div>
+          <div className="flex justify-between text-[10px] text-slate font-medium">
+            <span>{WIZARD_STEPS[step]}</span>
+            <span>{pct}% complete</span>
+          </div>
+        </div>
+
+        {/* Step names mini row */}
+        <div className="px-6 py-2 border-b border-border bg-gray-50 flex gap-1 overflow-x-auto flex-shrink-0 no-scrollbar">
+          {WIZARD_STEPS.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => i < step && setStep(i)}
+              className={`text-[10px] whitespace-nowrap px-2 py-0.5 rounded flex items-center gap-1 font-medium ${
+                i === step ? 'bg-sunrise-blue text-white' :
+                i < step ? 'bg-success/20 text-success cursor-pointer' :
+                'text-slate-300 cursor-default'
+              }`}
+            >
+              {i < step && <Check className="w-2.5 h-2.5" />}
+              {i + 1}. {s}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Step 0: Referral Info */}
+          {step === 0 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Full Name" required>
+                  <input className={inputCls} placeholder="First Last" value={form.name} onChange={e => update('name', e.target.value)} />
+                </Field>
+                <Field label="Date of Birth" required>
+                  <input type="date" className={inputCls} value={form.dob} onChange={e => update('dob', e.target.value)} />
+                </Field>
+                <Field label="Gender">
+                  <select className={selectCls} value={form.gender} onChange={e => update('gender', e.target.value)}>
+                    <option value="M">Male</option><option value="F">Female</option><option value="NB">Non-binary</option><option value="Other">Other / Prefer not to say</option>
+                  </select>
+                </Field>
+                <Field label="Phone" required>
+                  <input className={inputCls} placeholder="(301) 555-0000" value={form.phone} onChange={e => update('phone', e.target.value)} />
+                </Field>
+                <Field label="Referral Source">
+                  <input className={inputCls} placeholder="e.g. MedStar Georgetown ER, Self, PCP" value={form.referralSource} onChange={e => update('referralSource', e.target.value)} />
+                </Field>
+                <Field label="Referral Type">
+                  <select className={selectCls} value={form.referralType} onChange={e => update('referralType', e.target.value)}>
+                    <option>Self</option><option>Family</option><option>Hospital ER</option><option>Physician / PCP</option><option>Drug Court / Probation</option><option>EAP</option><option>Step-Down (Other Facility)</option><option>Mental Health Provider</option>
+                  </select>
+                </Field>
+              </div>
+            </div>
+          )}
+
+          {/* Step 1: Eligibility Check */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <Field label="Primary Diagnosis / SUD Type" required>
+                <input className={inputCls} placeholder="e.g. Severe Opioid Use Disorder, Alcohol Use Disorder (Moderate)" value={form.primaryDx} onChange={e => update('primaryDx', e.target.value)} />
+              </Field>
+              <Field label="Co-occurring Conditions">
+                <input className={inputCls} placeholder="e.g. PTSD, MDD, Anxiety — separate with commas" value={form.coOccurring} onChange={e => update('coOccurring', e.target.value)} />
+              </Field>
+              <Field label="Requested Level of Care" required>
+                <select className={selectCls} value={form.program} onChange={e => update('program', e.target.value)}>
+                  <option>Residential</option><option>PHP</option><option>IOP</option><option>Detox</option><option>OP</option>
+                </select>
+              </Field>
+              <Field label="Legal Involvement">
+                <select className={selectCls} value={form.legalInvolvement} onChange={e => update('legalInvolvement', e.target.value)}>
+                  <option>None</option><option>Drug Court (Track A)</option><option>Drug Court (Track B)</option><option>Probation / Parole</option><option>Pending Charges</option><option>Diversion Program</option>
+                </select>
+              </Field>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
+                <AlertCircle className="w-3.5 h-3.5 inline mr-1" />
+                Eligibility determination requires valid insurance or confirmed self-pay agreement before bed assignment.
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Insurance Verification */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Insurance Plan">
+                  <input className={inputCls} placeholder="e.g. CareFirst BCBS, Maryland Medicaid" value={form.insurance} onChange={e => update('insurance', e.target.value)} />
+                </Field>
+                <Field label="Member / Policy ID">
+                  <input className={inputCls} placeholder="e.g. CFBC-9821-MD" value={form.insuranceId} onChange={e => update('insuranceId', e.target.value)} />
+                </Field>
+              </div>
+              <Field label="Verification Status">
+                <select className={selectCls} value={form.insuranceStatus} onChange={e => update('insuranceStatus', e.target.value)}>
+                  <option value="Pending">Pending — call in progress</option>
+                  <option value="Verified">Verified — authorized</option>
+                  <option value="Denied">Denied — appeal required</option>
+                  <option value="Self-Pay">Self-Pay / No insurance</option>
+                </select>
+              </Field>
+              <Field label="Authorization Notes">
+                <textarea
+                  className={`${inputCls} min-h-[80px] resize-none`}
+                  placeholder="Auth number, coverage details, peer-to-peer notes..."
+                  value={form.authNotes}
+                  onChange={e => update('authNotes', e.target.value)}
+                />
+              </Field>
+              {form.insuranceStatus === 'Denied' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
+                  ⚠ Insurance denied — document peer-to-peer request and notify financial counselor before proceeding.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Clinical Screening (ASAM) */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="text-sm font-semibold text-navy mb-2">ASAM Multidimensional Assessment</div>
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  { key: 'd1', label: 'D1 Intox / Withdrawal', note: 'Severity 0–4' },
+                  { key: 'd2', label: 'D2 Biomedical', note: 'Medical conditions' },
+                  { key: 'd3', label: 'D3 Emotional / Behavioral', note: 'Psych stability' },
+                  { key: 'd4', label: 'D4 Readiness to Change', note: 'Motivation level' },
+                  { key: 'd5', label: 'D5 Relapse Potential', note: 'Risk of continued use' },
+                  { key: 'd6', label: 'D6 Recovery Environment', note: 'Home / social support' },
+                ] as { key: keyof WizardState; label: string; note: string }[]).map(d => (
+                  <div key={d.key} className="border border-border rounded-lg p-3">
+                    <div className="text-xs font-semibold text-navy mb-1">{d.label}</div>
+                    <div className="text-[10px] text-slate mb-2">{d.note}</div>
+                    <select className={selectCls} value={String(form[d.key])} onChange={e => update(d.key, e.target.value)}>
+                      <option value="0">0 — No problem</option>
+                      <option value="1">1 — Mild</option>
+                      <option value="2">2 — Moderate</option>
+                      <option value="3">3 — Severe</option>
+                      <option value="4">4 — Critical</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <Field label="Clinical Notes">
+                <textarea className={`${inputCls} min-h-[70px] resize-none`} placeholder="Clinician observations, chief complaint, presenting concerns..." value={form.clinicalNotes} onChange={e => update('clinicalNotes', e.target.value)} />
+              </Field>
+            </div>
+          )}
+
+          {/* Step 4: Risk Screening */}
+          {step === 4 && (
+            <div className="space-y-4">
+              <div className="text-sm font-semibold text-navy mb-1">Risk Screening</div>
+              <div className="grid grid-cols-2 gap-4">
+                {([
+                  { key: 'suicideRisk', label: 'Suicide / Self-Harm Risk' },
+                  { key: 'violenceRisk', label: 'Violence / Homicide Risk' },
+                  { key: 'withdrawalRisk', label: 'Withdrawal Severity Risk' },
+                  { key: 'amaRisk', label: 'AMA / Against Medical Advice Risk' },
+                ] as { key: keyof WizardState; label: string }[]).map(r => (
+                  <Field key={r.key} label={r.label}>
+                    <select className={selectCls} value={String(form[r.key])} onChange={e => update(r.key, e.target.value)}>
+                      <option value="Low">Low</option>
+                      <option value="Moderate">Moderate</option>
+                      <option value="High">High — requires escalation</option>
+                    </select>
+                  </Field>
+                ))}
+              </div>
+              {(form.suicideRisk === 'High' || form.violenceRisk === 'High') && (
+                <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-xs text-red-700 font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-none" />
+                  High risk identified — psychiatric evaluation required before admission. Supervisor notification mandatory.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 5: ASAM Recommendation */}
+          {step === 5 && (
+            <div className="space-y-4">
+              <div className="bg-sunrise-blue/10 border border-sunrise-blue/20 p-4 rounded-lg">
+                <div className="font-semibold text-sunrise-blue text-sm mb-1">ASAM Dimension Summary</div>
+                <div className="grid grid-cols-6 gap-2 text-center text-xs">
+                  {['d1','d2','d3','d4','d5','d6'].map(d => (
+                    <div key={d} className="bg-white border border-border rounded p-2">
+                      <div className="font-bold text-navy text-base">{form[d as keyof WizardState]}</div>
+                      <div className="text-slate text-[9px] uppercase">{d.toUpperCase()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Field label="ASAM Level of Care Recommendation">
+                <select className={selectCls} value={form.asamRec} onChange={e => update('asamRec', e.target.value)}>
+                  <option>Detox / Medically Managed Withdrawal (4-WM)</option>
+                  <option>Residential (3.7)</option>
+                  <option>Residential (3.5)</option>
+                  <option>Residential (3.1)</option>
+                  <option>Partial Hospitalization (2.5)</option>
+                  <option>Intensive Outpatient (2.1)</option>
+                  <option>Outpatient (1.0)</option>
+                </select>
+              </Field>
+              <Field label="LOC Rationale (for insurance documentation)">
+                <textarea className={`${inputCls} min-h-[100px] resize-none`} placeholder="Document clinical justification for recommended LOC..." value={form.locRationale} onChange={e => update('locRationale', e.target.value)} />
+              </Field>
+            </div>
+          )}
+
+          {/* Step 6: Required Documents */}
+          {step === 6 && (
+            <div className="space-y-3">
+              <div className="text-sm text-slate mb-2">Verify all required documentation is collected before admission decision.</div>
+              {([
+                { key: 'idOnFile', label: 'Government-Issued Photo ID on File' },
+                { key: 'insuranceCardOnFile', label: 'Insurance Card (copy) on File' },
+                { key: 'consentSigned', label: 'Consent to Treatment Signed' },
+                { key: 'cfr42Signed', label: '42 CFR Part 2 Confidentiality Disclosure Signed' },
+                { key: 'medHistoryCollected', label: 'Medical History / Physical Exam Collected' },
+              ] as { key: keyof WizardState; label: string }[]).map(doc => (
+                <label key={doc.key} className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={form[doc.key] as boolean}
+                    onChange={e => update(doc.key, e.target.checked)}
+                    className="accent-success w-4 h-4"
+                  />
+                  <span className={`text-sm font-medium ${form[doc.key] ? 'line-through text-slate' : 'text-navy'}`}>{doc.label}</span>
+                  {form[doc.key] && <Check className="w-4 h-4 text-success ml-auto" />}
+                </label>
+              ))}
+              {(['idOnFile','insuranceCardOnFile','consentSigned','cfr42Signed','medHistoryCollected'] as (keyof WizardState)[]).filter(k => !form[k]).length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                  ⚠ {(['idOnFile','insuranceCardOnFile','consentSigned','cfr42Signed','medHistoryCollected'] as (keyof WizardState)[]).filter(k => !form[k]).length} document(s) still outstanding — admission can proceed but must be collected within 24h.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 7: Admission Decision */}
+          {step === 7 && (
+            <div className="space-y-4">
+              <Field label="Admission Decision" required>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { val: 'Approved', color: 'border-green-400 bg-green-50 text-green-700', desc: 'Clinical criteria met — proceed to bed assignment' },
+                    { val: 'Waitlist', color: 'border-amber-400 bg-amber-50 text-amber-700', desc: 'Qualified but no bed available — place on waitlist' },
+                    { val: 'Deferred', color: 'border-blue-400 bg-blue-50 text-blue-700', desc: 'Pending additional info or auth before deciding' },
+                    { val: 'Declined', color: 'border-red-400 bg-red-50 text-red-700', desc: 'Does not meet criteria or requests withdrawn' },
+                  ].map(opt => (
+                    <button
+                      key={opt.val}
+                      onClick={() => update('decision', opt.val)}
+                      className={`border-2 rounded-xl p-4 text-left transition-all ${form.decision === opt.val ? opt.color + ' ring-2 ring-offset-1' : 'border-border hover:border-slate-300'}`}
+                    >
+                      <div className={`font-bold text-sm ${form.decision === opt.val ? '' : 'text-navy'}`}>{opt.val}</div>
+                      <div className="text-xs mt-1 text-slate">{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Decision Reason / Notes">
+                <textarea className={`${inputCls} min-h-[80px] resize-none`} placeholder="Required for Deferred / Declined / Waitlist..." value={form.decisionReason} onChange={e => update('decisionReason', e.target.value)} />
+              </Field>
+              {form.decision === 'Declined' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
+                  Document referral to alternative treatment resources per COMAR 10.47.03.07.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 8: Bed Assignment */}
+          {step === 8 && (
+            <div className="space-y-4">
+              {form.decision !== 'Approved' ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+                  Admission decision is <strong>{form.decision}</strong> — bed assignment skipped. Proceed to complete intake record.
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Assigned Bed">
+                      <select className={selectCls} value={form.assignedBed} onChange={e => update('assignedBed', e.target.value)}>
+                        <option value="">— Select bed —</option>
+                        {form.program === 'Residential' && ['1A','1B','2A','2B','3A','3B','4A','4B','5A','5B'].map(b => <option key={b} value={b}>Bed {b}</option>)}
+                        {form.program === 'PHP' && ['PHP-1','PHP-2','PHP-3','PHP-4'].map(b => <option key={b} value={b}>{b}</option>)}
+                        {form.program === 'IOP' && ['IOP-A','IOP-B','IOP-C'].map(b => <option key={b} value={b}>{b}</option>)}
+                        {(form.program === 'Detox') && ['DTX-1','DTX-2','DTX-3'].map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Admission Date">
+                      <input type="date" className={inputCls} value={form.admitDate} onChange={e => update('admitDate', e.target.value)} />
+                    </Field>
+                  </div>
+                  <Field label="Assigned Counselor">
+                    <select className={selectCls} value={form.assignedCounselor} onChange={e => update('assignedCounselor', e.target.value)}>
+                      <option>Sarah Jenkins, LCPC</option>
+                      <option>David Odom, LCADC</option>
+                      <option>Maria Gonzales, LCADC</option>
+                      <option>Amanda Lewis (Intake)</option>
+                    </select>
+                  </Field>
+                  {form.assignedBed && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-700 font-medium">
+                      ✓ Bed {form.assignedBed} reserved for {form.name || 'patient'} — {form.admitDate}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Step 9: Complete */}
+          {step === 9 && (
+            <div className="space-y-5 text-center">
+              {!converted ? (
+                <>
+                  <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto">
+                    <Check className="w-8 h-8 text-success" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-navy">Intake Complete</h3>
+                    <p className="text-slate text-sm mt-1">All {WIZARD_STEPS.length - 1} intake steps completed for <strong>{form.name}</strong></p>
+                  </div>
+                  <div className="bg-gray-50 border border-border rounded-xl p-4 text-left space-y-2 text-sm">
+                    {[
+                      { label: 'Decision', val: form.decision },
+                      { label: 'Program', val: form.program },
+                      { label: 'ASAM Rec', val: form.asamRec },
+                      { label: 'Insurance', val: `${form.insurance || '—'} (${form.insuranceStatus})` },
+                      { label: 'Assigned Bed', val: form.assignedBed || 'N/A' },
+                      { label: 'Admit Date', val: form.admitDate },
+                    ].map(r => (
+                      <div key={r.label} className="flex justify-between">
+                        <span className="text-slate font-medium">{r.label}</span>
+                        <span className="font-semibold text-navy">{r.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {form.decision === 'Approved' && !readOnly && (
+                    <button
+                      onClick={handleConvert}
+                      className="w-full bg-success text-white font-bold py-3 rounded-xl text-sm hover:bg-green-600 transition-colors"
+                    >
+                      Convert to Active Patient →
+                    </button>
+                  )}
+                  <p className="text-xs text-slate">This intake record has been saved to the Admissions store.</p>
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 bg-success rounded-full flex items-center justify-center mx-auto">
+                    <Check className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-success">{form.name} — Intake Finalized</h3>
+                    <p className="text-slate text-sm mt-1">MRN reserved: <strong className="font-mono text-navy">{savedMrn}</strong></p>
+                    <p className="text-xs text-slate mt-2">The admission record is saved and the bed is reserved. A clinical supervisor will open the chart from the census once the patient arrives.</p>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-800 text-left space-y-1">
+                    <div className="font-bold mb-1">Next steps for clinical staff:</div>
+                    <div>✓ Bed <strong>{form.assignedBed || '—'}</strong> is reserved — confirm on the Bed Board</div>
+                    <div>✓ Intake record appears in the Session Intakes section of the Admissions pipeline</div>
+                    <div>✓ Admission decision: <strong>{form.decision}</strong></div>
+                  </div>
+                  <button onClick={onClose} className="w-full bg-navy text-white font-bold py-3 rounded-xl text-sm hover:bg-navy-mid">
+                    Back to Admissions
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {step < WIZARD_STEPS.length - 1 && (
+          <div className="px-6 py-4 border-t border-border flex justify-between flex-shrink-0 bg-gray-50">
+            <button
+              onClick={() => setStep(s => Math.max(0, s - 1))}
+              disabled={step === 0}
+              className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-xl text-sm font-medium text-slate hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" /> Previous
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={!canAdvance()}
+              className="flex items-center gap-1.5 px-5 py-2 bg-navy text-white rounded-xl text-sm font-semibold hover:bg-navy-mid disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {step === WIZARD_STEPS.length - 2 ? 'Complete Intake' : 'Next Step'} <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        {step === WIZARD_STEPS.length - 1 && converted && (
+          <div className="px-6 py-4 border-t border-border bg-gray-50 flex-shrink-0">
+            <button onClick={onClose} className="w-full border border-border rounded-xl py-2 text-sm text-slate hover:bg-white">Close</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Admissions Component ────────────────────────────────────────────────
+
 export function Admissions({ navigate, readOnly }: Props) {
   const [activeTab, setActiveTab] = useState<'Pipeline' | 'Recent Admits' | 'Intake Checklist' | 'Analytics' | 'VOB Queue' | 'LOC Criteria'>('Pipeline');
   const [selected, setSelected] = useState<PendingAdmission | null>(PENDING[0]);
   const [filterStatus, setFilterStatus] = useState<AdmitStatus | 'All'>('All');
   const [admitActionSaved, setAdmitActionSaved] = useState<string | null>(null);
-  // New Referral form state
-  const [newReferralOpen, setNewReferralOpen] = useState(false);
-  const [newRef, setNewRef] = useState({ name: '', age: '', gender: 'M', phone: '', referralSource: '', primaryDx: '', program: 'Residential', insurance: '', notes: '' });
-  // Interactive checklist state — pre-check all items for Jonny Quest (demo patient)
+  const [intakeWizardOpen, setIntakeWizardOpen] = useState(false);
   const [checklistState, setChecklistState] = useState<Record<string, boolean[]>>(() => ({
     pa_demo: IOP_CHECKLIST_ITEMS.map(() => true),
   }));
+
+  const { intakePatients } = useDemoStore();
 
   const getChecked = (p: PendingAdmission, idx: number): boolean => {
     if (checklistState[p.id]) return checklistState[p.id][idx];
@@ -157,9 +709,11 @@ export function Admissions({ navigate, readOnly }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy">Admissions / Intake</h1>
-          <p className="text-slate text-sm mt-0.5">Pending referrals and intake pipeline</p>
+          <p className="text-slate text-sm mt-0.5">Pending referrals and intake pipeline{intakePatients.length > 0 ? ` · ${intakePatients.length} intake record${intakePatients.length > 1 ? 's' : ''} this session` : ''}</p>
         </div>
-        <LockedButton locked={readOnly} onClick={() => !readOnly && setNewReferralOpen(true)} className="btn-primary text-sm px-4 py-2">+ New Referral</LockedButton>
+        <LockedButton locked={readOnly} onClick={() => !readOnly && setIntakeWizardOpen(true)} className="btn-primary text-sm px-4 py-2">
+          + New Intake
+        </LockedButton>
       </div>
 
       {/* Pipeline Kanban Summary */}
@@ -185,7 +739,6 @@ export function Admissions({ navigate, readOnly }: Props) {
 
       {activeTab === 'Pipeline' && (
         <div className="grid grid-cols-5 gap-6">
-          {/* List */}
           <div className="col-span-2 space-y-2">
             {filtered.map(p => (
               <div
@@ -207,9 +760,29 @@ export function Admissions({ navigate, readOnly }: Props) {
                 </div>
               </div>
             ))}
+            {intakePatients.length > 0 && (
+              <div className="pt-2 border-t border-border">
+                <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-2">Session Intakes ({intakePatients.length})</div>
+                {intakePatients.map(ip => (
+                  <div key={ip.id} className="card p-3 mb-2 opacity-90">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-semibold text-navy text-sm">{ip.name}</div>
+                        <div className="text-xs text-slate">{ip.program} · {ip.insurance || 'No insurance'}</div>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ip.admissionDecision === 'Approved' ? 'bg-green-100 text-green-700' : ip.admissionDecision === 'Waitlist' ? 'bg-amber-100 text-amber-700' : ip.admissionDecision === 'Declined' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {ip.admissionDecision || 'Intake'}
+                      </span>
+                    </div>
+                    {ip.convertedToPatient && (
+                      <div className="text-[10px] text-success font-semibold mt-1">✓ Converted to Patient — {ip.mrn}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Detail Panel */}
           {selected && (
             <div className="col-span-3 space-y-4">
               <div className="card">
@@ -221,7 +794,6 @@ export function Admissions({ navigate, readOnly }: Props) {
                   <span className={`text-sm px-3 py-1 rounded-full font-medium ${STATUS_COLORS[selected.status]}`}>{selected.status}</span>
                 </div>
 
-                {/* Progress Bar */}
                 <div className="mt-4">
                   <div className="flex justify-between mb-1">
                     {STATUS_STEPS.map((step, i) => {
@@ -270,7 +842,7 @@ export function Admissions({ navigate, readOnly }: Props) {
                 </div>
                 {admitActionSaved && (
                   <div className="mt-2 text-xs font-semibold flex items-center gap-1.5 text-green-700">
-                    <X className="w-3.5 h-3.5 text-green-700" />{admitActionSaved === 'advanced' ? 'Status advanced' : admitActionSaved === 'noted' ? 'Note added' : 'Referral declined'}
+                    <Check className="w-3.5 h-3.5 text-green-700" />{admitActionSaved === 'advanced' ? 'Status advanced' : admitActionSaved === 'noted' ? 'Note added' : 'Referral declined'}
                   </div>
                 )}
               </div>
@@ -305,6 +877,17 @@ export function Admissions({ navigate, readOnly }: Props) {
                   <td className="px-4 py-3"><button onClick={() => navigate('PatientList')} className="text-xs text-orange hover:underline">View Chart</button></td>
                 </tr>
               ))}
+              {intakePatients.filter(ip => ip.convertedToPatient).map(ip => (
+                <tr key={ip.id} className="border-b border-border last:border-0 hover:bg-gray-50 bg-green-50/30">
+                  <td className="px-4 py-3 font-semibold text-navy">{ip.name}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate">{ip.mrn}</td>
+                  <td className="px-4 py-3 text-slate">{new Date(ip.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                  <td className="px-4 py-3"><span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{ip.program}</span></td>
+                  <td className="px-4 py-3 text-slate">—</td>
+                  <td className="px-4 py-3 font-mono text-navy">{ip.assignedBed || '—'}</td>
+                  <td className="px-4 py-3"><span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">This session</span></td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -326,9 +909,7 @@ export function Admissions({ navigate, readOnly }: Props) {
               </div>
             ))}
           </div>
-
           <div className="grid grid-cols-2 gap-6">
-            {/* Monthly admits by program */}
             <div className="card">
               <div className="text-sm font-semibold text-navy mb-4">Monthly Admissions by Program</div>
               <div className="h-56">
@@ -345,14 +926,12 @@ export function Admissions({ navigate, readOnly }: Props) {
                 </ResponsiveContainer>
               </div>
             </div>
-
-            {/* Insurance mix */}
             <div className="card">
               <div className="text-sm font-semibold text-navy mb-4">Insurance Payer Mix (YTD)</div>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={INSURANCE_MIX} cx="40%" cy="50%" outerRadius={70} dataKey="value" label={({ name, value }) => `${value}%`} labelLine={false}>
+                    <Pie data={INSURANCE_MIX} cx="40%" cy="50%" outerRadius={70} dataKey="value" label={({ value }) => `${value}%`} labelLine={false}>
                       {INSURANCE_MIX.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
                     <Legend formatter={v => <span className="text-xs text-navy">{v}</span>} />
@@ -362,8 +941,6 @@ export function Admissions({ navigate, readOnly }: Props) {
               </div>
             </div>
           </div>
-
-          {/* Referral sources */}
           <div className="card">
             <div className="text-sm font-semibold text-navy mb-4">Referral Sources (Last 90 Days)</div>
             <div className="h-44">
@@ -402,11 +979,7 @@ export function Admissions({ navigate, readOnly }: Props) {
                   {items.map((item, idx) => {
                     const checked = getChecked(p, idx);
                     return (
-                      <label
-                        key={idx}
-                        className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 rounded px-1 py-0.5 -mx-1 transition-colors"
-                        onClick={() => toggleItem(p.id, idx)}
-                      >
+                      <label key={idx} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 rounded px-1 py-0.5 -mx-1 transition-colors" onClick={() => toggleItem(p.id, idx)}>
                         <input type="checkbox" checked={checked} readOnly className="accent-orange pointer-events-none" />
                         <span className={checked ? 'line-through text-slate' : 'text-navy'}>{item}</span>
                       </label>
@@ -425,6 +998,7 @@ export function Admissions({ navigate, readOnly }: Props) {
           })}
         </div>
       )}
+
       {activeTab === 'VOB Queue' && (
         <div className="space-y-4">
           <div className="text-sm text-slate">Verification of Benefits (VOB) queue — insurance verification status for pending and recent admissions.</div>
@@ -442,19 +1016,14 @@ export function Admissions({ navigate, readOnly }: Props) {
               </div>
             ))}
           </div>
-
           <div className="card overflow-hidden">
             <h3 className="font-semibold text-navy text-sm mb-3">VOB Queue — Active Cases</h3>
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-gray-50 text-slate">
-                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Referral</th>
-                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Insurance</th>
-                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">LOC Requested</th>
-                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">VOB Specialist</th>
-                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Submitted</th>
-                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Status</th>
-                  <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Deductible/OOP</th>
+                  {['Referral', 'Insurance', 'LOC Requested', 'VOB Specialist', 'Submitted', 'Status', 'Deductible/OOP'].map(h => (
+                    <th key={h} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -464,7 +1033,6 @@ export function Admissions({ navigate, readOnly }: Props) {
                   { name: 'Jerome Simmons', ins: 'Cigna', loc: 'Residential', spec: 'L. Park', sub: '07/17', status: 'Auth Req.', sColor: 'bg-blue-100 text-blue-700', financial: '$1,000 ded met / $8,150 OOP' },
                   { name: 'Alicia Perkins', ins: 'Maryland Medicaid (CareFirst)', loc: 'Residential', spec: 'K. Santos', sub: '07/16', status: 'Verified', sColor: 'bg-green-100 text-green-700', financial: '$0 ded — Medicaid' },
                   { name: 'David Garza', ins: 'UHC / Optum', loc: 'IOP', spec: 'L. Park', sub: '07/15', status: 'Denied', sColor: 'bg-red-100 text-red-700', financial: 'Appeal in progress' },
-                  { name: 'Sophia Lambert', ins: 'Self-Pay', loc: 'Residential', spec: 'Admin', sub: '07/18', status: 'Scholarship', sColor: 'bg-purple-100 text-purple-700', financial: '75% scholarship applied' },
                 ].map(r => (
                   <tr key={r.name} className="hover:bg-gray-50">
                     <td className="px-3 py-2.5 font-medium text-navy">{r.name}</td>
@@ -472,9 +1040,7 @@ export function Admissions({ navigate, readOnly }: Props) {
                     <td className="px-3 py-2.5 text-slate">{r.loc}</td>
                     <td className="px-3 py-2.5 text-slate">{r.spec}</td>
                     <td className="px-3 py-2.5 text-slate">{r.sub}</td>
-                    <td className="px-3 py-2.5">
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.sColor}`}>{r.status}</span>
-                    </td>
+                    <td className="px-3 py-2.5"><span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.sColor}`}>{r.status}</span></td>
                     <td className="px-3 py-2.5 text-slate">{r.financial}</td>
                   </tr>
                 ))}
@@ -491,30 +1057,30 @@ export function Admissions({ navigate, readOnly }: Props) {
             {[
               {
                 loc: 'Medically Managed Inpatient (Detox)', asam: 'Level 4-WM',
-                inclusion: ['CIWA-Ar ≥10 or COWS ≥13', 'History of complicated withdrawal (seizures, DTs)', 'Concurrent medical conditions requiring 24h nursing supervision', 'Failure of lower LOC withdrawal management'],
-                exclusion: ['Medically stable, no complicated withdrawal history', 'CIWA-Ar <8 with low seizure risk', 'Stable co-occurring psychiatric conditions'],
-                auth: 'Typically 3–7 days; requires daily progress notes and interdisciplinary team review',
+                inclusion: ['CIWA-Ar ≥10 or COWS ≥13', 'History of complicated withdrawal (seizures, DTs)', 'Concurrent medical conditions requiring 24h nursing supervision'],
+                exclusion: ['Medically stable, no complicated withdrawal history', 'CIWA-Ar <8 with low seizure risk'],
+                auth: 'Typically 3–7 days; requires daily progress notes and IDT review',
                 color: 'border-red-300'
               },
               {
                 loc: 'Residential Treatment', asam: 'Level 3.5 / 3.1',
-                inclusion: ['Significant impairment requiring 24h structured environment', 'High relapse risk requiring 24h clinical supervision', 'Insufficient support in home environment for recovery', 'Multiple failed outpatient treatment attempts'],
-                exclusion: ['Stable living environment with adequate support', 'Medically complex requiring hospital-level monitoring', 'Active suicidality requiring inpatient psychiatric hold'],
-                auth: 'Typically 14–28 days; UR review every 5–7 days; discharge planning from Day 3',
+                inclusion: ['Significant impairment requiring 24h structured environment', 'High relapse risk requiring 24h clinical supervision', 'Insufficient support in home environment for recovery'],
+                exclusion: ['Stable living environment with adequate support', 'Active suicidality requiring inpatient psychiatric hold'],
+                auth: 'Typically 14–28 days; UR review every 5–7 days',
                 color: 'border-amber-300'
               },
               {
                 loc: 'Partial Hospitalization Program (PHP)', asam: 'Level 2.5',
-                inclusion: ['Needs daily structure but stable enough to return home evenings', 'Step-down from residential with continued clinical instability', 'Co-occurring psychiatric conditions requiring intensive support', 'Motivation for recovery present with moderate relapse risk'],
-                exclusion: ['No safe housing to return to each evening', 'Active withdrawal requiring 24h monitoring', 'Unable to reliably transport to 5-day/week program'],
-                auth: 'Typically 10–14 days; UR review every 7 days; payer-specific minimum hours requirements',
+                inclusion: ['Needs daily structure but stable enough to return home evenings', 'Step-down from residential with continued clinical instability'],
+                exclusion: ['No safe housing to return to each evening', 'Active withdrawal requiring 24h monitoring'],
+                auth: 'Typically 10–14 days; UR review every 7 days',
                 color: 'border-blue-300'
               },
               {
                 loc: 'Intensive Outpatient (IOP)', asam: 'Level 2.1',
-                inclusion: ['Stable functioning but needs structured support ≥3 days/week', 'Step-down from PHP or residential with good progress', 'Mild-moderate withdrawal risk managed on outpatient basis', 'Adequate support system and safe housing environment'],
-                exclusion: ['Unable to maintain sobriety in less-than-daily program', 'Imminent danger to self or others', 'Unstable psychiatric symptoms requiring daily monitoring'],
-                auth: 'Typically 6–8 weeks; UR review every 2 weeks; attendance documentation required',
+                inclusion: ['Stable functioning but needs structured support ≥3 days/week', 'Step-down from PHP or residential with good progress'],
+                exclusion: ['Unable to maintain sobriety in less-than-daily program', 'Imminent danger to self or others'],
+                auth: 'Typically 6–8 weeks; UR review every 2 weeks',
                 color: 'border-green-300'
               },
             ].map(l => (
@@ -540,70 +1106,9 @@ export function Admissions({ navigate, readOnly }: Props) {
         </div>
       )}
 
-      {/* New Referral form modal */}
-      {newReferralOpen && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setNewReferralOpen(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-[560px] max-h-[90vh] overflow-y-auto mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-bold text-navy">New Referral</h2>
-              <button onClick={() => setNewReferralOpen(false)} className="text-slate hover:text-navy p-1 rounded"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Full Name *</label>
-                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue" placeholder="First Last" value={newRef.name} onChange={e => setNewRef(r => ({ ...r, name: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Age</label>
-                  <input type="number" className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 34" value={newRef.age} onChange={e => setNewRef(r => ({ ...r, age: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Gender</label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newRef.gender} onChange={e => setNewRef(r => ({ ...r, gender: e.target.value }))}>
-                    <option value="M">Male</option><option value="F">Female</option><option value="NB">Non-binary</option><option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Phone</label>
-                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="(555) 000-0000" value={newRef.phone} onChange={e => setNewRef(r => ({ ...r, phone: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Referral Source</label>
-                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. MedStar Georgetown ER, Self" value={newRef.referralSource} onChange={e => setNewRef(r => ({ ...r, referralSource: e.target.value }))} />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Primary Diagnosis</label>
-                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Alcohol Use Disorder (Moderate)" value={newRef.primaryDx} onChange={e => setNewRef(r => ({ ...r, primaryDx: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Program</label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newRef.program} onChange={e => setNewRef(r => ({ ...r, program: e.target.value }))}>
-                    <option>Residential</option><option>PHP</option><option>IOP</option><option>OP</option><option>Detox</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Insurance</label>
-                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Aetna, Self-Pay" value={newRef.insurance} onChange={e => setNewRef(r => ({ ...r, insurance: e.target.value }))} />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Notes</label>
-                  <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none" placeholder="Initial call notes, clinical urgency, any flags…" value={newRef.notes} onChange={e => setNewRef(r => ({ ...r, notes: e.target.value }))} />
-                </div>
-              </div>
-            </div>
-            <div className="px-6 pb-6 flex gap-3">
-              <button onClick={() => setNewReferralOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50 transition-colors">Cancel</button>
-              <button
-                disabled={!newRef.name}
-                onClick={() => { setNewReferralOpen(false); setNewRef({ name: '', age: '', gender: 'M', phone: '', referralSource: '', primaryDx: '', program: 'Residential', insurance: '', notes: '' }); }}
-                className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-navy-mid transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Create Referral
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Intake Wizard Modal */}
+      {intakeWizardOpen && (
+        <IntakeWizard onClose={() => setIntakeWizardOpen(false)} readOnly={readOnly} />
       )}
     </div>
   );
