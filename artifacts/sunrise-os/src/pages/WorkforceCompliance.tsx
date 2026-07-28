@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Screen } from '../App';
 import {
   Users, ShieldCheck, AlertTriangle, CheckCircle, Clock, XCircle,
@@ -1155,9 +1155,23 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div className="text-sm text-slate">Track evidence of compliance, assign corrective actions, and assess audit readiness across all regulatory standards.</div>
-        <button onClick={() => setShowReport(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
-          <ClipboardList className="w-4 h-4" /> Generate Readiness Report
-        </button>
+        <div className="flex items-center gap-2">
+          {completedIds.size > 0 && (
+            <button
+              onClick={() => {
+                if (confirm('Reset all manually-marked requirements? This clears your current audit cycle progress.')) {
+                  setCompletedIds(new Set());
+                }
+              }}
+              className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-red-300 hover:text-red-600 transition-colors"
+            >
+              Reset Audit Cycle
+            </button>
+          )}
+          <button onClick={() => setShowReport(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+            <ClipboardList className="w-4 h-4" /> Generate Readiness Report
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -1335,9 +1349,26 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
 
 type WFTab = 'Dashboard' | 'Employee Profiles' | 'Exclusion & Screening' | 'Onboarding' | 'Performance Reviews' | 'Offboarding' | 'Compliance Standards';
 
+const COMPLIANCE_STORAGE_KEY = 'sunrise-os:compliance-completed-ids';
+
 export function WorkforceCompliance({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<WFTab>('Dashboard');
-  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [completedIds, setCompletedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_STORAGE_KEY);
+      return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COMPLIANCE_STORAGE_KEY, JSON.stringify([...completedIds]));
+    } catch {
+      // localStorage unavailable — silently continue
+    }
+  }, [completedIds]);
 
   const tabs: WFTab[] = ['Dashboard', 'Employee Profiles', 'Exclusion & Screening', 'Onboarding', 'Performance Reviews', 'Offboarding', 'Compliance Standards'];
 
