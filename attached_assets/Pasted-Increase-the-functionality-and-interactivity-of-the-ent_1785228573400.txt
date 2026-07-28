@@ -1,0 +1,624 @@
+Increase the functionality and interactivity of the entire SunriseOS demonstration environment.
+
+CRITICAL FIRST REQUIREMENT
+
+Before adding functionality, fix the current blank-page problem. The HTML document loads and contains <div id="root"></div>, but the React application is not mounting. Confirm that:
+
+- src/main.tsx executes correctly
+- React createRoot renders the App component
+- All imports resolve
+- Vite correctly supports the /app/ base path
+- The Replit development server binds to 0.0.0.0
+- A startup error boundary displays an understandable message instead of a blank screen
+- The profile-selection screen appears after a hard refresh
+
+Do not redesign the interface or remove existing modules. Preserve the current SunriseOS branding, layout, dark navigation, dashboard cards, typography, colors, fictional staff, and fictional patient environment.
+
+PRIMARY GOAL
+
+Turn SunriseOS into a highly interactive, investor-ready demonstration where users can complete realistic behavioral-health workflows without using real patient information.
+
+Every module must use fictional data only.
+
+GLOBAL INTERACTION RULES
+
+Every visible action must do something meaningful:
+
+- Buttons open functioning workflows
+- Dashboard cards open the underlying records
+- Alerts open the exact item requiring action
+- Tabs change content
+- Filters change results
+- Search returns relevant records
+- Tables sort and filter
+- Rows open detailed records
+- Forms validate required fields
+- Save buttons update the demonstration data
+- Cancel buttons close without saving
+- Changes update related dashboards and totals
+- Successful actions display confirmation messages
+- Errors display clear corrective instructions
+- Disabled actions explain why they are disabled
+- User actions create audit-log entries
+- Role permissions determine what each profile can view, create, edit, approve, or delete
+
+Use one canonical fictional data source for patients, staff, schedules, credentials, notes, authorizations, billing, compliance, and alerts.
+
+Use localStorage or the existing development database so changes persist during the demonstration. Add a clearly visible “Reset Demo Data” control restricted to the Owner and Security Administrator profiles.
+
+1. PROFILE SELECTION AND ROLE EXPLORER
+
+Make profile selection fully interactive.
+
+Required functionality:
+
+- Search profiles by name, role, credential, department, and location
+- Select a profile and load the correct role-based dashboard
+- Display last active date and location
+- Show which modules each role can access
+- Allow Role Explorer to preview permissions
+- Add “Return to Profile Selection”
+- Add “Reset Demo Session”
+- Preserve the selected role after page refresh
+- End inactive demo sessions automatically
+- Display a persistent “Fictitious Data Only — Not for Clinical Use” banner
+
+Roles should include:
+
+- Clinical Supervisor
+- Primary Counselor
+- Mental Health Therapist
+- Chief Medical Officer
+- Physician/Prescriber
+- Nurse
+- Behavioral Health Technician
+- BHT Supervisor
+- Intake Coordinator
+- Aftercare Coordinator
+- Billing Specialist
+- Accountant
+- Community Outreach
+- Owner/Executive
+- Human Resources
+- Security Administrator
+
+2. EXECUTIVE DASHBOARD
+
+Make every executive dashboard card clickable.
+
+Include functioning drill-downs for:
+
+- Current census
+- Occupancy by level of care
+- Admissions
+- Discharges
+- Average length of stay
+- Authorization risk
+- Documentation completion
+- Outstanding signatures
+- Revenue-cycle status
+- Staff compliance
+- Credential expirations
+- Client-risk alerts
+- Outcomes
+- Referral conversion
+- Bed availability
+
+Allow users to:
+
+- Filter by location
+- Filter by level of care
+- Filter by date
+- Compare current and previous periods
+- Export a fictional executive summary
+- Open the underlying records
+- Assign action items
+- Mark alerts reviewed
+- Add executive notes
+
+3. COMMAND CENTER
+
+Create a functioning operational command center.
+
+Include:
+
+- Critical, high, moderate, and routine alerts
+- Assigned employee
+- Responsible supervisor
+- Due date and time
+- Status
+- Recommended next action
+- Escalation status
+- Comments
+- Attachments
+- Audit history
+
+Allow authorized users to:
+
+- Assign alerts
+- Reassign alerts
+- Change priority
+- Add comments
+- Mark in progress
+- Resolve alerts
+- Escalate to leadership
+- Filter by program, employee, priority, deadline, and status
+
+Resolving an alert must update all related dashboard totals.
+
+4. CENSUS AND BED BOARD
+
+Make the bed board operational.
+
+Allow users to:
+
+- View occupied, available, held, blocked, and pending-discharge beds
+- Filter by location and program
+- Open a patient record from an occupied bed
+- Place a fictional admission hold
+- Move a patient to another approved bed
+- Block a bed for maintenance
+- Release a bed
+- Schedule a discharge
+- Add an expected admission
+- Display gender/program eligibility restrictions where applicable
+- Show capacity and occupancy calculations
+- Display an audit trail for every bed change
+
+5. PATIENT LIST AND PATIENT CHART
+
+Make every fictional patient row open a comprehensive chart.
+
+Patient chart tabs should include:
+
+- Overview
+- Demographics
+- Contacts
+- Consents
+- Diagnoses
+- Medications
+- Allergies
+- ASAM
+- Treatment plan
+- Progress notes
+- Group notes
+- Nursing
+- Medical
+- Drug-testing results
+- Authorizations
+- Appointments
+- Risk
+- Outcomes
+- Incidents
+- Case management
+- Discharge planning
+- Documents
+- Audit history
+
+Allow role-appropriate users to:
+
+- Search and filter patients
+- Add fictional chart information
+- Edit drafts
+- Sign records
+- Submit for co-signature
+- Review history
+- Add alerts
+- Assign tasks
+- Print or export a clearly watermarked fictional summary
+
+6. ADMISSIONS AND INTAKE
+
+Create a functioning intake workflow with a progress indicator.
+
+Steps:
+
+1. Referral received
+2. Preliminary eligibility
+3. Insurance verification
+4. Clinical screening
+5. Risk screening
+6. ASAM recommendation
+7. Required documents
+8. Admission decision
+9. Bed/program assignment
+10. Admission completed
+
+Allow users to:
+
+- Start a fictional intake
+- Save and return later
+- Validate required information
+- Upload demonstration documents
+- Identify missing information
+- Assign follow-up tasks
+- Approve, defer, waitlist, or decline
+- Convert an approved applicant into a fictional patient record
+
+7. CLINICAL DOCUMENTATION
+
+Make the following forms functional:
+
+- Progress notes
+- Group notes
+- Treatment plans
+- Treatment-plan reviews
+- ASAM assessments
+- Biopsychosocial assessments
+- Crisis assessments
+- Discharge summaries
+- Case-management notes
+- Nursing notes
+- Medical notes
+- Peer-support notes
+
+Required behavior:
+
+- Save as draft
+- Autosave
+- Validate required fields
+- Display completion percentage
+- Require signatures
+- Submit for co-signature
+- Return for correction
+- Add supervisor comments
+- Lock signed documents
+- Create an addendum without changing the original
+- Maintain version and audit history
+- Update documentation-compliance dashboards
+
+8. AI CLINICAL ASSISTANCE
+
+Make AI assistance interactive but clearly controlled.
+
+Allow users to:
+
+- Generate a fictional draft from selected structured information
+- Improve clarity
+- Check for missing required elements
+- Identify contradictions
+- Suggest measurable treatment-plan language
+- Summarize a fictional chart
+- Generate an executive daily brief
+- Generate a discharge-planning checklist
+
+Every AI output must:
+
+- Be labeled “AI-Generated Draft”
+- Require human review
+- Never automatically sign
+- Never independently diagnose
+- Never prescribe or recommend medication changes
+- Identify the information used
+- Allow accept, edit, or reject
+- Create an audit entry
+
+9. CO-SIGN QUEUE
+
+Make the queue functional.
+
+Allow supervisors to:
+
+- Filter by employee, document type, date, and urgency
+- Open the document
+- Review the associated chart
+- Approve and co-sign
+- Return for correction
+- Add feedback
+- Assign a deadline
+- Track repeated documentation deficiencies
+
+Completing an item must reduce the pending co-sign dashboard total.
+
+10. SCHEDULING
+
+Create interactive:
+
+- Appointment calendar
+- Group schedule
+- Staff schedule
+- Coverage requests
+- PTO requests
+- On-call schedule
+
+Allow:
+
+- Daily, weekly, and monthly views
+- Drag-and-drop only if stable
+- Add, edit, cancel, and reschedule
+- Detect double booking
+- Detect unavailable employees
+- Detect expired credentials
+- Identify overtime and fatigue risk
+- Request and approve coverage
+- Assign group facilitators
+- Display staff-to-client ratios
+
+11. GROUP CURRICULUM LIBRARY
+
+Make the curriculum library searchable and usable.
+
+Include fictional sample curricula for:
+
+- Step One: surrender and unmanageability
+- Stuck points and relapse
+- Fear and relapse
+- Grief and mourning
+- Appreciation, expectation, resentment, entitlement, and gratitude
+- Financial recovery
+- Life skills
+- Professional boundaries
+- Accountability
+- Recovery safety planning
+
+Allow users to:
+
+- Search by topic
+- Filter by level of care
+- Preview curriculum
+- Assign to a group
+- Add measurable outcomes
+- Record attendance
+- Create group notes
+- Duplicate and customize a curriculum
+- Track which curricula were delivered
+
+12. RISK AND OUTCOMES
+
+Make risk alerts explainable.
+
+Include:
+
+- Risk factor
+- Data source
+- Date detected
+- Severity
+- Responsible employee
+- Recommended review
+- Current status
+- Human decision
+- Resolution
+
+Allow users to:
+
+- Review supporting information
+- Accept or dismiss an alert
+- Document clinical judgment
+- Assign follow-up
+- Reassess risk
+- Track outcomes over time
+
+Never label predictive results as diagnoses or certain future events.
+
+13. DRUG TESTING
+
+Create interactive workflows for:
+
+- Test ordering
+- Specimen collection
+- Laboratory pending
+- Results received
+- Prescribed-medication reconciliation
+- Unexpected-result review
+- Confirmation-test status
+- Clinical follow-up
+- Patient notification
+- Final resolution
+
+Do not automatically classify a result as relapse or noncompliance.
+
+14. INCIDENT REPORTS
+
+Create a complete incident workflow.
+
+Include:
+
+- Incident type
+- Date, time, and location
+- People involved
+- Immediate response
+- Injuries
+- Notifications
+- Supervisor review
+- Corrective actions
+- Regulatory reporting determination
+- Follow-up
+- Closure
+- Audit history
+
+Allow reports to be saved, submitted, reviewed, returned, approved, and closed.
+
+15. BILLING AND AUTHORIZATIONS
+
+Make demonstration billing workflows interactive.
+
+Include:
+
+- Insurance verification
+- Authorization tracking
+- Units approved and used
+- Authorization expiration
+- Claims status
+- Denials
+- Corrected claims
+- Appeals
+- Patient responsibility
+- Payment posting
+- Accounts-receivable aging
+
+Allow users to drill from dashboard totals to fictional claim records.
+
+Do not process actual insurance claims or payments.
+
+16. COMPLIANCE AND AUDIT READINESS
+
+Create interactive audit preparation.
+
+Include:
+
+- Required standard
+- Responsible owner
+- Evidence
+- Review frequency
+- Last reviewed
+- Next due date
+- Status
+- Corrective action
+- Approval
+- Version history
+
+Allow users to:
+
+- Upload fictional evidence
+- Assign corrective action
+- Record completion
+- Filter by CARF, Joint Commission, HIPAA, 42 CFR Part 2, state, Medicaid, and internal policy
+- Generate a fictional readiness report
+
+17. WORKFORCE AND HR
+
+Complete these modules:
+
+- Employee profiles
+- Credentialing and licenses
+- Training and LMS
+- Clinical supervision
+- Staff scheduling
+- Onboarding
+- Performance management
+- Corrective-action tracking
+- Employee documents
+- Exclusion screening
+- Offboarding
+
+Credential entry must distinguish:
+
+- Entered
+- Pending verification
+- Verified
+- Expiring
+- Renewal submitted
+- Expired
+- Restricted
+- Suspended
+
+Credential and staff data must remain consistent across every SunriseOS module.
+
+18. SECURE MESSAGING
+
+Make messaging functional with fictional content.
+
+Allow:
+
+- Individual conversations
+- Team channels
+- Patient-care teams
+- Priority messages
+- Message search
+- Read status
+- Attachments
+- Task conversion
+- Archived conversations
+
+Do not allow messages to replace required clinical documentation.
+
+19. GLOBAL SEARCH
+
+The top search field must return:
+
+- Fictional patients
+- Staff
+- Notes
+- Tasks
+- Alerts
+- Appointments
+- Policies
+- Curricula
+- Credentials
+- Authorizations
+- Claims
+
+Group results by category and apply role-based access.
+
+20. NOTIFICATIONS
+
+Make the notification icon functional.
+
+Include:
+
+- Credential expirations
+- Training due
+- Co-sign requests
+- Documentation deadlines
+- Authorization deadlines
+- Admission tasks
+- Discharge tasks
+- Scheduling conflicts
+- Coverage requests
+- Risk reviews
+- Secure messages
+
+Allow mark as read, mark all as read, filter, and open the related record.
+
+21. SETTINGS AND SECURITY
+
+Create functional settings for:
+
+- Organization
+- Locations
+- Programs
+- Users
+- Roles and permissions
+- Required signatures
+- Alert thresholds
+- Documentation deadlines
+- Branding
+- Integrations
+- Security
+- Audit logs
+- Demo-data reset
+
+Only authorized profiles may change organization-wide settings.
+
+22. DEMONSTRATION GUIDANCE
+
+Add an optional guided tour with:
+
+- Start Tour
+- Next
+- Back
+- Skip
+- Restart Tour
+
+Create three guided demonstrations:
+
+- Executive tour
+- Clinical Supervisor tour
+- HR and Workforce Compliance tour
+
+Each tour should take approximately 5–7 minutes and direct attention to SunriseOS’s strongest differentiators.
+
+FINAL ACCEPTANCE TEST
+
+Before reporting completion:
+
+1. Test every sidebar item.
+2. Test every top navigation control.
+3. Test every dashboard card.
+4. Test every visible button.
+5. Test every tab.
+6. Test filters and search.
+7. Test form validation.
+8. Test saving and canceling.
+9. Confirm saved actions update related dashboards.
+10. Confirm roles have different permissions.
+11. Confirm all staff records are consistent.
+12. Confirm all totals mathematically reconcile.
+13. Confirm no blank page occurs after refresh.
+14. Confirm the browser back button does not break the application.
+15. Confirm the demo works at desktop, tablet, and mobile widths.
+16. Confirm no real patient or employee information exists.
+17. Confirm every AI output requires human review.
+18. Confirm the demo can be reset to its original fictional state.
+
+Do not claim completion until every acceptance test passes.
