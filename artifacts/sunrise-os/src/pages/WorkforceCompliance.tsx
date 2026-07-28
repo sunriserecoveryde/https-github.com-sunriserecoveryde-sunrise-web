@@ -1156,11 +1156,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
       <div className="flex items-center justify-between">
         <div className="text-sm text-slate">Track evidence of compliance, assign corrective actions, and assess audit readiness across all regulatory standards.</div>
         <div className="flex items-center gap-2">
-          {completedIds.size > 0 && (
+          {(completedIds.size > 0 || Object.values(evidenceInputs).some(v => v.trim()) || Object.values(corrActionInputs).some(v => v.trim())) && (
             <button
               onClick={() => {
                 if (confirm('Reset all manually-marked requirements? This clears your current audit cycle progress.')) {
                   setCompletedIds(new Set());
+                  setEvidenceInputs({});
+                  setCorrActionInputs({});
                 }
               }}
               className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-red-300 hover:text-red-600 transition-colors"
