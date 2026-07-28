@@ -22,11 +22,205 @@ import {
   Sparkles,
   BarChart2,
   FileText,
+  Info,
+  Eye,
+  EyeOff,
+  Minus,
 } from 'lucide-react';
 import { STAFF_MEMBERS, StaffMember } from '../data/mockStaff';
-import { getRoleById, RoleDefinition } from '../data/mockRoles';
+import { getRoleById, RoleDefinition, getPermission, Permission } from '../data/mockRoles';
 import { useAuth } from '../context/AuthContext';
 import sunriseLogo from '@assets/0_SunriseOS_Logo_transparent.png';
+
+// ─── Role Explorer screen groups ─────────────────────────────────────────────
+interface ScreenGroup { label: string; screens: { id: string; label: string }[] }
+const SCREEN_GROUPS: ScreenGroup[] = [
+  { label: 'Overview & Command', screens: [
+    { id: 'Dashboard', label: 'Dashboard' },
+    { id: 'CommandCenter', label: 'Command Center' },
+    { id: 'PatientList', label: 'Patient List' },
+    { id: 'RiskDashboard', label: 'Risk Dashboard' },
+    { id: 'HelpSupport', label: 'Help & Support' },
+  ]},
+  { label: 'Clinical Documentation', screens: [
+    { id: 'PatientDetail', label: 'Patient Detail' },
+    { id: 'ChartReview', label: 'Chart Review' },
+    { id: 'ProgressNotes', label: 'Progress Notes' },
+    { id: 'TreatmentPlans', label: 'Treatment Plans' },
+    { id: 'BiopsychosocialAssessment', label: 'Biopsychosocial' },
+    { id: 'ASAMAssessments', label: 'ASAM Assessment' },
+    { id: 'DischargeSummary', label: 'Discharge Summary' },
+    { id: 'CrisisAssessment', label: 'Crisis Assessment' },
+    { id: 'CosignQueue', label: 'Co-sign Queue' },
+    { id: 'MyCaseload', label: 'My Caseload' },
+  ]},
+  { label: 'Group & Therapy', screens: [
+    { id: 'GroupNotes', label: 'Group Notes' },
+    { id: 'GroupSchedule', label: 'Group Schedule' },
+    { id: 'GroupTherapyCurriculum', label: 'Group Curriculum' },
+    { id: 'TelehealthConsults', label: 'Telehealth' },
+    { id: 'ClinicalSupervision', label: 'Clinical Supervision' },
+  ]},
+  { label: 'Admissions & Census', screens: [
+    { id: 'CensusBedBoard', label: 'Census / Bed Board' },
+    { id: 'Admissions', label: 'Admissions' },
+    { id: 'Discharges', label: 'Discharges' },
+    { id: 'WaitlistManager', label: 'Waitlist Manager' },
+    { id: 'BedManagement', label: 'Bed Management' },
+  ]},
+  { label: 'Medical & Pharmacy', screens: [
+    { id: 'MedicationManagement', label: 'Medication Management' },
+    { id: 'MATManagement', label: 'MAT Management' },
+    { id: 'PhysicianOrders', label: 'Physician Orders' },
+    { id: 'UADrugTesting', label: 'UA Drug Testing' },
+    { id: 'MedicalRecords', label: 'Medical Records' },
+    { id: 'WithdrawalManagement', label: 'Withdrawal Mgmt' },
+  ]},
+  { label: 'Scheduling & Comms', screens: [
+    { id: 'AppointmentCalendar', label: 'Appointment Calendar' },
+    { id: 'Scheduling', label: 'Scheduling' },
+    { id: 'SecureMessaging', label: 'Secure Messaging' },
+    { id: 'FamilyEngagement', label: 'Family Engagement' },
+    { id: 'AftercarePlanning', label: 'Aftercare Planning' },
+    { id: 'PeerSupport', label: 'Peer Support' },
+  ]},
+  { label: 'Finance & Revenue', screens: [
+    { id: 'RevenueCycle', label: 'Revenue Cycle' },
+    { id: 'Billing', label: 'Billing' },
+    { id: 'BusinessDevelopment', label: 'Business Development' },
+    { id: 'ReferralTracker', label: 'Referral Tracker' },
+  ]},
+  { label: 'Workforce & Compliance', screens: [
+    { id: 'StaffDirectory', label: 'Staff Directory' },
+    { id: 'CertificationTracker', label: 'Certifications' },
+    { id: 'IncidentReporting', label: 'Incident Reports' },
+    { id: 'QualityAssurance', label: 'Quality Assurance' },
+    { id: 'Training', label: 'Training' },
+    { id: 'Settings', label: 'Settings' },
+  ]},
+  { label: 'Analytics & Intelligence', screens: [
+    { id: 'Analytics', label: 'Analytics' },
+    { id: 'OutcomeTracking', label: 'Outcome Tracking' },
+    { id: 'RecoveryEngagementScore', label: 'Recovery Score' },
+    { id: 'ClinicalIntelligence', label: 'Clinical Intelligence' },
+    { id: 'HandoffReport', label: 'Handoff Report' },
+  ]},
+];
+
+function PermBadge({ perm }: { perm: Permission }) {
+  if (perm === 'full') return (
+    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 border border-green-200">
+      <Eye className="w-2.5 h-2.5" />Full
+    </span>
+  );
+  if (perm === 'read') return (
+    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200">
+      <Eye className="w-2.5 h-2.5" />Read
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-400 border border-gray-200">
+      <EyeOff className="w-2.5 h-2.5" />None
+    </span>
+  );
+}
+
+interface RoleExplorerPanelProps {
+  staff: StaffMember;
+  role: RoleDefinition | undefined;
+  onClose: () => void;
+}
+
+function RoleExplorerPanel({ staff, role, onClose }: RoleExplorerPanelProps) {
+  const fullCount = role
+    ? SCREEN_GROUPS.flatMap(g => g.screens).filter(s => getPermission(role.id, s.id) === 'full').length
+    : 0;
+  const readCount = role
+    ? SCREEN_GROUPS.flatMap(g => g.screens).filter(s => getPermission(role.id, s.id) === 'read').length
+    : 0;
+
+  return (
+    <div
+      className="absolute inset-y-0 right-0 flex flex-col rounded-r-[20px] overflow-hidden z-20"
+      style={{
+        width: '380px',
+        background: 'rgba(8,22,37,0.97)',
+        borderLeft: '1px solid rgba(255,255,255,0.10)',
+        backdropFilter: 'blur(16px)',
+      }}
+    >
+      {/* Panel header */}
+      <div className="shrink-0 px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Role Explorer</span>
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-white/10 transition-colors"
+          >
+            <X className="w-4 h-4 text-slate-400" />
+          </button>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full ${staff.avatarBg} flex items-center justify-center text-white font-bold text-sm shrink-0`}>
+            {staff.photoInitials}
+          </div>
+          <div className="min-w-0">
+            <div className="font-semibold text-white truncate">{staff.firstName} {staff.lastName}</div>
+            <div className="text-[12px] text-slate-400 truncate">{staff.title}</div>
+          </div>
+        </div>
+        {role && (
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${role.color} ${role.textColor} ${role.borderColor}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${role.dotColor}`} />
+              {role.label}
+            </span>
+            <span className="text-[10px] text-green-400">✓ {fullCount} full</span>
+            <span className="text-[10px] text-blue-400">👁 {readCount} read</span>
+          </div>
+        )}
+      </div>
+
+      {/* Permission matrix */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+        {SCREEN_GROUPS.map(group => {
+          const hasAny = role && group.screens.some(s => getPermission(role.id, s.id) !== 'none');
+          return (
+            <div key={group.label}>
+              <div
+                className="text-[10px] font-bold uppercase tracking-widest mb-1.5 px-1"
+                style={{ color: hasAny ? '#F28C28' : 'rgba(255,255,255,0.25)' }}
+              >
+                {group.label}
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {group.screens.map(screen => {
+                  const perm = role ? getPermission(role.id, screen.id) : 'none';
+                  return (
+                    <div
+                      key={screen.id}
+                      className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg ${
+                        perm === 'full' ? 'bg-green-900/20' : perm === 'read' ? 'bg-blue-900/20' : 'opacity-40'
+                      }`}
+                    >
+                      <span className="text-[11px] text-slate-300 truncate">{screen.label}</span>
+                      <PermBadge perm={perm} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div className="shrink-0 px-5 py-3 border-t text-center" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+        <p className="text-[10px] text-slate-500">Permissions shown for demo role. Production access is managed by Security Admin.</p>
+      </div>
+    </div>
+  );
+}
 
 // ─── Config (make this page reusable by externalising these values) ────────────
 
@@ -93,10 +287,11 @@ interface ProfileRowProps {
   isSelected: boolean;
   isAnyLoading: boolean;
   onSelect: (id: string) => void;
+  onExplore: (staff: StaffMember) => void;
   prefersReducedMotion: boolean;
 }
 
-function ProfileRow({ staff, role, isSelected, isAnyLoading, onSelect, prefersReducedMotion }: ProfileRowProps) {
+function ProfileRow({ staff, role, isSelected, isAnyLoading, onSelect, onExplore, prefersReducedMotion }: ProfileRowProps) {
   const credStr = staff.credentials.length > 0
     ? staff.credentials.slice(0, 3).join(', ')
     : null;
@@ -186,7 +381,7 @@ function ProfileRow({ staff, role, isSelected, isAnyLoading, onSelect, prefersRe
         </div>
       </div>
 
-      {/* Right side: last login + chevron */}
+      {/* Right side: last login + explore + chevron */}
       <div className="flex flex-col items-end gap-1.5 shrink-0 ml-1">
         {lastLoginLabel && (
           <span
@@ -196,21 +391,34 @@ function ProfileRow({ staff, role, isSelected, isAnyLoading, onSelect, prefersRe
             {lastLoginLabel}
           </span>
         )}
-        {isSelected ? (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="text-[#2F80ED]"
+        <div className="flex items-center gap-1">
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label={`Explore permissions for ${staff.firstName} ${staff.lastName}`}
+            onClick={e => { e.stopPropagation(); onExplore(staff); }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onExplore(staff); } }}
+            className="p-1 rounded hover:bg-white/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F80ED] cursor-pointer"
+            title="View role permissions"
           >
-            <Sun className="w-4 h-4 animate-spin" aria-hidden />
-          </motion.div>
-        ) : (
-          <ChevronRight
-            className="w-4 h-4 transition-transform group-hover:translate-x-0.5"
-            style={{ color: '#8A9BAD' }}
-            aria-hidden
-          />
-        )}
+            <Info className="w-3.5 h-3.5" style={{ color: '#8A9BAD' }} aria-hidden />
+          </div>
+          {isSelected ? (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="text-[#2F80ED]"
+            >
+              <Sun className="w-4 h-4 animate-spin" aria-hidden />
+            </motion.div>
+          ) : (
+            <ChevronRight
+              className="w-4 h-4 transition-transform group-hover:translate-x-0.5"
+              style={{ color: '#8A9BAD' }}
+              aria-hidden
+            />
+          )}
+        </div>
       </div>
     </motion.button>
   );
@@ -317,8 +525,9 @@ function BrandPanel({ org }: { org: OrgConfig }) {
 
 export function LoginPage() {
   const { login } = useAuth();
-  const [loadingId, setLoadingId]   = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [loadingId, setLoadingId]       = useState<string | null>(null);
+  const [searchQuery, setSearchQuery]   = useState('');
+  const [explorerStaff, setExplorerStaff] = useState<StaffMember | null>(null);
   const searchId = useId();
   const listId   = useId();
   const prefersReducedMotion = useReducedMotion() ?? false;
@@ -349,14 +558,14 @@ export function LoginPage() {
       <div
         className="text-center py-1.5 text-xs font-medium tracking-wide shrink-0"
         style={{
-          background: 'rgba(88,28,135,0.50)',
-          borderBottom: '1px solid rgba(139,92,246,0.25)',
-          color: '#C4B5FD',
+          background: 'linear-gradient(90deg, #c2410c 0%, #ea580c 50%, #c2410c 100%)',
+          borderBottom: '1px solid rgba(0,0,0,0.18)',
+          color: '#ffffff',
         }}
         role="banner"
         aria-label="Demo environment notice"
       >
-        DEMO MODE &nbsp;·&nbsp; Fictitious patient data only &nbsp;·&nbsp; Not for clinical use
+        ⚠ Demo Mode &nbsp;·&nbsp; Fictitious Data Only &nbsp;—&nbsp; Not for Clinical Use
       </div>
 
       {/* Split-screen body — locked to remaining viewport height, no outer scroll */}
@@ -386,7 +595,7 @@ export function LoginPage() {
             initial={prefersReducedMotion ? {} : { opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="flex-1 flex flex-col min-h-0 w-full"
+            className="flex-1 flex flex-col min-h-0 w-full relative overflow-hidden"
             style={{
               background: 'rgba(15,34,53,0.88)',
               border: '1px solid rgba(255,255,255,0.10)',
@@ -396,6 +605,25 @@ export function LoginPage() {
               padding: '32px',
             }}
           >
+            {/* Role Explorer overlay panel */}
+            <AnimatePresence>
+              {explorerStaff && (
+                <motion.div
+                  className="absolute inset-0 z-20"
+                  initial={{ opacity: 0, x: 40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 40 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <RoleExplorerPanel
+                    staff={explorerStaff}
+                    role={getRoleById(explorerStaff.roleId)}
+                    onClose={() => setExplorerStaff(null)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Card header */}
             <header className="mb-6 shrink-0">
               <div className="flex items-start justify-between gap-2 mb-4">
@@ -504,6 +732,7 @@ export function LoginPage() {
                       isSelected={loadingId === staff.id}
                       isAnyLoading={loadingId !== null}
                       onSelect={handleSelect}
+                      onExplore={setExplorerStaff}
                       prefersReducedMotion={prefersReducedMotion}
                     />
                   </motion.div>

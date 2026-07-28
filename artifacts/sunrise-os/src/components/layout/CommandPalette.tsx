@@ -13,6 +13,7 @@ import { Screen } from '../../App';
 import { MOCK_PATIENTS, DEMO_PATIENTS } from '../../data/mockPatients';
 import { useRole } from '../../context/RoleContext';
 import { getPermission, getRoleById } from '../../data/mockRoles';
+import { STAFF_MEMBERS } from '../../data/mockStaff';
 
 interface Props {
   onClose: () => void;
@@ -209,6 +210,36 @@ export function CommandPalette({ onClose, navigate }: Props) {
           sublabel: s.category,
           icon: s.icon,
           action: () => go(s.screen),
+        })),
+        // Staff members
+        ...STAFF_MEMBERS.filter(staff => {
+          const q = query.toLowerCase();
+          return (
+            `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(q) ||
+            staff.title.toLowerCase().includes(q) ||
+            staff.department.toLowerCase().includes(q) ||
+            staff.credentials.some(c => c.toLowerCase().includes(q))
+          );
+        }).slice(0, 4).map(staff => ({
+          type: 'action' as const,
+          label: `${staff.firstName} ${staff.lastName}`,
+          sublabel: `Staff · ${staff.title} · ${staff.department}`,
+          icon: (
+            <div className={`w-6 h-6 rounded-full ${staff.avatarBg} text-white text-[10px] font-bold flex items-center justify-center shrink-0`}>
+              {staff.photoInitials}
+            </div>
+          ),
+          action: () => go('StaffAdmin'),
+        })),
+        // Credential matches
+        ...STAFF_MEMBERS.filter(staff =>
+          staff.credentials.some(c => c.toLowerCase().includes(query.toLowerCase()))
+        ).slice(0, 3).map(staff => ({
+          type: 'action' as const,
+          label: staff.credentials.filter(c => c.toLowerCase().includes(query.toLowerCase())).join(', '),
+          sublabel: `Credential · ${staff.firstName} ${staff.lastName}`,
+          icon: <Award className="w-4 h-4 text-amber-500" />,
+          action: () => go('CertificationTracker'),
         })),
       ];
 

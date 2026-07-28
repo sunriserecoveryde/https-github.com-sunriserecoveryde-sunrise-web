@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
-
+import { RotateCcw, AlertTriangle } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
+import { useRole } from '../context/RoleContext';
+import { useAuth } from '../context/AuthContext';
+import { resetDemoData } from '../store/demoStore';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -10,6 +13,11 @@ export function Settings({ navigate, readOnly }: Props) {
   const [saved, setSaved] = useState(false);
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [userSaved, setUserSaved] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const { role } = useRole();
+  const { logout } = useAuth();
+
+  const canResetDemo = role.id === 'ownership' || role.id === 'security_admin';
 
   const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
@@ -342,13 +350,38 @@ export function Settings({ navigate, readOnly }: Props) {
           <div className="card">
             <h2 className="text-base font-semibold text-navy mb-1">Demo Mode</h2>
             <p className="text-sm text-slate mb-4">Sunrise OS is currently running in demo mode with fictitious patient data. No real PHI is stored or transmitted.</p>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center justify-between">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center justify-between">
               <div>
-                <div className="font-semibold text-purple-800">Demo Mode Active</div>
-                <div className="text-xs text-purple-700">Fictitious data only · Not for clinical use</div>
+                <div className="font-semibold text-orange-800">Demo Mode Active</div>
+                <div className="text-xs text-orange-700">Fictitious data only · Not for clinical use</div>
               </div>
-              <span className="text-xs bg-purple-200 text-purple-800 px-3 py-1 rounded-full font-medium">Demo</span>
+              <span className="text-xs bg-orange-200 text-orange-800 px-3 py-1 rounded-full font-medium">Demo</span>
             </div>
+
+            {canResetDemo ? (
+              <div className="mt-4 p-3 rounded-lg border border-red-200 bg-red-50 flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-red-800">Reset Demo Data</div>
+                  <div className="text-xs text-red-600 mt-0.5">
+                    Clears all read states, audit log, and session. Restores demo seed. Signs everyone out.
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowResetConfirm(true)}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Reset
+                </button>
+              </div>
+            ) : (
+              <div className="mt-4 p-3 rounded-lg border border-gray-200 bg-gray-50 flex items-center gap-3">
+                <AlertTriangle className="w-4 h-4 text-gray-400 shrink-0" />
+                <div className="text-xs text-slate">
+                  Reset Demo Data is only available to <strong>Owner</strong> and <strong>Security Admin</strong> roles.
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="card">
@@ -540,6 +573,37 @@ export function Settings({ navigate, readOnly }: Props) {
       {userSaved && (
         <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
           <span>✓</span> Changes saved
+        </div>
+      )}
+
+      {/* Reset Demo Data confirm dialog */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-sm mx-4">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <RotateCcw className="w-6 h-6 text-red-600" />
+              </div>
+              <h2 className="text-base font-bold text-navy text-center mb-2">Reset Demo Data?</h2>
+              <p className="text-sm text-slate text-center mb-5">
+                This will clear all read states, audit history, and session data, then sign everyone out. Demo data will be restored to its default seed. This cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-slate hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setShowResetConfirm(false); resetDemoData(); logout(); }}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Reset &amp; Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

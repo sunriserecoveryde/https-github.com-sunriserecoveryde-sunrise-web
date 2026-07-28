@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import sunriseLogo from '@assets/0_SunriseOS_Logo_transparent.png';
-import { Bell, Search, Settings, MessageSquare, ChevronDown, Flag, LogOut, UserCircle } from 'lucide-react';
+import { Bell, Search, Settings, MessageSquare, ChevronDown, Flag, LogOut, UserCircle, RotateCcw, ArrowLeftCircle } from 'lucide-react';
 import { Screen } from '../../App';
-import { NotificationPanel } from './NotificationPanel';
+import { NotificationPanel, ALL_NOTIFICATION_IDS } from './NotificationPanel';
 import { CommandPalette } from './CommandPalette';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES, ROLE_CATEGORIES } from '../../data/mockRoles';
+import { useDemoStore, resetDemoData } from '../../store/demoStore';
 
 interface Props {
   navigate: (s: Screen, patientId?: string) => void;
   currentScreen: Screen;
 }
-
-const UNREAD_COUNT = 7;
 
 export function Topbar({ navigate, currentScreen }: Props) {
   const [showNotif, setShowNotif] = useState(false);
@@ -23,8 +22,14 @@ export function Topbar({ navigate, currentScreen }: Props) {
   const notifBtnRef = useRef<HTMLDivElement>(null);
   const rolePickerRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const { role, setRoleId } = useRole();
   const { currentStaff, logout } = useAuth();
+  const { state: demoState } = useDemoStore();
+  // Actual unread = all known notification IDs minus those already read
+  const unreadCount = ALL_NOTIFICATION_IDS.filter(
+    id => !demoState.notificationReadIds.includes(id),
+  ).length;
 
   // Ctrl+K global shortcut
   useEffect(() => {
@@ -196,7 +201,11 @@ export function Topbar({ navigate, currentScreen }: Props) {
               className={`p-2 hover:bg-white/10 rounded transition-colors relative ${showNotif ? 'bg-white/10' : ''}`}
             >
               <Bell className="w-5 h-5 text-slate-300" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-critical rounded-full border border-navy"></span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full border border-navy flex items-center justify-center leading-none">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </button>
             {showNotif && (
               <NotificationPanel onClose={() => setShowNotif(false)} navigate={navigate} />
@@ -269,6 +278,22 @@ export function Topbar({ navigate, currentScreen }: Props) {
                 <div className="border-t border-navy-light py-1">
                   <button
                     onClick={() => { setShowUserMenu(false); logout(); }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+                  >
+                    <ArrowLeftCircle className="w-4 h-4" />
+                    Return to Profile Selection
+                  </button>
+                  <button
+                    onClick={() => { setShowUserMenu(false); setShowResetConfirm(true); }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-amber-300 hover:bg-amber-500/10 hover:text-amber-200 transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Reset Demo Session
+                  </button>
+                </div>
+                <div className="border-t border-navy-light py-1">
+                  <button
+                    onClick={() => { setShowUserMenu(false); logout(); }}
                     className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
@@ -283,6 +308,37 @@ export function Topbar({ navigate, currentScreen }: Props) {
 
       {/* Command Palette */}
       {showCmd && <CommandPalette onClose={() => setShowCmd(false)} navigate={navigate} />}
+
+      {/* Reset Demo Session confirm dialog */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-sm mx-4 overflow-hidden">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <RotateCcw className="w-6 h-6 text-amber-600" />
+              </div>
+              <h2 className="text-base font-bold text-navy text-center mb-2">Reset Demo Session?</h2>
+              <p className="text-sm text-slate text-center mb-5">
+                This will clear all notification read states, clear audit history, and sign you out. Demo data will be restored to its default state.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-slate hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setShowResetConfirm(false); resetDemoData(); logout(); }}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors shadow"
+                >
+                  Reset &amp; Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

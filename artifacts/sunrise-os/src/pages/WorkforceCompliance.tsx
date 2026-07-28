@@ -146,7 +146,7 @@ const EMPLOYEES: EmployeeProfile[] = [
   },
   {
     id: 'EP-004', name: 'Maria Gonzalez', title: 'Staff Accountant',
-    department: 'Finance', employmentType: 'Full-Time', status: 'Active',
+    department: 'Administration', employmentType: 'Full-Time', status: 'Active',
     supervisor: 'CEO / Executive Director', location: 'Rockville, MD (HQ)',
     levelOfCare: [],
     hireDate: '2023-01-09', requiredCredentials: ['CPA'],

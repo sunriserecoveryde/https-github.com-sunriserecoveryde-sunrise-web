@@ -1,22 +1,27 @@
+/**
+ * DemoBanner — always-visible, non-dismissible safety notice.
+ *
+ * Spec requirement: "An always-visible orange 'Fictitious Data Only —
+ * Not for Clinical Use' banner appears across every screen."
+ */
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 export function DemoBanner() {
-  const [visible, setVisible] = React.useState(true);
-
-  if (!visible) return null;
-
   return (
-    <div className="h-[var(--banner-height)] w-full bg-gradient-to-r from-violet-800 via-purple to-indigo-600 flex items-center justify-between px-4 fixed top-0 left-0 z-50 text-white shadow-sm">
-      <div className="text-xs font-medium tracking-wide flex items-center gap-2">
-        <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold">DEMO MODE</span>
-        Fictitious patient data only · Not for clinical use
-      </div>
-      <button
-        onClick={() => setVisible(false)}
-        className="text-xs text-white/70 hover:text-white hover:bg-white/15 px-2 py-1 rounded transition-colors"
-      >
-        Exit Demo
-      </button>
+    <div
+      className="h-[var(--banner-height)] w-full fixed top-0 left-0 z-50 flex items-center justify-center gap-2 px-4 shrink-0"
+      style={{
+        background: 'linear-gradient(90deg, #c2410c 0%, #ea580c 50%, #c2410c 100%)',
+        borderBottom: '1px solid rgba(0,0,0,0.18)',
+      }}
+      role="banner"
+      aria-label="Demo environment notice — fictitious data only"
+    >
+      <AlertTriangle className="w-3.5 h-3.5 text-white/90 shrink-0" aria-hidden />
+      <span className="text-white text-[11px] font-semibold tracking-wide uppercase select-none">
+        Demo Mode &nbsp;·&nbsp; Fictitious Data Only &nbsp;—&nbsp; Not for Clinical Use
+      </span>
     </div>
   );
 }
