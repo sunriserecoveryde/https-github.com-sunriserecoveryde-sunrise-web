@@ -1138,11 +1138,33 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
 }) {
   const [stdFilter, setStdFilter] = useState<CompStandard>('All');
   const [selectedReq, setSelectedReq] = useState<string | null>(null);
-  const [evidenceInputs, setEvidenceInputs] = useState<Record<string, string>>({});
-  const [corrActionInputs, setCorrActionInputs] = useState<Record<string, string>>({});
+  const [evidenceInputs, setEvidenceInputs] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [corrActionInputs, setCorrActionInputs] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_CORR_ACTION_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
   const [showReport, setShowReport] = useState(false);
   const [compSaved, setCompSaved] = useState<string | null>(null);
   const saveCompAction = (msg: string) => { setCompSaved(msg); setTimeout(() => setCompSaved(null), 2500); };
+
+  useEffect(() => {
+    try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(evidenceInputs)); } catch { /* unavailable */ }
+  }, [evidenceInputs]);
+
+  useEffect(() => {
+    try { localStorage.setItem(COMPLIANCE_CORR_ACTION_KEY, JSON.stringify(corrActionInputs)); } catch { /* unavailable */ }
+  }, [corrActionInputs]);
 
   const standards: CompStandard[] = ['All', 'CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'];
   const filtered = COMP_REQUIREMENTS.filter(r => stdFilter === 'All' || r.standard === stdFilter);
@@ -1159,7 +1181,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
           {(completedIds.size > 0 || Object.values(evidenceInputs).some(v => v.trim()) || Object.values(corrActionInputs).some(v => v.trim())) && (
             <button
               onClick={() => {
-                if (confirm('Reset all manually-marked requirements? This clears your current audit cycle progress.')) {
+                if (confirm('Reset all manually-marked requirements? This clears your current audit cycle progress, including evidence notes and corrective action entries.')) {
                   setCompletedIds(new Set());
                   setEvidenceInputs({});
                   setCorrActionInputs({});
@@ -1352,6 +1374,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
 type WFTab = 'Dashboard' | 'Employee Profiles' | 'Exclusion & Screening' | 'Onboarding' | 'Performance Reviews' | 'Offboarding' | 'Compliance Standards';
 
 const COMPLIANCE_STORAGE_KEY = 'sunrise-os:compliance-completed-ids';
+const COMPLIANCE_EVIDENCE_KEY = 'sunrise-os:compliance-evidence-inputs';
+const COMPLIANCE_CORR_ACTION_KEY = 'sunrise-os:compliance-corr-action-inputs';
 
 export function WorkforceCompliance({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<WFTab>('Dashboard');
