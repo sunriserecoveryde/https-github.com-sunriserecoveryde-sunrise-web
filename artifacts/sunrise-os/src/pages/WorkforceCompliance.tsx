@@ -1157,6 +1157,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
   const [showReport, setShowReport] = useState(false);
   const [compSaved, setCompSaved] = useState<string | null>(null);
   const saveCompAction = (msg: string) => { setCompSaved(msg); setTimeout(() => setCompSaved(null), 2500); };
+  const [evidenceSavedId, setEvidenceSavedId] = useState<string | null>(null);
+  const [corrSavedId, setCorrSavedId] = useState<string | null>(null);
 
   useEffect(() => {
     try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(evidenceInputs)); } catch { /* unavailable */ }
@@ -1252,9 +1254,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
                         className="flex-1 border border-border rounded-lg px-3 py-2 text-sm"
                         placeholder="e.g. Policy-HIPAA-NPP-v4.pdf, 2026 CARF Self-Study Section 3.docx"
                       />
-                      <LockedButton locked={readOnly || !evidenceInputs[req.id]?.trim()} onClick={() => saveCompAction(`Evidence linked for ${req.id}`)}
-                        className="border border-border text-slate text-xs px-3 py-1.5 rounded-lg hover:bg-white disabled:opacity-40">
-                        Link Evidence
+                      <LockedButton locked={readOnly || !evidenceInputs[req.id]?.trim()} onClick={() => {
+                          saveCompAction(`Evidence linked for ${req.id}`);
+                          setEvidenceSavedId(req.id);
+                          setTimeout(() => setEvidenceSavedId(null), 2000);
+                        }}
+                        className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${evidenceSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
+                        {evidenceSavedId === req.id ? '✓ Saved' : 'Link Evidence'}
                       </LockedButton>
                     </div>
                   </div>
@@ -1268,9 +1274,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <LockedButton locked={readOnly || !corrActionInputs[req.id]?.trim()} onClick={() => saveCompAction(`Corrective action saved for ${req.id}`)}
-                      className="border border-border text-slate text-xs px-3 py-1.5 rounded-lg hover:bg-white disabled:opacity-40">
-                      Save Action Plan
+                    <LockedButton locked={readOnly || !corrActionInputs[req.id]?.trim()} onClick={() => {
+                        saveCompAction(`Corrective action saved for ${req.id}`);
+                        setCorrSavedId(req.id);
+                        setTimeout(() => setCorrSavedId(null), 2000);
+                      }}
+                      className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${corrSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
+                      {corrSavedId === req.id ? '✓ Saved' : 'Save Action Plan'}
                     </LockedButton>
                     {!isCompleted && (
                       <LockedButton locked={readOnly} onClick={() => {
