@@ -1,0 +1,91 @@
+Perform a data-integrity and regulatory-accuracy correction across the entire SunriseOS demo. Do not redesign the visual interface, remove existing modules, or change the approved SunriseOS branding.
+
+1. Create one canonical master staff dataset used by the profile selector, HR dashboard, credentialing, LMS, clinical supervision, staff scheduling, messaging, and role-based permissions.
+
+2. Every staff member must have one consistent:
+- Name
+- Credentials
+- Job title
+- Department
+- Work location
+- Employment status
+- System role
+- Schedule role
+- Supervisor
+- Credential status
+
+3. Correct these known inconsistencies:
+- Michael Boyd must remain a Behavioral Health Technician and ADT registrant everywhere. Do not identify him as an RN.
+- Maria Gonzales must remain the staff accountant everywhere. Do not identify her as an LCADC or place her in the counselor schedule.
+- The active staff count, selectable profile count, credentialing staff count, LMS staff count, and scheduling staff count must mathematically reconcile.
+- Remove or properly add any employees who appear in only one module.
+
+4. Correct the credential taxonomy:
+- LCADC = Licensed Clinical Alcohol and Drug Counselor
+- LCSW-C = Licensed Certified Social Worker–Clinical
+- LCMFT = Licensed Clinical Marriage and Family Therapist
+- LCPC = Licensed Clinical Professional Counselor
+- CAC-AD = Certified Associate Counselor–Alcohol and Drug
+- CSC-AD = Certified Supervised Counselor–Alcohol and Drug
+- ADT = Alcohol and Drug Trainee
+
+Do not describe LCADC as a social worker or marriage and family therapist credential.
+
+5. Review every Maryland credential and assign the correct licensing or certification authority. Do not identify Maryland BHA or ADAA as the issuing authority unless that is accurate for the particular credential.
+
+6. Replace “MAT/Buprenorphine Waiver” in Training & LMS with “MOUD and Buprenorphine Treatment Competency.” The federal X-waiver requirement has been eliminated.
+
+7. Use one system-wide demonstration date. Update the Staff Scheduling default week to July 27–August 2, 2026. Recalculate all expiration, overdue, last-active, renewal, census-trend, and scheduling dates from the same demo date.
+
+8. Adjust the fictional compliance data so the organization appears generally well managed while still demonstrating SunriseOS alerts:
+- Overall training compliance between 88% and 94%
+- One expired credential
+- Two credentials expiring within 60 days
+- Three overdue training requirements
+- Two scheduling conflicts
+- One open coverage request
+- One employee approaching overtime
+- No unlicensed employee independently assigned outside verified scope
+- No employee working overlapping shifts
+
+9. Expand Add Credential to include:
+- Staff member
+- Credential type
+- Credential number
+- Issuing board
+- Issuing state
+- Issue date
+- Expiration date
+- Verification status
+- Primary-source verification date
+- Verified by
+- Restrictions
+- Supervision required
+- Approved supervisor
+- Renewal status
+- Credential document upload
+- Verification evidence upload
+- Notes
+- Save as Draft
+- Submit for Verification
+- Approve Credential
+
+10. Add credential statuses:
+- Entered
+- Pending Verification
+- Verified
+- Expiring
+- Renewal Submitted
+- Expired
+- Restricted
+- Suspended
+
+11. Run a final reconciliation report and confirm:
+- Every staff member has the same role and credentials across every module.
+- All dashboard totals match the underlying records.
+- All compliance percentages calculate correctly.
+- All scheduling totals match the visible schedule.
+- No expired or restricted credential is silently treated as active.
+- No incorrect credential definitions remain.
+
+Preserve the current polished design. Focus this correction entirely on data accuracy, regulatory credibility, internal consistency, and realistic behavioral-health operations.

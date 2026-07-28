@@ -50,7 +50,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
   {
     id: 'SV-001', name: 'Sarah Jenkins', role: 'LCPC-A (MD)', supervisor: 'James S. Collins III, CAC-AD, BAS',
     hoursRequiredMonthly: 2, hoursCompletedThisMonth: 2, licenseExpiry: '2028-06-30',
-    supervisionType: 'Both', nextSession: '2026-07-22', caseload: 8, pendingCosigns: 2,
+    supervisionType: 'Both', nextSession: '2026-08-05', caseload: 8, pendingCosigns: 2,
     competencyScores: { assessment: 4.2, treatmentPlanning: 4.5, documentation: 3.8, therapeuticAlliance: 4.7, ethicsCompliance: 5.0, culturalHumility: 4.1 },
     notes: [
       {
@@ -72,9 +72,9 @@ const SUPERVISEES: SuperviseeRecord[] = [
     ],
   },
   {
-    id: 'SV-002', name: 'Michael Boyd', role: 'ADT (DE)', supervisor: '__DE_CAC-AD_WRIGHT__, PRS (DSAMH BAS)',
+    id: 'SV-002', name: 'Michael Boyd', role: 'ADT (DE)', supervisor: 'Kevin Wright, CAC-AD, PRS (DSAMH BAS)',
     hoursRequiredMonthly: 1, hoursCompletedThisMonth: 0, licenseExpiry: '2027-03-15',
-    supervisionType: 'Individual', nextSession: '2026-07-23', caseload: 6, pendingCosigns: 5,
+    supervisionType: 'Individual', nextSession: '2026-08-06', caseload: 6, pendingCosigns: 5,
     competencyScores: { assessment: 3.5, treatmentPlanning: 3.2, documentation: 3.0, therapeuticAlliance: 4.0, ethicsCompliance: 4.5, culturalHumility: 3.8 },
     notes: [
       {
@@ -83,14 +83,14 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Great group energy — patients respond well to Kevin\'s peer-informed perspective. Authentic and genuine. Strong in early engagement.',
         growthAreas: 'Documentation: 3 notes submitted after 24-hour deadline this week. Reviewed CMS documentation requirements. Also: avoid advice-giving in MI — practice reflective listening.',
         goals: 'By 7/23: all progress notes submitted within 24 hours. Complete online MI module (Level 2). Practice open-ended questions in group.',
-        supervisorSignature: '__DE_CAC-AD_WRIGHT__, DSAMH BAS, 7/8/2026', superviseeSignature: 'Michael Boyd, ADT-DSAMH, 7/8/2026',
+        supervisorSignature: 'Kevin Wright, CAC-AD, DSAMH BAS, 7/8/2026', superviseeSignature: 'Michael Boyd, ADT-DSAMH, 7/8/2026',
       },
     ],
   },
   {
     id: 'SV-003', name: 'Aisha Thompson', role: 'CSC-AD (MD)', supervisor: 'James S. Collins III, CAC-AD, BAS',
     hoursRequiredMonthly: 2, hoursCompletedThisMonth: 1, licenseExpiry: '2029-09-01',
-    supervisionType: 'Both', nextSession: '2026-07-27', caseload: 9, pendingCosigns: 1,
+    supervisionType: 'Both', nextSession: '2026-08-10', caseload: 9, pendingCosigns: 1,
     competencyScores: { assessment: 4.6, treatmentPlanning: 4.3, documentation: 4.8, therapeuticAlliance: 4.2, ethicsCompliance: 5.0, culturalHumility: 4.9 },
     notes: [
       {
@@ -106,9 +106,9 @@ const SUPERVISEES: SuperviseeRecord[] = [
 ];
 
 const GROUP_SUPERVISION = [
-  { date: '2026-07-22', time: '2:00 PM', topic: 'Complex Trauma & Addiction — Case Consultation', supervisor: 'James S. Collins III', attendees: ['Sarah Jenkins', 'Kevin Wright', 'Aisha Thompson', 'Maria Gonzalez'], status: 'Upcoming' },
+  { date: '2026-08-05', time: '2:00 PM', topic: 'Complex Trauma & Addiction — Case Consultation', supervisor: 'James S. Collins III', attendees: ['Sarah Jenkins', 'Kevin Wright', 'Aisha Thompson'], status: 'Upcoming' },
   { date: '2026-07-08', time: '2:00 PM', topic: 'Mandatory Reporting in Addiction Treatment (42 CFR Part 2 vs. Tarasoff)', supervisor: 'James S. Collins III', attendees: ['Sarah Jenkins', 'Kevin Wright', 'Aisha Thompson'], status: 'Completed' },
-  { date: '2026-06-24', time: '2:00 PM', topic: 'Motivational Interviewing Fidelity Review', supervisor: 'Maria Gonzalez', attendees: ['Kevin Wright', 'Aisha Thompson'], status: 'Completed' },
+  { date: '2026-06-24', time: '2:00 PM', topic: 'Motivational Interviewing Fidelity Review', supervisor: 'James S. Collins III', attendees: ['Kevin Wright', 'Aisha Thompson'], status: 'Completed' },
 ];
 
 const PRODUCTIVITY_DATA = [
@@ -163,7 +163,7 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
           { label: 'Active Supervisees', value: SUPERVISEES.length, sub: 'Under clinical oversight', color: 'text-navy' },
           { label: 'Hours This Month', value: `${SUPERVISEES.reduce((a,s)=>a+s.hoursCompletedThisMonth,0)}/${SUPERVISEES.reduce((a,s)=>a+s.hoursRequiredMonthly,0)}`, sub: 'Required vs. completed', color: 'text-navy' },
           { label: 'Pending Co-signs', value: SUPERVISEES.reduce((a,s)=>a+s.pendingCosigns,0), sub: 'Require supervisor signature', color: 'text-orange' },
-          { label: 'Next Group Supervision', value: 'Jul 22', sub: 'Complex Trauma & Addiction', color: 'text-navy' },
+          { label: 'Next Group Supervision', value: 'Aug 5', sub: 'Complex Trauma & Addiction', color: 'text-navy' },
         ].map(s => (
           <div key={s.label} className="card">
             <div className="text-xs text-slate font-semibold uppercase tracking-wide">{s.label}</div>
@@ -388,7 +388,7 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
               focus: ['Documentation quality', 'Transference in group settings'],
               strengths: 'Exceptional therapeutic alliance with high-acuity patients. Documentation is consistently thorough and timely. Demonstrates strong insight in processing countertransference during supervision.',
               growth: 'Continue developing advanced group facilitation skills for higher-acuity populations. Explore supervision of interns as a professional development goal for Q4.',
-              plan: 'Assign as lead facilitator for new DBT-ST group launching Aug 1. Pair with Maria Chen for peer observation.',
+              plan: 'Assign as lead facilitator for new DBT-ST group launching Aug 1. Pair with Devon Ramos for peer observation.',
               hours: { individual: 1, group: 0.5, total: 1.5 },
             },
             {
@@ -405,9 +405,9 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
               hours: { individual: 1, group: 0, total: 1 },
             },
             {
-              supervisee: 'Maria Chen, LCADC',
-              credential: 'LCADC (toward LCADC) · 2 yrs exp',
-              supervisor: 'Sarah Jenkins, LCPC',
+              supervisee: 'Devon Ramos, LMSW',
+              credential: 'LMSW (toward LCADC) · 2 yrs exp',
+              supervisor: 'David Odom, LCADC',
               date: '2026-07-12',
               type: 'Individual Supervision',
               rating: 4,
@@ -557,7 +557,7 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Supervisee *</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>Sarah Jenkins, LCPC</option><option>Maria Gonzales, LCADC</option><option>David Odom, LCADC</option><option>Kevin Wright, BHT</option>
+                    <option>Sarah Jenkins, LCPC</option><option>Michael Boyd, ADT</option><option>Aisha Thompson, CSC-AD</option><option>Kevin Wright, CAC-AD</option><option>Devon Ramos, LMSW</option>
                   </select>
                 </div>
                 <div>

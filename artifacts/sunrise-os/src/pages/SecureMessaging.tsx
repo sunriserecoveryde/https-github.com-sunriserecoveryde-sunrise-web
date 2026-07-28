@@ -60,7 +60,7 @@ const MESSAGES: Message[] = [
   {
     id: 'M-003', threadId: 'T-003', type: 'Staff-Staff', urgency: 'Routine',
     from: 'David Odom, LCADC', fromRole: 'Primary Counselor',
-    to: 'Maria Gonzalez, LCADC', toRole: 'Social Worker',
+    to: 'Maria Gonzalez, CPA', toRole: 'Staff Accountant',
     patientId: 'p5',
     subject: 'Tyler Morrison — DUI court letter',
     body: 'Hi Maria — Tyler Morrison\'s court date is 7/22. Can you generate the compliance letter for the Davidson County Drug Court? Needs: admission date, diagnosis (AUD, Moderate), treatment compliance (excellent), UA results (negative x4). I\'ll co-sign.',
@@ -68,7 +68,7 @@ const MESSAGES: Message[] = [
     replies: [
       {
         id: 'M-003r', threadId: 'T-003', type: 'Staff-Staff', urgency: 'Routine',
-        from: 'Maria Gonzalez, LCADC', fromRole: 'Social Worker',
+        from: 'Maria Gonzalez, CPA', fromRole: 'Staff Accountant',
         to: 'David Odom, LCADC', toRole: 'Primary Counselor',
         patientId: 'p5',
         subject: 'RE: Tyler Morrison — DUI court letter',
@@ -79,7 +79,7 @@ const MESSAGES: Message[] = [
   },
   {
     id: 'M-004', threadId: 'T-004', type: 'Team Alert', urgency: 'Critical',
-    from: 'James S. Collins III, PhD', fromRole: 'Clinical Director',
+    from: 'James S. Collins III, CAC-AD', fromRole: 'Clinical Supervisor',
     to: 'All Clinical Staff',
     patientId: 'p9',
     subject: '🔴 CRITICAL — Samantha Choi Safety Hold — All Staff Read',
@@ -106,16 +106,16 @@ const MESSAGES: Message[] = [
   },
   {
     id: 'M-007', threadId: 'T-007', type: 'Staff-Staff', urgency: 'Routine',
-    from: 'Aisha Thompson, LCADC', fromRole: 'Counselor',
-    to: 'James S. Collins III, PhD', toRole: 'Clinical Director',
+    from: 'Aisha Thompson, CSC-AD', fromRole: 'Counselor',
+    to: 'James S. Collins III, CAC-AD', toRole: 'Clinical Supervisor',
     subject: 'Supervision request — case consultation needed',
     body: 'Collins — I have a complex patient (co-occurring severe PTSD + OUD + domestic violence history) that I\'d like your consultation on before proceeding with treatment planning. She\'s triggered by anything trauma-related in group. Requesting 30 min consultation when you have availability this week.',
     timestamp: '2026-07-17 3:00 PM', status: 'Read',
     replies: [
       {
         id: 'M-007r', threadId: 'T-007', type: 'Staff-Staff', urgency: 'Routine',
-        from: 'James S. Collins III, PhD', fromRole: 'Clinical Director',
-        to: 'Aisha Thompson, LCADC', toRole: 'Counselor',
+        from: 'James S. Collins III, CAC-AD', fromRole: 'Clinical Supervisor',
+        to: 'Aisha Thompson, CSC-AD', toRole: 'Counselor',
         subject: 'RE: Supervision request',
         body: 'Of course Aisha. I have Tuesday at 3pm open — add it to the supervision calendar. Bring the biopsychosocial and any prior trauma history docs you have. We\'ll think through this together.',
         timestamp: '2026-07-17 4:10 PM', status: 'Read',
@@ -391,7 +391,7 @@ export function SecureMessaging({ navigate, readOnly }: Props) {
               <div>
                 <label className="block text-xs font-semibold text-slate mb-1">To *</label>
                 <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                  {['James S. Collins III — Clinical Director', 'Dr. Robert Chen — Medical Director', 'Dr. Emma Hughes — Psychiatrist', 'Sarah Jenkins — Primary Counselor', 'Maria Gonzalez — Social Worker', 'Jessica Torres — DON', 'All Clinical Staff (Broadcast)'].map(s => <option key={s}>{s}</option>)}
+                  {['James S. Collins III — Clinical Supervisor', 'Dr. Robert Chen — Medical Director', 'Dr. Emma Hughes — Psychiatrist', 'Sarah Jenkins — Primary Counselor', 'Maria Gonzalez — Staff Accountant', 'Jessica Torres — DON', 'All Clinical Staff (Broadcast)'].map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
               <div>
@@ -586,7 +586,7 @@ export function SecureMessaging({ navigate, readOnly }: Props) {
                   { date: 'Jul 19', from: 'J. Torres, RN', to: 'Dr. Chen, MD', type: 'Clinical Alert', phi: 'Vital signs + CIWA score', enc: 'TLS 1.3', consent: 'Internal — N/A', status: 'Delivered' },
                   { date: 'Jul 19', from: 'S. Jenkins, LCPC', to: 'D. Reyes (Probation)', type: 'Compliance Letter', phi: 'Treatment participation', enc: 'TLS 1.3', consent: '42 CFR consent on file', status: 'Delivered' },
                   { date: 'Jul 18', from: 'Billing — B. Hughes', to: 'BCBS Claims', type: 'Auth Documentation', phi: 'Diagnosis + treatment dates', enc: 'TLS 1.3', consent: 'Insurance exemption', status: 'Delivered' },
-                  { date: 'Jul 18', from: 'M. Gonzales, LCADC', to: 'Primary Care — Dr. Lee', type: 'Discharge Summary', phi: 'Full discharge summary', enc: 'TLS 1.3', consent: '42 CFR consent on file', status: 'Read Confirmed' },
+                  { date: 'Jul 18', from: 'M. Gonzales, CPA', to: 'Primary Care — Dr. Lee', type: 'Discharge Summary', phi: 'Full discharge summary', enc: 'TLS 1.3', consent: '42 CFR consent on file', status: 'Read Confirmed' },
                   { date: 'Jul 17', from: 'Admissions', to: 'Drug Court Coordinator', type: 'Admission Notification', phi: 'Admission date + program', enc: 'TLS 1.3', consent: '42 CFR consent on file', status: 'Delivered' },
                 ].map(r => (
                   <tr key={r.date + r.from + r.to} className="hover:bg-gray-50">

@@ -29,7 +29,7 @@ const COURSES: TrainingCourse[] = [
   { id: 'c3', name: 'Mandated Reporter', category: 'Compliance', required: true, renewalMonths: 12, applicableTo: ['All'] },
   { id: 'c4', name: 'Crisis De-escalation (CPI)', category: 'Clinical', required: true, renewalMonths: 12, applicableTo: ['Clinical', 'Operations', 'Nursing'] },
   { id: 'c5', name: 'ASAM Criteria Training', category: 'Clinical', required: true, renewalMonths: 24, applicableTo: ['Clinical', 'Medical'] },
-  { id: 'c6', name: 'MAT / Buprenorphine Waiver', category: 'Medical', required: false, renewalMonths: 36, applicableTo: ['Medical'] },
+  { id: 'c6', name: 'MOUD and Buprenorphine Treatment Competency', category: 'Medical', required: false, renewalMonths: 36, applicableTo: ['Medical'] },
   { id: 'c7', name: 'Documentation & Chart Integrity', category: 'Compliance', required: true, renewalMonths: 12, applicableTo: ['Clinical', 'Nursing', 'Admissions'] },
   { id: 'c8', name: 'Trauma-Informed Care', category: 'Clinical', required: true, renewalMonths: 24, applicableTo: ['Clinical', 'Operations'] },
   { id: 'c9', name: 'Suicide Risk Assessment', category: 'Clinical', required: true, renewalMonths: 12, applicableTo: ['Clinical', 'Medical', 'Nursing'] },
@@ -70,7 +70,7 @@ const SCHEDULED: ScheduledTraining[] = [
   { id: 'st1', title: 'HIPAA & 42 CFR Part 2 Annual Refresher', date: '2026-07-22', time: '9:00 AM – 11:00 AM', instructor: 'James S. Collins III', location: 'Conference Room A', registeredCount: 8, capacity: 20, category: 'Compliance', ceuHours: 2 },
   { id: 'st2', title: 'CPI Crisis De-escalation Recertification', date: '2026-07-29', time: '8:00 AM – 4:00 PM', instructor: 'Kevin Wright (CPI Certified)', location: 'Main Group Room', registeredCount: 6, capacity: 12, category: 'Clinical', ceuHours: 8 },
   { id: 'st3', title: 'Trauma-Informed Care — Level 2', date: '2026-08-05', time: '1:00 PM – 4:00 PM', instructor: 'Dr. Allen Hughes', location: 'Conference Room A', registeredCount: 4, capacity: 15, category: 'Clinical', ceuHours: 3 },
-  { id: 'st4', title: 'Motivational Interviewing (MI) Foundations', date: '2026-08-12', time: '9:00 AM – 12:00 PM', instructor: 'Maria Gonzales, LCADC', location: 'Group Room B', registeredCount: 7, capacity: 12, category: 'Clinical', ceuHours: 3 },
+  { id: 'st4', title: 'Motivational Interviewing (MI) Foundations', date: '2026-08-12', time: '9:00 AM – 12:00 PM', instructor: 'Sarah Jenkins, LCPC', location: 'Group Room B', registeredCount: 7, capacity: 12, category: 'Clinical', ceuHours: 3 },
   { id: 'st5', title: 'Fire Safety & Emergency Evacuation Drill', date: '2026-08-19', time: '10:00 AM – 11:00 AM', instructor: 'Kevin Wright', location: 'Full Facility', registeredCount: 12, capacity: 30, category: 'Safety', ceuHours: 1 },
 ];
 
@@ -454,7 +454,7 @@ export function Training({ navigate, readOnly }: Props) {
                   ]
                 },
                 {
-                  name: 'M. Boyd, RN', role: 'Staff Nurse', startDate: '2026-07-14', preceptor: 'J. Torres, RN',
+                  name: 'M. Boyd, ADT', role: 'Behavioral Health Technician', startDate: '2026-07-14', preceptor: 'K. Wright, CAC-AD',
                   modules: [
                     { name: 'Orientation & HR Policies', done: true, dueDate: 'Day 1' },
                     { name: 'HIPAA & 42 CFR Part 2 Training', done: true, dueDate: 'Day 2' },
@@ -517,7 +517,7 @@ export function Training({ navigate, readOnly }: Props) {
                 { title: 'ASAM Criteria & LOC Decision-Making', cat: 'Clinical', duration: '2.0 CEU', format: 'Self-paced video + quiz', level: 'All clinical staff', new: false },
                 { title: 'Motivational Interviewing — Foundations (MI-1)', cat: 'Clinical', duration: '6.0 CEU', format: 'Video series + role-play', level: 'Counselors, ADT', new: false },
                 { title: 'Trauma-Informed Care in SUD Settings', cat: 'Clinical', duration: '3.0 CEU', format: 'Self-paced video + quiz', level: 'All clinical staff', new: true },
-                { title: 'MAT Basics: Buprenorphine, Naltrexone, Methadone', cat: 'Clinical', duration: '2.5 CEU', format: 'Video + case studies', level: 'All clinical staff', new: false },
+                { title: 'MOUD: Buprenorphine, Naltrexone, and Methadone', cat: 'Clinical', duration: '2.5 CEU', format: 'Video + case studies', level: 'All clinical staff', new: false },
                 { title: 'CIWA-Ar / COWS Assessment Proficiency', cat: 'Nursing', duration: '1.5 CEU', format: 'Video + competency check', level: 'Nursing staff', new: false },
                 { title: 'Suicide Risk Assessment (Columbia C-SSRS)', cat: 'Safety', duration: '2.0 CEU', format: 'Video + scenario-based', level: 'All clinical staff', new: true },
                 { title: '42 CFR Part 2 & HIPAA for SUD Programs', cat: 'Compliance', duration: '1.0 CEU', format: 'Self-paced + attestation', level: 'All staff', new: false },

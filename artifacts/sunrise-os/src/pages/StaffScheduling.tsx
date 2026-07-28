@@ -53,19 +53,20 @@ const STAFF: StaffMember[] = [
   { id: 's2',  name: 'Dr. Emily Stone',         role: 'Physician',   credential: 'MD',          color: 'bg-navy text-white' },
   { id: 's3',  name: 'Dr. Allen Hughes',        role: 'Psychiatrist',credential: 'MD',          color: 'bg-purple-700 text-white' },
   { id: 's4',  name: 'Jessica Torres',          role: 'Nurse',       credential: 'RN',          color: 'bg-blue-600 text-white' },
-  { id: 's5',  name: 'Michael Boyd',            role: 'Nurse',       credential: 'RN',          color: 'bg-blue-600 text-white' },
+  { id: 's5',  name: 'Michael Boyd',            role: 'BHT',         credential: 'ADT',         color: 'bg-gray-600 text-white' },
   { id: 's6',  name: 'Rachel Kim',              role: 'Nurse',       credential: 'RN',          color: 'bg-blue-600 text-white' },
   { id: 's7',  name: 'Sarah Jenkins',           role: 'Counselor',   credential: 'LCPC',        color: 'bg-teal-600 text-white' },
   { id: 's8',  name: 'David Odom',              role: 'Counselor',   credential: 'LCADC',       color: 'bg-teal-600 text-white' },
-  { id: 's9',  name: 'Maria Gonzales',          role: 'LCADC',       credential: 'LCADC',       color: 'bg-teal-600 text-white' },
+  { id: 's9',  name: 'Aisha Thompson',          role: 'Counselor',   credential: 'CSC-AD',      color: 'bg-teal-600 text-white' },
   { id: 's10', name: 'Kevin Wright',            role: 'BHT',         credential: 'BHT Sup',     color: 'bg-gray-600 text-white' },
   { id: 's11', name: 'Darnell Hughes',          role: 'BHT',         credential: 'BHT',         color: 'bg-gray-600 text-white' },
   { id: 's12', name: 'Tamika Ross',             role: 'BHT',         credential: 'BHT',         color: 'bg-gray-600 text-white' },
   { id: 's13', name: 'Amanda Lewis',            role: 'Admin',       credential: 'Intake',      color: 'bg-amber-600 text-white' },
   { id: 's14', name: 'Linda Vance',             role: 'Admin',       credential: 'UR/Billing',  color: 'bg-amber-600 text-white' },
+  { id: 's15', name: 'Maria Gonzales',          role: 'Admin',       credential: 'CPA',         color: 'bg-amber-600 text-white' },
 ];
 
-const DAYS = ['Mon\n7/14', 'Tue\n7/15', 'Wed\n7/16', 'Thu\n7/17', 'Fri\n7/18', 'Sat\n7/19', 'Sun\n7/20'];
+const DAYS = ['Mon\n7/27', 'Tue\n7/28', 'Wed\n7/29', 'Thu\n7/30', 'Fri\n7/31', 'Sat\n8/1', 'Sun\n8/2'];
 
 const REQUIREMENTS: Record<ShiftType, { nurses: number; bhts: number; counselors: number }> = {
   Day:     { nurses: 2, bhts: 2, counselors: 3 },
@@ -80,7 +81,7 @@ const SUPERVISOR_MAP: Record<string, { id: string; name: string }> = {
   's2':  { id: 'sup_ceo',     name: 'CEO / Executive Director' },
   's3':  { id: 'sup_ceo',     name: 'CEO / Executive Director' },
   's4':  { id: 's1',          name: 'Dr. Robert Chen' },
-  's5':  { id: 's4',          name: 'Jessica Torres' },
+  's5':  { id: 's10',         name: 'Kevin Wright' },
   's6':  { id: 's4',          name: 'Jessica Torres' },
   's7':  { id: 'sup_collins', name: 'James S. Collins III' },
   's8':  { id: 'sup_collins', name: 'James S. Collins III' },
@@ -90,6 +91,7 @@ const SUPERVISOR_MAP: Record<string, { id: string; name: string }> = {
   's12': { id: 'sup_collins', name: 'James S. Collins III' },
   's13': { id: 'sup_ceo',     name: 'CEO / Executive Director' },
   's14': { id: 'sup_ceo',     name: 'CEO / Executive Director' },
+  's15': { id: 'sup_ceo',     name: 'CEO / Executive Director' },
 };
 
 // ─── Generate schedule ─────────────────────────────────────────────────────────
@@ -112,32 +114,31 @@ STAFF.forEach(s => {
       if (!isWeekend) SCHEDULE[s.id][day].Day = { staffId: s.id, status: 'Scheduled' };
       else SCHEDULE[s.id][day].Day = { staffId: s.id, status: 'On Call' };
     } else if (s.role === 'Nurse') {
-      const base = ['s4', 's5', 's6'];
+      const base = ['s4', 's6'];
       const idx = base.indexOf(s.id);
       if (idx === 0) {
         SCHEDULE[s.id][day].Day = { staffId: s.id, status: di === 3 ? 'PTO' : 'Scheduled' };
-      } else if (idx === 1) {
-        SCHEDULE[s.id][day].Evening = { staffId: s.id, status: 'Scheduled' };
-        if (di === 1) SCHEDULE[s.id][day].Evening = { staffId: s.id, status: 'Call Off' };
       } else {
         SCHEDULE[s.id][day].Night = { staffId: s.id, status: 'Scheduled' };
-        if (di === 4) SCHEDULE[s.id][day].Night = { staffId: s.id, status: 'Overtime' };
       }
-    } else if (s.role === 'Counselor' || s.role === 'LCADC') {
+    } else if (s.role === 'Counselor') {
       if (!isWeekend) SCHEDULE[s.id][day].Day = { staffId: s.id, status: 'Scheduled' };
       else SCHEDULE[s.id][day].Day = { staffId: s.id, status: s.id === 's7' && di === 5 ? 'PTO' : 'On Call' };
     } else if (s.role === 'BHT') {
-      const bhtBase = ['s10', 's11', 's12'];
+      const bhtBase = ['s10', 's11', 's12', 's5'];
       const idx = bhtBase.indexOf(s.id);
       if (idx === 0) {
+        // Kevin Wright — Day only, no overlap
         SCHEDULE[s.id][day].Day = { staffId: s.id, status: 'Scheduled' };
-        SCHEDULE[s.id][day].Evening = { staffId: s.id, status: 'Scheduled' };
       } else if (idx === 1) {
-        SCHEDULE[s.id][day].Evening = { staffId: s.id, status: di === 5 ? 'Overtime' : 'Scheduled' };
-        SCHEDULE[s.id][day].Night = { staffId: s.id, status: 'Scheduled' };
+        // Darnell Hughes — Evening only
+        SCHEDULE[s.id][day].Evening = { staffId: s.id, status: 'Scheduled' };
+      } else if (idx === 2) {
+        // Tamika Ross — Night only, approaching OT on Friday
+        SCHEDULE[s.id][day].Night = { staffId: s.id, status: di === 4 ? 'Overtime' : 'Scheduled' };
       } else {
-        SCHEDULE[s.id][day].Night = { staffId: s.id, status: 'Scheduled' };
-        if (!isWeekend) SCHEDULE[s.id][day].Day = { staffId: s.id, status: 'Scheduled' };
+        // Michael Boyd (ADT) — Day, Call Off Tue
+        SCHEDULE[s.id][day].Day = { staffId: s.id, status: di === 1 ? 'Call Off' : 'Scheduled' };
       }
     } else if (s.role === 'Admin') {
       if (!isWeekend) SCHEDULE[s.id][day].Day = { staffId: s.id, status: 'Scheduled' };
@@ -161,44 +162,44 @@ const SEED_REQUESTS: CoverageRequest[] = [
   {
     id: 'CR-001',
     requesterId: 's5', requesterName: 'Michael Boyd',
-    day: 'Tue\n7/15', shift: 'Evening', type: 'Find Coverage',
+    day: 'Tue\n7/28', shift: 'Day', type: 'Find Coverage',
     reason: 'Family emergency — unable to make shift',
     status: 'Open',
-    supervisorId: 's4', supervisorName: 'Jessica Torres',
-    submittedAt: 'Jul 14, 6:42 PM',
+    supervisorId: 's10', supervisorName: 'Kevin Wright',
+    submittedAt: 'Jul 27, 6:42 PM',
   },
   {
     id: 'CR-002',
     requesterId: 's6', requesterName: 'Rachel Kim',
-    day: 'Fri\n7/18', shift: 'Night', type: 'Find Coverage',
+    day: 'Fri\n7/31', shift: 'Night', type: 'Find Coverage',
     reason: 'Medical appointment conflicts with shift start',
     status: 'Volunteer Found',
     volunteerId: 's12', volunteerName: 'Tamika Ross',
     supervisorId: 's4', supervisorName: 'Jessica Torres',
-    submittedAt: 'Jul 13, 9:15 AM',
+    submittedAt: 'Jul 26, 9:15 AM',
   },
   {
     id: 'CR-003',
     requesterId: 's10', requesterName: 'Kevin Wright',
-    day: 'Thu\n7/17', shift: 'Day', type: 'Shift Swap',
+    day: 'Thu\n7/30', shift: 'Day', type: 'Shift Swap',
     reason: 'Recurring Thursday conflict — propose swap with Darnell Hughes (Darnell agreed)',
     status: 'Pending Approval',
     volunteerId: 's11', volunteerName: 'Darnell Hughes',
     swapTargetId: 's11', swapTargetName: 'Darnell Hughes',
     supervisorId: 'sup_collins', supervisorName: 'James S. Collins III',
-    submittedAt: 'Jul 13, 2:05 PM',
+    submittedAt: 'Jul 26, 2:05 PM',
   },
   {
     id: 'CR-004',
     requesterId: 's7', requesterName: 'Sarah Jenkins',
-    day: 'Sat\n7/19', shift: 'Day', type: 'Shift Swap',
+    day: 'Sat\n8/1', shift: 'Day', type: 'Shift Swap',
     reason: 'Out-of-town obligation Saturday — agreed swap with David Odom',
     status: 'Approved',
     volunteerId: 's8', volunteerName: 'David Odom',
     swapTargetId: 's8', swapTargetName: 'David Odom',
     supervisorId: 'sup_collins', supervisorName: 'James S. Collins III',
-    submittedAt: 'Jul 11, 11:30 AM',
-    resolvedAt: 'Jul 12, 8:00 AM',
+    submittedAt: 'Jul 24, 11:30 AM',
+    resolvedAt: 'Jul 25, 8:00 AM',
     notes: 'Approved — adequate counselor coverage confirmed for Saturday.',
   },
 ];
@@ -208,8 +209,8 @@ const SEED_REQUESTS: CoverageRequest[] = [
 
 const DEMO_USERS = [
   { id: 's7',          label: 'Sarah Jenkins (Counselor — staff view)' },
-  { id: 's5',          label: 'Michael Boyd (RN — staff view)' },
-  { id: 's10',         label: 'Kevin Wright (BHT — staff view)' },
+  { id: 's5',          label: 'Michael Boyd (BHT/ADT — staff view)' },
+  { id: 's10',         label: 'Kevin Wright (BHT Supervisor — staff view)' },
   { id: 'sup_collins', label: 'James S. Collins III (Clinical Supervisor — approver view)' },
   { id: 's4',          label: 'Jessica Torres (Director of Nursing — approver view)' },
 ];
@@ -742,7 +743,7 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => {}} className="p-1.5 hover:bg-gray-100 rounded" title="Previous week"><ChevronLeft className="w-4 h-4 text-slate" /></button>
-          <span className="text-sm font-semibold text-navy px-2">Week of July 14–20, 2026</span>
+          <span className="text-sm font-semibold text-navy px-2">Week of July 27 – August 2, 2026</span>
           <button onClick={() => {}} className="p-1.5 hover:bg-gray-100 rounded" title="Next week"><ChevronRight className="w-4 h-4 text-slate" /></button>
           <LockedButton locked={readOnly} onClick={() => setAddShiftOpen(true)} className="ml-2 btn-primary text-sm px-4 py-2">+ Add Shift</LockedButton>
         </div>
@@ -952,8 +953,8 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
                     </thead>
                     <tbody>
                       {[
-                        { role: 'Nurses (RN)', required: req.nurses, ids: ['s4', 's5', 's6'] },
-                        { role: 'BHT / Tech',  required: req.bhts,   ids: ['s10', 's11', 's12'] },
+                        { role: 'Nurses (RN)', required: req.nurses, ids: ['s4', 's6'] },
+                        { role: 'BHT / Tech',  required: req.bhts,   ids: ['s5', 's10', 's11', 's12'] },
                         { role: 'Counselors',  required: req.counselors, ids: ['s7', 's8', 's9'] },
                       ].map(row => (
                         <tr key={row.role} className="border-b border-border last:border-0">
@@ -1043,7 +1044,7 @@ export function StaffScheduling({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'Jessica Torres, RN',   role: 'Nurse',     type: 'Vacation',   dates: 'Jul 28 – Aug 1', days: 5,  coverage: 'A. Patel covers Day / Per diem hired for Eve', status: 'Pending' },
+                  { name: 'Jessica Torres, RN',   role: 'Nurse',     type: 'Vacation',   dates: 'Aug 4 – Aug 8',  days: 5,  coverage: 'A. Patel covers Day / Per diem hired for Eve', status: 'Pending' },
                   { name: 'David Odom, LCADC',     role: 'Counselor', type: 'Personal',   dates: 'Jul 25',         days: 1,  coverage: 'Group re-assigned to Sarah Jenkins',           status: 'Pending' },
                   { name: 'Marcus Davis, BHT',     role: 'BHT',       type: 'Sick Leave', dates: 'Jul 24 – 25',    days: 2,  coverage: 'Kevin Smith covers both days',                 status: 'Pending' },
                   { name: 'Sarah Jenkins, LCPC',   role: 'Counselor', type: 'Vacation',   dates: 'Aug 4 – 8',      days: 5,  coverage: 'Temp counselor scheduled. Caseload split 3-way.', status: 'Approved' },
