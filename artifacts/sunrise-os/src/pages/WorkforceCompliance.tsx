@@ -390,7 +390,11 @@ const SUB_MODULES = [
 
 // ─── Dashboard KPIs ────────────────────────────────────────────────────────────
 
-function DashboardTab({ navigate }: { navigate: (s: Screen) => void }) {
+function DashboardTab({ navigate, onOpenComplianceStandards, completedIds }: {
+  navigate: (s: Screen) => void;
+  onOpenComplianceStandards: () => void;
+  completedIds: Set<string>;
+}) {
   const activeCount = EMPLOYEES.filter(e => e.status === 'Active').length;
   const onboardingCount = EMPLOYEES.filter(e => e.status === 'Onboarding').length;
   const credAlerts = EMPLOYEES.reduce((n, e) => n + e.credentialAlerts, 0);
@@ -398,7 +402,20 @@ function DashboardTab({ navigate }: { navigate: (s: Screen) => void }) {
   const supervisionOverdue = EMPLOYEES.filter(e => e.supervisionStatus === 'Overdue').length;
   const reviewsOverdue = PERFORMANCE_REVIEWS.filter(r => r.status === 'Overdue').length;
 
-  const kpis = [
+  const compMet = COMP_REQUIREMENTS.filter(r => r.status === 'Met' || completedIds.has(r.id)).length;
+  const compTotal = COMP_REQUIREMENTS.length;
+  const compScore = Math.round((compMet / compTotal) * 100);
+  const compDot = compScore >= 90 ? 'green' : compScore >= 75 ? 'amber' : 'red';
+  const compColor = compScore >= 90 ? 'text-green-600' : compScore >= 75 ? 'text-amber-600' : 'text-red-600';
+
+  const kpis: Array<{ label: string; value: string | number; sub: string; color: string; dot: string; detail: string; onClick?: () => void }> = [
+    {
+      label: 'Compliance Audit Score', value: `${compScore}%`,
+      sub: `${compMet} of ${compTotal} requirements met`,
+      color: compColor, dot: compDot,
+      detail: 'CARF · HIPAA · 42 CFR Part 2 · MD OHCQ · Medicaid · Internal Policy — tap to open Compliance Standards',
+      onClick: onOpenComplianceStandards,
+    },
     {
       label: 'Active Employees / Contractors', value: `${activeCount} / ${EMPLOYEES.length}`,
       sub: `${onboardingCount} currently onboarding`, color: 'text-navy', dot: 'green',
@@ -477,15 +494,28 @@ function DashboardTab({ navigate }: { navigate: (s: Screen) => void }) {
         <p className="text-sm text-slate mb-5">Know who is qualified, properly trained, appropriately supervised, correctly scheduled, and authorized to serve clients — before a compliance problem occurs.</p>
         <div className="grid grid-cols-3 gap-4">
           {kpis.map((kpi, i) => (
-            <div key={i} className="card hover:border-orange/30 transition-colors">
-              <div className="flex items-start justify-between mb-1">
-                <div className="text-xs font-semibold text-slate uppercase tracking-wide leading-tight pr-2">{kpi.label}</div>
-                <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-0.5 ${dotColor[kpi.dot]}`} />
+            kpi.onClick ? (
+              <button key={i} onClick={kpi.onClick}
+                className="card hover:border-orange/40 hover:bg-orange/5 transition-colors text-left group">
+                <div className="flex items-start justify-between mb-1">
+                  <div className="text-xs font-semibold text-slate uppercase tracking-wide leading-tight pr-2 group-hover:text-orange transition-colors">{kpi.label}</div>
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-0.5 ${dotColor[kpi.dot]}`} />
+                </div>
+                <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
+                <div className="text-xs text-slate mt-0.5 mb-2">{kpi.sub}</div>
+                <div className="text-[10px] text-slate border-t border-border pt-2 leading-relaxed">{kpi.detail}</div>
+              </button>
+            ) : (
+              <div key={i} className="card hover:border-orange/30 transition-colors">
+                <div className="flex items-start justify-between mb-1">
+                  <div className="text-xs font-semibold text-slate uppercase tracking-wide leading-tight pr-2">{kpi.label}</div>
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-0.5 ${dotColor[kpi.dot]}`} />
+                </div>
+                <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
+                <div className="text-xs text-slate mt-0.5 mb-2">{kpi.sub}</div>
+                <div className="text-[10px] text-slate border-t border-border pt-2 leading-relaxed">{kpi.detail}</div>
               </div>
-              <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-xs text-slate mt-0.5 mb-2">{kpi.sub}</div>
-              <div className="text-[10px] text-slate border-t border-border pt-2 leading-relaxed">{kpi.detail}</div>
-            </div>
+            )
           ))}
         </div>
       </div>
@@ -1101,12 +1131,15 @@ const STATUS_CHIP: Record<CompRequirement['status'], string> = {
   'N/A': 'bg-gray-100 text-gray-500',
 };
 
-function ComplianceStandardsTab({ readOnly }: { readOnly?: boolean }) {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
+  readOnly?: boolean;
+  completedIds: Set<string>;
+  setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+}) {
   const [stdFilter, setStdFilter] = useState<CompStandard>('All');
   const [selectedReq, setSelectedReq] = useState<string | null>(null);
   const [evidenceInputs, setEvidenceInputs] = useState<Record<string, string>>({});
   const [corrActionInputs, setCorrActionInputs] = useState<Record<string, string>>({});
-  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [showReport, setShowReport] = useState(false);
   const [compSaved, setCompSaved] = useState<string | null>(null);
   const saveCompAction = (msg: string) => { setCompSaved(msg); setTimeout(() => setCompSaved(null), 2500); };
@@ -1304,6 +1337,7 @@ type WFTab = 'Dashboard' | 'Employee Profiles' | 'Exclusion & Screening' | 'Onbo
 
 export function WorkforceCompliance({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<WFTab>('Dashboard');
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
   const tabs: WFTab[] = ['Dashboard', 'Employee Profiles', 'Exclusion & Screening', 'Onboarding', 'Performance Reviews', 'Offboarding', 'Compliance Standards'];
 
@@ -1357,13 +1391,13 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       </div>
 
       <div>
-        {tab === 'Dashboard'             && <DashboardTab navigate={navigate} />}
+        {tab === 'Dashboard'             && <DashboardTab navigate={navigate} onOpenComplianceStandards={() => setTab('Compliance Standards')} completedIds={completedIds} />}
         {tab === 'Employee Profiles'     && <EmployeeProfilesTab />}
         {tab === 'Exclusion & Screening' && <ExclusionTab readOnly={readOnly} />}
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} />}
       </div>
     </div>
   );
