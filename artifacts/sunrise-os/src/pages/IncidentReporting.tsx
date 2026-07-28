@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
-import { AlertTriangle, AlertCircle, CheckCircle, Clock, Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle, Clock, Plus, ChevronDown, ChevronUp, X, ClipboardList } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
@@ -113,6 +113,7 @@ export function IncidentReporting({ navigate, readOnly }: Props) {
   const [filterSeverity, setFilterSeverity] = useState<Severity | 'All'>('All');
   const [filterType, setFilterType] = useState<string>('All');
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
   const [followUpFor, setFollowUpFor] = useState<string | null>(null);
   const [followUpText, setFollowUpText] = useState('');
   const [followUpSaved, setFollowUpSaved] = useState<string | null>(null);
@@ -290,75 +291,219 @@ export function IncidentReporting({ navigate, readOnly }: Props) {
         </div>
       )}
 
-      {tab === 'New Incident' && !formSubmitted && (
-        <div className="max-w-2xl">
-          <div className="card space-y-5">
+      {tab === 'New Incident' && !formSubmitted && !draftSaved && (
+        <div className="max-w-3xl">
+          <div className="card space-y-6">
             <div>
-              <h2 className="font-bold text-navy">Report New Incident</h2>
-              <p className="text-sm text-slate mt-0.5">Complete all required fields. This report will be submitted to the clinical director for review.</p>
+              <h2 className="font-bold text-navy text-lg">Report New Incident</h2>
+              <p className="text-sm text-slate mt-0.5">All starred fields are required. This report will proceed through: <span className="font-medium text-navy">Draft → Submit → Review → Approve → Close</span>.</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">Incident Type *</label>
-                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                  {['AMA Attempt', 'Elopement', 'Fall / Injury', 'Physical Altercation', 'Medication Error', 'Self-Harm Ideation', 'Property Damage', 'Sexual Misconduct', 'Medical Emergency', 'Behavioral Escalation'].map(t => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">Severity *</label>
-                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                  {(['Critical', 'High', 'Moderate', 'Low'] as Severity[]).map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient *</label>
-                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                  <option value="">Select patient...</option>
-                  {MOCK_PATIENTS.map(p => (
-                    <option key={p.id} value={p.id}>{p.firstName} {p.lastName} — {p.program}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">Date & Time *</label>
-                <input type="datetime-local" defaultValue="2026-07-19T10:00" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">Location *</label>
-                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                  {['Common Area', 'Patient Room', 'Group Therapy Room', 'Nursing Station', 'Hallway', 'Cafeteria / Dining', 'Outdoor Area', 'Off-Campus', 'Other'].map(l => <option key={l}>{l}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">Reported By *</label>
-                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                  {['Jessica Torres, RN', 'Michael Boyd, RN', 'Kevin Wright, BHT', 'Sarah Jenkins, LCPC', 'David Odom, LCADC', 'Maria Gonzales, LCADC', 'Dr. Robert Chen', 'Dr. Emily Stone', 'Dr. Allen Hughes'].map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-            </div>
+
+            {/* Section 1: Incident Classification */}
             <div>
-              <label className="block text-xs font-semibold text-slate uppercase mb-1">Brief Summary *</label>
-              <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="One-sentence summary of what occurred..." />
+              <h3 className="text-xs font-bold text-slate uppercase tracking-wider mb-3 pb-1 border-b border-border">1 — Incident Classification</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Incident Type *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['AMA Attempt', 'Elopement', 'Fall / Injury', 'Physical Altercation', 'Medication Error', 'Self-Harm Ideation / Attempt', 'Property Damage', 'Sexual Misconduct', 'Medical Emergency', 'Behavioral Escalation', 'Abuse / Neglect Allegation', 'Death On Premises', 'Other'].map(t => (
+                      <option key={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Severity *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {(['Critical', 'High', 'Moderate', 'Low'] as Severity[]).map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Date & Time *</label>
+                  <input type="datetime-local" defaultValue="2026-07-19T10:00" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Location *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['Common Area', 'Patient Room', 'Group Therapy Room', 'Nursing Station', 'Hallway', 'Cafeteria / Dining', 'Outdoor / Perimeter', 'Off-Campus', 'Parking Lot', 'Other'].map(l => <option key={l}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Reported By *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['Jessica Torres, RN', 'Michael Boyd, RN', 'Kevin Wright, BHT', 'Sarah Jenkins, LCPC', 'David Odom, LCADC', 'Maria Gonzales, LCADC', 'Dr. Robert Chen', 'Dr. Emily Stone', 'Dr. Allen Hughes'].map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Assign for Review *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['James S. Collins III, Clinical Supervisor', 'Dr. Robert Chen, Medical Director', 'Dr. Emily Stone, APRN', 'Renée M. Caldwell, HR Director', 'CEO / Executive Director'].map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
             </div>
+
+            {/* Section 2: People Involved */}
             <div>
-              <label className="block text-xs font-semibold text-slate uppercase mb-1">Full Narrative *</label>
-              <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[120px] resize-none" placeholder="Describe what happened, who was involved, sequence of events, patient condition at time of incident..." />
+              <h3 className="text-xs font-bold text-slate uppercase tracking-wider mb-3 pb-1 border-b border-border">2 — People Involved</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient(s) Involved *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select patient...</option>
+                    {MOCK_PATIENTS.map(p => (
+                      <option key={p.id} value={p.id}>{p.firstName} {p.lastName} — {p.program}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Staff Witness(es)</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select witness(es)...</option>
+                    {['Jessica Torres, RN', 'Michael Boyd, RN', 'Kevin Wright, BHT', 'Sarah Jenkins, LCPC', 'David Odom, LCADC', 'Dr. Robert Chen', 'No witnesses present'].map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Other Patients Present</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Names of other patients in the area (if applicable)" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">External Parties (EMS, Police, Family)</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. EMS Unit 4 responded at 10:22 AM" />
+                </div>
+              </div>
             </div>
+
+            {/* Section 3: Narrative */}
             <div>
-              <label className="block text-xs font-semibold text-slate uppercase mb-1">Immediate Actions Taken</label>
-              <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none" placeholder="List all actions taken immediately after the incident (one per line)..." />
+              <h3 className="text-xs font-bold text-slate uppercase tracking-wider mb-3 pb-1 border-b border-border">3 — Incident Narrative</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Brief Summary (one sentence) *</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Patient attempted to exit through the side gate at 10:05 AM and was redirected by BHT." />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Full Narrative *</label>
+                  <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[120px] resize-none" placeholder="Describe what happened: sequence of events, patient presentation, antecedents, behaviors observed, staff response, patient condition at end of incident..." />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Immediate Response Taken *</label>
+                  <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none" placeholder="List all actions taken immediately during or after the incident (de-escalation techniques used, code called, EMS contacted, safe room used, medication administered...)" />
+                </div>
+              </div>
             </div>
+
+            {/* Section 4: Injuries & Harm */}
             <div>
-              <label className="block text-xs font-semibold text-slate uppercase mb-1">Assign To</label>
-              <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                {['James S. Collins III (Clinical Supervisor)', 'Dr. Robert Chen', 'Dr. Emily Stone', 'Dr. Allen Hughes', 'Sarah Jenkins, LCPC', 'David Odom, LCADC'].map(s => <option key={s}>{s}</option>)}
-              </select>
+              <h3 className="text-xs font-bold text-slate uppercase tracking-wider mb-3 pb-1 border-b border-border">4 — Injuries & Harm Assessment</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Injury to Patient?</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>No injury observed</option>
+                    <option>Minor injury — no medical treatment</option>
+                    <option>Injury requiring first aid</option>
+                    <option>Injury requiring ER/physician evaluation</option>
+                    <option>Serious injury — hospitalization</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Injury to Staff?</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>No staff injury</option>
+                    <option>Minor injury — no medical treatment</option>
+                    <option>Injury requiring first aid</option>
+                    <option>Injury requiring medical attention</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Medical Attention Provided</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Vitals checked, PRN administered, EMS evaluated and cleared" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient Safety Status After Incident</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Stable — returned to program</option>
+                    <option>On enhanced monitoring</option>
+                    <option>Transferred to medical unit</option>
+                    <option>Transported to ER</option>
+                    <option>AMA — facility</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-3">
+
+            {/* Section 5: Notifications */}
+            <div>
+              <h3 className="text-xs font-bold text-slate uppercase tracking-wider mb-3 pb-1 border-b border-border">5 — Notifications & Supervisor Review</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Supervisor Notified</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    {['James S. Collins III (on duty)', 'Dr. Robert Chen (on call)', 'Dr. Emily Stone (on call)', 'Dr. Allen Hughes (on call)', 'Not yet notified'].map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Time of Supervisor Notification</label>
+                  <input type="time" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Family / Guardian Notified?</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>No — patient is adult, not indicated</option>
+                    <option>Yes — notified at time of incident</option>
+                    <option>Yes — notified within 24 hours</option>
+                    <option>Pending — notification planned</option>
+                    <option>N/A — no family contact on file</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Supervisor Review Note</label>
+                  <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="Supervisor assessment and initial response guidance (optional at submission — required before approval)" />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 6: Corrective Action & Regulatory */}
+            <div>
+              <h3 className="text-xs font-bold text-slate uppercase tracking-wider mb-3 pb-1 border-b border-border">6 — Initial Corrective Action & Regulatory Determination</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Initial Corrective Action Plan</label>
+                  <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none" placeholder="Describe any immediate corrective actions planned or already implemented (policy change, staff coaching, environmental fix, etc.)..." />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Regulatory Reporting Determination</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: 'ohcq', label: 'Maryland OHCQ notification required' },
+                      { id: 'carf', label: 'CARF critical incident report required' },
+                      { id: 'cps', label: 'CPS / APS mandatory reporting required' },
+                      { id: 'police', label: 'Law enforcement notification required' },
+                      { id: 'internal', label: 'Internal critical incident review only' },
+                      { id: 'none', label: 'No external reporting required' },
+                    ].map(item => (
+                      <label key={item.id} className="flex items-center gap-2 text-sm cursor-pointer hover:text-navy">
+                        <input type="checkbox" className="rounded" />
+                        <span>{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Regulatory Reporting Basis / Notes</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Cite the specific regulation or standard driving any external reporting requirement..." />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
               <button onClick={() => setTab('Active')} className="border border-border rounded-lg px-5 py-2 text-sm text-slate hover:bg-gray-50">Cancel</button>
-              <LockedButton locked={readOnly} onClick={() => setFormSubmitted(true)} className="btn-primary text-sm px-5 py-2">Submit Incident Report</LockedButton>
+              <LockedButton locked={readOnly} onClick={() => setDraftSaved(true)} className="border border-orange text-orange rounded-lg px-5 py-2 text-sm hover:bg-orange/5">
+                Save Draft
+              </LockedButton>
+              <LockedButton locked={readOnly} onClick={() => setFormSubmitted(true)} className="btn-primary text-sm px-5 py-2">
+                Submit for Review
+              </LockedButton>
             </div>
           </div>
         </div>
@@ -585,13 +730,29 @@ export function IncidentReporting({ navigate, readOnly }: Props) {
         </div>
       )}
 
+      {tab === 'New Incident' && draftSaved && !formSubmitted && (
+        <div className="max-w-2xl">
+          <div className="card text-center py-10">
+            <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <ClipboardList className="w-7 h-7 text-orange" />
+            </div>
+            <h2 className="text-xl font-bold text-navy">Draft Saved</h2>
+            <p className="text-slate text-sm mt-2">Your incident report has been saved as a draft. It has <strong>not</strong> been submitted for review yet. You can return to complete and submit it at any time from the Active Incidents list.</p>
+            <div className="flex gap-3 justify-center mt-6">
+              <button onClick={() => { setDraftSaved(false); }} className="border border-border rounded-xl px-5 py-2 text-sm text-slate hover:bg-gray-50">Continue Editing</button>
+              <button onClick={() => { setDraftSaved(false); setFormSubmitted(false); setTab('Active'); }} className="btn-primary text-sm px-6 py-2">Return to Incidents</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {tab === 'New Incident' && formSubmitted && (
         <div className="max-w-2xl">
           <div className="card text-center py-10">
             <CheckCircle className="w-14 h-14 text-green-500 mx-auto mb-3" />
-            <h2 className="text-xl font-bold text-navy">Incident Reported</h2>
+            <h2 className="text-xl font-bold text-navy">Incident Submitted for Review</h2>
             <p className="text-slate text-sm mt-2">The incident has been submitted and assigned to the clinical director for review. An incident number will be generated within the hour.</p>
-            <button onClick={() => { setFormSubmitted(false); setTab('Active'); }} className="btn-primary text-sm px-6 py-2 mt-6">Return to Incidents</button>
+            <button onClick={() => { setFormSubmitted(false); setDraftSaved(false); setTab('Active'); }} className="btn-primary text-sm px-6 py-2 mt-6">Return to Incidents</button>
           </div>
         </div>
       )}

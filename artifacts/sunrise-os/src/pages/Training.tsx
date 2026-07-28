@@ -88,6 +88,36 @@ export function Training({ navigate, readOnly }: Props) {
   const [trainingSaved, setTrainingSaved] = useState<string | null>(null);
   const saveTrainingAction = (msg: string) => { setTrainingSaved(msg); setTimeout(() => setTrainingSaved(null), 2500); };
 
+  // Per-cell completion overrides (local state — click to toggle)
+  const [completionOverrides, setCompletionOverrides] = useState<Record<string, Record<string, boolean>>>({});
+
+  const toggleCompletion = (staffId: string, courseId: string, currentlyComplete: boolean) => {
+    if (readOnly) return;
+    setCompletionOverrides(prev => ({
+      ...prev,
+      [staffId]: { ...(prev[staffId] ?? {}), [courseId]: !currentlyComplete },
+    }));
+    saveTrainingAction(!currentlyComplete ? 'Training marked complete' : 'Completion removed');
+  };
+
+  const getEffectiveCompletion = (staffId: string, courseId: string): boolean => {
+    if (completionOverrides[staffId]?.[courseId] !== undefined) return completionOverrides[staffId][courseId];
+    return TRAINING_DATA.find(t => t.staffId === staffId)?.completions[courseId]?.completed ?? false;
+  };
+
+  const getEffectiveCellStatus = (record: TrainingRecord, courseId: string): string => {
+    const comp = record.completions[courseId];
+    if (!comp) return 'n/a';
+    const complete = getEffectiveCompletion(record.staffId, courseId);
+    if (!complete) return 'overdue';
+    // If the user manually toggled this cell to complete in this session, treat it as current
+    // regardless of seed expiry data (which reflects the pre-override baseline).
+    if (completionOverrides[record.staffId]?.[courseId] === true) return 'current';
+    if (comp.daysUntilExpiry < 0) return 'expired';
+    if (comp.daysUntilExpiry <= 60) return 'expiring';
+    return 'current';
+  };
+
   const departments = Array.from(new Set(MOCK_STAFF.map(s => s.department)));
   const filteredStaff = TRAINING_DATA.filter(t => deptFilter === 'All' || t.department === deptFilter);
 
@@ -215,7 +245,7 @@ export function Training({ navigate, readOnly }: Props) {
               <tbody>
                 {filteredStaff.map(staff => {
                   const applicable = COURSES.filter(c => c.applicableTo.includes('All') || c.applicableTo.includes(staff.department));
-                  const compliant = applicable.filter(c => getCellStatus(staff, c.id) === 'current').length;
+                  const compliant = applicable.filter(c => getEffectiveCellStatus(staff, c.id) === 'current').length;
                   const pct = Math.round((compliant / applicable.length) * 100);
                   return (
                     <tr key={staff.staffId} className="hover:bg-gray-50">
@@ -224,9 +254,16 @@ export function Training({ navigate, readOnly }: Props) {
                         <div className="text-slate text-xs">{staff.role}</div>
                       </td>
                       {COURSES.map(c => {
-                        const status = getCellStatus(staff, c.id);
+                        const status = getEffectiveCellStatus(staff, c.id);
+                        const isComplete = getEffectiveCompletion(staff.staffId, c.id);
+                        const isNA = status === 'n/a';
                         return (
-                          <td key={c.id} className={`border border-border text-center font-bold ${cellStyles[status]}`} title={status === 'n/a' ? 'Not applicable' : staff.completions[c.id]?.expiration ? `Exp: ${staff.completions[c.id].expiration}` : 'Not completed'}>
+                          <td
+                            key={c.id}
+                            onClick={() => { if (!isNA) toggleCompletion(staff.staffId, c.id, isComplete); }}
+                            className={`border border-border text-center font-bold transition-opacity ${isNA ? '' : 'cursor-pointer hover:opacity-70'} ${cellStyles[status]}`}
+                            title={isNA ? 'Not applicable' : isComplete ? `Click to remove — Exp: ${staff.completions[c.id]?.expiration ?? 'N/A'}` : 'Click to mark complete'}
+                          >
                             {cellLabel[status]}
                           </td>
                         );

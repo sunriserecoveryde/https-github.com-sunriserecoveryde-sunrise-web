@@ -489,11 +489,15 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
 
           {/* Metrics Row */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <MetricCard title="Census" value="18/22" subtitle="81.8% Occupancy" color="orange"
-              onClick={() => setDrillDown({ title: 'Active Census', subtitle: `${filterLoc !== 'All' ? filterLoc + ' · ' : ''}${filterLOC !== 'All' ? filterLOC + ' · ' : ''}${filterDate}`, badge: { label: '18 patients', color: 'bg-orange-100 text-orange-700' }, rows: DRILL_CENSUS_ROWS, columns: COLS_CENSUS, navigateLabel: 'Open Bed Board', onNavigate: () => { setDrillDown(null); navigate('CensusBedBoard'); } })} />
+            <div data-tour-id="kpi-census">
+              <MetricCard title="Census" value="18/22" subtitle="81.8% Occupancy" color="orange"
+                onClick={() => setDrillDown({ title: 'Active Census', subtitle: `${filterLoc !== 'All' ? filterLoc + ' · ' : ''}${filterLOC !== 'All' ? filterLOC + ' · ' : ''}${filterDate}`, badge: { label: '18 patients', color: 'bg-orange-100 text-orange-700' }, rows: DRILL_CENSUS_ROWS, columns: COLS_CENSUS, navigateLabel: 'Open Bed Board', onNavigate: () => { setDrillDown(null); navigate('CensusBedBoard'); } })} />
+            </div>
             {canAccessScreen('RiskDashboard') && (
-              <MetricCard title="AMA Risk" value="2" subtitle="High Risk Clients" color="red"
-                onClick={() => setDrillDown({ title: 'High AMA Risk Clients', subtitle: 'Clients with elevated early-departure risk', badge: { label: '2 high risk', color: 'bg-red-100 text-red-700' }, rows: DRILL_AMA_ROWS, columns: COLS_AMA, navigateLabel: 'Risk Dashboard', onNavigate: () => { setDrillDown(null); navigate('RiskDashboard'); } })} />
+              <div data-tour-id="ama-alerts">
+                <MetricCard title="AMA Risk" value="2" subtitle="High Risk Clients" color="red"
+                  onClick={() => setDrillDown({ title: 'High AMA Risk Clients', subtitle: 'Clients with elevated early-departure risk', badge: { label: '2 high risk', color: 'bg-red-100 text-red-700' }, rows: DRILL_AMA_ROWS, columns: COLS_AMA, navigateLabel: 'Risk Dashboard', onNavigate: () => { setDrillDown(null); navigate('RiskDashboard'); } })} />
+              </div>
             )}
             {canAccessScreen('CosignQueue') && (
               <MetricCard title="Pending Co-signs" value="4" subtitle="Action Required" color="amber"
@@ -839,8 +843,10 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
 
           {/* KPI Cards */}
           <div className="grid grid-cols-5 gap-4">
-            <MetricCard title="MTD Revenue" value="$310K" subtitle="Jul billed to date" color="green"
-              onClick={() => setDrillDown({ title: 'MTD Revenue by Payer', subtitle: `${filterDate} · ${filterLoc !== 'All' ? filterLoc : 'All Locations'}`, badge: { label: '$310K collected', color: 'bg-green-100 text-green-700' }, rows: DRILL_REVENUE_ROWS, columns: COLS_REVENUE, navigateLabel: 'Revenue Cycle', onNavigate: () => { setDrillDown(null); navigate('RevenueCycle'); } })} />
+            <div data-tour-id="kpi-revenue">
+              <MetricCard title="MTD Revenue" value="$310K" subtitle="Jul billed to date" color="green"
+                onClick={() => setDrillDown({ title: 'MTD Revenue by Payer', subtitle: `${filterDate} · ${filterLoc !== 'All' ? filterLoc : 'All Locations'}`, badge: { label: '$310K collected', color: 'bg-green-100 text-green-700' }, rows: DRILL_REVENUE_ROWS, columns: COLS_REVENUE, navigateLabel: 'Revenue Cycle', onNavigate: () => { setDrillDown(null); navigate('RevenueCycle'); } })} />
+            </div>
             <MetricCard title="Collection Rate" value="87.3%" subtitle="Last 30 days" trend={{ value: '2.1', direction: 'up' }} color="blue"
               onClick={() => setDrillDown({ title: 'Collection Rate — Payer Breakdown', subtitle: 'Billed vs. collected by payer', rows: DRILL_REVENUE_ROWS, columns: COLS_REVENUE, navigateLabel: 'Revenue Cycle', onNavigate: () => { setDrillDown(null); navigate('RevenueCycle'); } })} />
             <MetricCard title="Pending Claims" value="$84K" subtitle="Awaiting payment" color="amber"

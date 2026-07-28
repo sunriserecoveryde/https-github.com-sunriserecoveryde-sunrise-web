@@ -94,10 +94,112 @@ const SUBSTANCE_BREAKDOWN = [
   { substance: 'Benzo', count: 1 },
 ];
 
+// ── Workflow types & seed data ────────────────────────────────────────────────
+
+type WorkflowStage = 'Ordered' | 'Specimen Collected' | 'Lab Pending' | 'Results Received' | 'Reconciliation' | 'Under Review' | 'Final Resolution';
+
+interface WorkflowItem {
+  id: string;
+  patientName: string;
+  patientId: string;
+  testType: string;
+  panel: string;
+  orderedBy: string;
+  orderedAt: string;
+  stage: WorkflowStage;
+  timestamps: Partial<Record<WorkflowStage, string>>;
+  clinicalJudgment?: string;
+}
+
+const WORKFLOW_STAGES: WorkflowStage[] = ['Ordered', 'Specimen Collected', 'Lab Pending', 'Results Received', 'Reconciliation', 'Under Review', 'Final Resolution'];
+
+const NEXT_STAGE: Partial<Record<WorkflowStage, WorkflowStage>> = {
+  'Ordered': 'Specimen Collected',
+  'Specimen Collected': 'Lab Pending',
+  'Lab Pending': 'Results Received',
+  'Results Received': 'Reconciliation',
+  'Reconciliation': 'Under Review',
+  'Under Review': 'Final Resolution',
+};
+
+const STAGE_ACTION: Partial<Record<WorkflowStage, string>> = {
+  'Ordered': 'Collect Specimen',
+  'Specimen Collected': 'Send to Lab',
+  'Lab Pending': 'Enter Results',
+  'Results Received': 'Begin Reconciliation',
+  'Reconciliation': 'Submit for Review',
+  'Under Review': 'Finalize',
+};
+
+const STAGE_COLOR: Record<WorkflowStage, string> = {
+  'Ordered': 'bg-blue-50 border-blue-200',
+  'Specimen Collected': 'bg-sky-50 border-sky-200',
+  'Lab Pending': 'bg-violet-50 border-violet-200',
+  'Results Received': 'bg-amber-50 border-amber-200',
+  'Reconciliation': 'bg-orange-50 border-orange-200',
+  'Under Review': 'bg-rose-50 border-rose-200',
+  'Final Resolution': 'bg-green-50 border-green-200',
+};
+
+const STAGE_HEADER: Record<WorkflowStage, string> = {
+  'Ordered': 'bg-blue-100 text-blue-800',
+  'Specimen Collected': 'bg-sky-100 text-sky-800',
+  'Lab Pending': 'bg-violet-100 text-violet-800',
+  'Results Received': 'bg-amber-100 text-amber-800',
+  'Reconciliation': 'bg-orange-100 text-orange-800',
+  'Under Review': 'bg-rose-100 text-rose-800',
+  'Final Resolution': 'bg-green-100 text-green-800',
+};
+
+const INIT_WORKFLOW: WorkflowItem[] = [
+  {
+    id: 'WF-001', patientName: 'Marcus Webb', patientId: 'p1',
+    testType: 'Triggered (Suspicion)', panel: '10-Panel Standard', orderedBy: 'Dr. Robert Chen',
+    orderedAt: '2026-07-18 09:14', stage: 'Lab Pending',
+    timestamps: { Ordered: '07/18 09:14', 'Specimen Collected': '07/18 10:02', 'Lab Pending': '07/18 10:45' },
+  },
+  {
+    id: 'WF-002', patientName: 'Samantha Choi', patientId: 'p2',
+    testType: 'Scheduled', panel: '10-Panel Standard', orderedBy: 'Dr. Emily Stone',
+    orderedAt: '2026-07-18 08:00', stage: 'Results Received',
+    timestamps: { Ordered: '07/18 08:00', 'Specimen Collected': '07/18 08:45', 'Lab Pending': '07/18 09:30', 'Results Received': '07/19 11:20' },
+  },
+  {
+    id: 'WF-003', patientName: 'Patricia Holloway', patientId: 'p3',
+    testType: 'Random', panel: '12-Panel Extended', orderedBy: 'Dr. Robert Chen',
+    orderedAt: '2026-07-17 14:30', stage: 'Under Review',
+    timestamps: { Ordered: '07/17 14:30', 'Specimen Collected': '07/17 15:10', 'Lab Pending': '07/17 15:55', 'Results Received': '07/18 13:00', Reconciliation: '07/18 14:00', 'Under Review': '07/19 09:00' },
+  },
+  {
+    id: 'WF-004', patientName: 'James Thornton', patientId: 'p4',
+    testType: 'Scheduled', panel: '10-Panel Standard', orderedBy: 'Dr. Allen Hughes',
+    orderedAt: '2026-07-19 08:00', stage: 'Ordered',
+    timestamps: { Ordered: '07/19 08:00' },
+  },
+  {
+    id: 'WF-005', patientName: 'Devon Patel', patientId: 'p5',
+    testType: 'Scheduled', panel: '10-Panel Standard', orderedBy: 'Dr. Emily Stone',
+    orderedAt: '2026-07-16 08:00', stage: 'Final Resolution',
+    timestamps: { Ordered: '07/16 08:00', 'Specimen Collected': '07/16 08:40', 'Lab Pending': '07/16 09:20', 'Results Received': '07/17 10:10', Reconciliation: '07/17 11:00', 'Under Review': '07/17 13:30', 'Final Resolution': '07/18 09:00' },
+    clinicalJudgment: "Negative result consistent with current MAT compliance. No clinical concern. Continue current monitoring schedule.",
+  },
+];
+
 export function UADrugTesting({ navigate, readOnly }: Props) {
-  const [tab, setTab] = useState<'Schedule' | 'History' | 'Analytics' | 'Chain of Custody' | 'Positive Results' | 'Panel Reference' | 'Lab Partners'>('Schedule');
+  const [tab, setTab] = useState<'Schedule' | 'Workflow' | 'History' | 'Analytics' | 'Chain of Custody' | 'Positive Results' | 'Panel Reference' | 'Lab Partners'>('Schedule');
   const [selectedCell, setSelectedCell] = useState<UaResult | null>(null);
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(INIT_WORKFLOW);
+  const [judgmentFor, setJudgmentFor] = useState<string | null>(null);
+  const [judgmentText, setJudgmentText] = useState('');
+  const [orderPatient, setOrderPatient] = useState(monitored[0]?.id ?? '');
+  const [orderType, setOrderType] = useState('Scheduled');
+  const [orderPanel, setOrderPanel] = useState('10-Panel Standard');
+  const [orderBy, setOrderBy] = useState('Dr. Robert Chen');
+  const [orderRationale, setOrderRationale] = useState('');
+  const [orderMethod, setOrderMethod] = useState('Observed');
+  const [wfSaved, setWFSaved] = useState<string | null>(null);
+  const saveWFAction = (msg: string) => { setWFSaved(msg); setTimeout(() => setWFSaved(null), 2500); };
 
   const totalTests = monitored.length * DAYS.filter((_, di) => true).length;
   const negatives = Object.values(SCHEDULE).flatMap(days => Object.values(days)).filter(s => s === 'Negative').length;
@@ -145,7 +247,7 @@ export function UADrugTesting({ navigate, readOnly }: Props) {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
-        {(['Schedule', 'History', 'Analytics', 'Chain of Custody', 'Positive Results', 'Panel Reference', 'Lab Partners'] as const).map(t => (
+        {(['Schedule', 'Workflow', 'History', 'Analytics', 'Chain of Custody', 'Positive Results', 'Panel Reference', 'Lab Partners'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>{t}</button>
         ))}
       </div>
@@ -309,6 +411,98 @@ export function UADrugTesting({ navigate, readOnly }: Props) {
         </div>
       )}
 
+      {tab === 'Workflow' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-slate">Test order lifecycle — track each specimen from order through final clinical resolution. Click an action button to advance a test to the next stage.</div>
+            <div className="text-xs text-slate">{workflowItems.length} active orders</div>
+          </div>
+          <div className="overflow-x-auto pb-3">
+            <div className="flex gap-3" style={{ minWidth: `${WORKFLOW_STAGES.length * 220}px` }}>
+              {WORKFLOW_STAGES.map((stage, si) => {
+                const items = workflowItems.filter(w => w.stage === stage);
+                return (
+                  <div key={stage} className="flex-1 min-w-[210px]">
+                    <div className={`rounded-t-xl px-3 py-2 text-xs font-bold flex items-center justify-between ${STAGE_HEADER[stage]}`}>
+                      <span>{stage}</span>
+                      {items.length > 0 && <span className="bg-white/60 rounded-full px-1.5">{items.length}</span>}
+                    </div>
+                    <div className={`min-h-[180px] rounded-b-xl border-l border-r border-b p-2 space-y-2 ${STAGE_COLOR[stage]}`}>
+                      {items.map(item => {
+                        const nextStage = NEXT_STAGE[stage];
+                        const actionLabel = STAGE_ACTION[stage];
+                        const isFinalizing = judgmentFor === item.id;
+                        return (
+                          <div key={item.id} className="bg-white rounded-lg border border-white/80 shadow-sm p-2.5 text-xs">
+                            <div className="font-semibold text-navy mb-0.5">{item.patientName}</div>
+                            <div className="text-slate mb-1">{item.testType} · {item.panel}</div>
+                            <div className="text-slate mb-1">By: {item.orderedBy}</div>
+                            <div className="text-slate font-mono mb-2">{item.orderedAt.slice(5)}</div>
+                            {stage === 'Final Resolution' && item.clinicalJudgment && (
+                              <div className="text-[10px] text-green-700 bg-green-50 border border-green-200 rounded p-1.5 mb-2 leading-relaxed">{item.clinicalJudgment.slice(0, 80)}…</div>
+                            )}
+                            {stage === 'Under Review' && !isFinalizing && (
+                              <LockedButton locked={readOnly} onClick={() => { setJudgmentFor(item.id); setJudgmentText(''); }}
+                                className="w-full text-[10px] bg-rose-600 text-white rounded py-1 hover:bg-rose-700">
+                                Enter Clinical Judgment &amp; Finalize
+                              </LockedButton>
+                            )}
+                            {stage === 'Under Review' && isFinalizing && (
+                              <div className="space-y-1.5">
+                                <textarea
+                                  value={judgmentText}
+                                  onChange={e => setJudgmentText(e.target.value)}
+                                  className="w-full border border-border rounded px-2 py-1 text-[11px] min-h-[60px] resize-none"
+                                  placeholder="Clinical judgment (required — must not automatically label as relapse; document context, clinical reasoning, and plan)..."
+                                />
+                                <div className="flex gap-1">
+                                  <button onClick={() => setJudgmentFor(null)} className="flex-1 text-[10px] border border-border rounded py-1 text-slate hover:bg-gray-50">Cancel</button>
+                                  <LockedButton locked={readOnly || !judgmentText.trim()} onClick={() => {
+                                    setWorkflowItems(prev => prev.map(w => w.id === item.id
+                                      ? { ...w, stage: 'Final Resolution', timestamps: { ...w.timestamps, 'Final Resolution': new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) }, clinicalJudgment: judgmentText }
+                                      : w
+                                    ));
+                                    setJudgmentFor(null);
+                                    saveWFAction('Test finalized — clinical judgment recorded');
+                                  }} className="flex-1 text-[10px] bg-rose-600 text-white rounded py-1 disabled:opacity-40">
+                                    Confirm
+                                  </LockedButton>
+                                </div>
+                              </div>
+                            )}
+                            {stage !== 'Under Review' && stage !== 'Final Resolution' && nextStage && actionLabel && (
+                              <LockedButton locked={readOnly} onClick={() => {
+                                setWorkflowItems(prev => prev.map(w => w.id === item.id
+                                  ? { ...w, stage: nextStage, timestamps: { ...w.timestamps, [nextStage]: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) } }
+                                  : w
+                                ));
+                                saveWFAction(`${item.patientName}: advanced to ${nextStage}`);
+                              }} className="w-full text-[10px] bg-navy text-white rounded py-1 hover:bg-navy/90">
+                                {actionLabel} →
+                              </LockedButton>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {items.length === 0 && <div className="text-[10px] text-slate/60 text-center py-6">No orders in this stage</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="card text-xs text-slate">
+            <span className="font-semibold text-navy">Clinical judgment requirement:</span> Final Resolution requires a documented clinical judgment note. Labels such as "relapse" must NOT be automatically assigned — the treating clinician must review context (prescribed medications, timing, program status) and document their clinical reasoning before final disposition.
+          </div>
+        </div>
+      )}
+
+      {wfSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          ✓ {wfSaved}
+        </div>
+      )}
+
       {/* Detail Modal */}
       {selectedCell && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setSelectedCell(null)}>
@@ -337,43 +531,67 @@ export function UADrugTesting({ navigate, readOnly }: Props) {
       {/* Order Form Modal */}
       {showOrderForm && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setShowOrderForm(false)}>
-          <div className="bg-white rounded-xl p-6 shadow-2xl w-[480px]" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl p-6 shadow-2xl w-[520px]" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-navy mb-4">Order Urinalysis</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient</label>
-                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">Patient *</label>
+                <select value={orderPatient} onChange={e => setOrderPatient(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm">
                   {monitored.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName} — {p.program}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Test Type</label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Test Type *</label>
+                  <select value={orderType} onChange={e => setOrderType(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm">
                     <option>Scheduled</option><option>Random</option><option>Triggered (Behavior)</option><option>Triggered (Suspicion)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Panel</label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Panel *</label>
+                  <select value={orderPanel} onChange={e => setOrderPanel(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm">
                     <option>10-Panel Standard</option><option>12-Panel Extended</option><option>Alcohol Only</option><option>Custom</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Collection Method *</label>
+                  <select value={orderMethod} onChange={e => setOrderMethod(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Observed</option><option>Unobserved</option><option>Split Specimen</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Ordered By *</label>
+                  <select value={orderBy} onChange={e => setOrderBy(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option>Dr. Robert Chen</option><option>Dr. Emily Stone</option><option>Dr. Allen Hughes</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">Ordered By</label>
-                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                  <option>Dr. Robert Chen</option><option>Dr. Emily Stone</option><option>Dr. Allen Hughes</option>
-                </select>
-              </div>
-              <div>
                 <label className="block text-xs font-semibold text-slate uppercase mb-1">Clinical Rationale</label>
-                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="e.g. Routine weekly screening; behavioral change noted..." />
+                <textarea value={orderRationale} onChange={e => setOrderRationale(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="e.g. Routine weekly screening; behavioral change noted; clinical suspicion based on..." />
               </div>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setShowOrderForm(false)} className="flex-1 border border-border rounded-lg py-2 text-sm text-slate hover:bg-gray-50">Cancel</button>
-              <LockedButton locked={readOnly} onClick={() => setShowOrderForm(false)} className="flex-1 btn-primary text-sm py-2">Place Order</LockedButton>
+              <LockedButton locked={readOnly} onClick={() => {
+                const patient = monitored.find(p => p.id === orderPatient);
+                const now = new Date().toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const newItem: WorkflowItem = {
+                  id: `WF-${Date.now()}`,
+                  patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown',
+                  patientId: orderPatient,
+                  testType: orderType,
+                  panel: orderPanel,
+                  orderedBy: orderBy,
+                  orderedAt: `2026-07-${String(new Date().getDate()).padStart(2,'0')} ${now.split(', ')[1] ?? '09:00'}`,
+                  stage: 'Ordered',
+                  timestamps: { Ordered: now },
+                };
+                setWorkflowItems(prev => [newItem, ...prev]);
+                setShowOrderForm(false);
+                setOrderRationale('');
+                saveWFAction(`Order placed — ${newItem.patientName} advanced to Workflow`);
+              }} className="flex-1 btn-primary text-sm py-2">Place Order</LockedButton>
             </div>
           </div>
         </div>

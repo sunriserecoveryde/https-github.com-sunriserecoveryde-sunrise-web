@@ -1057,14 +1057,255 @@ function OffboardingTab({ readOnly }: { readOnly?: boolean }) {
   );
 }
 
+// ─── Compliance Standards Tab ──────────────────────────────────────────────────
+
+type CompStandard = 'All' | 'CARF' | 'HIPAA' | '42 CFR Part 2' | 'State (MD OHCQ)' | 'Medicaid' | 'Internal Policy';
+
+interface CompRequirement {
+  id: string;
+  standard: Exclude<CompStandard, 'All'>;
+  category: string;
+  requirement: string;
+  frequency: string;
+  status: 'Met' | 'Partial' | 'Gap' | 'N/A';
+  dueDate?: string;
+}
+
+const COMP_REQUIREMENTS: CompRequirement[] = [
+  { id: 'CR-001', standard: 'CARF', category: 'Access to Services', requirement: 'Written access to services policy with eligibility criteria and referral processes', frequency: 'Annual review', status: 'Met', dueDate: '2026-12-01' },
+  { id: 'CR-002', standard: 'CARF', category: 'Clinical Records', requirement: 'Individual service plan present for all clients within 30 days of admission', frequency: 'Per admission', status: 'Met' },
+  { id: 'CR-003', standard: 'CARF', category: 'Human Resources', requirement: 'Written job descriptions for all positions with required qualifications', frequency: 'Annual review', status: 'Met', dueDate: '2026-12-01' },
+  { id: 'CR-004', standard: 'CARF', category: 'Quality Improvement', requirement: 'Annual performance measurement plan with documented QAPI projects', frequency: 'Annual', status: 'Partial', dueDate: '2026-11-01' },
+  { id: 'CR-005', standard: 'CARF', category: 'Rights & Responsibilities', requirement: 'Client rights and responsibilities document provided at admission and signed', frequency: 'Per admission', status: 'Met' },
+  { id: 'CR-006', standard: 'HIPAA', category: 'Privacy Rule', requirement: 'Notice of Privacy Practices (NPP) provided to every patient at intake', frequency: 'Per admission', status: 'Met' },
+  { id: 'CR-007', standard: 'HIPAA', category: 'Security Rule', requirement: 'Annual HIPAA security risk assessment completed and documented', frequency: 'Annual', status: 'Partial', dueDate: '2026-09-01' },
+  { id: 'CR-008', standard: 'HIPAA', category: 'Training', requirement: 'All staff complete HIPAA training within 30 days of hire and annually', frequency: 'Annual', status: 'Met' },
+  { id: 'CR-009', standard: 'HIPAA', category: 'Breach Notification', requirement: 'Breach notification policy and designated HIPAA Privacy Officer in place', frequency: 'Ongoing', status: 'Met' },
+  { id: 'CR-010', standard: '42 CFR Part 2', category: 'Confidentiality', requirement: 'Written consent for disclosure of SUD records separate from HIPAA consent', frequency: 'Per disclosure', status: 'Met' },
+  { id: 'CR-011', standard: '42 CFR Part 2', category: 'Records Security', requirement: 'SUD treatment records stored separately with additional access controls', frequency: 'Ongoing', status: 'Met' },
+  { id: 'CR-012', standard: '42 CFR Part 2', category: 'Staff Training', requirement: 'All clinical staff trained on 42 CFR Part 2 vs. HIPAA distinctions', frequency: 'Annual', status: 'Partial', dueDate: '2026-08-15' },
+  { id: 'CR-013', standard: 'State (MD OHCQ)', category: 'Licensing', requirement: 'Residential and PHP/IOP programs licensed annually by MD BHBIS / OHCQ', frequency: 'Annual renewal', status: 'Met', dueDate: '2027-01-31' },
+  { id: 'CR-014', standard: 'State (MD OHCQ)', category: 'Incident Reporting', requirement: 'Critical incidents reported to OHCQ within 24 hours of occurrence', frequency: 'Per incident', status: 'Met' },
+  { id: 'CR-015', standard: 'State (MD OHCQ)', category: 'Staffing', requirement: 'Minimum staffing ratios maintained per MD OHCQ COMAR 10.47 requirements', frequency: 'Ongoing', status: 'Met' },
+  { id: 'CR-016', standard: 'Medicaid', category: 'Enrollment', requirement: 'All billing providers enrolled in Maryland Medicaid with current NPIs', frequency: 'Annual / change events', status: 'Met' },
+  { id: 'CR-017', standard: 'Medicaid', category: 'Prior Authorization', requirement: 'Prior authorization obtained before rendering billable Level of Care services', frequency: 'Per admission', status: 'Partial', dueDate: '2026-08-01' },
+  { id: 'CR-018', standard: 'Medicaid', category: 'Documentation', requirement: 'All Medicaid-billable services documented within 24 hours per billing standards', frequency: 'Per service', status: 'Partial', dueDate: '2026-08-01' },
+  { id: 'CR-019', standard: 'Internal Policy', category: 'HR', requirement: 'Annual performance reviews completed for all staff on anniversary dates', frequency: 'Annual per employee', status: 'Gap', dueDate: '2026-08-14' },
+  { id: 'CR-020', standard: 'Internal Policy', category: 'Clinical', requirement: 'Group therapy sessions documented with attendance and participation notes', frequency: 'Per session', status: 'Met' },
+];
+
+const STATUS_CHIP: Record<CompRequirement['status'], string> = {
+  Met: 'bg-green-100 text-green-700',
+  Partial: 'bg-amber-100 text-amber-700',
+  Gap: 'bg-red-100 text-red-700',
+  'N/A': 'bg-gray-100 text-gray-500',
+};
+
+function ComplianceStandardsTab({ readOnly }: { readOnly?: boolean }) {
+  const [stdFilter, setStdFilter] = useState<CompStandard>('All');
+  const [selectedReq, setSelectedReq] = useState<string | null>(null);
+  const [evidenceInputs, setEvidenceInputs] = useState<Record<string, string>>({});
+  const [corrActionInputs, setCorrActionInputs] = useState<Record<string, string>>({});
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [showReport, setShowReport] = useState(false);
+  const [compSaved, setCompSaved] = useState<string | null>(null);
+  const saveCompAction = (msg: string) => { setCompSaved(msg); setTimeout(() => setCompSaved(null), 2500); };
+
+  const standards: CompStandard[] = ['All', 'CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'];
+  const filtered = COMP_REQUIREMENTS.filter(r => stdFilter === 'All' || r.standard === stdFilter);
+
+  const met = COMP_REQUIREMENTS.filter(r => r.status === 'Met' || completedIds.has(r.id)).length;
+  const total = COMP_REQUIREMENTS.length;
+  const score = Math.round((met / total) * 100);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-slate">Track evidence of compliance, assign corrective actions, and assess audit readiness across all regulatory standards.</div>
+        <button onClick={() => setShowReport(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+          <ClipboardList className="w-4 h-4" /> Generate Readiness Report
+        </button>
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
+        {[
+          { label: 'Overall Score', value: `${score}%`, color: score >= 90 ? 'text-green-600' : score >= 75 ? 'text-amber-600' : 'text-red-600', sub: `${met} of ${total} requirements met` },
+          { label: 'CARF Requirements', value: `${COMP_REQUIREMENTS.filter(r => r.standard === 'CARF' && (r.status === 'Met' || completedIds.has(r.id))).length}/${COMP_REQUIREMENTS.filter(r => r.standard === 'CARF').length}`, color: 'text-navy', sub: 'Standards satisfied' },
+          { label: 'Open Gaps', value: COMP_REQUIREMENTS.filter(r => r.status === 'Gap' && !completedIds.has(r.id)).length, color: 'text-red-600', sub: 'Require corrective action' },
+          { label: 'Partial / Incomplete', value: COMP_REQUIREMENTS.filter(r => r.status === 'Partial' && !completedIds.has(r.id)).length, color: 'text-amber-600', sub: 'Evidence or remediation needed' },
+        ].map(k => (
+          <div key={k.label} className="card">
+            <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
+            <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
+            <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
+        {standards.map(s => (
+          <button key={s} onClick={() => setStdFilter(s)}
+            className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${stdFilter === s ? 'bg-navy text-white border-navy' : 'bg-white text-slate border-border hover:border-navy/40'}`}>
+            {s}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        {filtered.map(req => {
+          const isCompleted = completedIds.has(req.id);
+          const effectiveStatus = isCompleted ? 'Met' : req.status;
+          const isSelected = selectedReq === req.id;
+          return (
+            <div key={req.id} className={`border rounded-xl overflow-hidden transition-all ${isSelected ? 'border-orange shadow-sm' : 'border-border'}`}>
+              <div
+                className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50"
+                onClick={() => setSelectedReq(isSelected ? null : req.id)}
+              >
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${STATUS_CHIP[effectiveStatus]}`}>{effectiveStatus}</span>
+                <span className="text-[10px] font-semibold text-slate uppercase tracking-wider shrink-0 w-28">{req.standard}</span>
+                <span className="text-xs font-medium text-navy flex-1">{req.requirement}</span>
+                <span className="text-[10px] text-slate shrink-0">{req.category}</span>
+                {req.dueDate && !isCompleted && <span className="text-[10px] text-slate shrink-0">Due: {req.dueDate}</span>}
+                <span className="text-slate shrink-0">{isSelected ? '▲' : '▼'}</span>
+              </div>
+              {isSelected && (
+                <div className="px-4 pb-4 bg-gray-50/60 border-t border-border space-y-3">
+                  <div className="text-xs text-slate font-semibold mt-3 mb-1">Frequency: {req.frequency}</div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate uppercase mb-1">Evidence File / Document Name</label>
+                    <div className="flex gap-2">
+                      <input
+                        value={evidenceInputs[req.id] ?? ''}
+                        onChange={e => setEvidenceInputs(prev => ({ ...prev, [req.id]: e.target.value }))}
+                        className="flex-1 border border-border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Policy-HIPAA-NPP-v4.pdf, 2026 CARF Self-Study Section 3.docx"
+                      />
+                      <LockedButton locked={readOnly || !evidenceInputs[req.id]?.trim()} onClick={() => saveCompAction(`Evidence linked for ${req.id}`)}
+                        className="border border-border text-slate text-xs px-3 py-1.5 rounded-lg hover:bg-white disabled:opacity-40">
+                        Link Evidence
+                      </LockedButton>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate uppercase mb-1">Corrective Action Plan</label>
+                    <textarea
+                      value={corrActionInputs[req.id] ?? ''}
+                      onChange={e => setCorrActionInputs(prev => ({ ...prev, [req.id]: e.target.value }))}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none"
+                      placeholder="Describe corrective actions planned or in progress, responsible person, and target completion date..."
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <LockedButton locked={readOnly || !corrActionInputs[req.id]?.trim()} onClick={() => saveCompAction(`Corrective action saved for ${req.id}`)}
+                      className="border border-border text-slate text-xs px-3 py-1.5 rounded-lg hover:bg-white disabled:opacity-40">
+                      Save Action Plan
+                    </LockedButton>
+                    {!isCompleted && (
+                      <LockedButton locked={readOnly} onClick={() => {
+                        setCompletedIds(prev => new Set([...prev, req.id]));
+                        saveCompAction(`${req.id} marked as Met`);
+                      }} className="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">
+                        Mark as Met ✓
+                      </LockedButton>
+                    )}
+                    {isCompleted && (
+                      <button onClick={() => setCompletedIds(prev => { const n = new Set(prev); n.delete(req.id); return n; })}
+                        className="text-xs text-slate border border-border px-3 py-1.5 rounded-lg hover:bg-white">
+                        Undo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {compSaved && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <CheckCircle className="w-4 h-4" /> {compSaved}
+        </div>
+      )}
+
+      {/* Readiness Report Modal */}
+      {showReport && (
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4" onClick={() => setShowReport(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[680px] max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-navy">Compliance Readiness Report</h2>
+              <button onClick={() => setShowReport(false)} className="text-slate hover:text-navy"><XCircle className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-5 relative">
+              {/* Watermark */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.05] rotate-[-30deg] text-6xl font-black text-gray-900 tracking-widest z-0">
+                SAMPLE DEMO
+              </div>
+              <div className="relative z-10 space-y-5">
+                <div className="text-center border-b pb-4">
+                  <div className="text-xl font-bold text-navy">Sunrise Recovery Center — Rockville, MD</div>
+                  <div className="text-sm text-slate mt-0.5">Compliance Readiness Summary Report · Generated {new Date().toLocaleDateString()}</div>
+                  <div className="text-xs text-slate mt-0.5">CONFIDENTIAL — For Internal Use Only · Not for Distribution</div>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  {[
+                    { label: 'Overall Score', value: `${score}%`, color: score >= 90 ? 'text-green-600' : 'text-amber-600' },
+                    { label: 'Requirements Met', value: `${met} / ${total}`, color: 'text-navy' },
+                    { label: 'Open Gaps', value: COMP_REQUIREMENTS.filter(r => r.status === 'Gap' && !completedIds.has(r.id)).length, color: 'text-red-600' },
+                  ].map(s => (
+                    <div key={s.label} className="bg-gray-50 rounded-xl p-3">
+                      <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                      <div className="text-xs text-slate mt-0.5">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {(['CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'] as const).map(std => {
+                  const stdReqs = COMP_REQUIREMENTS.filter(r => r.standard === std);
+                  const stdMet = stdReqs.filter(r => r.status === 'Met' || completedIds.has(r.id)).length;
+                  const stdPct = Math.round((stdMet / stdReqs.length) * 100);
+                  return (
+                    <div key={std}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="text-sm font-semibold text-navy">{std}</div>
+                        <div className="text-xs text-slate">{stdMet}/{stdReqs.length} · {stdPct}%</div>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full">
+                        <div className={`h-2 rounded-full ${stdPct >= 90 ? 'bg-green-500' : stdPct >= 75 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${stdPct}%` }} />
+                      </div>
+                      {stdReqs.filter(r => r.status !== 'Met' && !completedIds.has(r.id)).map(gap => (
+                        <div key={gap.id} className="mt-1 text-xs text-red-700 pl-3 border-l-2 border-red-300">
+                          <span className={`font-bold ${gap.status === 'Gap' ? 'text-red-600' : 'text-amber-600'}`}>{gap.status}: </span>
+                          {gap.requirement}{gap.dueDate ? ` (due ${gap.dueDate})` : ''}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+                  <strong>Disclaimer:</strong> This report is auto-generated from the SunriseOS compliance module for internal quality improvement purposes. It does not constitute a formal audit opinion. All findings should be verified against source documentation before any regulatory submission.
+                </div>
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={() => setShowReport(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Close</button>
+              <button onClick={() => { setShowReport(false); saveCompAction('Report exported — PDF queued (demo)'); }} className="flex-1 btn-primary text-sm py-2.5">Export PDF (Demo)</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 
-type WFTab = 'Dashboard' | 'Employee Profiles' | 'Exclusion & Screening' | 'Onboarding' | 'Performance Reviews' | 'Offboarding';
+type WFTab = 'Dashboard' | 'Employee Profiles' | 'Exclusion & Screening' | 'Onboarding' | 'Performance Reviews' | 'Offboarding' | 'Compliance Standards';
 
 export function WorkforceCompliance({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<WFTab>('Dashboard');
 
-  const tabs: WFTab[] = ['Dashboard', 'Employee Profiles', 'Exclusion & Screening', 'Onboarding', 'Performance Reviews', 'Offboarding'];
+  const tabs: WFTab[] = ['Dashboard', 'Employee Profiles', 'Exclusion & Screening', 'Onboarding', 'Performance Reviews', 'Offboarding', 'Compliance Standards'];
 
   const alerts: Partial<Record<WFTab, number>> = {
     'Employee Profiles': EMPLOYEES.filter(e => e.credentialAlerts > 0 || e.supervisionStatus === 'Overdue' || e.trainingCompliance < 80).length,
@@ -1116,12 +1357,13 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       </div>
 
       <div>
-        {tab === 'Dashboard'          && <DashboardTab navigate={navigate} />}
-        {tab === 'Employee Profiles'  && <EmployeeProfilesTab />}
+        {tab === 'Dashboard'             && <DashboardTab navigate={navigate} />}
+        {tab === 'Employee Profiles'     && <EmployeeProfilesTab />}
         {tab === 'Exclusion & Screening' && <ExclusionTab readOnly={readOnly} />}
-        {tab === 'Onboarding'         && <OnboardingTab readOnly={readOnly} />}
-        {tab === 'Performance Reviews' && <PerformanceTab readOnly={readOnly} />}
-        {tab === 'Offboarding'        && <OffboardingTab readOnly={readOnly} />}
+        {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
+        {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
+        {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} />}
       </div>
     </div>
   );

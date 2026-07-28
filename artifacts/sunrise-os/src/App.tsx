@@ -64,6 +64,7 @@ import { DAPNoteWorkflow } from './pages/DAPNoteWorkflow';
 import { MeasurementBasedCare } from './pages/MeasurementBasedCare';
 import { ClinicalIntelligence } from './pages/ClinicalIntelligence';
 import { WorkforceCompliance } from './pages/WorkforceCompliance';
+import { TourEngine } from './pages/TourEngine';
 import { LoginPage } from './pages/LoginPage';
 import { AccessDenied } from './components/common/AccessDenied';
 import { ReadOnlyBanner } from './components/common/ReadOnlyBanner';
@@ -144,6 +145,10 @@ function AppInner() {
   const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [lastDemoPatientId, setLastDemoPatientId] = useState<string | null>(null);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourFABHidden, setTourFABHidden] = useState(
+    typeof window !== 'undefined' && window.sessionStorage.getItem('tour-fab-dismissed') === '1'
+  );
   const { getPermissionForScreen } = useRole();
 
   // ── Browser Back / Forward support ──────────────────────────────────────────
@@ -301,6 +306,34 @@ function AppInner() {
           </AnimatePresence>
         </main>
       </div>
+
+      {/* Tour FAB — shown on Dashboard only, dismissible per session */}
+      {activeScreen === 'Dashboard' && !tourOpen && !tourFABHidden && (
+        <div className="fixed bottom-6 right-6 z-[8000] flex items-center gap-2">
+          <button
+            onClick={() => { window.sessionStorage.setItem('tour-fab-dismissed', '1'); setTourFABHidden(true); }}
+            className="text-slate/50 hover:text-slate/80 p-1 rounded-full hover:bg-white/50 transition-colors"
+            title="Dismiss"
+          >
+            ✕
+          </button>
+          <button
+            onClick={() => setTourOpen(true)}
+            className="bg-orange text-white rounded-full shadow-lg px-4 py-2.5 text-sm font-semibold flex items-center gap-2 hover:bg-orange/90 transition-all hover:shadow-xl"
+          >
+            🗺 Start Tour
+          </button>
+        </div>
+      )}
+
+      {/* Tour Engine */}
+      {tourOpen && (
+        <TourEngine
+          navigate={navigateTo}
+          currentScreen={activeScreen}
+          onClose={() => setTourOpen(false)}
+        />
+      )}
     </div>
   );
 }

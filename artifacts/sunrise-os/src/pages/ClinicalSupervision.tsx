@@ -117,11 +117,113 @@ const PRODUCTIVITY_DATA = [
   { name: 'Aisha T.', notes: 16, cosigns: 15, groups: 7, missed: 0 },
 ];
 
+// ── Note Form Modal ────────────────────────────────────────────────────────────
+
+interface SavedNote {
+  supervisee: string;
+  date: string;
+  type: string;
+  duration: string;
+  focusAreas: string;
+  observations: string;
+  savedAt: string;
+}
+
+function NoteFormModal({ onClose, onSave, readOnly }: { onClose: () => void; onSave: (note: SavedNote) => void; readOnly?: boolean }) {
+  const [supervisee, setSupervisee] = useState('Sarah Jenkins, LCPC');
+  const [date, setDate] = useState('2026-07-19');
+  const [type, setType] = useState('Individual Supervision');
+  const [duration, setDuration] = useState('1');
+  const [focusAreas, setFocusAreas] = useState('');
+  const [observations, setObservations] = useState('');
+  const [strengths, setStrengths] = useState('');
+  const [growthAreas, setGrowthAreas] = useState('');
+  const [goals, setGoals] = useState('');
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-[580px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h2 className="text-lg font-bold text-navy">New Supervision Note</h2>
+          <button onClick={onClose} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate uppercase mb-1">Supervisee *</label>
+              <select value={supervisee} onChange={e => setSupervisee(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                <option>Sarah Jenkins, LCPC</option>
+                <option>Michael Boyd, ADT</option>
+                <option>Aisha Thompson, CSC-AD</option>
+                <option>Kevin Wright, CAC-AD</option>
+                <option>Devon Ramos, LMSW</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate uppercase mb-1">Session Date *</label>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate uppercase mb-1">Session Type *</label>
+              <select value={type} onChange={e => setType(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                <option>Individual Supervision</option>
+                <option>Group Supervision</option>
+                <option>Crisis Consultation</option>
+                <option>Chart Review</option>
+                <option>Competency Evaluation</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate uppercase mb-1">Duration (hours) *</label>
+              <select value={duration} onChange={e => setDuration(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                <option>0.5</option><option>1</option><option>1.5</option><option>2</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate uppercase mb-1">Cases / Focus Areas Discussed *</label>
+            <textarea value={focusAreas} onChange={e => setFocusAreas(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[70px] resize-none" placeholder="Caseload review, clinical challenges, ethics discussion, countertransference, specific patient situations..." />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate uppercase mb-1">Strengths Observed</label>
+            <textarea value={strengths} onChange={e => setStrengths(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="Clinical skills, therapeutic techniques, documentation quality, patient engagement..." />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate uppercase mb-1">Areas for Growth</label>
+            <textarea value={growthAreas} onChange={e => setGrowthAreas(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="Skills to develop, knowledge gaps, documentation improvements..." />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate uppercase mb-1">Supervisor Observations, Action Items & Follow-up Plan *</label>
+            <textarea value={observations} onChange={e => setObservations(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[70px] resize-none" placeholder="Action items before next session, reading assignments, skill practice goals..." />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate uppercase mb-1">Goals for Next Session</label>
+            <textarea value={goals} onChange={e => setGoals(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[50px] resize-none" placeholder="Specific measurable goals to review at next supervision session..." />
+          </div>
+        </div>
+        <div className="px-6 pb-6 flex gap-3">
+          <button onClick={onClose} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
+          <button
+            disabled={!focusAreas.trim() || !observations.trim() || !!readOnly}
+            onClick={() => onSave({ supervisee, date, type, duration, focusAreas, observations: `${strengths ? 'Strengths: ' + strengths + ' | ' : ''}${observations}${goals ? ' | Goals: ' + goals : ''}`, savedAt: new Date().toLocaleTimeString() })}
+            className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40"
+          >
+            Save &amp; Sign Note
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Overview' | 'Individual' | 'Group' | 'Productivity' | 'Supervisor Notes' | 'Competency Eval'>('Overview');
   const [selectedSupervisee, setSelectedSupervisee] = useState<string>('SV-001');
   const [expandedNote, setExpandedNote] = useState<string | null>('SN-001');
   const [newNoteOpen, setNewNoteOpen] = useState(false);
+  const [savedNotesList, setSavedNotesList] = useState<SavedNote[]>([]);
   const [noteSaved, setNoteSaved] = useState<string | null>(null);
   const saveSuperAction = (msg: string) => { setNoteSaved(msg); setTimeout(() => setNoteSaved(null), 2500); };
 
@@ -295,6 +397,18 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
                       </div>
                     );
                   })}
+                  {/* Session-added notes (persisted in local state) */}
+                  {savedNotesList.filter(n => n.supervisee.startsWith(supervisee.name.split(',')[0])).map((n, i) => (
+                    <div key={i} className="border border-green-300 bg-green-50 rounded-xl px-4 py-3 text-xs">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-navy">{n.date}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">Signed (session)</span>
+                        <span className="text-slate">{n.type} · {n.duration}h</span>
+                      </div>
+                      <div className="text-slate">{n.focusAreas}</div>
+                      {n.observations && <div className="text-navy mt-1">{n.observations}</div>}
+                    </div>
+                  ))}
                   <button onClick={() => setNewNoteOpen(true)} className="w-full py-3 border-2 border-dashed border-border rounded-xl text-sm text-slate hover:border-orange hover:text-orange transition-colors flex items-center justify-center gap-2">
                     <Plus className="w-4 h-4" /> Add Supervision Note
                   </button>
@@ -546,52 +660,15 @@ export function ClinicalSupervision({ navigate: _navigate, readOnly }: Props) {
       )}
 
       {newNoteOpen && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setNewNoteOpen(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-[540px]" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h2 className="text-lg font-bold text-navy">New Supervision Note</h2>
-              <button onClick={() => setNewNoteOpen(false)} className="text-slate hover:text-navy"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Supervisee *</label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>Sarah Jenkins, LCPC</option><option>Michael Boyd, ADT</option><option>Aisha Thompson, CSC-AD</option><option>Kevin Wright, CAC-AD</option><option>Devon Ramos, LMSW</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Session Date</label>
-                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Session Type</label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>Individual Supervision</option><option>Group Supervision</option><option>Crisis Consultation</option><option>Chart Review</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate uppercase mb-1">Duration (hours)</label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>0.5</option><option>1</option><option>1.5</option><option>2</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">Cases Reviewed / Focus Areas</label>
-                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="Caseload review, clinical challenges, skill-building focus, ethics discussion..." />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">Supervisor Observations & Plan</label>
-                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none" placeholder="Strengths noted, areas for growth, action items, follow-up plan..." />
-              </div>
-            </div>
-            <div className="px-6 pb-6 flex gap-3">
-              <button onClick={() => setNewNoteOpen(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
-              <button onClick={() => { setNewNoteOpen(false); saveSuperAction('Supervision note saved'); }} className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold">Save Note</button>
-            </div>
-          </div>
-        </div>
+        <NoteFormModal
+          onClose={() => setNewNoteOpen(false)}
+          onSave={(note) => {
+            setSavedNotesList(prev => [note, ...prev]);
+            setNewNoteOpen(false);
+            saveSuperAction(`Supervision note saved — ${note.supervisee}`);
+          }}
+          readOnly={readOnly}
+        />
       )}
 
       {noteSaved && (
