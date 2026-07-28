@@ -1148,7 +1148,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
   });
   const [corrActionInputs, setCorrActionInputs] = useState<Record<string, string>>(() => {
     try {
-      const stored = localStorage.getItem(COMPLIANCE_CORR_ACTION_KEY);
+      const stored = localStorage.getItem(COMPLIANCE_CORR_KEY);
       return stored ? JSON.parse(stored) : {};
     } catch {
       return {};
@@ -1163,7 +1163,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
   }, [evidenceInputs]);
 
   useEffect(() => {
-    try { localStorage.setItem(COMPLIANCE_CORR_ACTION_KEY, JSON.stringify(corrActionInputs)); } catch { /* unavailable */ }
+    try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(corrActionInputs)); } catch { /* unavailable */ }
   }, [corrActionInputs]);
 
   const standards: CompStandard[] = ['All', 'CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'];
@@ -1375,7 +1375,8 @@ type WFTab = 'Dashboard' | 'Employee Profiles' | 'Exclusion & Screening' | 'Onbo
 
 const COMPLIANCE_STORAGE_KEY = 'sunrise-os:compliance-completed-ids';
 const COMPLIANCE_EVIDENCE_KEY = 'sunrise-os:compliance-evidence-inputs';
-const COMPLIANCE_CORR_ACTION_KEY = 'sunrise-os:compliance-corr-action-inputs';
+
+const COMPLIANCE_CORR_KEY = 'sunrise-os:compliance-corr-action-inputs';
 
 export function WorkforceCompliance({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<WFTab>('Dashboard');
