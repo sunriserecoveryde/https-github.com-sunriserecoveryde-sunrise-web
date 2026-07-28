@@ -5,7 +5,7 @@ import { useSessionChart } from '../context/SessionChartContext';
 import {
   Target, CheckCircle2, Clock, Search, ChevronDown, ChevronUp,
   AlertTriangle, TrendingUp, BarChart3, PenTool, Plus, Calendar,
-  Sparkles, X, ChevronRight, Zap,
+  Sparkles, X, ChevronRight, Zap, ShieldCheck, UserCheck, Lock,
 } from 'lucide-react';
 import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
@@ -784,9 +784,26 @@ function PatientPlanCard({
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [clientSig, setClientSig] = useState<SignatureRecord | null>(null);
   const [clinicianSig, setClinicianSig] = useState<SignatureRecord | null>(null);
-  const [sigModal, setSigModal] = useState<'client' | 'staff' | null>(null);
+  const [supervisorSig, setSupervisorSig] = useState<SignatureRecord | null>(null);
+  const [directorSig, setDirectorSig] = useState<SignatureRecord | null>(null);
+  const [sigModal, setSigModal] = useState<'client' | 'staff' | 'supervisor' | 'director' | null>(null);
   const tpDocId = useRef(`tp-${patient.id}-${Date.now()}`).current;
   const goals = [...getGoals(patient), ...sessionGoals].map(g => ({ ...g, status: goalStatuses[g.id] ?? g.status }));
+
+  // ASAM dimension coverage — D1–D6 must each have ≥1 goal
+  const coveredDims = new Set((goals as ExtGoal[]).map(g => g.asamDimension).filter(Boolean));
+  const REQUIRED_DIMS: AsamDim[] = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'];
+  const missingDims = REQUIRED_DIMS.filter(d => !coveredDims.has(d));
+  const allDimsCovered = missingDims.length === 0;
+
+  // Approval chain status
+  type PlanApproval = 'Draft' | 'Awaiting Clinician' | 'Awaiting Supervisor' | 'Awaiting Director' | 'Approved';
+  const planApproval: PlanApproval =
+    directorSig  ? 'Approved' :
+    supervisorSig ? 'Awaiting Director' :
+    clinicianSig  ? 'Awaiting Supervisor' :
+    clientSig     ? 'Awaiting Clinician' : 'Draft';
+
   const tpDocForm = useDocumentForm({
     docId: tpDocId,
     docType: 'Treatment Plan',
@@ -797,13 +814,15 @@ function PatientPlanCard({
     authorName: patient.counselor.split(',')[0],
     authorId: `counselor-${patient.id}`,
     authorRole: 'Primary Counselor',
-    supervisor: 'James S. Collins III, Clinical Director',
+    supervisor: 'James S. Collins III, CAC-AD — Clinical Director',
     requiresCoSign: true,
-    requiredFields: ['Goals', 'Client Signature', 'Clinician Signature'],
+    requiredFields: ['Goals (All 6 ASAM Dimensions)', 'Client Signature', 'Clinician Signature', 'Supervisor Co-Signature', 'Director Approval'],
     fieldValues: {
-      'Goals': goals.length > 0 ? 'present' : '',
+      'Goals (All 6 ASAM Dimensions)': allDimsCovered ? 'complete' : '',
       'Client Signature': clientSig ? 'signed' : '',
       'Clinician Signature': clinicianSig ? 'signed' : '',
+      'Supervisor Co-Signature': supervisorSig ? 'signed' : '',
+      'Director Approval': directorSig ? 'signed' : '',
     },
   });
 
@@ -892,11 +911,20 @@ function PatientPlanCard({
           <div><div className="text-lg font-bold text-blue-500">{inProgressCount}</div><div className="text-[10px] text-slate uppercase">Active</div></div>
           <div><div className="text-lg font-bold text-slate">{notStartedCount}</div><div className="text-[10px] text-slate uppercase">Not Started</div></div>
         </div>
-        <div className="flex-none text-center">
+        <div className="flex-none text-center space-y-1">
           <div className={`text-xs font-semibold px-2 py-1 rounded ${reviewOverdue ? 'bg-red-100 text-red-700' : reviewSoon ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate'}`}>
             {reviewOverdue ? '⚠ Overdue' : reviewSoon ? 'Due Soon' : 'On Track'}
           </div>
           {nextReview && <div className="text-[10px] text-slate mt-0.5">{nextReview}</div>}
+          <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+            planApproval === 'Approved'           ? 'bg-green-100 text-green-700 border-green-300' :
+            planApproval === 'Awaiting Director'  ? 'bg-blue-100 text-blue-700 border-blue-300' :
+            planApproval === 'Awaiting Supervisor'? 'bg-violet-100 text-violet-700 border-violet-300' :
+            planApproval === 'Awaiting Clinician' ? 'bg-amber-100 text-amber-700 border-amber-300' :
+            'bg-slate-100 text-slate border-slate-200'
+          }`}>
+            {planApproval === 'Approved' ? '✓ Approved' : planApproval}
+          </div>
         </div>
         <div className="flex-none">
           {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
@@ -978,44 +1006,167 @@ function PatientPlanCard({
             );
           })}
 
-          {/* Signatures */}
+          {/* ASAM Dimension Coverage Gate */}
           <div className="mt-2 pt-4 border-t border-border">
-            <div className="text-[10px] font-bold text-slate uppercase tracking-wider flex items-center gap-1.5 mb-3">
-              <PenTool className="w-3 h-3" /> Treatment Plan Signatures
+            <div className="text-[10px] font-bold text-slate uppercase tracking-wider flex items-center gap-1.5 mb-2">
+              <Target className="w-3 h-3" /> ASAM Dimension Coverage (required for approval)
             </div>
+            <div className="grid grid-cols-6 gap-1.5 mb-2">
+              {REQUIRED_DIMS.map(d => {
+                const covered = coveredDims.has(d);
+                const meta = dimMeta(d);
+                return (
+                  <div key={d} className={`flex flex-col items-center gap-0.5 rounded-lg border py-1.5 px-1 ${covered ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+                    <span className={`text-[10px] font-bold ${covered ? 'text-green-700' : 'text-red-600'}`}>{d}</span>
+                    <span className="text-[9px] text-center leading-tight text-slate/80">{meta.short}</span>
+                    <span className={`text-[11px] font-bold ${covered ? 'text-green-600' : 'text-red-500'}`}>{covered ? '✓' : '✗'}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {!allDimsCovered && (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600" />
+                <span>Missing goals for: <strong>{missingDims.join(', ')}</strong>. All 6 ASAM dimensions must have at least one goal before this plan can be submitted for approval.</span>
+              </div>
+            )}
+            {allDimsCovered && (
+              <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-800">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                All 6 ASAM dimensions covered — plan is eligible for the approval workflow.
+              </div>
+            )}
+          </div>
+
+          {/* 4-Step Approval Chain */}
+          <div className="pt-4 border-t border-border">
+            <div className="text-[10px] font-bold text-slate uppercase tracking-wider flex items-center gap-1.5 mb-3">
+              <ShieldCheck className="w-3 h-3" /> Treatment Plan Approval Chain
+            </div>
+
+            {/* Step indicators */}
+            <div className="flex items-center gap-1 mb-4 overflow-x-auto">
+              {[
+                { label: 'Client', done: !!clientSig },
+                { label: 'Clinician', done: !!clinicianSig },
+                { label: 'Supervisor', done: !!supervisorSig },
+                { label: 'Director', done: !!directorSig },
+              ].map((step, i) => (
+                <React.Fragment key={step.label}>
+                  <div className={`flex flex-col items-center gap-0.5 min-w-[60px] ${step.done ? 'text-green-600' : 'text-slate/50'}`}>
+                    <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[11px] font-bold transition-colors ${step.done ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 text-slate/50'}`}>
+                      {step.done ? '✓' : i + 1}
+                    </div>
+                    <span className="text-[9px] font-semibold uppercase tracking-wide">{step.label}</span>
+                  </div>
+                  {i < 3 && <div className={`flex-1 h-0.5 min-w-[12px] ${step.done ? 'bg-green-400' : 'bg-slate-200'}`} />}
+                </React.Fragment>
+              ))}
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
-              <div className="border border-teal-200 rounded-xl p-3 space-y-2">
-                <div className="text-[10px] font-bold text-teal-700 uppercase tracking-wide">Client Signature</div>
-                <div className="text-xs text-slate">Client agrees to and acknowledges this treatment plan.</div>
+              {/* Step 1 — Client */}
+              <div className={`border rounded-xl p-3 space-y-2 ${clientSig ? 'border-green-300 bg-green-50/40' : 'border-teal-200'}`}>
+                <div className="text-[10px] font-bold text-teal-700 uppercase tracking-wide flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-teal-100 text-teal-700 text-[9px] font-bold flex items-center justify-center">1</span>
+                  Client Signature
+                </div>
+                <div className="text-xs text-slate">Client acknowledges and agrees to this treatment plan.</div>
                 {clientSig ? <SignedBadge record={clientSig} /> : (
                   <LockedButton locked={readOnly} editRoles={readOnly ? [] : ['Primary Counselor', 'Certified Clinician', 'Clinical Supervisor']} onClick={() => setSigModal('client')} className="text-xs px-3 py-1.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-semibold w-full text-center">
                     Collect Client Signature
                   </LockedButton>
                 )}
               </div>
-              <div className="border border-border rounded-xl p-3 space-y-2">
-                <div className="text-[10px] font-bold text-slate uppercase tracking-wide">Clinician Signature</div>
-                <div className="text-xs text-slate">Clinician authorizes this treatment plan.</div>
-                {clinicianSig ? <SignedBadge record={clinicianSig} /> : (
+
+              {/* Step 2 — Clinician */}
+              <div className={`border rounded-xl p-3 space-y-2 ${clinicianSig ? 'border-green-300 bg-green-50/40' : !clientSig ? 'border-slate-200 opacity-60' : 'border-border'}`}>
+                <div className="text-[10px] font-bold text-slate uppercase tracking-wide flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-slate-100 text-slate text-[9px] font-bold flex items-center justify-center">2</span>
+                  Clinician Signature
+                </div>
+                <div className="text-xs text-slate">Primary counselor certifies the plan is clinically appropriate.</div>
+                {clinicianSig ? <SignedBadge record={clinicianSig} /> : !clientSig ? (
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate/60 italic"><Lock className="w-3 h-3" /> Awaiting client signature first</div>
+                ) : (
                   <LockedButton locked={readOnly} editRoles={readOnly ? [] : ['Primary Counselor', 'Certified Clinician', 'Clinical Supervisor']} onClick={() => setSigModal('staff')} className="text-xs px-3 py-1.5 bg-navy text-white rounded-lg hover:bg-navy/90 font-semibold w-full text-center">
-                    Sign Treatment Plan
+                    Sign as Clinician
+                  </LockedButton>
+                )}
+              </div>
+
+              {/* Step 3 — Clinical Supervisor */}
+              <div className={`border rounded-xl p-3 space-y-2 ${supervisorSig ? 'border-green-300 bg-green-50/40' : !clinicianSig ? 'border-slate-200 opacity-60' : 'border-violet-200'}`}>
+                <div className="text-[10px] font-bold text-violet-700 uppercase tracking-wide flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-violet-100 text-violet-700 text-[9px] font-bold flex items-center justify-center">3</span>
+                  Clinical Supervisor Co-Signature
+                </div>
+                <div className="text-xs text-slate">Supervisor reviews and co-signs to confirm clinical oversight.</div>
+                {supervisorSig ? <SignedBadge record={supervisorSig} /> : !clinicianSig ? (
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate/60 italic"><Lock className="w-3 h-3" /> Awaiting clinician signature first</div>
+                ) : (
+                  <LockedButton locked={readOnly} editRoles={readOnly ? [] : ['Clinical Supervisor']} onClick={() => setSigModal('supervisor')} className="text-xs px-3 py-1.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-semibold w-full text-center">
+                    Co-Sign as Supervisor
+                  </LockedButton>
+                )}
+              </div>
+
+              {/* Step 4 — Clinical Director */}
+              <div className={`border rounded-xl p-3 space-y-2 ${directorSig ? 'border-green-300 bg-green-50/40' : !supervisorSig ? 'border-slate-200 opacity-60' : 'border-blue-200'}`}>
+                <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wide flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 text-[9px] font-bold flex items-center justify-center">4</span>
+                  Clinical Director Approval
+                </div>
+                <div className="text-xs text-slate">Director provides final authorization — plan is active upon signing.</div>
+                {directorSig ? <SignedBadge record={directorSig} /> : !supervisorSig ? (
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate/60 italic"><Lock className="w-3 h-3" /> Awaiting supervisor co-signature first</div>
+                ) : (
+                  <LockedButton locked={readOnly} editRoles={readOnly ? [] : ['Clinical Director', 'Clinical Supervisor']} onClick={() => setSigModal('director')} className="text-xs px-3 py-1.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-semibold w-full text-center">
+                    Approve as Director
                   </LockedButton>
                 )}
               </div>
             </div>
+
+            {directorSig && (
+              <div className="mt-3 flex items-center gap-2 bg-green-100 border border-green-300 rounded-xl px-4 py-3 text-sm text-green-800 font-semibold">
+                <UserCheck className="w-4 h-4 text-green-600" />
+                Treatment plan fully approved — all 4 signatures collected. Plan is now active.
+              </div>
+            )}
           </div>
 
           <SignatureModal
-            isOpen={!!sigModal}
+            isOpen={sigModal === 'client'}
             onClose={() => setSigModal(null)}
-            signerType={sigModal ?? 'staff'}
-            title={sigModal === 'client' ? 'Client Treatment Plan Signature' : 'Clinician Treatment Plan Signature'}
+            signerType="client"
+            title="Client Treatment Plan Signature"
             documentTitle={`Treatment Plan — ${patient.firstName} ${patient.lastName}`}
-            onSign={(record) => {
-              if (sigModal === 'client') setClientSig(record);
-              else setClinicianSig(record);
-              setSigModal(null);
-            }}
+            onSign={(record) => { setClientSig(record); setSigModal(null); }}
+          />
+          <SignatureModal
+            isOpen={sigModal === 'staff'}
+            onClose={() => setSigModal(null)}
+            signerType="staff"
+            title="Clinician Treatment Plan Signature"
+            documentTitle={`Treatment Plan — ${patient.firstName} ${patient.lastName}`}
+            onSign={(record) => { setClinicianSig(record); setSigModal(null); }}
+          />
+          <SignatureModal
+            isOpen={sigModal === 'supervisor'}
+            onClose={() => setSigModal(null)}
+            signerType="staff"
+            title="Clinical Supervisor Co-Signature"
+            documentTitle={`Treatment Plan — ${patient.firstName} ${patient.lastName}`}
+            onSign={(record) => { setSupervisorSig(record); setSigModal(null); }}
+          />
+          <SignatureModal
+            isOpen={sigModal === 'director'}
+            onClose={() => setSigModal(null)}
+            signerType="staff"
+            title="Clinical Director Approval Signature"
+            documentTitle={`Treatment Plan — ${patient.firstName} ${patient.lastName}`}
+            onSign={(record) => { setDirectorSig(record); setSigModal(null); }}
           />
 
           {/* Document Form Bar */}
