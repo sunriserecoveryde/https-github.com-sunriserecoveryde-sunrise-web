@@ -1131,42 +1131,22 @@ const STATUS_CHIP: Record<CompRequirement['status'], string> = {
   'N/A': 'bg-gray-100 text-gray-500',
 };
 
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  evidenceInputs: Record<string, string>;
+  setEvidenceInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  corrActionInputs: Record<string, string>;
+  setCorrActionInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }) {
   const [stdFilter, setStdFilter] = useState<CompStandard>('All');
   const [selectedReq, setSelectedReq] = useState<string | null>(null);
-  const [evidenceInputs, setEvidenceInputs] = useState<Record<string, string>>(() => {
-    try {
-      const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_KEY);
-      return stored ? JSON.parse(stored) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [corrActionInputs, setCorrActionInputs] = useState<Record<string, string>>(() => {
-    try {
-      const stored = localStorage.getItem(COMPLIANCE_CORR_KEY);
-      return stored ? JSON.parse(stored) : {};
-    } catch {
-      return {};
-    }
-  });
   const [showReport, setShowReport] = useState(false);
   const [compSaved, setCompSaved] = useState<string | null>(null);
   const saveCompAction = (msg: string) => { setCompSaved(msg); setTimeout(() => setCompSaved(null), 2500); };
   const [evidenceSavedId, setEvidenceSavedId] = useState<string | null>(null);
   const [corrSavedId, setCorrSavedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(evidenceInputs)); } catch { /* unavailable */ }
-  }, [evidenceInputs]);
-
-  useEffect(() => {
-    try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(corrActionInputs)); } catch { /* unavailable */ }
-  }, [corrActionInputs]);
 
   const standards: CompStandard[] = ['All', 'CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'];
   const filtered = COMP_REQUIREMENTS.filter(r => stdFilter === 'All' || r.standard === stdFilter);
@@ -1385,11 +1365,13 @@ type WFTab = 'Dashboard' | 'Employee Profiles' | 'Exclusion & Screening' | 'Onbo
 
 const COMPLIANCE_STORAGE_KEY = 'sunrise-os:compliance-completed-ids';
 const COMPLIANCE_EVIDENCE_KEY = 'sunrise-os:compliance-evidence-inputs';
-
 const COMPLIANCE_CORR_KEY = 'sunrise-os:compliance-corr-action-inputs';
 
 export function WorkforceCompliance({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<WFTab>('Dashboard');
+
+  // ── Compliance audit state lifted here so resets are atomic and the
+  //    Dashboard KPI always reads the same source of truth as the Standards tab.
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_STORAGE_KEY);
@@ -1398,7 +1380,26 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       return new Set<string>();
     }
   });
+  const [evidenceInputs, setEvidenceInputs] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [corrActionInputs, setCorrActionInputs] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_CORR_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
 
+  // Persist all three pieces of compliance state from one place so a reset
+  // (setCompletedIds + setEvidenceInputs + setCorrActionInputs) is always
+  // reflected in localStorage regardless of which tab is currently mounted.
   useEffect(() => {
     try {
       localStorage.setItem(COMPLIANCE_STORAGE_KEY, JSON.stringify([...completedIds]));
@@ -1406,6 +1407,14 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       // localStorage unavailable — silently continue
     }
   }, [completedIds]);
+
+  useEffect(() => {
+    try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(evidenceInputs)); } catch { /* unavailable */ }
+  }, [evidenceInputs]);
+
+  useEffect(() => {
+    try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(corrActionInputs)); } catch { /* unavailable */ }
+  }, [corrActionInputs]);
 
   const tabs: WFTab[] = ['Dashboard', 'Employee Profiles', 'Exclusion & Screening', 'Onboarding', 'Performance Reviews', 'Offboarding', 'Compliance Standards'];
 
@@ -1465,7 +1474,7 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} />}
       </div>
     </div>
   );
