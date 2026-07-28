@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
@@ -189,7 +189,13 @@ export function UADrugTesting({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<'Schedule' | 'Workflow' | 'History' | 'Analytics' | 'Chain of Custody' | 'Positive Results' | 'Panel Reference' | 'Lab Partners'>('Schedule');
   const [selectedCell, setSelectedCell] = useState<UaResult | null>(null);
   const [showOrderForm, setShowOrderForm] = useState(false);
-  const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(INIT_WORKFLOW);
+  const [workflowItems, setWorkflowItems] = useState<WorkflowItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('sunrise-os:ua-workflow-items');
+      if (stored) return JSON.parse(stored) as WorkflowItem[];
+    } catch { /* ignore parse errors */ }
+    return INIT_WORKFLOW;
+  });
   const [judgmentFor, setJudgmentFor] = useState<string | null>(null);
   const [judgmentText, setJudgmentText] = useState('');
   const [orderPatient, setOrderPatient] = useState(monitored[0]?.id ?? '');
@@ -200,6 +206,13 @@ export function UADrugTesting({ navigate, readOnly }: Props) {
   const [orderMethod, setOrderMethod] = useState('Observed');
   const [wfSaved, setWFSaved] = useState<string | null>(null);
   const saveWFAction = (msg: string) => { setWFSaved(msg); setTimeout(() => setWFSaved(null), 2500); };
+
+  // Persist workflow items to localStorage so stage progress survives a page refresh
+  useEffect(() => {
+    try {
+      localStorage.setItem('sunrise-os:ua-workflow-items', JSON.stringify(workflowItems));
+    } catch { /* quota / private-mode errors are non-fatal */ }
+  }, [workflowItems]);
 
   const totalTests = monitored.length * DAYS.filter((_, di) => true).length;
   const negatives = Object.values(SCHEDULE).flatMap(days => Object.values(days)).filter(s => s === 'Negative').length;
