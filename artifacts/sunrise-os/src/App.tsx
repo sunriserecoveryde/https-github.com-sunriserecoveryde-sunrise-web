@@ -64,6 +64,8 @@ import { DAPNoteWorkflow } from './pages/DAPNoteWorkflow';
 import { MeasurementBasedCare } from './pages/MeasurementBasedCare';
 import { ClinicalIntelligence } from './pages/ClinicalIntelligence';
 import { WorkforceCompliance } from './pages/WorkforceCompliance';
+import { ClinicalForms } from './pages/ClinicalForms';
+import { ChartAuditTool } from './pages/ChartAuditTool';
 import { TourEngine } from './pages/TourEngine';
 import { LoginPage } from './pages/LoginPage';
 import { AccessDenied } from './components/common/AccessDenied';
@@ -137,7 +139,9 @@ export type Screen =
   | 'DemoPatientDetail'
   | 'ClinicalIntelligence'
   | 'DAPNoteWorkflow'
-  | 'WorkforceCompliance';
+  | 'WorkforceCompliance'
+  | 'ClinicalForms'
+  | 'ChartAuditTool';
 
 // ─── Inner app (needs RoleContext) ───────────────────────────────────────────
 
@@ -269,6 +273,8 @@ function AppInner() {
       case 'WithdrawalMonitor':       return withAccessReadOnlyProp('WithdrawalMonitor', ro => <WithdrawalMonitor navigate={navigateTo} readOnly={ro} />);
       case 'AIAssistant':             return withAccess('AIAssistant', <AIAssistant navigate={navigateTo} />);
       case 'DAPNoteWorkflow':         return withAccess('AIAssistant', <DAPNoteWorkflow navigate={navigateTo} />);
+      case 'ClinicalForms':           return withAccessReadOnlyProp('ClinicalForms',     ro => <ClinicalForms navigate={navigateTo} readOnly={ro} />);
+      case 'ChartAuditTool':          return withAccessReadOnlyProp('ChartAuditTool',    ro => <ChartAuditTool navigate={navigateTo} readOnly={ro} />);
       case 'DemoPatientDetail':       return <DemoPatientDetail patientId={lastDemoPatientId ?? selectedPatientId} navigate={navigateTo} returnTo='Dashboard' />;
       case 'RoleExplorer':            return <RoleExplorer navigate={navigateTo} />;
       default:

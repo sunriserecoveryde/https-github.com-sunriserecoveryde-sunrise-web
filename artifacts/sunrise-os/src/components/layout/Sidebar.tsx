@@ -11,7 +11,7 @@ import {
   ArrowLeftRight, Star, CreditCard, MapPin, BookUser, Download,
   Video, UserCheck, FolderOpen, DollarSign, BookOpen, HandHelping,
   Award, ClipboardCheck, MessageSquare, ListOrdered, Grid3X3,
-  Eye, Sparkles, Brain, FlaskConical, Building2
+  Eye, Sparkles, Brain, FlaskConical, Building2, FileSearch
 } from 'lucide-react';
 import { Screen } from '../../App';
 import { useRole } from '../../context/RoleContext';
@@ -47,6 +47,7 @@ const ALL_SECTIONS: SidebarSection[] = [
       { id: 'CensusBedBoard', label: 'Census & Bed Board', icon: Bed },
       { id: 'PatientList', label: 'Patient List', icon: Users, badge: 18 },
       { id: 'Admissions', label: 'Admissions / Intake', icon: UserPlus },
+      { id: 'ClinicalForms', label: 'Clinical Intake Forms', icon: ClipboardCheck },
       { id: 'Discharges', label: 'Discharges', icon: LogOut },
       { id: 'MATManagement', label: 'MAT Management', icon: Pill },
       { id: 'FamilyEngagement', label: 'Family Engagement', icon: Heart },
@@ -118,6 +119,7 @@ const ALL_SECTIONS: SidebarSection[] = [
       { id: 'RevenueCycle', label: 'Revenue Cycle', icon: Receipt },
       { id: 'FinancialCounseling', label: 'Financial Counseling', icon: DollarSign },
       { id: 'AuditCompliance', label: 'Audit Readiness', icon: ShieldCheck },
+      { id: 'ChartAuditTool', label: 'Chart Audit Tool', icon: FileSearch },
       { id: 'QualityImprovement', label: 'Quality Improvement', icon: Star },
       { id: 'FormularyManagement', label: 'Formulary & Drug Ref', icon: ClipboardCheck },
     ]
