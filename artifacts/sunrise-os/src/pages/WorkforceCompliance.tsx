@@ -224,6 +224,17 @@ const EMPLOYEES: EmployeeProfile[] = [
     backgroundStatus: 'Clear', trainingCompliance: 75, supervisionStatus: 'Current',
     nextReviewDate: '2026-11-01', nextReviewType: 'Annual', credentialAlerts: 0,
   },
+  {
+    id: 'EP-011', name: 'Renée M. Caldwell', title: 'Director of Human Resources',
+    department: 'Administration', employmentType: 'Full-Time', status: 'Active',
+    supervisor: 'CEO / Executive Director', location: 'Rockville, MD',
+    levelOfCare: [],
+    hireDate: '2018-06-11', requiredCredentials: ['SHRM-SCP', 'PHR'],
+    systemRole: 'HR Director', onboardingPct: 100, onboardStatus: 'Complete',
+    exclusionLastChecked: '2026-01-10', exclusionNextDue: '2027-01-10', exclusionStatus: 'Clear',
+    backgroundStatus: 'Clear', trainingCompliance: 100, supervisionStatus: 'N/A',
+    nextReviewDate: '2026-12-11', nextReviewType: 'Annual', credentialAlerts: 0,
+  },
 ];
 
 const EXCLUSION_RECORDS: ExclusionRecord[] = EMPLOYEES.map(e => ({
@@ -276,6 +287,18 @@ const PERFORMANCE_REVIEWS: PerformanceReview[] = [
     type: 'Annual', dueDate: '2026-11-01', status: 'Scheduled', reviewer: 'James S. Collins III',
     metrics: { docTimeliness: 90, caseloadManagement: 80, trainingCompliance: 75, supervisionParticipation: 92, teamworkConduct: 98, ethicsCompliance: 100 },
     goals: ['Complete outstanding training modules by 9/1/2026', 'Expand peer contact outreach to alumni program', 'Pursue ADT renewal 60 days prior to expiry'],
+  },
+  {
+    id: 'PR-006', staffId: 'EP-011', staffName: 'Renée M. Caldwell', title: 'Director of Human Resources',
+    type: 'Annual', dueDate: '2026-12-11', status: 'Scheduled', reviewer: 'CEO / Executive Director',
+    metrics: { docTimeliness: 98, caseloadManagement: 96, trainingCompliance: 100, supervisionParticipation: 100, teamworkConduct: 99, ethicsCompliance: 100 },
+    goals: [
+      'Complete OIG / exclusion screening automation rollout by Q4 2026',
+      'Reduce time-to-onboard for clinical hires to 10 business days',
+      'Implement performance review completion tracking dashboard for all supervisors',
+      'SHRM-SCP recertification — submit PDC credits by 12/31/2026',
+    ],
+    followUpDate: '2027-06-11',
   },
 ];
 
