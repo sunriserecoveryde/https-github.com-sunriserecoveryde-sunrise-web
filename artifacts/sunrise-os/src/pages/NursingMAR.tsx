@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { CheckCircle, Clock, AlertTriangle, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
+import { useDocumentForm } from '../hooks/useDocumentForm';
+import { DocumentFormBar } from '../components/ui/DocumentFormBar';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -154,6 +156,69 @@ const CAT_STYLE: Record<string, string> = {
 };
 
 const SHIFTS = ['0800', '1200', '1400', '1800', '2000', '2100'];
+
+// ─── Nursing MAR Administration Form Bar ──────────────────────────────────────
+
+function NursingMARAdminBar({ readOnly, editRoles, onCancel }: { readOnly?: boolean; editRoles: string[]; onCancel: () => void }) {
+  const docId = useRef(`mar-admin-${Date.now()}`).current;
+  const [adminNotes, setAdminNotes] = useState('');
+  const docForm = useDocumentForm({
+    docId,
+    docType: 'MAR Administration',
+    patientId: '',
+    patientName: '',
+    mrn: '',
+    program: '',
+    authorName: 'Jessica Torres, RN',
+    authorId: 'torres',
+    authorRole: 'RN',
+    supervisor: 'Charge Nurse',
+    requiresCoSign: false,
+    requiredFields: ['Administration Notes'],
+    fieldValues: { 'Administration Notes': adminNotes },
+  });
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs font-semibold text-slate uppercase mb-1">Notes</label>
+        <textarea
+          value={adminNotes}
+          onChange={e => { setAdminNotes(e.target.value); docForm.markDirty(); }}
+          className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none"
+          placeholder="Patient tolerated well, any observations, hold reasons..."
+        />
+      </div>
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-800">
+        By signing, you certify this administration is accurate and was witnessed as required by facility policy and DEA regulations.
+      </div>
+      <DocumentFormBar
+        formState={docForm.formState}
+        isLocked={docForm.isLocked}
+        isSigned={docForm.isSigned}
+        isDirty={docForm.isDirty}
+        completionPct={docForm.completionPct}
+        autosaveStatus={docForm.autosaveStatus}
+        lastSaved={docForm.lastSaved}
+        validationErrors={docForm.validationErrors}
+        requiresCoSign={false}
+        showAddendum={docForm.showAddendum}
+        setShowAddendum={docForm.setShowAddendum}
+        addendumText={docForm.addendumText}
+        setAddendumText={docForm.setAddendumText}
+        onAddAddendum={docForm.handleAddAddendum}
+        versions={docForm.versions}
+        editRoles={editRoles}
+        authorName="Jessica Torres, RN"
+        authorRole="RN"
+        documentTitle="MAR Administration"
+        onSaveDraft={() => { docForm.handleSaveDraft(); onCancel(); }}
+        onSign={(record) => { if (docForm.handleSign(record)) { onCancel(); } }}
+      />
+      <button onClick={onCancel} className="w-full border border-border rounded-lg py-2 text-sm text-slate mt-1">Cancel</button>
+    </div>
+  );
+}
 
 // Module-level UI state — survives tab-switching (component unmount/remount)
 let _marTab: 'MAR' | 'Controlled Log' | 'PRN History' | 'Allergy Registry' | 'Medication Errors' | 'Waste Log' = 'MAR';
@@ -436,10 +501,7 @@ export function NursingMAR({ navigate, readOnly }: Props) {
                 By signing, you certify this administration is accurate and was witnessed as required by facility policy and DEA regulations.
               </div>
             </div>
-            <div className="flex gap-3 mt-4">
-              <button onClick={() => setAdministering(null)} className="flex-1 border border-border rounded-lg py-2 text-sm text-slate">Cancel</button>
-              <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => setAdministering(null)} className="flex-1 btn-primary text-sm py-2">Sign & Save</LockedButton>
-            </div>
+            <NursingMARAdminBar readOnly={readOnly} editRoles={editRoles} onCancel={() => setAdministering(null)} />
           </div>
         </div>
       )}

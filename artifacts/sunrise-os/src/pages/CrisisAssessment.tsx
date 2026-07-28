@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { AlertTriangle, CheckCircle, XCircle, Shield, Phone, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
+import { useDocumentForm } from '../hooks/useDocumentForm';
+import { DocumentFormBar } from '../components/ui/DocumentFormBar';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -172,12 +175,34 @@ const INTERVENTIONS_BY_RISK: Record<RiskLevel, string[]> = {
 };
 
 export function CrisisAssessment({ navigate, readOnly }: Props) {
+  const editRoles = getRolesWithEditAccess('CrisisAssessment');
   const [tab, setTab] = useState<'Dashboard' | 'Assess' | 'Protocol' | 'Debriefing' | 'Resources' | 'Training' | 'Risk Indicators'>('Dashboard');
   const [expandedRecord, setExpandedRecord] = useState<string | null>('p1');
   const [newAssessmentPatient, setNewAssessmentPatient] = useState('p1');
   const [ideationType, setIdeationType] = useState<IdeationType>(0);
   const [behaviorScore, setBehaviorScore] = useState(0);
   const [assessmentSaved, setAssessmentSaved] = useState(false);
+  const [clinicalNotes, setClinicalNotes] = useState('');
+  const crisisDocId = `ca-${newAssessmentPatient}`;
+  const crisisDocForm = useDocumentForm({
+    docId: crisisDocId,
+    docType: 'Crisis Assessment',
+    patientId: newAssessmentPatient,
+    patientName: MOCK_PATIENTS.find(p => p.id === newAssessmentPatient)?.firstName + ' ' + MOCK_PATIENTS.find(p => p.id === newAssessmentPatient)?.lastName,
+    mrn: MOCK_PATIENTS.find(p => p.id === newAssessmentPatient)?.mrn ?? '',
+    program: MOCK_PATIENTS.find(p => p.id === newAssessmentPatient)?.program ?? '',
+    authorName: 'Staff Member',
+    authorId: 'current-staff',
+    authorRole: 'Clinician',
+    supervisor: 'James S. Collins III, Clinical Director',
+    requiresCoSign: true,
+    requiredFields: ['C-SSRS Ideation', 'C-SSRS Behavior', 'Clinical Notes'],
+    fieldValues: {
+      'C-SSRS Ideation': ideationType > 0 ? IDEATION_LABELS[ideationType] : '',
+      'C-SSRS Behavior': behaviorScore > 0 ? BEHAVIOR_LABELS[behaviorScore] : '',
+      'Clinical Notes': clinicalNotes,
+    },
+  });
 
   const computedRisk = (): RiskLevel => {
     if (behaviorScore >= 3) return 'Imminent';
@@ -338,8 +363,8 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
               <p className="text-xs text-slate">Select the HIGHEST ideation type present in the past 30 days (or since last assessment)</p>
             </div>
             {IDEATION_LABELS.map((label, i) => (
-              <label key={i} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${ideationType === i ? (i === 0 ? 'border-green-400 bg-green-50' : i <= 2 ? 'border-amber-400 bg-amber-50' : 'border-red-400 bg-red-50') : 'border-border hover:border-orange/50'}`}>
-                <input type="radio" name="ideation" checked={ideationType === i} onChange={() => setIdeationType(i as IdeationType)} className="mt-0.5" />
+              <label key={i} className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${crisisDocForm.isLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${ideationType === i ? (i === 0 ? 'border-green-400 bg-green-50' : i <= 2 ? 'border-amber-400 bg-amber-50' : 'border-red-400 bg-red-50') : 'border-border hover:border-orange/50'}`}>
+                <input type="radio" name="ideation" checked={ideationType === i} disabled={crisisDocForm.isLocked} onChange={() => { setIdeationType(i as IdeationType); crisisDocForm.markDirty(); }} className="mt-0.5" />
                 <div>
                   <div className="font-semibold text-navy text-sm">Type {i}: {label}</div>
                   <div className="text-xs text-slate mt-0.5">
@@ -361,8 +386,8 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
               <p className="text-xs text-slate">Select the HIGHEST behavior type that has occurred in the past 3 months</p>
             </div>
             {BEHAVIOR_LABELS.map((label, i) => (
-              <label key={i} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${behaviorScore === i ? (i === 0 ? 'border-green-400 bg-green-50' : 'border-red-400 bg-red-50') : 'border-border hover:border-orange/50'}`}>
-                <input type="radio" name="behavior" checked={behaviorScore === i} onChange={() => setBehaviorScore(i)} className="mt-0.5" />
+              <label key={i} className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${crisisDocForm.isLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${behaviorScore === i ? (i === 0 ? 'border-green-400 bg-green-50' : 'border-red-400 bg-red-50') : 'border-border hover:border-orange/50'}`}>
+                <input type="radio" name="behavior" checked={behaviorScore === i} disabled={crisisDocForm.isLocked} onChange={() => { setBehaviorScore(i); crisisDocForm.markDirty(); }} className="mt-0.5" />
                 <div>
                   <div className="font-semibold text-navy text-sm">{label}</div>
                 </div>
@@ -386,11 +411,37 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
           </div>
 
           <div className="card space-y-4">
-            <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none" placeholder="Clinical notes — document context, precipitating factors, patient statements, clinicians notified, and interventions taken..." />
-            <div className="flex gap-3">
-              <button onClick={() => setTab('Dashboard')} className="border border-border text-slate rounded-lg px-5 py-2 text-sm">Cancel</button>
-              <LockedButton locked={readOnly} onClick={() => { setAssessmentSaved(true); setTab('Dashboard'); setTimeout(() => setAssessmentSaved(false), 3000); }} className="btn-primary text-sm px-5 py-2">Save Assessment & Generate Safety Plan</LockedButton>
-            </div>
+            <textarea
+              value={clinicalNotes}
+              onChange={e => { setClinicalNotes(e.target.value); crisisDocForm.markDirty(); }}
+              disabled={crisisDocForm.isLocked}
+              className={`w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none ${crisisDocForm.isLocked ? 'opacity-60 cursor-not-allowed bg-gray-50' : ''}`}
+              placeholder={crisisDocForm.isLocked ? '(document is locked)' : 'Clinical notes — document context, precipitating factors, patient statements, clinicians notified, and interventions taken...'}
+            />
+            <DocumentFormBar
+              formState={crisisDocForm.formState}
+              isLocked={crisisDocForm.isLocked}
+              isSigned={crisisDocForm.isSigned}
+              isDirty={crisisDocForm.isDirty}
+              completionPct={crisisDocForm.completionPct}
+              autosaveStatus={crisisDocForm.autosaveStatus}
+              lastSaved={crisisDocForm.lastSaved}
+              validationErrors={crisisDocForm.validationErrors}
+              requiresCoSign
+              showAddendum={crisisDocForm.showAddendum}
+              setShowAddendum={crisisDocForm.setShowAddendum}
+              addendumText={crisisDocForm.addendumText}
+              setAddendumText={crisisDocForm.setAddendumText}
+              onAddAddendum={crisisDocForm.handleAddAddendum}
+              versions={crisisDocForm.versions}
+              editRoles={editRoles}
+              authorName="Staff Member"
+              authorRole="Clinician"
+              documentTitle="Crisis Assessment & Safety Plan"
+              onSaveDraft={() => { crisisDocForm.handleSaveDraft(); }}
+              onSubmitForCoSign={() => { const ok = crisisDocForm.handleSubmitForCoSign(); if (ok !== false) { setAssessmentSaved(true); setTab('Dashboard'); setTimeout(() => setAssessmentSaved(false), 3000); } return ok; }}
+              onSign={(record) => { if (crisisDocForm.handleSign(record)) { setAssessmentSaved(true); setTab('Dashboard'); setTimeout(() => setAssessmentSaved(false), 3000); } }}
+            />
           </div>
         </div>
       )}

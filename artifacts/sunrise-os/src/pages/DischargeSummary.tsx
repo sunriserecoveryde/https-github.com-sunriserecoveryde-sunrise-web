@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { LockedButton } from '../components/common/LockedButton';
 import { getPatientMedications } from '../data/mockMedications';
 import { CheckCircle, Printer, Save, Download, PenTool } from 'lucide-react';
 import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
+import { useDocumentForm } from '../hooks/useDocumentForm';
+import { DocumentFormBar } from '../components/ui/DocumentFormBar';
+import { getRolesWithEditAccess } from '../data/mockRoles';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -117,7 +120,9 @@ const GOAL_STATUS_STYLE: Record<string, string> = {
 };
 
 export function DischargeSummary({ navigate, readOnly }: Props) {
+  const editRoles = getRolesWithEditAccess('DischargeSummary');
   const [selectedPatient, setSelectedPatient] = useState('p4');
+  const docId = `ds-${selectedPatient}`;
   const [tab, setTab] = useState<'Draft' | 'Print Preview' | 'Continuity of Care' | 'Distribution Log' | 'Legal & Court Docs'>('Draft');
   const [saved, setSaved] = useState(false);
   // Wet signature state
@@ -132,6 +137,33 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
 
   const goals = DISCHARGE_DATA.goalsAddressed as { goal: string; status: string; notes: string }[];
 
+  // Editable narrative fields for completion tracking
+  const [draftFields, setDraftFields] = useState<Record<string, string>>({
+    'Admission Presentation': DISCHARGE_DATA.admissionPresentation,
+    'Treatment Received': DISCHARGE_DATA.treatmentReceived,
+    'Clinical Progress': DISCHARGE_DATA.clinicalProgress,
+    'Follow-Up Plan': DISCHARGE_DATA.followUpPlan,
+    'Discharge Precautions': DISCHARGE_DATA.dischargePrecautions,
+    'Medications on Discharge': DISCHARGE_DATA.medicationsOnDischarge,
+  });
+
+  const docForm = useDocumentForm({
+    docId,
+    docType: 'Discharge Summary',
+    patientId: selectedPatient,
+    patientName: `${p.firstName} ${p.lastName}`,
+    mrn: p.mrn,
+    program: p.program,
+    authorName: 'Sarah Jenkins, LCPC',
+    authorId: 'jenkins',
+    authorRole: 'Primary Counselor',
+    supervisor: 'James S. Collins III, Clinical Director',
+    requiresCoSign: true,
+    requiredFields: ['Admission Presentation', 'Treatment Received', 'Clinical Progress', 'Follow-Up Plan', 'Discharge Precautions'],
+    fieldValues: draftFields,
+    totalFields: 6,
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -140,8 +172,8 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
           <p className="text-slate text-sm mt-0.5">Clinical discharge documentation · CARF / CMS required within 5 business days of discharge</p>
         </div>
         <div className="flex gap-2">
-          <LockedButton locked={readOnly} onClick={() => !readOnly && setSaved(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
-            <Save className="w-4 h-4" />{saved ? 'Saved ✓' : 'Save Summary'}
+          <LockedButton locked={readOnly} onClick={() => !readOnly && setSaved(true)} className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
+            <Printer className="w-4 h-4" /> Print / PDF
           </LockedButton>
         </div>
       </div>
@@ -224,13 +256,19 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
           <div className="card space-y-4">
             <h3 className="font-semibold text-navy">Clinical Narrative</h3>
             {[
-              { label: 'Admission Presentation & Reason for Treatment', key: 'admissionPresentation' },
-              { label: 'Treatment Services Received', key: 'treatmentReceived' },
-              { label: 'Clinical Progress & Response to Treatment', key: 'clinicalProgress' },
+              { label: 'Admission Presentation & Reason for Treatment', field: 'Admission Presentation' },
+              { label: 'Treatment Services Received', field: 'Treatment Received' },
+              { label: 'Clinical Progress & Response to Treatment', field: 'Clinical Progress' },
             ].map(f => (
-              <div key={f.key}>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">{f.label}</label>
-                <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none" style={{ minHeight: '100px' }} defaultValue={(DISCHARGE_DATA as unknown as Record<string, unknown>)[f.key] as string} />
+              <div key={f.field}>
+                <label className="block text-xs font-semibold text-slate uppercase mb-1">{f.label} <span className="text-red-400">*</span></label>
+                <textarea
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                  style={{ minHeight: '100px' }}
+                  value={draftFields[f.field] ?? ''}
+                  onChange={e => { setDraftFields(prev => ({ ...prev, [f.field]: e.target.value })); docForm.markDirty(); }}
+                  disabled={docForm.isLocked}
+                />
               </div>
             ))}
           </div>
@@ -264,22 +302,37 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
           {/* Medications */}
           <div className="card space-y-3">
             <h3 className="font-semibold text-navy">Medications at Discharge</h3>
-            <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[100px] resize-none" defaultValue={DISCHARGE_DATA.medicationsOnDischarge as string} />
+            <textarea
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[100px] resize-none"
+              value={draftFields['Medications on Discharge'] ?? ''}
+              onChange={e => { setDraftFields(prev => ({ ...prev, 'Medications on Discharge': e.target.value })); docForm.markDirty(); }}
+              disabled={docForm.isLocked}
+            />
           </div>
 
           {/* Follow-up plan */}
           <div className="card space-y-3">
-            <h3 className="font-semibold text-navy">Aftercare & Follow-up Plan</h3>
-            <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[100px] resize-none" defaultValue={DISCHARGE_DATA.followUpPlan as string} />
+            <h3 className="font-semibold text-navy">Aftercare & Follow-up Plan <span className="text-red-400 text-sm">*</span></h3>
+            <textarea
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[100px] resize-none"
+              value={draftFields['Follow-Up Plan'] ?? ''}
+              onChange={e => { setDraftFields(prev => ({ ...prev, 'Follow-Up Plan': e.target.value })); docForm.markDirty(); }}
+              disabled={docForm.isLocked}
+            />
           </div>
 
           {/* Discharge precautions */}
           <div className="card space-y-3">
             <h3 className="font-semibold text-navy flex items-center gap-2">
               <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-              Discharge Precautions & Safety Instructions
+              Discharge Precautions & Safety Instructions <span className="text-red-400 text-sm">*</span>
             </h3>
-            <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[100px] resize-none" defaultValue={DISCHARGE_DATA.dischargePrecautions as string} />
+            <textarea
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[100px] resize-none"
+              value={draftFields['Discharge Precautions'] ?? ''}
+              onChange={e => { setDraftFields(prev => ({ ...prev, 'Discharge Precautions': e.target.value })); docForm.markDirty(); }}
+              disabled={docForm.isLocked}
+            />
           </div>
 
           {/* Signatures */}
@@ -390,6 +443,34 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
               setActiveSigModal(null);
             }}
           />
+
+          {/* Document Form Engine Bar */}
+          <div className="mt-5">
+            <DocumentFormBar
+              formState={docForm.formState}
+              isLocked={docForm.isLocked}
+              isSigned={docForm.isSigned}
+              isDirty={docForm.isDirty}
+              completionPct={docForm.completionPct}
+              autosaveStatus={docForm.autosaveStatus}
+              lastSaved={docForm.lastSaved}
+              validationErrors={docForm.validationErrors}
+              requiresCoSign
+              showAddendum={docForm.showAddendum}
+              setShowAddendum={docForm.setShowAddendum}
+              addendumText={docForm.addendumText}
+              setAddendumText={docForm.setAddendumText}
+              onAddAddendum={docForm.handleAddAddendum}
+              versions={docForm.versions}
+              editRoles={editRoles}
+              authorName="Sarah Jenkins, LCPC"
+              authorRole="Primary Counselor"
+              documentTitle={`Discharge Summary — ${p.firstName} ${p.lastName}`}
+              onSaveDraft={() => { docForm.handleSaveDraft(); setSaved(true); }}
+              onSubmitForCoSign={() => { const ok = docForm.handleSubmitForCoSign(); if (ok !== false) setSaved(true); return ok; }}
+              onSign={(record) => { if (docForm.handleSign(record)) { setClinicianSig(record); setSaved(true); } }}
+            />
+          </div>
         </div>
       )}
 

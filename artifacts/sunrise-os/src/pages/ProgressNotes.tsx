@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { MOCK_PATIENTS, Patient, ProgressNote } from '../data/mockPatients';
 import { Screen } from '../App';
 import { useSessionChart, SessionNote } from '../context/SessionChartContext';
@@ -14,6 +14,8 @@ import { getRolesWithEditAccess } from '../data/mockRoles';
 import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
 import { NoteFormat } from '../lib/aiNoteEngine';
 import { NoteIntelligencePanel } from '../components/ui/NoteIntelligencePanel';
+import { useDocumentForm } from '../hooks/useDocumentForm';
+import { DocumentFormBar } from '../components/ui/DocumentFormBar';
 
 // ─── Extended mock notes ─────────────────────────────────────────────────────
 
@@ -242,12 +244,14 @@ const FORMAT_FIELDS: Record<NoteFormat, string[]> = {
 };
 
 function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: SessionNote) => void }) {
+  // Stable doc ID for this form instance
+  const docId = useRef(`pn-${Date.now()}`).current;
+  const editRoles = getRolesWithEditAccess('ProgressNotes');
+
   const [format, setFormat] = useState<NoteFormat>('BIRP');
   const [type, setType] = useState('Individual');
   const [patient, setPatient] = useState('p_demo');
   const [values, setValues] = useState<Record<string, string>>({});
-  // Signature + recorder modal state
-  const [sigOpen, setSigOpen] = useState(false);
   const [showRecorder, setShowRecorder] = useState(false);
   const { currentStaff } = useAuth();
   const authorLabel = currentStaff
@@ -255,31 +259,42 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
     : 'Staff Member';
 
   const fields = FORMAT_FIELDS[format];
+  const pt = MOCK_PATIENTS.find(p => p.id === patient);
+
+  // ── Document form engine ────────────────────────────────────────────────────
+  const docForm = useDocumentForm({
+    docId,
+    docType: `${type} Note`,
+    patientId: patient,
+    patientName: pt ? `${pt.firstName} ${pt.lastName}` : '',
+    mrn: pt?.mrn ?? '',
+    program: pt?.program ?? '',
+    authorName: authorLabel,
+    authorId: 'current-staff',
+    authorRole: authorLabel.split(',').slice(1).join(',').trim(),
+    supervisor: 'James S. Collins III, Clinical Director',
+    requiresCoSign: true,
+    requiredFields: fields,
+    fieldValues: values,
+    format,
+  });
 
   function buildContent() {
     return fields.map(f => `${f[0]}: ${values[f] ?? '(not entered)'}`).join('\n');
   }
 
   function buildNote(status: ProgressNote['status']) {
-    const pt = MOCK_PATIENTS.find(p => p.id === patient);
     if (!pt) return null;
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     return {
-      id: `session-${Date.now()}`,
+      id: docId,
       date: `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
       type, author: authorLabel, status, format,
       content: buildContent(),
       patientId: pt.id, patientFirstName: pt.firstName,
       patientLastName: pt.lastName, program: pt.program,
     };
-  }
-
-  function handleSave(status: ProgressNote['status']) {
-    const note = buildNote(status);
-    if (!note) return;
-    onSave(note);
-    onClose();
   }
 
   function handleFormatChange(f: NoteFormat) {
@@ -329,51 +344,81 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
         noteType={type}
         staffTitle={currentStaff?.title}
         values={values}
-        onValuesChange={setValues}
+        onValuesChange={(v) => { setValues(v); docForm.markDirty(); }}
         fields={fields}
       />
 
       {/* Note sections */}
-      <div className="space-y-3">
+      <div className="space-y-3 mt-3">
         {fields.map(f => (
           <div key={f}>
-            <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">{f}</label>
-            <textarea rows={3} value={values[f] ?? ''} onChange={e => setValues(prev => ({ ...prev, [f]: e.target.value }))}
-              placeholder={`Enter ${f.toLowerCase()} here…`}
-              className="w-full bg-bg border border-border rounded px-3 py-2 text-sm resize-none focus:outline-none focus:border-sunrise-blue" />
+            <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">
+              {f} <span className="text-red-400">*</span>
+            </label>
+            <textarea
+              rows={3}
+              value={values[f] ?? ''}
+              onChange={e => { setValues(prev => ({ ...prev, [f]: e.target.value })); docForm.markDirty(); }}
+              disabled={docForm.isLocked}
+              placeholder={docForm.isLocked ? '(document is locked)' : `Enter ${f.toLowerCase()} here…`}
+              className={`w-full bg-bg border border-border rounded px-3 py-2 text-sm resize-none focus:outline-none focus:border-sunrise-blue ${docForm.isLocked ? 'opacity-60 cursor-not-allowed bg-gray-50' : ''}`}
+            />
           </div>
         ))}
       </div>
 
-      <div className="flex gap-2 mt-4 pt-4 border-t border-border flex-wrap">
-        <button onClick={() => handleSave('Awaiting Co-sign')} disabled={!patient} className="px-4 py-2 bg-sunrise-blue text-white text-sm font-semibold rounded hover:bg-sunrise-blue-light disabled:opacity-40 disabled:cursor-not-allowed">Submit for Co-sign</button>
-        <button onClick={() => handleSave('Draft')} disabled={!patient} className="px-4 py-2 border border-border text-slate text-sm font-semibold rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">Save as Draft</button>
-        <button onClick={() => setSigOpen(true)} disabled={!patient} className="px-4 py-2 bg-navy text-white text-sm font-semibold rounded hover:bg-navy/90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
-          <PenTool className="w-4 h-4" /> Sign & Submit
-        </button>
-        <button onClick={onClose} className="px-4 py-2 text-slate text-sm">Cancel</button>
+      {/* Document Form Engine Bar */}
+      <div className="mt-4">
+        <DocumentFormBar
+          formState={docForm.formState}
+          isLocked={docForm.isLocked}
+          isSigned={docForm.isSigned}
+          isDirty={docForm.isDirty}
+          completionPct={docForm.completionPct}
+          autosaveStatus={docForm.autosaveStatus}
+          lastSaved={docForm.lastSaved}
+          validationErrors={docForm.validationErrors}
+          requiresCoSign
+          showAddendum={docForm.showAddendum}
+          setShowAddendum={docForm.setShowAddendum}
+          addendumText={docForm.addendumText}
+          setAddendumText={docForm.setAddendumText}
+          onAddAddendum={docForm.handleAddAddendum}
+          versions={docForm.versions}
+          editRoles={editRoles}
+          authorName={authorLabel}
+          authorRole={authorLabel.split(',').slice(1).join(',').trim()}
+          documentTitle={`${type} Progress Note — ${pt?.firstName ?? ''} ${pt?.lastName ?? ''}`}
+          onSaveDraft={() => {
+            docForm.handleSaveDraft();
+            const note = buildNote('Draft');
+            if (note) { onSave(note); onClose(); }
+          }}
+          onSubmitForCoSign={() => {
+            const ok = docForm.handleSubmitForCoSign();
+            if (ok !== false) { const note = buildNote('Awaiting Co-sign'); if (note) { onSave(note); onClose(); } }
+            return ok;
+          }}
+          onSign={(record) => {
+            if (docForm.handleSign(record)) {
+              const note = buildNote('Signed');
+              if (note) { onSave(note); onClose(); }
+            }
+          }}
+        />
       </div>
-
-      <SignatureModal
-        isOpen={sigOpen}
-        onClose={() => setSigOpen(false)}
-        signerType="staff"
-        documentTitle="Progress Note"
-        signerName={authorLabel.split(',')[0]}
-        signerRole={authorLabel.split(',').slice(1).join(',').trim()}
-        onSign={() => { handleSave('Signed'); setSigOpen(false); }}
-      />
 
       <SessionRecorderModal
         isOpen={showRecorder}
         onClose={() => setShowRecorder(false)}
         format={format}
-        patientName={MOCK_PATIENTS.find(p => p.id === patient)?.firstName + ' ' + MOCK_PATIENTS.find(p => p.id === patient)?.lastName || 'Client'}
+        patientName={`${MOCK_PATIENTS.find(p => p.id === patient)?.firstName ?? ''} ${MOCK_PATIENTS.find(p => p.id === patient)?.lastName ?? 'Client'}`}
         noteType={type}
         fields={fields}
         currentValues={values}
         onGenerate={(newValues) => {
           setValues(prev => ({ ...prev, ...newValues }));
+          docForm.markDirty();
           setShowRecorder(false);
         }}
       />

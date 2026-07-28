@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { MOCK_PATIENTS, Patient } from '../data/mockPatients';
 import { Screen } from '../App';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
@@ -12,6 +12,8 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip
 } from 'recharts';
 import { getRolesWithEditAccess } from '../data/mockRoles';
+import { useDocumentForm } from '../hooks/useDocumentForm';
+import { DocumentFormBar } from '../components/ui/DocumentFormBar';
 
 // ─── ASAM Dimension Metadata ─────────────────────────────────────────────────
 
@@ -111,6 +113,26 @@ function AssessmentDetail({ patient, readOnly, onSave }: { patient: Patient; rea
   const [clinicianSig, setClinicianSig] = useState<SignatureRecord | null>(null);
   const [clientSig, setClientSig] = useState<SignatureRecord | null>(null);
   const [sigModal, setSigModal] = useState<'client' | 'staff' | null>(null);
+  const editRoles = getRolesWithEditAccess('ASAMAssessments');
+  const assessDocId = useRef(`asam-${patient.id}-${Date.now()}`).current;
+  const asamFieldValues = Object.fromEntries(
+    DIMENSIONS.map(d => [d.name, getNarrative(patient.id, d.key)])
+  );
+  const asamDocForm = useDocumentForm({
+    docId: assessDocId,
+    docType: 'ASAM Assessment',
+    patientId: patient.id,
+    patientName: `${patient.firstName} ${patient.lastName}`,
+    mrn: patient.mrn,
+    program: patient.program,
+    authorName: 'Sarah Jenkins, LCPC',
+    authorId: 'jenkins',
+    authorRole: 'Primary Counselor',
+    supervisor: 'James S. Collins III, Clinical Director',
+    requiresCoSign: true,
+    requiredFields: DIMENSIONS.map(d => d.name),
+    fieldValues: asamFieldValues,
+  });
 
   return (
     <div className="border-t border-border bg-slate-50/50 p-5">
@@ -225,6 +247,34 @@ function AssessmentDetail({ patient, readOnly, onSave }: { patient: Patient; rea
           setSigModal(null);
         }}
       />
+
+      {/* Document Form Bar */}
+      <div className="mt-4">
+        <DocumentFormBar
+          formState={asamDocForm.formState}
+          isLocked={asamDocForm.isLocked}
+          isSigned={asamDocForm.isSigned}
+          isDirty={asamDocForm.isDirty}
+          completionPct={asamDocForm.completionPct}
+          autosaveStatus={asamDocForm.autosaveStatus}
+          lastSaved={asamDocForm.lastSaved}
+          validationErrors={asamDocForm.validationErrors}
+          requiresCoSign
+          showAddendum={asamDocForm.showAddendum}
+          setShowAddendum={asamDocForm.setShowAddendum}
+          addendumText={asamDocForm.addendumText}
+          setAddendumText={asamDocForm.setAddendumText}
+          onAddAddendum={asamDocForm.handleAddAddendum}
+          versions={asamDocForm.versions}
+          editRoles={editRoles}
+          authorName="Sarah Jenkins, LCPC"
+          authorRole="Primary Counselor"
+          documentTitle={`ASAM Assessment — ${patient.firstName} ${patient.lastName}`}
+          onSaveDraft={() => { asamDocForm.handleSaveDraft(); onSave('Draft saved'); }}
+          onSubmitForCoSign={() => { const ok = asamDocForm.handleSubmitForCoSign(); if (ok !== false) onSave('Submitted for co-sign'); return ok; }}
+          onSign={(record) => { if (asamDocForm.handleSign(record)) { setClinicianSig(record); onSave('Assessment signed'); } }}
+        />
+      </div>
     </div>
   );
 }

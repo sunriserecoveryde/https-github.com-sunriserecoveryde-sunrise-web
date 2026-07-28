@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { useSessionChart } from '../context/SessionChartContext';
 import { CheckCircle, ChevronDown, ChevronRight, AlertTriangle, FileText, Save, Printer, Sparkles } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
+import { useDocumentForm } from '../hooks/useDocumentForm';
+import { DocumentFormBar } from '../components/ui/DocumentFormBar';
 
 // ---------------------------------------------------------------------------
 // Intake screening data keyed by patient ID — mirrors what was captured in
@@ -278,6 +280,26 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
     ? Object.fromEntries(SECTIONS_ORDER.map(k => [k, getAiCues(k, intakeData)]))
     : {};
 
+  const bpsDocId = `bps-${selectedPatient}`;
+  const bpsDocForm = useDocumentForm({
+    docId: bpsDocId,
+    docType: 'Biopsychosocial Assessment',
+    patientId: selectedPatient,
+    patientName: `${p.firstName} ${p.lastName}`,
+    mrn: p.mrn,
+    program: p.program,
+    authorName: 'Sarah Jenkins, LCPC',
+    authorId: 'jenkins',
+    authorRole: 'Primary Counselor',
+    supervisor: 'James S. Collins III, Clinical Director',
+    requiresCoSign: true,
+    requiredFields: SECTIONS_ORDER as unknown as string[],
+    fieldValues: Object.fromEntries(
+      (SECTIONS_ORDER as string[]).map(k => [k, completedSections.has(k as SectionKey) ? 'complete' : ''])
+    ),
+    totalFields: SECTIONS_ORDER.length,
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -287,7 +309,6 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
         </div>
         <div className="flex gap-2">
           <button onClick={() => setSavedByPatient(prev => ({ ...prev, [selectedPatient + '_printed']: true }))} className="border border-border text-slate rounded-lg px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"><Printer className="w-4 h-4" /> Print / PDF</button>
-          <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && setSavedByPatient(prev => ({ ...prev, [selectedPatient]: true }))} className="btn-primary text-sm px-4 py-2 flex items-center gap-2"><Save className="w-4 h-4" />{saved ? 'Saved ✓' : 'Save Assessment'}</LockedButton>
         </div>
       </div>
 
@@ -494,6 +515,7 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
                       onClick={() => {
                         if (readOnly) return;
                         completeBioSection(selectedPatient, key);
+                        bpsDocForm.markDirty();
                         toggleSection(key);
                         const nextIdx = SECTIONS_ORDER.indexOf(key) + 1;
                         if (nextIdx < SECTIONS_ORDER.length) {
@@ -521,12 +543,40 @@ export function BiopsychosocialAssessment({ navigate, readOnly }: Props) {
               All sections completed. Ready for co-signer review. Assessment must be co-signed by clinical director within 24 hours of completion.
             </div>
           </div>
-          <div className="ml-auto flex gap-2">
-            <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && navigate('CosignQueue')} className="text-sm border border-green-300 text-green-700 bg-white px-4 py-2 rounded-lg hover:bg-green-50">Send to Co-sign Queue</LockedButton>
-            <button onClick={() => setSavedByPatient(prev => ({ ...prev, [selectedPatient + '_printed']: true }))} className="btn-primary text-sm px-4 py-2">Print Assessment</button>
-          </div>
         </div>
       )}
+
+      {/* Document Form Bar — always visible on Assessment tab */}
+      <div className="mt-2">
+        <DocumentFormBar
+          formState={bpsDocForm.formState}
+          isLocked={bpsDocForm.isLocked}
+          isSigned={bpsDocForm.isSigned}
+          isDirty={bpsDocForm.isDirty}
+          completionPct={bpsDocForm.completionPct}
+          autosaveStatus={bpsDocForm.autosaveStatus}
+          lastSaved={bpsDocForm.lastSaved}
+          validationErrors={bpsDocForm.validationErrors}
+          requiresCoSign
+          showAddendum={bpsDocForm.showAddendum}
+          setShowAddendum={bpsDocForm.setShowAddendum}
+          addendumText={bpsDocForm.addendumText}
+          setAddendumText={bpsDocForm.setAddendumText}
+          onAddAddendum={bpsDocForm.handleAddAddendum}
+          versions={bpsDocForm.versions}
+          editRoles={editRoles}
+          authorName="Sarah Jenkins, LCPC"
+          authorRole="Primary Counselor"
+          documentTitle={`Biopsychosocial Assessment — ${p.firstName} ${p.lastName}`}
+          onSaveDraft={() => { bpsDocForm.handleSaveDraft(); setSavedByPatient(prev => ({ ...prev, [selectedPatient]: true })); }}
+          onSubmitForCoSign={() => {
+            const ok = bpsDocForm.handleSubmitForCoSign();
+            if (ok !== false) { navigate('CosignQueue'); }
+            return ok;
+          }}
+          onSign={(record) => { if (bpsDocForm.handleSign(record)) { setSavedByPatient(prev => ({ ...prev, [selectedPatient]: true })); } }}
+        />
+      </div>
       </>
       )}
 

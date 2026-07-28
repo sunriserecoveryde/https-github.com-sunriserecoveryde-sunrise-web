@@ -10,6 +10,8 @@ import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/S
 import { generateGroupNote, GroupNoteInput } from '../lib/aiNoteEngine';
 import { TopicPicker } from '../components/ui/TopicPicker';
 import { getTopicById } from '../lib/topicLibrary';
+import { useDocumentForm } from '../hooks/useDocumentForm';
+import { DocumentFormBar } from '../components/ui/DocumentFormBar';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -126,6 +128,27 @@ export function GroupNotes({ navigate, readOnly }: Props) {
   const [groupParseScore, setGroupParseScore] = useState(0);
   const [parsedGroupInput, setParsedGroupInput] = useState<Partial<GroupNoteInput>>({});
 
+  // ── Document form engine for the active group session note ─────────────────
+  // Scoped to the active session so switching sessions resets form state
+  const groupDocId = selected ? `gn-${selected.id}` : 'gn-none';
+  const { currentStaff } = useAuth();
+  const authorName = currentStaff ? `${currentStaff.firstName} ${currentStaff.lastName}` : 'Staff Member';
+  const groupDocForm = useDocumentForm({
+    docId: groupDocId,
+    docType: 'Group Note',
+    patientId: selected?.id ?? '',
+    patientName: selected?.name ?? '',
+    mrn: '',
+    program: selected?.program ?? '',
+    authorName,
+    authorId: 'current-staff',
+    authorRole: currentStaff?.title ?? 'Clinician',
+    supervisor: 'James S. Collins III, Clinical Director',
+    requiresCoSign: true,
+    requiredFields: ['Group Narrative'],
+    fieldValues: { 'Group Narrative': noteText },
+  });
+
   function getSessionPatients(session: GroupSession) {
     return MOCK_PATIENTS.filter(p =>
       session.program === 'All Programs' || p.program === session.program
@@ -145,8 +168,6 @@ export function GroupNotes({ navigate, readOnly }: Props) {
       },
     }));
   }
-
-  const { currentStaff } = useAuth();
 
   // Debounced parse of quick capture text → GroupNoteInput fields
   useEffect(() => {
@@ -605,17 +626,48 @@ export function GroupNotes({ navigate, readOnly }: Props) {
                   <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1.5">Group Narrative Note</div>
                   <textarea
                     value={noteText}
-                    onChange={e => setNoteText(e.target.value)}
-                    placeholder="Document session themes, overall group dynamics, therapeutic interventions, follow-up actions…"
-                    className="w-full border border-border rounded-lg p-3 text-sm min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50"
+                    onChange={e => { setNoteText(e.target.value); groupDocForm.markDirty(); }}
+                    disabled={groupDocForm.isLocked}
+                    placeholder={groupDocForm.isLocked ? '(document is locked)' : 'Document session themes, overall group dynamics, therapeutic interventions, follow-up actions…'}
+                    className={`w-full border border-border rounded-lg p-3 text-sm min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-orange/50 ${groupDocForm.isLocked ? 'opacity-60 cursor-not-allowed bg-gray-50' : ''}`}
                   />
-                  <div className="flex gap-2 mt-2 flex-wrap">
-                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => { if (!readOnly && selected) { setSigModal(selected.id); } }} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" /> Sign Note
-                    </LockedButton>
-                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => { setShowNoteEditor(false); saveGroupNote('Draft saved'); }} className="btn-outline text-sm px-4 py-2">Save Draft</LockedButton>
-                    <LockedButton locked={readOnly} editRoles={editRoles} onClick={() => !readOnly && navigate('CosignQueue')} className="btn-outline text-sm px-4 py-2">Send for Co-sign</LockedButton>
-                    {showNoteEditor && <button onClick={() => setShowNoteEditor(false)} className="btn-outline text-sm px-4 py-2 text-slate">Cancel</button>}
+                  <div className="mt-2">
+                    <DocumentFormBar
+                      formState={groupDocForm.formState}
+                      isLocked={groupDocForm.isLocked}
+                      isSigned={groupDocForm.isSigned}
+                      isDirty={groupDocForm.isDirty}
+                      completionPct={groupDocForm.completionPct}
+                      autosaveStatus={groupDocForm.autosaveStatus}
+                      lastSaved={groupDocForm.lastSaved}
+                      validationErrors={groupDocForm.validationErrors}
+                      requiresCoSign
+                      showAddendum={groupDocForm.showAddendum}
+                      setShowAddendum={groupDocForm.setShowAddendum}
+                      addendumText={groupDocForm.addendumText}
+                      setAddendumText={groupDocForm.setAddendumText}
+                      onAddAddendum={groupDocForm.handleAddAddendum}
+                      versions={groupDocForm.versions}
+                      editRoles={editRoles}
+                      authorName={authorName}
+                      authorRole={currentStaff?.title ?? 'Clinician'}
+                      documentTitle={selected ? `Group Note — ${selected.name}` : 'Group Note'}
+                      onSaveDraft={() => { groupDocForm.handleSaveDraft(); setShowNoteEditor(false); saveGroupNote('Draft saved'); }}
+                      onSubmitForCoSign={() => {
+                        const ok = groupDocForm.handleSubmitForCoSign();
+                        if (ok !== false) { setShowNoteEditor(false); saveGroupNote('Submitted for co-sign'); navigate('CosignQueue'); }
+                        return ok;
+                      }}
+                      onSign={(record) => {
+                        if (groupDocForm.handleSign(record)) {
+                          if (selected) {
+                            setSessionSigs(prev => ({ ...prev, [selected.id]: record }));
+                            setSigModal(selected.id);
+                          }
+                        }
+                      }}
+                    />
+                    {showNoteEditor && <button onClick={() => setShowNoteEditor(false)} className="mt-2 text-xs text-slate underline underline-offset-2 hover:text-navy">Cancel</button>}
                   </div>
                 </div>
               )}

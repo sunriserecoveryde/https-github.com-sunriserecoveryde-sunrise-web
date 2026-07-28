@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { MOCK_PATIENTS, Patient, TreatmentGoal } from '../data/mockPatients';
 import { Screen } from '../App';
 import { useSessionChart } from '../context/SessionChartContext';
@@ -11,6 +11,8 @@ import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/S
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
+import { useDocumentForm } from '../hooks/useDocumentForm';
+import { DocumentFormBar } from '../components/ui/DocumentFormBar';
 
 // ─── ASAM Dimension metadata ──────────────────────────────────────────────────
 
@@ -776,14 +778,35 @@ function PatientPlanCard({
   sessionGoals?: ExtGoal[];
   onAddGoal?: (g: ExtGoal) => void;
 }) {
+  const editRoles = getRolesWithEditAccess('TreatmentPlans');
   const [expanded, setExpanded] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [clientSig, setClientSig] = useState<SignatureRecord | null>(null);
   const [clinicianSig, setClinicianSig] = useState<SignatureRecord | null>(null);
   const [sigModal, setSigModal] = useState<'client' | 'staff' | null>(null);
-
+  const tpDocId = useRef(`tp-${patient.id}-${Date.now()}`).current;
   const goals = [...getGoals(patient), ...sessionGoals].map(g => ({ ...g, status: goalStatuses[g.id] ?? g.status }));
+  const tpDocForm = useDocumentForm({
+    docId: tpDocId,
+    docType: 'Treatment Plan',
+    patientId: patient.id,
+    patientName: `${patient.firstName} ${patient.lastName}`,
+    mrn: patient.mrn,
+    program: patient.program,
+    authorName: patient.counselor.split(',')[0],
+    authorId: `counselor-${patient.id}`,
+    authorRole: 'Primary Counselor',
+    supervisor: 'James S. Collins III, Clinical Director',
+    requiresCoSign: true,
+    requiredFields: ['Goals', 'Client Signature', 'Clinician Signature'],
+    fieldValues: {
+      'Goals': goals.length > 0 ? 'present' : '',
+      'Client Signature': clientSig ? 'signed' : '',
+      'Clinician Signature': clinicianSig ? 'signed' : '',
+    },
+  });
+
   const metCount = goals.filter(g => g.status === 'Met').length;
   const inProgressCount = goals.filter(g => g.status === 'In Progress').length;
   const notStartedCount = goals.filter(g => g.status === 'Not Started').length;
@@ -994,6 +1017,34 @@ function PatientPlanCard({
               setSigModal(null);
             }}
           />
+
+          {/* Document Form Bar */}
+          <div className="mt-4">
+            <DocumentFormBar
+              formState={tpDocForm.formState}
+              isLocked={tpDocForm.isLocked}
+              isSigned={tpDocForm.isSigned}
+              isDirty={tpDocForm.isDirty}
+              completionPct={tpDocForm.completionPct}
+              autosaveStatus={tpDocForm.autosaveStatus}
+              lastSaved={tpDocForm.lastSaved}
+              validationErrors={tpDocForm.validationErrors}
+              requiresCoSign
+              showAddendum={tpDocForm.showAddendum}
+              setShowAddendum={tpDocForm.setShowAddendum}
+              addendumText={tpDocForm.addendumText}
+              setAddendumText={tpDocForm.setAddendumText}
+              onAddAddendum={tpDocForm.handleAddAddendum}
+              versions={tpDocForm.versions}
+              editRoles={editRoles}
+              authorName={patient.counselor.split(',')[0]}
+              authorRole="Primary Counselor"
+              documentTitle={`Treatment Plan — ${patient.firstName} ${patient.lastName}`}
+              onSaveDraft={() => tpDocForm.handleSaveDraft()}
+              onSubmitForCoSign={() => tpDocForm.handleSubmitForCoSign()}
+              onSign={(record) => { if (tpDocForm.handleSign(record)) { setClinicianSig(record); } }}
+            />
+          </div>
         </div>
       )}
     </div>

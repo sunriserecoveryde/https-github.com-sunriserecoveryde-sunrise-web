@@ -21,16 +21,66 @@ export interface AuditEntry {
   detail: string;
 }
 
+/** A document pending supervisor co-signature */
+export interface PendingDoc {
+  id: string;
+  patientId: string;
+  patientName: string;
+  mrn: string;
+  program: string;
+  noteDate: string;       // YYYY-MM-DD
+  noteType: string;
+  author: string;
+  authorId: string;
+  authorRole: string;
+  supervisor: string;
+  priority: 'Urgent' | 'Routine';
+  preview: string;
+  format?: string;
+  submittedAt: string;    // ISO timestamp
+  deadline?: string;      // ISO timestamp — optional assigned deadline
+  correctionCount: number;
+  lastReturnReason?: string;
+}
+
+/** Each time a supervisor returns a note for correction */
+export interface CorrectionEvent {
+  id: string;
+  docId: string;
+  authorId: string;
+  authorName: string;
+  supervisorName: string;
+  reason: string;
+  timestamp: string;      // ISO timestamp
+}
+
+/** Snapshot saved during autosave or manual Save Draft */
+export interface DocVersion {
+  id: string;
+  docId: string;
+  savedAt: string;        // ISO timestamp
+  savedBy: string;
+  contentSnapshot: string;
+  isAutosave: boolean;
+}
+
 export interface DemoState {
   notificationReadIds: string[];
   auditLog: AuditEntry[];
   lastResetAt: string | null;
+  // Clinical documentation
+  pendingDocs: PendingDoc[];
+  correctionEvents: CorrectionEvent[];
+  docVersions: DocVersion[];
 }
 
 const INITIAL_STATE: DemoState = {
   notificationReadIds: [],
   auditLog: [],
   lastResetAt: null,
+  pendingDocs: [],
+  correctionEvents: [],
+  docVersions: [],
 };
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
@@ -94,9 +144,23 @@ export function resetDemoData(): void {
   _notify();
 }
 
+// ── Selector helpers (called outside React, e.g. in DocumentFormBar) ─────────
+/** Returns true if author has 3+ returned corrections within the last 30 days */
+export function hasDeficiencyFlag(authorId: string): boolean {
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const recent = _state.correctionEvents.filter(
+    e => e.authorId === authorId && new Date(e.timestamp).getTime() > cutoff,
+  );
+  return recent.length >= 3;
+}
+
+/** Live count of pending docs (for Dashboard badge) */
+export function getPendingDocCount(): number {
+  return _state.pendingDocs.length;
+}
+
 // ── React hook ────────────────────────────────────────────────────────────────
 export function useDemoStore() {
-  // useSyncExternalStore: single snapshot object shared across all callers
   const state = useSyncExternalStore(_subscribe, _getSnapshot);
 
   const markRead = useCallback((id: string) => {
@@ -133,5 +197,112 @@ export function useDemoStore() {
     try { localStorage.removeItem(SESSION_KEY); } catch {}
   }, []);
 
-  return { state, markRead, markAllRead, addAuditEntry, reset };
+  // ── Clinical doc mutations ───────────────────────────────────────────────────
+
+  const addPendingDoc = useCallback(
+    (doc: Omit<PendingDoc, 'id' | 'submittedAt'> & { correctionCount?: number }) => {
+      _setState(s => ({
+        ...s,
+        pendingDocs: [
+          {
+            ...doc,
+            id: `pd-${Date.now()}`,
+            submittedAt: new Date().toISOString(),
+            correctionCount: doc.correctionCount ?? 0,
+          },
+          ...s.pendingDocs,
+        ],
+      }));
+    },
+    [],
+  );
+
+  const approvePendingDoc = useCallback((id: string) => {
+    _setState(s => ({
+      ...s,
+      pendingDocs: s.pendingDocs.filter(d => d.id !== id),
+    }));
+  }, []);
+
+  const returnForCorrection = useCallback(
+    (id: string, supervisorName: string, reason: string) => {
+      _setState(s => {
+        const doc = s.pendingDocs.find(d => d.id === id);
+        if (!doc) return s;
+        const event: CorrectionEvent = {
+          id: `corr-${Date.now()}`,
+          docId: id,
+          authorId: doc.authorId,
+          authorName: doc.author,
+          supervisorName,
+          reason,
+          timestamp: new Date().toISOString(),
+        };
+        return {
+          ...s,
+          // Remove from supervisor queue — author must resubmit after corrections.
+          // Correction analytics (events + counts) are preserved separately.
+          pendingDocs: s.pendingDocs.filter(d => d.id !== id),
+          correctionEvents: [event, ...s.correctionEvents],
+        };
+      });
+    },
+    [],
+  );
+
+  const assignDeadline = useCallback((id: string, deadline: string) => {
+    _setState(s => ({
+      ...s,
+      pendingDocs: s.pendingDocs.map(d =>
+        d.id === id ? { ...d, deadline } : d,
+      ),
+    }));
+  }, []);
+
+  const addDocVersion = useCallback(
+    (version: Omit<DocVersion, 'id'>) => {
+      _setState(s => ({
+        ...s,
+        docVersions: [
+          { ...version, id: `v-${Date.now()}` },
+          ...s.docVersions.slice(0, 499),
+        ],
+      }));
+    },
+    [],
+  );
+
+  const getDocVersions = useCallback(
+    (docId: string) => state.docVersions.filter(v => v.docId === docId),
+    [state.docVersions],
+  );
+
+  const isDeficiencyFlagged = useCallback(
+    (authorId: string) => {
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      const recent = state.correctionEvents.filter(
+        e => e.authorId === authorId && new Date(e.timestamp).getTime() > cutoff,
+      );
+      return recent.length >= 3;
+    },
+    [state.correctionEvents],
+  );
+
+  return {
+    state,
+    markRead,
+    markAllRead,
+    addAuditEntry,
+    reset,
+    // Doc lifecycle
+    addPendingDoc,
+    approvePendingDoc,
+    returnForCorrection,
+    assignDeadline,
+    addDocVersion,
+    getDocVersions,
+    isDeficiencyFlagged,
+    // Exposed state slices (read-only via useSyncExternalStore)
+    correctionEvents: state.correctionEvents,
+  };
 }
