@@ -306,7 +306,7 @@ export function TelehealthConsults({ navigate, readOnly }: Props) {
               ))}
               <div>
                 <label className="block text-xs font-semibold text-slate mb-1">Patient location today (required by CMS — must document state)</label>
-                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Home — 123 Main St, Rockville, MD 37201" />
+                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Home — 123 Main St, Rockville, MD 20850" />
               </div>
             </div>
             {techCheckSaved ? (

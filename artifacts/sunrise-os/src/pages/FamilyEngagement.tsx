@@ -44,8 +44,8 @@ const FAMILY_DATA: FamilyRecord[] = [
     familyTherapySessions: 2,
     familyTherapyScheduled: '2026-07-22, 4:00 PM',
     members: [
-      { name: 'Sheila Webb', relationship: 'Spouse', phone: '(615) 555-0141', email: 'sheila.webb@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-14', notes: 'Supportive but fatigued. Expressed "I can\'t keep doing this cycle." Referred to Al-Anon.' },
-      { name: 'Darnell Webb', relationship: 'Brother', phone: '(615) 555-0142', consentOnFile: true, hipaaAuth: false, lastContact: '2026-07-10', notes: 'Wants updates but patient has not authorized. Counseled on 42 CFR Part 2 limitations.' },
+      { name: 'Sheila Webb', relationship: 'Spouse', phone: '(301) 555-0141', email: 'sheila.webb@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-14', notes: 'Supportive but fatigued. Expressed "I can\'t keep doing this cycle." Referred to Al-Anon.' },
+      { name: 'Darnell Webb', relationship: 'Brother', phone: '(301) 555-0142', consentOnFile: true, hipaaAuth: false, lastContact: '2026-07-10', notes: 'Wants updates but patient has not authorized. Counseled on 42 CFR Part 2 limitations.' },
     ],
     log: [
       { date: '2026-07-14', type: 'Family Session', with: 'Sheila Webb (spouse)', conductedBy: 'Sarah Jenkins, LCPC', summary: 'Communication patterns explored. Spouse expressed fear of relapse after discharge. Codependency education delivered. Next session 7/22.', duration: '50 min' },
@@ -59,8 +59,8 @@ const FAMILY_DATA: FamilyRecord[] = [
     familyTherapySessions: 4,
     familyTherapyScheduled: '2026-07-24, 3:00 PM',
     members: [
-      { name: 'David Choi', relationship: 'Father', phone: '(615) 555-0201', email: 'dchoi@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-17', notes: 'Highly engaged. Attending family therapy weekly. Initially struggled with patient\'s eating disorder diagnosis.' },
-      { name: 'Lydia Choi', relationship: 'Mother', phone: '(615) 555-0202', email: 'lchoi@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-17', notes: 'Empathetic. Working on not enabling through over-accommodation of food restrictions.' },
+      { name: 'David Choi', relationship: 'Father', phone: '(301) 555-0201', email: 'dchoi@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-17', notes: 'Highly engaged. Attending family therapy weekly. Initially struggled with patient\'s eating disorder diagnosis.' },
+      { name: 'Lydia Choi', relationship: 'Mother', phone: '(301) 555-0202', email: 'lchoi@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-17', notes: 'Empathetic. Working on not enabling through over-accommodation of food restrictions.' },
     ],
     log: [
       { date: '2026-07-17', type: 'Family Session', with: 'David & Lydia Choi (parents)', conductedBy: 'David Odom, LCADC', summary: 'Excellent session. Parents demonstrating healthy boundary-setting. Patient very emotional but grateful. Family dynamics shifting positively.', duration: '60 min' },
@@ -74,7 +74,7 @@ const FAMILY_DATA: FamilyRecord[] = [
     cfr42Consent: false,
     familyTherapySessions: 0,
     members: [
-      { name: 'Maria Thornton', relationship: 'Mother', phone: '(615) 555-0301', consentOnFile: false, hipaaAuth: false, lastContact: '2026-07-07', notes: 'Patient requested no contact with family. 42 CFR Part 2 consent not signed. No disclosures made.' },
+      { name: 'Maria Thornton', relationship: 'Mother', phone: '(301) 555-0301', consentOnFile: false, hipaaAuth: false, lastContact: '2026-07-07', notes: 'Patient requested no contact with family. 42 CFR Part 2 consent not signed. No disclosures made.' },
     ],
     log: [
       { date: '2026-07-07', type: 'Phone Call', with: 'Maria Thornton (mother)', conductedBy: 'Sarah Jenkins, LCPC', summary: 'Mother called inquiring about patient. Confirmed admission ONLY (per patient limited disclosure). No clinical information shared.', duration: '5 min' },
@@ -97,8 +97,8 @@ const FAMILY_DATA: FamilyRecord[] = [
     familyTherapySessions: 1,
     familyTherapyScheduled: '2026-07-25, 3:00 PM',
     members: [
-      { name: 'Jessica Brooks', relationship: 'Mother', phone: '(615) 555-0191', email: 'jbrooks@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-15', notes: 'Veteran family member — has attended family support groups. Very supportive of MAT. Asks good questions.' },
-      { name: 'Cpl. Ryan Brooks', relationship: 'Brother (active duty)', phone: '(615) 555-0192', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-12', notes: 'Called from base. Emotionally supportive but limited availability due to deployment.' },
+      { name: 'Jessica Brooks', relationship: 'Mother', phone: '(301) 555-0191', email: 'jbrooks@email.com', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-15', notes: 'Veteran family member — has attended family support groups. Very supportive of MAT. Asks good questions.' },
+      { name: 'Cpl. Ryan Brooks', relationship: 'Brother (active duty)', phone: '(301) 555-0192', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-12', notes: 'Called from base. Emotionally supportive but limited availability due to deployment.' },
     ],
     log: [
       { date: '2026-07-15', type: 'Phone Call', with: 'Jessica Brooks (mother)', conductedBy: 'Maria Gonzales, LCADC', summary: 'Patient\'s disclosure of overdose history in group discussed. Mother aware of history. Discussed family naloxone education. Mother very engaged.', duration: '20 min' },
@@ -111,7 +111,7 @@ const FAMILY_DATA: FamilyRecord[] = [
     cfr42Consent: true,
     familyTherapySessions: 0,
     members: [
-      { name: 'Rachel Park', relationship: 'Sister', phone: '(615) 555-0201', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-17', notes: 'Sister is primary support. DV protective order in place from ex-partner. NO contact to be facilitated with ex-partner under any circumstances.' },
+      { name: 'Rachel Park', relationship: 'Sister', phone: '(301) 555-0201', consentOnFile: true, hipaaAuth: true, lastContact: '2026-07-17', notes: 'Sister is primary support. DV protective order in place from ex-partner. NO contact to be facilitated with ex-partner under any circumstances.' },
     ],
     log: [
       { date: '2026-07-17', type: 'Phone Call', with: 'Rachel Park (sister)', conductedBy: 'Sarah Jenkins, LCPC', summary: 'Confirmed patient\'s new address and safety plan. Sister confirmed willingness to provide transitional support. DV safety protocols reviewed.', duration: '15 min' },

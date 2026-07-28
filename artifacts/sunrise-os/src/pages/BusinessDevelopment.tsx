@@ -34,21 +34,21 @@ interface OutreachActivity {
 }
 
 const CONTACTS: BDContact[] = [
-  { id: 'bd1', name: 'Dr. Michelle Park', organization: 'Vanderbilt University Medical Center', type: 'Hospital / ER', relationship: 'Strong', lastContact: '2026-07-10', nextFollowUp: '2026-07-25', referralsLTD: 34, referrals30d: 4, admissions30d: 3, owner: 'James S. Collins III', notes: 'Primary ER liaison. Monthly lunch meetings. Accepts our clinical brochures at triage desk. Strong referral relationship.' },
-  { id: 'bd2', name: 'Judge Harold Wallace', organization: 'Davidson County Drug Court', type: 'Drug Court', relationship: 'Strong', lastContact: '2026-07-08', nextFollowUp: '2026-07-30', referralsLTD: 22, referrals30d: 2, admissions30d: 2, owner: 'James S. Collins III', notes: 'Court-mandated referrals. Requires Level 3.7 placement documentation. Biweekly status reports required.' },
-  { id: 'bd3', name: 'Dr. Lisa Nguyen', organization: 'Northside Family Practice', type: 'Primary Care', relationship: 'Developing', lastContact: '2026-07-22', nextFollowUp: '2026-07-29', referralsLTD: 8, referrals30d: 1, admissions30d: 1, owner: 'James S. Collins III', notes: 'SBIRT-trained. CE presentation delivered 7/22 — 8 providers attended. Follow-up with office manager to distribute referral packets.' },
+  { id: 'bd1', name: 'Dr. Michelle Park', organization: 'MedStar Georgetown University Hospital', type: 'Hospital / ER', relationship: 'Strong', lastContact: '2026-07-10', nextFollowUp: '2026-07-25', referralsLTD: 34, referrals30d: 4, admissions30d: 3, owner: 'James S. Collins III', notes: 'Primary ER liaison. Monthly lunch meetings. Accepts our clinical brochures at triage desk. CRISP-connected for warm handoffs. Strong referral relationship.' },
+  { id: 'bd2', name: 'Judge Patricia Hollins', organization: 'Montgomery County Drug Diversion Court', type: 'Drug Court', relationship: 'Strong', lastContact: '2026-07-08', nextFollowUp: '2026-07-30', referralsLTD: 22, referrals30d: 2, admissions30d: 2, owner: 'James S. Collins III', notes: 'Court-mandated referrals under Montgomery County District Court Drug Diversion program. Requires Level 3.7 placement documentation and biweekly progress reports to probation officer.' },
+  { id: 'bd3', name: 'Dr. Lisa Nguyen', organization: 'Shady Grove Medical Center — Family Medicine', type: 'Primary Care', relationship: 'Developing', lastContact: '2026-07-22', nextFollowUp: '2026-07-29', referralsLTD: 8, referrals30d: 1, admissions30d: 1, owner: 'James S. Collins III', notes: 'SBIRT-trained. CE presentation delivered 7/22 — 8 providers attended. Follow-up with office manager to distribute referral packets. In network with CareFirst and UHC Community Plan.' },
   { id: 'bd4', name: 'Mark Sullivan', organization: 'Johns Hopkins Health System EAP', type: 'Corporate EAP', relationship: 'Strong', lastContact: '2026-06-28', nextFollowUp: '2026-07-25', referralsLTD: 15, referrals30d: 2, admissions30d: 1, owner: 'James S. Collins III', notes: 'Manages EAP for 3,200 hospital employees. Preferred provider status. Quarterly account review scheduled for Aug.' },
   { id: 'bd5', name: 'Pastor James Reynolds', organization: 'Grace Community Church', type: 'Faith Community', relationship: 'Developing', lastContact: '2026-06-20', nextFollowUp: '2026-07-23', referralsLTD: 5, referrals30d: 0, admissions30d: 0, owner: 'James S. Collins III', notes: 'Hosts AA/NA meetings. Congregation of 800. Recovery ministry leader is a Sunrise alumnus — strong advocate.' },
-  { id: 'bd6', name: 'Dr. Anthony Reed', organization: 'Midtown Psychiatry', type: 'Private Practice', relationship: 'Developing', lastContact: '2026-07-05', nextFollowUp: '2026-07-22', referralsLTD: 9, referrals30d: 1, admissions30d: 1, owner: 'James S. Collins III', notes: 'Psychiatrist with large dual-diagnosis caseload. Sends overflow residential cases. Building trust.' },
+  { id: 'bd6', name: 'Dr. Anthony Reed', organization: 'Behavioral Health Associates of Bethesda', type: 'Private Practice', relationship: 'Developing', lastContact: '2026-07-05', nextFollowUp: '2026-07-22', referralsLTD: 9, referrals30d: 1, admissions30d: 1, owner: 'James S. Collins III', notes: 'Psychiatrist with large dual-diagnosis caseload in Montgomery County. Sends overflow residential cases. Building trust.' },
   { id: 'bd7', name: 'Amanda Torres', organization: 'Serenity Sober Living', type: 'Sober Living', relationship: 'Strong', lastContact: '2026-07-12', nextFollowUp: '2026-07-26', referralsLTD: 12, referrals30d: 3, admissions30d: 2, owner: 'James S. Collins III', notes: 'Bidirectional relationship — we refer to their sober living, they send back to us for PHP/IOP. 12 beds reserved for Sunrise graduates.' },
   { id: 'bd8', name: 'Kevin Morris', organization: 'Rockville Detox Center', type: 'Detox', relationship: 'Cold', lastContact: '2026-05-15', nextFollowUp: '2026-07-28', referralsLTD: 3, referrals30d: 0, admissions30d: 0, owner: 'James S. Collins III', notes: 'Used to be a strong referral source. New medical director. Relationship needs re-warming. Lunch visit scheduled 7/28.' },
 ];
 
 const ACTIVITIES: OutreachActivity[] = [
-  { id: 'oa1', date: '2026-07-17', type: 'CE Presentation', contact: 'Dr. Lisa Nguyen + Staff', organization: 'Northside Family Practice', outcome: '8 providers attended. Presented SBIRT and warm handoff protocol. 3 requested our referral packet. Follow-up with office manager.', followUpDate: '2026-07-22' },
-  { id: 'oa2', date: '2026-07-15', type: 'Site Visit', contact: 'Vanderbilt ER Team', organization: 'Vanderbilt University Medical Center', outcome: 'Quarterly relationship visit. Updated resource packets. Met new social work supervisor. Invited to present at grand rounds in September.', followUpDate: '2026-07-25' },
+  { id: 'oa1', date: '2026-07-17', type: 'CE Presentation', contact: 'Dr. Lisa Nguyen + Staff', organization: 'Shady Grove Medical Center — Family Medicine', outcome: '8 providers attended. Presented SBIRT and warm handoff protocol. 3 requested our referral packet. Follow-up with office manager.', followUpDate: '2026-07-22' },
+  { id: 'oa2', date: '2026-07-15', type: 'Site Visit', contact: 'Dr. Michelle Park + Social Work Team', organization: 'MedStar Georgetown University Hospital', outcome: 'Quarterly relationship visit. Updated resource packets. Met new social work supervisor. Invited to present at grand rounds in September. Confirmed CRISP connection is active.', followUpDate: '2026-07-25' },
   { id: 'oa3', date: '2026-07-10', type: 'Lunch & Learn', contact: 'Mark Sullivan + EAP Staff', organization: 'Johns Hopkins Health System EAP', outcome: 'Reviewed our clinical outcomes data. They were impressed by 6-month sobriety rates. Preferred provider contract renewal on track.' },
-  { id: 'oa4', date: '2026-07-08', type: 'Phone Call', contact: 'Judge Harold Wallace', organization: 'Davidson County Drug Court', outcome: 'Discussed case coordination protocol. Judge agreed to refer Andre Simmons next week. Agreed to biweekly status report format.', followUpDate: '2026-07-30' },
+  { id: 'oa4', date: '2026-07-08', type: 'Phone Call', contact: 'Judge Patricia Hollins', organization: 'Montgomery County Drug Diversion Court', outcome: 'Discussed case coordination protocol. Judge agreed to refer next eligible defendant. Confirmed biweekly status report format to probation officer.', followUpDate: '2026-07-30' },
   { id: 'oa5', date: '2026-07-02', type: 'Conference', contact: 'Multiple', organization: 'Maryland Association of Addiction Professionals', outcome: 'Presented at MAAP annual conference. Distributed 200 brochures. Connected with 4 new potential referral sources. 2 promising leads for follow-up.' },
 ];
 
@@ -430,9 +430,9 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
               <div className="mt-4 pt-3 border-t border-border">
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">Upcoming BD Events</div>
                 {[
-                  { date: '7/20', event: 'Lunch w/ Rockville Detox — Kevin Morris', type: 'Re-engagement' },
-                  { date: '7/22', event: 'CE Presentation at Northside Family Practice', type: 'Education' },
-                  { date: '7/25', event: 'Quarterly call — Vanderbilt ER', type: 'Relationship' },
+                  { date: '7/28', event: 'Lunch w/ Rockville Detox — Kevin Morris', type: 'Re-engagement' },
+                  { date: '7/29', event: 'CE Presentation at Shady Grove Medical Center', type: 'Education' },
+                  { date: '7/30', event: 'Quarterly site visit — MedStar Georgetown ER', type: 'Relationship' },
                   { date: '8/05', event: 'MAAP Networking Breakfast', type: 'Conference' },
                 ].map(e => (
                   <div key={e.date} className="flex items-start gap-3 py-1.5 border-b border-border last:border-0">
@@ -562,7 +562,7 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
 
       {activeTab === 'Market Map' && (
         <div className="space-y-5">
-          <div className="text-sm text-slate">DC-metro competitive landscape and referral ecosystem — active referral partners, market share indicators, and growth opportunity areas.</div>
+          <div className="text-sm text-slate">Maryland / DC-metro competitive landscape and referral ecosystem — active referral partners, market share indicators, and growth opportunity areas. Coverage area: Montgomery, Prince George's, Frederick, and Howard counties plus DC.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
               { label: 'Active Referral Partners', value: 34, color: 'text-navy', sub: 'Within 50-mile radius' },
@@ -609,11 +609,11 @@ export function BusinessDevelopment({ navigate, readOnly }: Props) {
                 <h3 className="font-semibold text-navy text-sm mb-3">Top Growth Opportunities — Unworked</h3>
                 <div className="space-y-2 text-xs">
                   {[
-                    { org: 'Vanderbilt Univ. Medical Center — PACU', type: 'Hospital', potential: 'High', reason: 'High OUD/AUD post-op volume; no SUD referral pathway to Sunrise yet' },
-                    { org: 'Maryland Oncology Hematology', type: 'Specialty', potential: 'High', reason: 'Opioid-dependent cancer patient pipeline; no current SUD partner' },
-                    { org: 'PEPCO EAP', type: 'EAP', potential: 'Medium', reason: '2,400+ employees; current EAP partner lacks residential capacity' },
-                    { org: 'Montgomery County Circuit Court Drug Diversion', type: 'Drug Court', potential: 'Medium', reason: 'DUI / drug diversion track; Sunrise not yet on approved provider list' },
-                    { org: 'St. Thomas Health — ED Bridge Program', type: 'Hospital', potential: 'High', reason: 'SBIRT program active; looking for residential SUD step-down partner' },
+                    { org: 'Johns Hopkins Bayview Medical Center — PACU', type: 'Hospital', potential: 'High', reason: 'High OUD/AUD post-op volume; no warm handoff SUD pathway to Sunrise yet. SBIRT-active facility.' },
+                    { org: 'Maryland Oncology Hematology', type: 'Specialty', potential: 'High', reason: 'Opioid-dependent cancer patient pipeline; no current SUD residential partner in network' },
+                    { org: 'PEPCO / Exelon EAP', type: 'EAP', potential: 'Medium', reason: '2,400+ DC-metro employees; current EAP partner lacks residential capacity' },
+                    { org: 'Prince George\'s County Drug Court', type: 'Drug Court', potential: 'Medium', reason: 'DUI / drug diversion track; Sunrise not yet on approved provider list' },
+                    { org: 'Holy Cross Hospital Germantown — ED Bridge', type: 'Hospital', potential: 'High', reason: 'SBIRT program active; looking for residential SUD step-down partner in Montgomery County' },
                   ].map(o => (
                     <div key={o.org} className="border border-border rounded p-2.5">
                       <div className="flex items-start justify-between mb-0.5">

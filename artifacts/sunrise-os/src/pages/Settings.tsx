@@ -439,7 +439,7 @@ export function Settings({ navigate, readOnly }: Props) {
               {
                 category: 'Prescription & Controlled Substance',
                 items: [
-                  { name: 'Maryland PDMP (MDH) + Delaware PMP (PMPInterConnect)', status: 'Active', desc: 'Real-time PDMP check for MD and DE prescribers. Mandatory before prescribing CII–CV controlled substances in either state.', color: 'bg-green-100 text-green-700' },
+                  { name: 'Maryland PDMP (MDH — CRISP)', status: 'Active', desc: 'Real-time PDMP check for Maryland prescribers via CRISP. Mandatory before prescribing CII–CV controlled substances per COMAR 10.01.18.', color: 'bg-green-100 text-green-700' },
                   { name: 'Surescripts (eRx)', status: 'Active', desc: 'Electronic prescribing for all medications including controlled substances.', color: 'bg-green-100 text-green-700' },
                   { name: 'DEA CSOS (Electronic Orders)', status: 'Active', desc: 'DEA-compliant electronic ordering for Schedule II controlled substances.', color: 'bg-green-100 text-green-700' },
                 ]
@@ -457,7 +457,7 @@ export function Settings({ navigate, readOnly }: Props) {
                 items: [
                   { name: 'Waystar / ZirMed (Clearinghouse)', status: 'Active', desc: '837/835 EDI claims submission and ERA posting.', color: 'bg-green-100 text-green-700' },
                   { name: 'Availity Real-time Eligibility', status: 'Active', desc: '270/271 real-time eligibility and benefits verification.', color: 'bg-green-100 text-green-700' },
-                  { name: 'MD HealthChoice (CareFirst, Optum, UHC, Jai Medical) + DE Diamond State Health Plan (Highmark)', status: 'Active', desc: 'Direct payer portal submission for MD HealthChoice MCOs and DE Diamond State Health Plan. Prior auth required for all SUD levels of care.', color: 'bg-green-100 text-green-700' },
+                  { name: 'MD HealthChoice MCOs (CareFirst, Optum/UHC, Jai Medical, Amerigroup) + Carelon ProviderConnect (BH ASO)', status: 'Active', desc: 'Direct payer portal submission for MD HealthChoice MCOs. All BH prior auth routes through Carelon ProviderConnect. Prior auth required per COMAR 10.09.80 for all SUD levels of care.', color: 'bg-green-100 text-green-700' },
                 ]
               },
               {

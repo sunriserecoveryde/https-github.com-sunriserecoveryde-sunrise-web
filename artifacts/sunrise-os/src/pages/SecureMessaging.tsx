@@ -63,7 +63,7 @@ const MESSAGES: Message[] = [
     to: 'Maria Gonzalez, CPA', toRole: 'Staff Accountant',
     patientId: 'p5',
     subject: 'Tyler Morrison — DUI court letter',
-    body: 'Hi Maria — Tyler Morrison\'s court date is 7/22. Can you generate the compliance letter for the Davidson County Drug Court? Needs: admission date, diagnosis (AUD, Moderate), treatment compliance (excellent), UA results (negative x4). I\'ll co-sign.',
+    body: 'Hi Maria — Tyler Morrison\'s court date is 7/22. Can you generate the compliance letter for the Montgomery County Drug Diversion Court? Needs: admission date, diagnosis (AUD, Moderate), treatment compliance (excellent), UA results (negative x4). I\'ll co-sign.',
     timestamp: '2026-07-18 4:15 PM', status: 'Read',
     replies: [
       {

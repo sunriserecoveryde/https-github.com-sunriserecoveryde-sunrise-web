@@ -33,7 +33,7 @@ interface Authorization {
 
 const AUTHS: Authorization[] = [
   {
-    id: 'AUTH-001', patientId: 'p1', payor: 'BlueCross BlueShield', memberId: 'BCB-883921',
+    id: 'AUTH-001', patientId: 'p1', payor: 'CareFirst BlueCross BlueShield', memberId: 'CFB-883921',
     authNumber: 'RC2026-0741', levelOfCare: 'Residential', approvedUnits: 28, usedUnits: 12,
     unitType: 'days', startDate: '2026-07-07', endDate: '2026-08-04', status: 'Approved',
     caseManager: 'Lisa Hendrix', caseManagerPhone: '(800) 555-2100 x4412',
@@ -69,25 +69,25 @@ const AUTHS: Authorization[] = [
     asamJustification: 'ASAM D4:3 (motivational enhancement ongoing), D5:2 — IOP appropriate. Community support and employment argue against higher level of care.',
   },
   {
-    id: 'AUTH-005', patientId: 'p7', payor: 'Humana', memberId: 'HUM-71209',
+    id: 'AUTH-005', patientId: 'p7', payor: 'Kaiser Permanente Mid-Atlantic', memberId: 'KP-71209',
     authNumber: 'PHP2026-0501', levelOfCare: 'PHP', approvedUnits: 10, usedUnits: 6,
     unitType: 'days', startDate: '2026-07-13', endDate: '2026-07-23', status: 'Approved',
-    caseManager: 'Steve Abrams', caseManagerPhone: '(800) 555-6800',
+    caseManager: 'Steve Abrams', caseManagerPhone: '(800) 777-7902',
     nextReviewDate: '2026-07-23',
     clinicalJustification: 'Step-up from IOP after relapse event on 7/10. Disulfiram initiated. Daily medical oversight required for medication compliance monitoring. Motivational interviewing intensive needed.',
     asamJustification: 'ASAM D5:3 (continued relapse risk), D4:2 (motivational fluctuation) — PHP warranted as step-up level following relapse.',
   },
   {
-    id: 'AUTH-006', patientId: 'p9', payor: 'Medicaid (Maryland Medicaid)', memberId: 'TNC-33018',
+    id: 'AUTH-006', patientId: 'p9', payor: 'Maryland Medicaid / Carelon BH', memberId: 'MMA-83914',
     authNumber: 'RC2026-0712', levelOfCare: 'Residential', approvedUnits: 14, usedUnits: 8,
     unitType: 'days', startDate: '2026-07-11', endDate: '2026-07-25', status: 'Approved',
-    caseManager: 'Greg Simmons', caseManagerPhone: '(615) 555-9000',
+    caseManager: 'Greg Simmons', caseManagerPhone: '(800) 888-1970',
     nextReviewDate: '2026-07-23',
     clinicalJustification: 'Substance-induced psychosis requiring 30-minute safety checks. Active psychiatric monitoring by Dr. Hughes. Daily functioning severely impaired. Community supports absent — recent homelessness.',
     asamJustification: 'ASAM D3:4 (severe psychiatric instability), D6:4 (homeless, no recovery environment) — Residential medically necessary.',
   },
   {
-    id: 'AUTH-007', patientId: 'p11', payor: 'BlueCross BlueShield', memberId: 'BCB-65890',
+    id: 'AUTH-007', patientId: 'p11', payor: 'CareFirst BlueCross BlueShield', memberId: 'CFB-65890',
     authNumber: 'RC2026-0699', levelOfCare: 'Residential', approvedUnits: 21, usedUnits: 11,
     unitType: 'days', startDate: '2026-07-08', endDate: '2026-07-29', status: 'Approved',
     caseManager: 'Lisa Hendrix', caseManagerPhone: '(800) 555-2100 x4412',
@@ -104,10 +104,10 @@ const AUTHS: Authorization[] = [
     asamJustification: 'ASAM D3:2 (stable psychiatric), D5:3 (court motivation high relapse risk without structure) — IOP appropriate.',
   },
   {
-    id: 'AUTH-009', patientId: 'p18', payor: 'Medicare Part A', memberId: 'MCA-39018',
+    id: 'AUTH-009', patientId: 'p18', payor: 'Medicare (Novitas J-L MAC)', memberId: 'MCA-39018',
     authNumber: 'RC2026-0680', levelOfCare: 'Residential', approvedUnits: 30, usedUnits: 19,
     unitType: 'days', startDate: '2026-06-30', endDate: '2026-07-30', status: 'Pending',
-    caseManager: 'Theresa Holt', caseManagerPhone: '(800) 555-7700',
+    caseManager: 'Theresa Holt', caseManagerPhone: '(855) 252-8782',
     nextReviewDate: '2026-07-24',
     denialReason: 'Concurrent review request submitted 7/21. Awaiting Medicare response. Extension needed — patient has COPD and fall risk requiring continued medical monitoring.',
     clinicalJustification: 'Continued medical monitoring required for COPD, fall risk, and polypharmacy management. Geriatric patient with complex medical/substance use presentation. PT initiated post-fall. Family not available for immediate discharge support.',
@@ -123,10 +123,10 @@ const AUTHS: Authorization[] = [
     asamJustification: 'ASAM D3:2, D5:2 — IOP level appropriate.',
   },
   {
-    id: 'AUTH-011', patientId: 'p17', payor: 'Medicaid (Maryland Medicaid)', memberId: 'TNC-27331',
+    id: 'AUTH-011', patientId: 'p17', payor: 'Maryland Medicaid / Carelon BH', memberId: 'MMA-71204',
     authNumber: 'RC2026-0718', levelOfCare: 'Residential', approvedUnits: 14, usedUnits: 7,
     unitType: 'days', startDate: '2026-07-12', endDate: '2026-07-26', status: 'Approved',
-    caseManager: 'Greg Simmons', caseManagerPhone: '(615) 555-9000',
+    caseManager: 'Greg Simmons', caseManagerPhone: '(800) 888-1970',
     nextReviewDate: '2026-07-22',
     clinicalJustification: 'Combat veteran, active PTSD, day 7 Suboxone induction. AMA risk HIGH. Trauma-informed residential milieu essential for engagement. VA referral coordination underway.',
     asamJustification: 'ASAM D3:4 (severe PTSD), D4:2 (ambivalent, AMA ideation), D5:3 — Residential warranted.',
@@ -358,13 +358,13 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
             <h3 className="font-semibold text-navy text-sm mb-2">Payor Mix — Authorized Patients</h3>
             <div className="space-y-2.5">
               {[
-                { payor: 'BlueCross BlueShield', count: 3, color: '#3B9ED4' },
-                { payor: 'Medicaid (Maryland Medicaid)', count: 2, color: '#E8761A' },
+                { payor: 'CareFirst BCBS', count: 3, color: '#3B9ED4' },
+                { payor: 'Maryland Medicaid / Carelon BH', count: 2, color: '#E8761A' },
                 { payor: 'Cigna', count: 2, color: '#2ECC71' },
-                { payor: 'Aetna', count: 1, color: '#9B59B6' },
-                { payor: 'United Healthcare', count: 1, color: '#F39C12' },
-                { payor: 'Humana', count: 1, color: '#1ABC9C' },
-                { payor: 'Medicare Part A', count: 1, color: '#95a5a6' },
+                { payor: 'Aetna Better Health MD', count: 1, color: '#9B59B6' },
+                { payor: 'UHC Community Plan MD', count: 1, color: '#F39C12' },
+                { payor: 'Kaiser Permanente Mid-Atlantic', count: 1, color: '#1ABC9C' },
+                { payor: 'Medicare (Novitas J-L)', count: 1, color: '#95a5a6' },
                 { payor: 'Self-Pay', count: 1, color: '#E74C3C' },
               ].map(p => (
                 <div key={p.payor}>
@@ -504,7 +504,7 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
               <br />
               <div>We request continued authorization of {letterModal.approvedUnits - letterModal.usedUnits} additional {letterModal.unitType} of {letterModal.levelOfCare} treatment. Early termination of services at this time would place this patient at significant risk for relapse, medical deterioration, and potential hospitalization.</div>
               <br />
-              <div>Please contact our Utilization Review Coordinator at (615) 555-0100 x201 with any questions or to discuss this case.</div>
+              <div>Please contact our Utilization Review Coordinator at (301) 555-0100 x201 with any questions or to discuss this case.</div>
               <br />
               <div>Respectfully,</div>
               <div>Dr. Robert Chen, MD — Medical Director</div>
@@ -542,13 +542,13 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
             <div className="space-y-3 text-xs">
               {[
                 {
-                  patient: 'Marcus Webb', payer: 'Cigna Behavioral', denied: 'Residential day 15+', level: '2nd Level',
+                  patient: 'Marcus Webb', payer: 'Cigna Behavioral Health', denied: 'Residential day 15+', level: '2nd Level',
                   reason: 'Medical necessity for continued residential — peer reviewer disagreed on ASAM D3 severity.',
                   action: 'Physician peer-to-peer call scheduled 07/21. Clinical notes and Columbia Suicide Severity forwarded.',
                   filed: '07/12', due: '07/26', status: 'In Review', sColor: 'border-blue-200 bg-blue-50'
                 },
                 {
-                  patient: 'Samantha Choi', payer: 'UHC / Optum', denied: 'PHP x5 days', level: '1st Level',
+                  patient: 'Samantha Choi', payer: 'UHC Community Plan MD', denied: 'PHP x5 days', level: '1st Level',
                   reason: 'Step-down from residential deemed premature; payer requested additional stabilization justification.',
                   action: 'Discharge summary and treatment plan submitted 07/16. Awaiting UM review.',
                   filed: '07/15', due: '07/29', status: 'Awaiting Response', sColor: 'border-amber-200 bg-amber-50'
@@ -560,9 +560,9 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
                   filed: '07/17', due: '07/31', status: 'Strong Position', sColor: 'border-green-200 bg-green-50'
                 },
                 {
-                  patient: 'Patricia Holloway', payer: 'CareFirst BCBS', denied: 'Residential day 20+', level: '2nd Level',
+                  patient: 'Patricia Holloway', payer: 'CareFirst BlueCross BlueShield', denied: 'Residential day 20+', level: '2nd Level',
                   reason: 'Payer position: patient no longer meets ASAM Residential criteria. Clinical team disagrees.',
-                  action: 'External IRO review requested 07/18. IRO decision binding under Maryland law.',
+                  action: 'External IRO review requested 07/18. IRO decision binding under Maryland Insurance Administration law (Md. Code, Ins. § 15-10B).',
                   filed: '07/10', due: '07/24', status: 'IRO Requested', sColor: 'border-purple-200 bg-purple-50'
                 },
               ].map(a => (
@@ -594,7 +594,10 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
         <div className="space-y-5">
           <div className="text-sm text-slate">Payer contact directory — UM/authorizations lines, appeals contacts, and key policy reference numbers for top payers by volume.</div>
           <div className="card">
-            <h3 className="font-semibold text-navy text-sm mb-3">Payer Contact Directory — Active Contracts</h3>
+            <div className="mb-3">
+              <h3 className="font-semibold text-navy text-sm">Payer Contact Directory — Active Contracts</h3>
+              <p className="text-xs text-slate mt-0.5">Maryland HealthChoice MCOs are carved out for behavioral health. All Maryland Medicaid BH authorizations route through <span className="font-semibold text-navy">Carelon Behavioral Health</span> (ASO), regardless of which MCO the member is enrolled in. Submit all BH prior auths and UR to Carelon via ProviderConnect.</p>
+            </div>
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-gray-50 text-slate">
@@ -605,14 +608,14 @@ export function InsuranceAuthorization({ navigate, readOnly }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { payer: 'CareFirst BlueCross BlueShield', auth: '800-555-0111', appeals: '800-555-0112', fax: '800-555-0113', portal: 'provider.bcbst.com', notes: 'Auth required for all residential; PHP/IOP req initial auth + UR every 7d' },
-                  { payer: 'Aetna', auth: '800-555-0221', appeals: '800-555-0222', fax: '800-555-0223', portal: 'provider.aetna.com', notes: 'Use Naviguard for UR; residential: 72h prior auth window' },
-                  { payer: 'Cigna Behavioral Health', auth: '800-555-0331', appeals: '800-555-0332', fax: '800-555-0333', portal: 'cignaforhcp.cigna.com', notes: 'ASAM LOC justification required; peer-to-peer available M–F 9–5 CT' },
-                  { payer: 'UnitedHealthcare/Optum', auth: '800-555-0441', appeals: '800-555-0442', fax: '800-555-0443', portal: 'uhcprovider.com', notes: 'Level-of-care auth via Optum portal; residential UR every 5 days' },
-                  { payer: 'Humana', auth: '800-555-0551', appeals: '800-555-0552', fax: '800-555-0553', portal: 'humanaone.com', notes: 'MAT does not require prior auth; residential requires ASAM criteria documentation' },
-                  { payer: 'Maryland Medicaid / Amerigroup', auth: '800-555-0661', appeals: '800-555-0662', fax: '800-555-0663', portal: 'amerigrouptn.com', notes: 'Medicaid — residential requires prior auth; IOP: 12 sessions then UR' },
-                  { payer: 'Maryland Medicaid / BlueCare', auth: '800-555-0771', appeals: '800-555-0772', fax: '800-555-0773', portal: 'bluecaretennessee.com', notes: 'Same ASAM criteria as commercial; peer-to-peer within 48h of denial' },
-                  { payer: 'Medicare (TrailBlazer)', auth: '800-555-0881', appeals: '800-555-0882', fax: '800-555-0883', portal: 'cgsmedicare.com', notes: 'No prior auth for detox; PHP/IOP: CERT documentation standards apply' },
+                  { payer: '⭐ Carelon Behavioral Health (MD Medicaid ASO)', auth: '800-888-1965', appeals: '800-888-1966', fax: '855-555-0100', portal: 'providerconnect.carelon.com', notes: 'ASO for all MD Medicaid BH. All HealthChoice BH prior auths and UR submitted here regardless of MCO. Use ProviderConnect portal. Residential UR every 7 days per COMAR 10.09.80.' },
+                  { payer: 'CareFirst BlueCross BlueShield (Commercial)', auth: '800-555-0111', appeals: '800-555-0112', fax: '800-555-0113', portal: 'carefirst.com/provider', notes: 'Commercial only. Auth required for residential/PHP; IOP: initial auth + UR every 7d. Peer-to-peer M–F 9–5 ET.' },
+                  { payer: 'Aetna Better Health of MD (HealthChoice MCO)', auth: '800-454-3730', appeals: '800-555-0222', fax: '800-555-0223', portal: 'aetnabetterhealth.com/maryland', notes: 'HealthChoice MCO — BH auth still routes to Carelon ASO. Medical auth through Aetna. NPI credentialing required.' },
+                  { payer: 'UHC Community Plan MD (HealthChoice MCO)', auth: '800-318-8804', appeals: '800-555-0442', fax: '800-555-0443', portal: 'uhccommunityplan.com/md', notes: 'HealthChoice MCO — all BH prior auths go to Carelon. Physical health auth via UHC Community Plan portal.' },
+                  { payer: 'Kaiser Permanente Mid-Atlantic', auth: '800-777-7902', appeals: '800-555-0552', fax: '800-555-0553', portal: 'kaiserpermanente.org/providers', notes: 'Auth required all LOCs. Residential UR every 5 days. Strong ASAM criteria documentation required. Peer-to-peer available M–F 9–5 ET.' },
+                  { payer: 'Amerigroup Maryland (Elevance / HealthChoice)', auth: '800-454-3730', appeals: '800-555-0662', fax: '800-555-0663', portal: 'maryland.amerigroupgov.com', notes: 'HealthChoice MCO — BH auth via Carelon ASO. Member services M–F 8–8 ET.' },
+                  { payer: 'CareFirst BlueChoice (HealthChoice MCO)', auth: '800-628-8543', appeals: '800-555-0772', fax: '800-555-0773', portal: 'carefirst.com/provider', notes: 'HealthChoice MCO — BH carved out to Carelon. Same clinical criteria as CareFirst commercial.' },
+                  { payer: 'Medicare (Novitas Solutions — J-L MAC)', auth: '855-252-8782', appeals: '855-252-8783', fax: '877-555-0883', portal: 'novitas-solutions.com', notes: 'Novitas Solutions is the Medicare Administrative Contractor (MAC) for MD/DE/PA. No prior auth for detox; PHP/IOP: CERT documentation standards apply. ET hours.' },
                 ].map(r => (
                   <tr key={r.payer} className="hover:bg-gray-50">
                     <td className="px-2 py-2 font-semibold text-navy">{r.payer}</td>

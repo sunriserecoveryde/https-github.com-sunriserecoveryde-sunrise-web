@@ -60,14 +60,14 @@ const ROI_REQUESTS: ROIRequest[] = [
   },
   {
     id: 'ROI-003', patientId: 'p9', type: 'Incoming',
-    recipientOrSender: 'Vanderbilt Psychiatric Hospital — Records Department',
+    recipientOrSender: 'Sheppard Pratt Health System — Records Department',
     recipientType: 'Other Treatment Facility',
     recordTypes: ['Psychiatric Records', 'Medical Records'],
     purposeOfDisclosure: 'Continuity of care — prior psychiatric hospitalization records needed for current treatment',
     requestDate: '2026-07-15', expiryDate: '2027-01-15', status: 'Pending',
     requires42CFR: false,
     auditLog: [
-      { date: '2026-07-15', action: 'ROI signed; faxed to Vanderbilt Records (301-322-XXXX)', user: 'Jessica Torres, RN' },
+      { date: '2026-07-15', action: 'ROI signed; faxed to Sheppard Pratt Records (410-938-XXXX)', user: 'Jessica Torres, RN' },
       { date: '2026-07-16', action: 'Fax delivery confirmed; records anticipated within 5 business days', user: 'Medical Records (Admin)' },
     ],
   },

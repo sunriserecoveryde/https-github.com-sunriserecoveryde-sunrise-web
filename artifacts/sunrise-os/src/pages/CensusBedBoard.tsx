@@ -702,7 +702,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  { name: 'M. Carver', dob: '09/14/1988', sud: 'OUD', loc: 'Residential', source: 'ER — Vanderbilt', auth: 'Approved', eta: '2:30 PM', bed: 'Rm 12A', notes: 'Suboxone candidate; needs MAT eval on arrival' },
+                  { name: 'M. Carver', dob: '09/14/1988', sud: 'OUD', loc: 'Residential', source: 'ER — MedStar Georgetown', auth: 'Approved', eta: '2:30 PM', bed: 'Rm 12A', notes: 'Suboxone candidate; needs MAT eval on arrival' },
                   { name: 'T. Nguyen', dob: '03/22/1975', sud: 'AUD', loc: 'Detox', source: 'Self / Family', auth: 'Pending', eta: '4:00 PM', bed: '—', notes: 'CIWA risk — awaiting Blue Cross auth' },
                   { name: 'S. Okafor', dob: '07/01/1993', sud: 'Meth + AUD', loc: 'Residential', source: 'Probation', auth: 'Approved', eta: '3:15 PM', bed: 'Rm 7B', notes: 'Drug court Track B; compliance letter required on admit' },
                   { name: 'R. Delgado', dob: '11/30/1981', sud: 'OUD', loc: 'PHP', source: 'Step-down — Bethesda MD', auth: 'Approved', eta: '5:00 PM', bed: 'PHP Unit', notes: 'Transferring from residential; Suboxone 16mg continued' },
@@ -761,7 +761,7 @@ export function CensusBedBoard({ navigate }: { navigate: (s: Screen, id?: string
                   { name: 'K. Williams', from: 'PHP', to: 'Residential', dir: 'Step-Up', reason: 'Positive UA + missed 3 groups — LOC escalation', auth: 'Approved', date: 'Today', recv: 'Sunrise Residential', status: 'Pending Bed' },
                   { name: 'A. Santos', from: 'Detox', to: 'Residential', dir: 'Step-Down', reason: 'Medical stability achieved; COWS < 8', auth: 'Approved', date: 'Yesterday', recv: 'Sunrise Residential', status: 'Completed' },
                   { name: 'P. Thompson', from: 'Residential', to: 'IOP', dir: 'Step-Down', reason: '30-day completion; housing secured', auth: 'Pending', date: 'Aug 1', recv: 'TBD — awaiting auth', status: 'Planning' },
-                  { name: 'M. Reyes', from: 'Residential', to: 'External Detox', dir: 'Transfer Out', reason: 'Medical need beyond scope — seizure risk', auth: 'Approved', date: 'Jul 17', recv: 'Vanderbilt Medical Center', status: 'Completed' },
+                  { name: 'M. Reyes', from: 'Residential', to: 'External Detox', dir: 'Transfer Out', reason: 'Medical need beyond scope — seizure risk', auth: 'Approved', date: 'Jul 17', recv: 'Holy Cross Hospital Germantown', status: 'Completed' },
                 ].map(r => (
                   <tr key={r.name} className="hover:bg-gray-50">
                     <td className="px-3 py-2 font-semibold text-navy">{r.name}</td>

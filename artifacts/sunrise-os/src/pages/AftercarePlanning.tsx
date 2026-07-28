@@ -60,13 +60,13 @@ const AFTERCARE_DATA: AftercareRecord[] = [
       { type: '90-Day', scheduledDate: '2026-11-01' },
       { type: '6-Month', scheduledDate: '2027-02-01' },
     ],
-    recoveryHousing: { name: 'Serenity House Rockville', address: '4201 Nolensville Pike, Rockville, MD', phone: '(615) 555-0211', type: 'Sober Living (Men)', beds: 12, waitlist: false },
+    recoveryHousing: { name: 'Serenity House Rockville', address: '4201 Veirs Mill Rd, Rockville, MD 20853', phone: '(301) 555-0211', type: 'Sober Living (Men)', beds: 12, waitlist: false },
   },
   {
     patientId: 'p1',
     targetDischargeDate: '2026-08-04',
     safetyPlan: true, naloxoneKitGiven: false, alumniEnrolled: false,
-    aaNaveen: 'Green Hills NA — Tuesday 7PM, Franklin AA — Saturday 9AM',
+    aaNaveen: 'Bethesda NA — Tuesday 7PM, Rockville AA — Saturday 9AM',
     checklist: [
       { id: 'd1', category: 'Housing', task: 'Confirm return to family home (wife)', completed: true, notes: 'Wife confirmed 7/14 — safe to return.' },
       { id: 'd2', category: 'MAT', task: 'Suboxone prescription at community pharmacy', completed: false, dueBy: '2026-08-01', assignedTo: 'Dr. Robert Chen' },
@@ -89,7 +89,7 @@ const AFTERCARE_DATA: AftercareRecord[] = [
     patientId: 'p4',
     targetDischargeDate: '2026-07-24',
     dischargeType: 'Completed', safetyPlan: false, naloxoneKitGiven: false, alumniEnrolled: true,
-    aaNaveen: 'Brentwood AA — Sunday 10AM (home group)',
+    aaNaveen: 'Silver Spring AA — Sunday 10AM (home group)',
     checklist: [
       { id: 'e1', category: 'Housing', task: 'Confirm independent apartment (attorney arranged)', completed: true },
       { id: 'e2', category: 'MAT', task: 'Naltrexone oral continued — prescription at pharmacy', completed: true },
@@ -109,12 +109,12 @@ const AFTERCARE_DATA: AftercareRecord[] = [
 ];
 
 const RECOVERY_HOUSING_DIRECTORY = [
-  { name: 'Serenity House Rockville', address: '4201 Nolensville Pike', phone: '(615) 555-0211', type: 'Men\'s Sober Living', beds: 12, waitlist: false, rating: 4.5, cost: '$600/mo', affiliation: 'Oxford House affiliated' },
-  { name: 'New Hope Women\'s Recovery', address: '714 W. Trinity Lane', phone: '(615) 555-0334', type: 'Women\'s Sober Living', beds: 8, waitlist: true, rating: 4.8, cost: '$550/mo', affiliation: 'NARR Level 3' },
-  { name: 'Three Rivers Sober Living (Men)', address: '2200 Lebanon Pike, Donelson', phone: '(615) 555-0412', type: 'Men\'s Sober Living', beds: 16, waitlist: false, rating: 4.2, cost: '$700/mo', affiliation: 'Oxford House' },
-  { name: 'Harmony House (Co-ed)', address: '910 Fern Ave, Franklin', phone: '(615) 555-0561', type: 'Co-ed Transitional Housing', beds: 20, waitlist: false, rating: 4.0, cost: '$500/mo', affiliation: 'State-certified' },
-  { name: 'Cornerstone Recovery Homes', address: '1520 Charlotte Pike', phone: '(615) 555-0678', type: 'Men\'s Sober Living', beds: 10, waitlist: true, rating: 4.6, cost: '$650/mo', affiliation: 'CARF accredited' },
-  { name: 'New Dawn Women\'s Housing', address: '405 Woodmont Blvd', phone: '(615) 555-0782', type: 'Women\'s Sober Living + MAT friendly', beds: 14, waitlist: false, rating: 4.7, cost: '$580/mo', affiliation: 'SAMHSA-certified' },
+  { name: 'Serenity House Rockville', address: '4201 Veirs Mill Rd, Rockville, MD 20853', phone: '(301) 555-0211', type: 'Men\'s Sober Living', beds: 12, waitlist: false, rating: 4.5, cost: '$600/mo', affiliation: 'Oxford House affiliated' },
+  { name: 'New Hope Women\'s Recovery', address: '714 University Blvd W, Silver Spring, MD 20902', phone: '(301) 555-0334', type: 'Women\'s Sober Living', beds: 8, waitlist: true, rating: 4.8, cost: '$550/mo', affiliation: 'NARR Level 3' },
+  { name: 'Capital Recovery Homes (Men)', address: '2200 Randolph Rd, Wheaton, MD 20902', phone: '(301) 555-0412', type: 'Men\'s Sober Living', beds: 16, waitlist: false, rating: 4.2, cost: '$700/mo', affiliation: 'Oxford House' },
+  { name: 'Harmony House (Co-ed)', address: '910 Bonifant St, Silver Spring, MD 20910', phone: '(240) 555-0561', type: 'Co-ed Transitional Housing', beds: 20, waitlist: false, rating: 4.0, cost: '$500/mo', affiliation: 'State-certified' },
+  { name: 'Cornerstone Recovery Homes', address: '1520 East-West Hwy, Bethesda, MD 20814', phone: '(301) 555-0678', type: 'Men\'s Sober Living', beds: 10, waitlist: true, rating: 4.6, cost: '$650/mo', affiliation: 'CARF accredited' },
+  { name: 'New Dawn Women\'s Housing', address: '405 Hungerford Dr, Rockville, MD 20850', phone: '(301) 555-0782', type: 'Women\'s Sober Living + MAT friendly', beds: 14, waitlist: false, rating: 4.7, cost: '$580/mo', affiliation: 'SAMHSA-certified' },
 ];
 
 const CATEGORY_STYLE: Record<string, string> = {
@@ -536,7 +536,7 @@ export function AftercarePlanning({ navigate, readOnly }: Props) {
               <h3 className="font-semibold text-navy text-sm mb-3">Recent Alumni Milestones</h3>
               <div className="space-y-3">
                 {[
-                  { name: 'Kevin Ashford', milestone: '6 Months Sober', date: '2026-07-18', program: 'Residential alum', note: 'Employed at Vanderbilt. Attending AA 4x/week.' },
+                  { name: 'Kevin Ashford', milestone: '6 Months Sober', date: '2026-07-18', program: 'Residential alum', note: 'Employed at NIH / Frederick. Attending AA 4x/week.' },
                   { name: 'Monica Delgado', milestone: '90 Days Sober', date: '2026-07-15', program: 'PHP alum', note: 'Living with family. Outpatient therapy continuing.' },
                   { name: 'Stuart Fink', milestone: '1 Year Sober', date: '2026-07-10', program: 'IOP alum', note: 'Peer support volunteer at Sunrise. Leading alumni group.' },
                   { name: 'Jasmine Hayward', milestone: '30 Days (Re-entry)', date: '2026-07-05', program: 'Residential — readmit alum', note: 'Returned after relapse. Now 30 days clean in current admission.' },

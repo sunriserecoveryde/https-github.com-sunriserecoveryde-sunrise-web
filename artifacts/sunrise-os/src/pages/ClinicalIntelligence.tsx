@@ -327,7 +327,7 @@ export function ClinicalIntelligence({ navigate, readOnly }: Props) {
           {/* Evidence base footer */}
           <div className="card-sm flex items-center gap-3 text-xs text-slate">
             <Shield className="w-4 h-4 text-blue-400 flex-none" />
-            <span>Alert logic grounded in <strong>COMAR 10.47.03–10.47.05</strong> (Maryland BHA documentation &amp; staffing requirements), <strong>DSAMH Provider Manual §5</strong> (Delaware), <strong>SAMHSA TIP-63</strong>, <strong>ASAM LOCA Clinical Practice Guidelines</strong>, <strong>CARF CRS 3.L standards</strong>, <strong>MD BHA Provider Manual</strong>, and <strong>Columbia Suicide Severity Rating Scale (C-SSRS) / Columbia SPI</strong>.</span>
+            <span>Alert logic grounded in <strong>COMAR 10.47.03–10.47.05</strong> (Maryland BHA documentation &amp; staffing requirements), <strong>MD BHA Provider Manual</strong>, <strong>SAMHSA TIP-63</strong>, <strong>ASAM LOCA Clinical Practice Guidelines</strong>, <strong>CARF CRS 3.L standards</strong>, and <strong>Columbia Suicide Severity Rating Scale (C-SSRS) / Columbia SPI</strong>.</span>
           </div>
         </div>
       )}
@@ -355,7 +355,7 @@ export function ClinicalIntelligence({ navigate, readOnly }: Props) {
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl px-5 py-3 flex items-start gap-3">
             <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-none" />
             <div className="text-xs text-blue-900">
-              <strong>SBIRT</strong> (Screening, Brief Intervention, and Referral to Treatment) is federally recommended per SAMHSA TIP-61 and <strong>mandated for Maryland Medicaid-funded SUD programs under COMAR 10.63.09</strong> and for Delaware DSAMH-funded programs per DSAMH Provider Manual §7. All clients must be screened at admission and at clinically indicated intervals.
+              <strong>SBIRT</strong> (Screening, Brief Intervention, and Referral to Treatment) is federally recommended per SAMHSA TIP-61 and <strong>mandated for Maryland Medicaid-funded SUD programs under COMAR 10.63.09</strong>. All clients must be screened at admission and at clinically indicated intervals.
               Screening tools: <strong>AUDIT-C</strong> (alcohol, 0–12), <strong>DAST-10</strong> (drugs, 0–10), <strong>PC-PTSD-5</strong> (trauma, 0–5), and <strong>PHQ-9</strong> (depression, 0–27).
             </div>
           </div>
@@ -701,7 +701,7 @@ export function ClinicalIntelligence({ navigate, readOnly }: Props) {
               {[
                 { from:'Residential (3.7)', to:'PHP (2.5)', criteria:'Clinical stabilization achieved (ASAM Dim. 1–3) · No imminent withdrawal risk · Can safely manage in structured day program · Stable housing confirmed · ASAM LOC reassessment documented per COMAR 10.47.03.08B(3)' },
                 { from:'PHP (2.5)',          to:'IOP (2.1)', criteria:'Abstinent or MAT-stable · PHP goals substantially met · Housing and support network sufficient · No acute co-occurring psychiatric crisis · ASAM reassessment per COMAR 10.47.04 supporting step-down' },
-                { from:'IOP (2.1)',          to:'OP / Aftercare', criteria:'Treatment goals met per individualized plan · Recovery Capital Index ≥60 · Stable housing + employment/school · Active support system · ASAM reassessment per COMAR 10.47.05 / DSAMH Manual §5 supporting step-down · Aftercare referral confirmed' },
+                { from:'IOP (2.1)',          to:'OP / Aftercare', criteria:'Treatment goals met per individualized plan · Recovery Capital Index ≥60 · Stable housing + employment/school · Active support system · ASAM reassessment per COMAR 10.47.05 supporting step-down · Aftercare referral confirmed' },
               ].map(c => (
                 <div key={c.from} className="bg-gray-50 border border-border rounded-lg p-2.5">
                   <div className="font-bold text-navy flex items-center gap-1 mb-1">

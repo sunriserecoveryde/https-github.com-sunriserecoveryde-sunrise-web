@@ -99,7 +99,7 @@ Medications patient is NOT taking at discharge that were discussed:
   dischargePrecautions: `• OVERDOSE RISK: After residential treatment, tolerance is significantly reduced. If relapse occurs, DO NOT use the same amount as before treatment — risk of fatal overdose is HIGH.
 • Narcan kit NOT provided (no opioid use history) — family educated on alcohol-related overdose risk
 • Patient instructed to call 988 (Suicide & Crisis Lifeline) or go to nearest ED if SI returns
-• Patient to call Sunrise Alumni Line if struggling: (615) 555-0100 x HELP
+• Patient to call Sunrise Alumni Line if struggling: (301) 555-0100 x HELP
 • Emergency contacts: wife Emily (301-555-9211), sponsor David H. (301-555-7890), Dr. Chen on-call (pager 4421)
 • Return to ED or call 911 if: seizures, loss of consciousness, severe chest pain, confusion`,
 
@@ -398,7 +398,7 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
           {/* Letterhead */}
           <div className="text-center border-b border-gray-200 pb-6">
             <div className="text-2xl font-bold text-navy">Sunrise Recovery Center</div>
-            <div className="text-gray-500 text-sm mt-1">123 Sunrise Way, Rockville, MD 37201 · (615) 555-0100</div>
+            <div className="text-gray-500 text-sm mt-1">123 Sunrise Way, Rockville, MD 20850 · (301) 555-0100</div>
             <div className="text-lg font-bold mt-4 tracking-widest uppercase text-gray-700">Discharge Summary</div>
             <div className="text-xs text-gray-500 mt-1">CONFIDENTIAL — 42 CFR Part 2 Protected Information</div>
           </div>
@@ -502,9 +502,9 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
               <h3 className="font-semibold text-navy text-sm mb-3">Follow-Up Appointments Scheduled</h3>
               <div className="space-y-3">
                 {[
-                  { type: 'Outpatient Counseling', provider: 'Recovery Road Counseling Center', date: '2026-07-26', status: 'Confirmed', contact: '(615) 555-0198' },
-                  { type: 'Buprenorphine Prescriber', provider: 'Dr. Anita Shah, MD (OBOT Clinic)', date: '2026-07-23', status: 'Confirmed', contact: '(615) 555-0241' },
-                  { type: 'Primary Care', provider: 'Vanderbilt Medical Group — Dr. Parrish', date: '2026-08-05', status: 'Pending — awaiting callback', contact: '(615) 555-0112' },
+                  { type: 'Outpatient Counseling', provider: 'Recovery Road Counseling Center', date: '2026-07-26', status: 'Confirmed', contact: '(301) 555-0198' },
+                  { type: 'Buprenorphine Prescriber', provider: 'Dr. Anita Shah, MD (OBOT Clinic)', date: '2026-07-23', status: 'Confirmed', contact: '(301) 555-0241' },
+                  { type: 'Primary Care', provider: 'Shady Grove Medical Group — Dr. Parrish', date: '2026-08-05', status: 'Pending — awaiting callback', contact: '(301) 555-0112' },
                   { type: 'Psychiatry', provider: 'MD Behavioral Health Associates', date: '2026-08-12', status: 'Pending — referral sent', contact: '(301) 555-0339' },
                   { type: 'Peer Support / AA Sponsor', provider: 'Local AA — Group 114, Monday 7 PM', date: 'Ongoing', status: 'Committed', contact: 'Via patient' },
                 ].map(f => (
@@ -628,7 +628,7 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
                   { patient: 'Samantha Choi', dc: '2026-07-15', recipient: 'Recovery Works IOP', type: 'Step-down', method: 'Secure Email', sent: '2026-07-15 09:41', status: 'Confirmed', ok: true },
                   { patient: 'Samantha Choi', dc: '2026-07-15', recipient: 'Patient Self', type: 'Patient', method: 'MyChart Portal', sent: '2026-07-15 09:00', status: 'Confirmed', ok: true },
                   { patient: 'James Thornton', dc: '2026-07-16', recipient: 'Montgomery County Drug Court', type: 'Legal', method: 'Secure Fax', sent: '2026-07-16 11:15', status: 'Pending Confirm', ok: false },
-                  { patient: 'James Thornton', dc: '2026-07-16', recipient: 'Vanderbilt Psychiatry', type: 'Specialist', method: 'CommonWell HIE', sent: '2026-07-16 11:16', status: 'Delivered', ok: true },
+                  { patient: 'James Thornton', dc: '2026-07-16', recipient: 'Sheppard Pratt Outpatient Psychiatry', type: 'Specialist', method: 'CommonWell HIE', sent: '2026-07-16 11:16', status: 'Delivered', ok: true },
                   { patient: 'Patricia Holloway', dc: '2026-07-17', recipient: 'Patient Self', type: 'Patient', method: 'Printed / Given', sent: '2026-07-17 08:30', status: 'Confirmed', ok: true },
                   { patient: 'Patricia Holloway', dc: '2026-07-17', recipient: 'Serenity Sober Living', type: 'Housing', method: 'Secure Email', sent: '2026-07-17 09:00', status: 'Pending Confirm', ok: false },
                 ].map((r, i) => (

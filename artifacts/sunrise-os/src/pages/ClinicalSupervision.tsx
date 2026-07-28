@@ -6,7 +6,7 @@ import { LockedButton } from '../components/common/LockedButton';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
-type SuperviseeRole = 'LCPC-A (MD)' | 'CSC-AD (MD)' | 'ADT (DE)' | '__DE_CAC-AD_TYPE__' | 'BHT';
+type SuperviseeRole = 'LCPC-A (MD)' | 'CSC-AD (MD)' | 'ADT (MD BHA)' | 'BHT';
 type NoteStatus = 'Draft' | 'Signed' | 'Co-signed' | 'Pending Review';
 
 interface SuperviseeRecord {
@@ -72,7 +72,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
     ],
   },
   {
-    id: 'SV-002', name: 'Michael Boyd', role: 'ADT (DE)', supervisor: 'Kevin Wright, CAC-AD, PRS (DSAMH BAS)',
+    id: 'SV-002', name: 'Michael Boyd', role: 'ADT (MD BHA)', supervisor: 'Kevin Wright, CAC-AD, PRS (MD BHA BAS)',
     hoursRequiredMonthly: 1, hoursCompletedThisMonth: 0, licenseExpiry: '2027-03-15',
     supervisionType: 'Individual', nextSession: '2026-08-06', caseload: 6, pendingCosigns: 5,
     competencyScores: { assessment: 3.5, treatmentPlanning: 3.2, documentation: 3.0, therapeuticAlliance: 4.0, ethicsCompliance: 4.5, culturalHumility: 3.8 },
@@ -83,7 +83,7 @@ const SUPERVISEES: SuperviseeRecord[] = [
         strengths: 'Great group energy — patients respond well to Kevin\'s peer-informed perspective. Authentic and genuine. Strong in early engagement.',
         growthAreas: 'Documentation: 3 notes submitted after 24-hour deadline this week. Reviewed CMS documentation requirements. Also: avoid advice-giving in MI — practice reflective listening.',
         goals: 'By 7/23: all progress notes submitted within 24 hours. Complete online MI module (Level 2). Practice open-ended questions in group.',
-        supervisorSignature: 'Kevin Wright, CAC-AD, DSAMH BAS, 7/8/2026', superviseeSignature: 'Michael Boyd, ADT-DSAMH, 7/8/2026',
+        supervisorSignature: 'Kevin Wright, CAC-AD, MD BHA BAS, 7/8/2026', superviseeSignature: 'Michael Boyd, ADT (MD BHA), 7/8/2026',
       },
     ],
   },

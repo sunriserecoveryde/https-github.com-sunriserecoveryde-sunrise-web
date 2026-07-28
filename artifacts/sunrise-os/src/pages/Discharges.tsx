@@ -474,7 +474,7 @@ export function Discharges({ navigate, readOnly }: Props) {
                 {[
                   { org: 'Recovery Works Rockville', loc: 'IOP / PHP', payers: 'Commercial, Maryland Medicaid', avail: 'Mon–Fri, 3 spots', contact: '301-555-0192', status: 'Active' },
                   { org: 'Centerstone Rockville', loc: 'IOP / OP', payers: 'All', avail: 'Intake M/W/F', contact: '301-555-0241', status: 'Active' },
-                  { org: 'Vanderbilt Outpatient Psych', loc: 'OP (MH+SUD)', payers: 'Commercial, Medicare', avail: '2–4 wk wait', contact: '301-555-0318', status: 'Waitlist' },
+                  { org: 'Sheppard Pratt Outpatient — Towson', loc: 'OP (MH+SUD)', payers: 'Commercial, Medicare, Medicaid', avail: '2–4 wk wait', contact: '410-938-3000', status: 'Waitlist' },
                   { org: 'Maryland OTP Clinic (Methadone)', loc: 'MAT / OTP', payers: 'Maryland Medicaid, Self-Pay', avail: 'Open enrollment', contact: '301-555-0155', status: 'Active' },
                   { org: 'Brentwood Springs', loc: 'PHP / Residential', payers: 'Commercial', avail: '1–2 beds', contact: '301-555-0277', status: 'Active' },
                   { org: 'Serenity Sober Living — Men', loc: 'Sober Living', payers: 'Self-Pay only', avail: '3 beds available', contact: '301-555-0388', status: 'Active' },

@@ -1,7 +1,7 @@
 - [Sunrise OS architecture](sunrise-os-arch.md) — Screen union (53 values), data files, Sidebar sections, key conventions
 - [Sunrise OS auth & permission architecture](sunrise-os-auth.md) — AuthContext + RoleProvider wiring, permissionStore override pattern, login flow
 - [Sunrise Staff mobile](sunrise-staff-mobile.md) — Expo companion app structure, data model, role context, key pitfalls
-- [MD/DE credential compliance](md-de-compliance.md) — Facilities in Rockville MD + Wilmington DE; MD BHA/ADAA and IC&RC/DSAMH credential pathways; all TN refs replaced
+- [Maryland-only compliance](md-only-compliance.md) — Full Maryland purge complete: no DE/TN/Nashville refs remain; payer ecosystem, referral network, sober housing, staff credentials all MD-specific
 - [Competitive feature adoptions](competitive-features.md) — MBC (Valant), GroupNotes participation (Kipu), LOS alerts (BestNotes), ProgressNotes Templates tab fix
 - [Apostrophe TS bug pattern](apostrophe-ts-bug.md) — ASCII apostrophe inside single-quoted TS string literals silently breaks parse; fix by switching outer delimiters to double quotes
 - [Login page height constraint](login-height-constraint.md) — outer wrapper needs h-screen not min-h-screen; without definite height flex children silently grow to content size

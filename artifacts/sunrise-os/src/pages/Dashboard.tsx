@@ -571,7 +571,7 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
               <h3 className="font-bold text-navy text-sm mb-4">Top Referral Sources — July</h3>
               <div className="space-y-2">
                 {[
-                  { source: 'Vanderbilt Medical Center', referrals: 7 },
+                  { source: 'MedStar Georgetown University Hospital', referrals: 7 },
                   { source: 'Saint Thomas West', referrals: 5 },
                   { source: 'Self / Family', referrals: 4 },
                   { source: 'Probation / Courts', referrals: 4 },

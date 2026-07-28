@@ -33,17 +33,17 @@ interface WaitlistEntry {
 
 const WAITLIST: WaitlistEntry[] = [
   {
-    id: 'WL-001', name: 'Patricia Reynolds', dob: '1982-04-12', phone: '(615) 555-9071',
-    referralSource: 'Vanderbilt Psychiatric Emergency — direct referral', primaryDx: 'Opioid Use Disorder, Severe / PTSD',
+    id: 'WL-001', name: 'Patricia Reynolds', dob: '1982-04-12', phone: '(301) 555-9071',
+    referralSource: 'MedStar Georgetown Psychiatric Emergency — direct referral', primaryDx: 'Opioid Use Disorder, Severe / PTSD',
     requestedLOC: 'Residential', priority: 'P1 — Urgent',
     addedDate: '2026-07-17', daysWaiting: 5, status: 'Active',
     insuranceVerified: true, payer: 'CareFirst BlueCross BlueShield (auth pending)',
     lastContactDate: '2026-07-22', lastContactOutcome: 'Spoke with patient — motivated, in withdrawal, staying with sister. Wants bed ASAP.',
-    notes: 'Referred by Dr. Linda Strauss at Vanderbilt Psych ED. Fentanyl OUD, last use 7/16. CIWA score estimated at 14 at ED. Insurance auth submitted — awaiting decision. P1 — offer next available residential bed.',
+    notes: 'Referred by Dr. Linda Strauss at MedStar Georgetown Psych ED. Fentanyl OUD, last use 7/16. CIWA score estimated at 14 at ED. Insurance auth submitted — awaiting decision. P1 — offer next available residential bed.',
     assignedTo: 'Sarah Jenkins, LCPC', preferredAdmitDate: '2026-07-23',
   },
   {
-    id: 'WL-002', name: 'Anthony Barnes', dob: '1990-08-30', phone: '(615) 555-4412',
+    id: 'WL-002', name: 'Anthony Barnes', dob: '1990-08-30', phone: '(301) 555-4412',
     referralSource: 'Self-referral — saw radio ad', primaryDx: 'Alcohol Use Disorder, Severe',
     requestedLOC: 'Residential', priority: 'P2 — High',
     addedDate: '2026-07-14', daysWaiting: 8, status: 'Active',
@@ -53,7 +53,7 @@ const WAITLIST: WaitlistEntry[] = [
     assignedTo: 'Maria Gonzalez, LCADC',
   },
   {
-    id: 'WL-003', name: 'Michelle Thompson', dob: '1975-11-22', phone: '(615) 555-7834',
+    id: 'WL-003', name: 'Michelle Thompson', dob: '1975-11-22', phone: '(301) 555-7834',
     referralSource: 'Physician referral — Dr. Sarah Kim, Cool Springs Family Medicine',
     primaryDx: 'Alcohol Use Disorder, Moderate / MDD',
     requestedLOC: 'PHP', priority: 'P2 — High',
@@ -64,7 +64,7 @@ const WAITLIST: WaitlistEntry[] = [
     assignedTo: 'David Odom, LCADC', preferredAdmitDate: '2026-07-23',
   },
   {
-    id: 'WL-004', name: 'James Worthington III', dob: '1965-02-08', phone: '(615) 555-3310',
+    id: 'WL-004', name: 'James Worthington III', dob: '1965-02-08', phone: '(301) 555-3310',
     referralSource: 'Maryland Bar Association LAP referral',
     primaryDx: 'Alcohol Use Disorder, Severe',
     requestedLOC: 'Residential', priority: 'P1 — Urgent',
@@ -75,7 +75,7 @@ const WAITLIST: WaitlistEntry[] = [
     assignedTo: 'Sarah Jenkins, LCPC',
   },
   {
-    id: 'WL-005', name: 'Destiny Williams', dob: '1998-06-14', phone: '(615) 555-8821',
+    id: 'WL-005', name: 'Destiny Williams', dob: '1998-06-14', phone: '(301) 555-8821',
     referralSource: 'Recovery coach outreach — Rockville Interfaith Recovery House',
     primaryDx: 'Opioid Use Disorder, Severe / Homelessness',
     requestedLOC: 'Residential', priority: 'P1 — Urgent',
@@ -86,18 +86,18 @@ const WAITLIST: WaitlistEntry[] = [
     assignedTo: 'Maria Gonzalez, LCADC', preferredAdmitDate: '2026-07-23',
   },
   {
-    id: 'WL-006', name: 'Kevin Ostrowski', dob: '1987-09-01', phone: '(615) 555-6641',
-    referralSource: 'Employer EAP — Vanderbilt University HR',
+    id: 'WL-006', name: 'Kevin Ostrowski', dob: '1987-09-01', phone: '(301) 555-6641',
+    referralSource: 'Employer EAP — NIH / DHHS Federal HR',
     primaryDx: 'Alcohol Use Disorder, Moderate',
     requestedLOC: 'IOP', priority: 'P3 — Routine',
     addedDate: '2026-07-10', daysWaiting: 12, status: 'Active',
-    insuranceVerified: true, payer: 'Vanderbilt Faculty Benefits (BCBS)',
+    insuranceVerified: true, payer: 'CareFirst BCBS (Federal Employee Program)',
     lastContactDate: '2026-07-22', lastContactOutcome: 'Confirmed IOP schedule preferences — evenings preferred.',
     notes: 'Faculty member. Functional drinker — employer-mandated evaluation after incident. Prefers evening IOP to maintain work schedule. FMLA paperwork in progress with HR.',
     assignedTo: 'David Odom, LCADC',
   },
   {
-    id: 'WL-007', name: 'Sandra Nguyen', dob: '1972-03-28', phone: '(615) 555-2234',
+    id: 'WL-007', name: 'Sandra Nguyen', dob: '1972-03-28', phone: '(301) 555-2234',
     referralSource: 'Family referral — husband called',
     primaryDx: 'Stimulant Use Disorder (Methamphetamine), Severe',
     requestedLOC: 'Residential', priority: 'P2 — High',
@@ -108,7 +108,7 @@ const WAITLIST: WaitlistEntry[] = [
     assignedTo: 'Maria Gonzalez, LCADC',
   },
   {
-    id: 'WL-008', name: 'Robert Greenfield', dob: '1955-10-15', phone: '(615) 555-0093',
+    id: 'WL-008', name: 'Robert Greenfield', dob: '1955-10-15', phone: '(301) 555-0093',
     referralSource: 'Primary care physician — Dr. James Park',
     primaryDx: 'Opioid Use Disorder, Moderate (Rx opioids)',
     requestedLOC: 'IOP', priority: 'P3 — Routine',
@@ -433,7 +433,7 @@ export function WaitlistManager({ navigate: _navigate, readOnly }: Props) {
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate mb-1">Phone *</label>
-              <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="(615) 555-xxxx" />
+              <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="(301) 555-xxxx" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate mb-1">Date of Birth</label>

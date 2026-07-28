@@ -95,7 +95,7 @@ const STAFF_CREDENTIALS: StaffCredential[] = [
     id: 'SC-007', staffName: 'Kevin Wright', role: 'Behavioral Health Technician',
     ceuRequired: 12, ceuCompleted: 6, ceuCycleEnd: '2026-12-31',
     credentials: [
-      { id: 'C-024', name: 'CAC-AD — Certified Associate Counselor–Alcohol and Drug', type: 'Certification', issuingBody: 'IC&RC — Delaware DSAMH recognized', issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'Expired', licenseNumber: 'DE-CAC-AD-7831', notes: 'Expired 3/1/2025 — renewal application submitted 4/2/2025. Awaiting IC&RC processing. 40 CEU hrs completed and submitted. Working toward CAC-AD upgrade.' },
+      { id: 'C-024', name: 'CAC-AD — Certified Associate Counselor–Alcohol and Drug', type: 'Certification', issuingBody: 'IC&RC — MD BHA / ADAA recognized', issueDate: '2021-03-01', expiryDate: '2025-03-01', status: 'Expired', licenseNumber: 'MD-CAC-AD-7831', notes: 'Expired 3/1/2025 — renewal application submitted 4/2/2025. Awaiting IC&RC processing. 40 CEU hrs completed and submitted. Working toward CAC-AD upgrade.' },
       { id: 'C-025', name: 'CPR / AED Certification', type: 'Certification', issuingBody: 'American Heart Association', issueDate: '2025-06-01', expiryDate: '2027-06-01', status: 'Current' },
       { id: 'C-026', name: 'Mental Health First Aid', type: 'Training', issuingBody: 'MHFA USA', issueDate: '2025-02-15', expiryDate: '2028-02-15', status: 'Current' },
       { id: 'C-027', name: 'Crisis Prevention Institute (CPI) Nonviolent Crisis Intervention', type: 'Training', issuingBody: 'CPI', issueDate: '2025-08-01', expiryDate: '2026-08-01', status: 'Expiring Soon' },
@@ -433,9 +433,9 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
                   { name: 'Dr. Robert Chen', license: 'MD', num: 'MD-18834', state: 'MD', issued: '2015-07-01', expires: '2027-03-31', ce: '50 CME hrs/2yr (MBP)', status: 'Active' },
                   { name: 'Dr. Allen Hughes', license: 'MD + FASAM', num: 'MD-09921', state: 'MD', issued: '2008-06-01', expires: '2028-12-31', ce: '50 CME hrs/2yr (MBP)', status: 'Active' },
                   { name: 'Jessica Torres', license: 'RN + CARN', num: 'RN-MD-44129', state: 'MD', issued: '2015-11-01', expires: '2026-10-31', ce: '30 hrs/2yr (MBON)', status: 'Active' },
-                  { name: 'Kevin Wright', license: 'CAC-AD + PRS', num: 'DE-CAC-AD-7831 / DSAMH-PRS-1122', state: 'DE', issued: '2021-03-01', expires: '2025-03-01', ce: '40 hrs/2yr (IC&RC)', status: 'Renewal Overdue' },
-                  { name: 'Michael Boyd', license: 'ADT (DSAMH)', num: 'DSAMH-ADT-2023-0447', state: 'DE', issued: '2023-04-15', expires: '2027-04-15', ce: 'Annual renewal (DSAMH)', status: 'Active' },
-                  { name: 'Carlos Rivera', license: 'CAC-AD + ADT', num: 'DE-CAC-AD-4419 / ADT-DE-0891', state: 'DE', issued: '2023-05-01', expires: '2027-05-01', ce: '40 hrs/2yr (IC&RC)', status: 'Active' },
+                  { name: 'Kevin Wright', license: 'CAC-AD + PRS', num: 'MD-CAC-AD-7831 / ADAA-PRS-1122', state: 'MD', issued: '2021-03-01', expires: '2025-03-01', ce: '40 hrs/2yr (IC&RC)', status: 'Renewal Overdue' },
+                  { name: 'Michael Boyd', license: 'ADT (MD BHA)', num: 'MD-BHA-ADT-2023-0447', state: 'MD', issued: '2023-04-15', expires: '2027-04-15', ce: 'Annual renewal (MD BHA)', status: 'Active' },
+                  { name: 'Carlos Rivera', license: 'CAC-AD + ADT', num: 'MD-CAC-AD-4419 / MD-BHA-ADT-0891', state: 'MD', issued: '2023-05-01', expires: '2027-05-01', ce: '40 hrs/2yr (IC&RC)', status: 'Active' },
                   { name: 'Marcus Thompson (PSS)', license: 'ADT', num: 'MD-ADT-5521', state: 'MD', issued: '2023-03-01', expires: '2027-03-01', ce: '20 hrs/2yr', status: 'Active' },
                 ].map(r => (
                   <tr key={r.name} className={`hover:bg-gray-50 ${r.status === 'Renewal Overdue' ? 'bg-red-50/40' : r.status === 'Due Q3' ? 'bg-amber-50/30' : ''}`}>
@@ -592,13 +592,13 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
                   <div>
                     <label className="block text-xs font-semibold text-slate uppercase mb-1">Issuing Board *</label>
                     <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                      <option>MD BHA / ADAA</option><option>MBPCT (Maryland Board of Professional Counselors)</option><option>MBON (Maryland Board of Nursing)</option><option>MBSWE (Maryland Board of Social Work Examiners)</option><option>Delaware DSAMH</option><option>IC&RC</option><option>NBCC</option><option>AHA / Red Cross</option><option>Other</option>
+                      <option>MD BHA / ADAA</option><option>MBPCT (Maryland Board of Professional Counselors)</option><option>MBON (Maryland Board of Nursing)</option><option>MBSWE (Maryland Board of Social Work Examiners)</option><option>IC&RC</option><option>NBCC</option><option>AHA / Red Cross</option><option>Other</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate uppercase mb-1">Issuing State</label>
                     <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                      <option>Maryland (MD)</option><option>Delaware (DE)</option><option>National (IC&RC / NBCC)</option><option>N/A (Internal / Vendor)</option>
+                      <option>Maryland (MD)</option><option>National (IC&RC / NBCC)</option><option>N/A (Internal / Vendor)</option>
                     </select>
                   </div>
                   <div>
@@ -649,7 +649,7 @@ export function CertificationTracker({ navigate: _navigate, readOnly }: Props) {
                     Supervision required for practice under this credential
                   </label>
                   <select className="border border-border rounded-lg px-2 py-1 text-xs ml-2 flex-1">
-                    <option>— Select approved supervisor —</option><option>James S. Collins III, CAC-AD, BAS</option><option>Kevin Wright, CAC-AD, BAS-DE</option><option>Jessica Torres, RN (nursing)</option>
+                    <option>— Select approved supervisor —</option><option>James S. Collins III, CAC-AD, BAS</option><option>Kevin Wright, CAC-AD (MD BHA)</option><option>Jessica Torres, RN (nursing)</option>
                   </select>
                 </div>
               </div>

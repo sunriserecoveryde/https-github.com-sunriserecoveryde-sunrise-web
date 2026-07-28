@@ -49,7 +49,7 @@ const CSSRS_RECORDS: CSSRSRecord[] = [
       'Internal coping: breathing exercises (4-7-8 technique), journaling',
       'Social distraction: call wife Emily (301-555-9211), sponsor David H.',
       'Professional support: Sunrise Recovery on-call (301-555-0100), Collins (pager 4401)',
-      'Crisis resources: 988 Suicide & Crisis Lifeline, Vanderbilt ED',
+      'Crisis resources: 988 Suicide & Crisis Lifeline, MedStar Georgetown Psychiatric ED',
       'Means restriction: firearms secured with brother-in-law',
     ],
     notes: 'Patient expressed passive ideation during 1:1 session on 7/18. "I\'ve thought I\'d be better off dead but I don\'t want to do anything about it." No plan, no means access, no intent. Reports motivation to stay for children. AMA risk remains high due to withdrawal discomfort — this appears to be driving passive SI rather than primary psychiatric crisis. Monitoring increased. Counselor and MD aware.',
@@ -438,12 +438,12 @@ export function CrisisAssessment({ navigate, readOnly }: Props) {
             <div className="grid grid-cols-2 gap-3 text-sm">
               {[
                 { label: '988 Suicide & Crisis Lifeline', value: 'Call or text 988' },
-                { label: 'Vanderbilt Psychiatric ED', value: '(615) 322-2700' },
+                { label: 'MedStar Georgetown Psychiatric ED', value: '(202) 444-2000' },
                 { label: 'On-Call MD (Day)', value: 'Dr. Robert Chen — pager 4421' },
                 { label: 'On-Call MD (Night)', value: 'Dr. Chen — pager 4421 (24/7)' },
                 { label: 'Clinical Director', value: 'James S. Collins III — pager 4401' },
                 { label: 'Psychiatrist On-Call', value: 'Dr. Emma Hughes — pager 4433' },
-                { label: 'Hospital Transfer Line', value: '(615) 555-0200 (DON direct)' },
+                { label: 'Hospital Transfer Line', value: '(301) 555-0200 (DON direct)' },
                 { label: 'Police / EMS', value: '911' },
               ].map(c => (
                 <div key={c.label} className="flex items-center gap-3 p-2 border border-border rounded-lg">

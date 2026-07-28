@@ -31,25 +31,25 @@ interface Claim {
 }
 
 const AUTHS: AuthRecord[] = [
-  { patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential', insurance: 'BlueCross', authNumber: 'BCB-2026-44821', authorizedDays: 30, usedDays: 22, authStart: '2026-06-26', authEnd: '2026-07-25', status: 'Active', dailyRate: 850, urContact: 'Linda Vance' },
-  { patientId: 'p2', patientName: 'Samantha Choi', mrn: 'MRN-74563', program: 'Residential', insurance: 'Aetna', authNumber: 'AET-2026-19034', authorizedDays: 14, usedDays: 14, authStart: '2026-07-05', authEnd: '2026-07-22', status: 'Expiring Soon', dailyRate: 920, urContact: 'Linda Vance' },
-  { patientId: 'p3', patientName: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', insurance: 'United', authNumber: 'UHC-2026-88201', authorizedDays: 28, usedDays: 28, authStart: '2026-06-20', authEnd: '2026-07-17', status: 'Expired', dailyRate: 780, urContact: 'Linda Vance' },
-  { patientId: 'p4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', insurance: 'Humana', authNumber: 'HUM-2026-33012', authorizedDays: 35, usedDays: 35, authStart: '2026-06-13', authEnd: '2026-07-17', status: 'Expired', dailyRate: 810, urContact: 'Linda Vance' },
-  { patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', insurance: 'Maryland Medicaid', authNumber: 'TCR-2026-55810', authorizedDays: 50, usedDays: 46, authStart: '2026-06-06', authEnd: '2026-07-25', status: 'Expiring Soon', dailyRate: 620, urContact: 'Linda Vance' },
+  { patientId: 'p1', patientName: 'Marcus Webb', mrn: 'MRN-83921', program: 'Residential', insurance: 'CareFirst BCBS', authNumber: 'CFB-2026-44821', authorizedDays: 30, usedDays: 22, authStart: '2026-06-26', authEnd: '2026-07-25', status: 'Active', dailyRate: 850, urContact: 'Linda Vance' },
+  { patientId: 'p2', patientName: 'Samantha Choi', mrn: 'MRN-74563', program: 'Residential', insurance: 'Aetna Better Health MD', authNumber: 'AET-2026-19034', authorizedDays: 14, usedDays: 14, authStart: '2026-07-05', authEnd: '2026-07-22', status: 'Expiring Soon', dailyRate: 920, urContact: 'Linda Vance' },
+  { patientId: 'p3', patientName: 'James Thornton', mrn: 'MRN-62841', program: 'Residential', insurance: 'UHC Community Plan MD', authNumber: 'UHC-2026-88201', authorizedDays: 28, usedDays: 28, authStart: '2026-06-20', authEnd: '2026-07-17', status: 'Expired', dailyRate: 780, urContact: 'Linda Vance' },
+  { patientId: 'p4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', program: 'Residential', insurance: 'Kaiser Permanente Mid-Atlantic', authNumber: 'KP-2026-33012', authorizedDays: 35, usedDays: 35, authStart: '2026-06-13', authEnd: '2026-07-17', status: 'Expired', dailyRate: 810, urContact: 'Linda Vance' },
+  { patientId: 'p5', patientName: 'Robert Navarro', mrn: 'MRN-44782', program: 'Residential', insurance: 'Maryland Medicaid / Carelon BH', authNumber: 'CAR-2026-55810', authorizedDays: 50, usedDays: 46, authStart: '2026-06-06', authEnd: '2026-07-25', status: 'Expiring Soon', dailyRate: 620, urContact: 'Linda Vance' },
   { patientId: 'p6', patientName: 'Destiny Williams', mrn: 'MRN-55129', program: 'PHP', insurance: 'Cigna', authNumber: 'CGN-2026-77441', authorizedDays: 20, usedDays: 11, authStart: '2026-07-07', authEnd: '2026-07-26', status: 'Active', dailyRate: 480, urContact: 'Linda Vance' },
-  { patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', insurance: 'BlueCross', authNumber: 'BCB-2026-50291', authorizedDays: 21, usedDays: 21, authStart: '2026-06-27', authEnd: '2026-07-17', status: 'Expired', dailyRate: 490, urContact: 'Linda Vance' },
-  { patientId: 'p8', patientName: 'Linda Farris', mrn: 'MRN-39018', program: 'IOP', insurance: 'Aetna', authNumber: 'Pending Review', authorizedDays: 0, usedDays: 14, authStart: '2026-07-04', authEnd: '—', status: 'Pending', dailyRate: 310, urContact: 'Linda Vance' },
+  { patientId: 'p7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', program: 'PHP', insurance: 'CareFirst BCBS', authNumber: 'CFB-2026-50291', authorizedDays: 21, usedDays: 21, authStart: '2026-06-27', authEnd: '2026-07-17', status: 'Expired', dailyRate: 490, urContact: 'Linda Vance' },
+  { patientId: 'p8', patientName: 'Linda Farris', mrn: 'MRN-39018', program: 'IOP', insurance: 'Aetna Better Health MD', authNumber: 'Pending Review', authorizedDays: 0, usedDays: 14, authStart: '2026-07-04', authEnd: '—', status: 'Pending', dailyRate: 310, urContact: 'Linda Vance' },
 ];
 
 const CLAIMS: Claim[] = [
-  { id: 'cl1', patientName: 'Marcus Webb', mrn: 'MRN-83921', insurance: 'BlueCross', serviceDate: '2026-07-01', submittedDate: '2026-07-03', amount: 18700, status: 'Paid' },
-  { id: 'cl2', patientName: 'Samantha Choi', mrn: 'MRN-74563', insurance: 'Aetna', serviceDate: '2026-07-05', submittedDate: '2026-07-07', amount: 12880, status: 'Paid' },
-  { id: 'cl3', patientName: 'James Thornton', mrn: 'MRN-62841', insurance: 'United', serviceDate: '2026-07-01', submittedDate: '2026-07-03', amount: 15600, status: 'In Review' },
-  { id: 'cl4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', insurance: 'Humana', serviceDate: '2026-06-20', submittedDate: '2026-06-22', amount: 22680, status: 'Denied', denialReason: 'Level of care not medically necessary per Humana clinical criteria. Residential denied — PHP approved.' },
-  { id: 'cl5', patientName: 'Robert Navarro', mrn: 'MRN-44782', insurance: 'Maryland Medicaid', serviceDate: '2026-07-01', submittedDate: '2026-07-03', amount: 8680, status: 'Paid' },
+  { id: 'cl1', patientName: 'Marcus Webb', mrn: 'MRN-83921', insurance: 'CareFirst BCBS', serviceDate: '2026-07-01', submittedDate: '2026-07-03', amount: 18700, status: 'Paid' },
+  { id: 'cl2', patientName: 'Samantha Choi', mrn: 'MRN-74563', insurance: 'Aetna Better Health MD', serviceDate: '2026-07-05', submittedDate: '2026-07-07', amount: 12880, status: 'Paid' },
+  { id: 'cl3', patientName: 'James Thornton', mrn: 'MRN-62841', insurance: 'UHC Community Plan MD', serviceDate: '2026-07-01', submittedDate: '2026-07-03', amount: 15600, status: 'In Review' },
+  { id: 'cl4', patientName: 'Patricia Holloway', mrn: 'MRN-48320', insurance: 'Kaiser Permanente Mid-Atlantic', serviceDate: '2026-06-20', submittedDate: '2026-06-22', amount: 22680, status: 'Denied', denialReason: 'Level of care not medically necessary per Kaiser clinical criteria. Residential denied — PHP approved.' },
+  { id: 'cl5', patientName: 'Robert Navarro', mrn: 'MRN-44782', insurance: 'Maryland Medicaid / Carelon BH', serviceDate: '2026-07-01', submittedDate: '2026-07-03', amount: 8680, status: 'Paid' },
   { id: 'cl6', patientName: 'Destiny Williams', mrn: 'MRN-55129', insurance: 'Cigna', serviceDate: '2026-07-07', submittedDate: '2026-07-09', amount: 5280, status: 'Submitted' },
-  { id: 'cl7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', insurance: 'BlueCross', serviceDate: '2026-06-27', submittedDate: '2026-06-29', amount: 10290, status: 'Appealing', denialReason: 'Missing clinical documentation — ASAM assessment not included.' },
-  { id: 'cl8', patientName: 'Linda Farris', mrn: 'MRN-39018', insurance: 'Aetna', serviceDate: '2026-07-04', submittedDate: '—', amount: 4340, status: 'Submitted' },
+  { id: 'cl7', patientName: 'Brian Kowalski', mrn: 'MRN-27641', insurance: 'CareFirst BCBS', serviceDate: '2026-06-27', submittedDate: '2026-06-29', amount: 10290, status: 'Appealing', denialReason: 'Missing clinical documentation — ASAM assessment not included.' },
+  { id: 'cl8', patientName: 'Linda Farris', mrn: 'MRN-39018', insurance: 'Aetna Better Health MD', serviceDate: '2026-07-04', submittedDate: '—', amount: 4340, status: 'Submitted' },
 ];
 
 // ─── Analytics mock data ──────────────────────────────────────────────────────
@@ -65,13 +65,13 @@ const MONTHLY_REVENUE = [
 ];
 
 const PAYER_MIX = [
-  { name: 'BlueCross',  value: 34, color: '#1e5fa8' },
-  { name: 'Aetna',      value: 10, color: '#0ea5e9' },
-  { name: 'United',     value: 18, color: '#6366f1' },
-  { name: 'Maryland Medicaid',   value: 12, color: '#14b8a6' },
-  { name: 'Humana',     value: 8,  color: '#f59e0b' },
-  { name: 'Cigna',      value: 4,  color: '#f97316' },
-  { name: 'Self-Pay',   value: 2,  color: '#94a3b8' },
+  { name: 'CareFirst BCBS',       value: 32, color: '#1e5fa8' },
+  { name: 'Aetna Better Health',  value: 12, color: '#0ea5e9' },
+  { name: 'UHC Community Plan',   value: 14, color: '#6366f1' },
+  { name: 'MD Medicaid / Carelon',value: 14, color: '#14b8a6' },
+  { name: 'Kaiser Mid-Atlantic',  value: 8,  color: '#f59e0b' },
+  { name: 'Cigna',                value: 6,  color: '#f97316' },
+  { name: 'Self-Pay',             value: 2,  color: '#94a3b8' },
 ];
 
 const AR_AGING = [
@@ -448,9 +448,9 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
 
             <div className="space-y-3">
               {[
-                { patientId: 'p3', patient: 'James Thornton', mrn: 'MRN-62841', insurance: 'Aetna Behavioral', level: 'Residential (3.7)', los: 7, authDays: 14, authEnd: '2026-07-26', nextReview: '2026-07-24', status: 'Due in 5 days', asam: { dim1: '3 – Severe', dim2: '3 – Moderate', dim3: '3 – Moderate', dim4: '2 – Low', dim5: '3 – Moderate', dim6: '2 – Low' }, criteria: 'Patient meets medical necessity for continued 3.7 residential LOC. COWS 9 at admission, now 4. MAT initiated (Suboxone 8mg). Continuing medical withdrawal management required due to complex polysubstance history and co-occurring GAD.', reviewer: 'David Odom, LCADC', lastSubmitted: '2026-07-17' },
-                { patientId: 'p1', patient: 'Marcus Webb', mrn: 'MRN-83921', insurance: 'BCBS Commercial', level: 'Residential (3.5)', los: 34, authDays: 30, authEnd: '2026-08-01', nextReview: '2026-07-29', status: 'Due in 10 days', asam: { dim1: '2 – Moderate', dim2: '2 – Low', dim3: '3 – Moderate', dim4: '1 – Minimal', dim5: '3 – Moderate', dim6: '3 – Moderate' }, criteria: 'Day 34. Patient stabilized on medication. High AMA risk remains — verbalized intent to leave 7/18 following family conflict. Treatment plan updated with AMA prevention goals. Continued residential justified by imminent AMA risk and insufficient coping skills for lower LOC.', reviewer: 'Sarah Jenkins, LCPC', lastSubmitted: '2026-07-09' },
-                { patientId: 'p5', patient: 'Robert Navarro', mrn: 'MRN-44782', insurance: 'Medicaid MCO', level: 'Residential (3.5)', los: 46, authDays: 50, authEnd: '2026-07-25', nextReview: '2026-07-23', status: 'Due in 1 Day', asam: { dim1: '2 – Low', dim2: '2 – Low', dim3: '3 – Moderate', dim4: '2 – Low', dim5: '3 – Moderate', dim6: '3 – Moderate' }, criteria: 'Court-ordered treatment (pretrial diversion). Legal obligations and incomplete treatment goals require continued residential. CJS involvement increases relapse risk substantially. TP goals at 60% completion.', reviewer: 'Maria Gonzales, LCADC', lastSubmitted: '2026-06-29' },
+                { patientId: 'p3', patient: 'James Thornton', mrn: 'MRN-62841', insurance: 'Aetna Better Health MD', level: 'Residential (3.7)', los: 7, authDays: 14, authEnd: '2026-07-26', nextReview: '2026-07-24', status: 'Due in 5 days', asam: { dim1: '3 – Severe', dim2: '3 – Moderate', dim3: '3 – Moderate', dim4: '2 – Low', dim5: '3 – Moderate', dim6: '2 – Low' }, criteria: 'Patient meets medical necessity for continued 3.7 residential LOC. COWS 9 at admission, now 4. MAT initiated (Suboxone 8mg). Continuing medical withdrawal management required due to complex polysubstance history and co-occurring GAD.', reviewer: 'David Odom, LCADC', lastSubmitted: '2026-07-17' },
+                { patientId: 'p1', patient: 'Marcus Webb', mrn: 'MRN-83921', insurance: 'CareFirst BCBS Commercial', level: 'Residential (3.5)', los: 34, authDays: 30, authEnd: '2026-08-01', nextReview: '2026-07-29', status: 'Due in 10 days', asam: { dim1: '2 – Moderate', dim2: '2 – Low', dim3: '3 – Moderate', dim4: '1 – Minimal', dim5: '3 – Moderate', dim6: '3 – Moderate' }, criteria: 'Day 34. Patient stabilized on medication. High AMA risk remains — verbalized intent to leave 7/18 following family conflict. Treatment plan updated with AMA prevention goals. Continued residential justified by imminent AMA risk and insufficient coping skills for lower LOC.', reviewer: 'Sarah Jenkins, LCPC', lastSubmitted: '2026-07-09' },
+                { patientId: 'p5', patient: 'Robert Navarro', mrn: 'MRN-44782', insurance: 'MD Medicaid / Carelon BH', level: 'Residential (3.5)', los: 46, authDays: 50, authEnd: '2026-07-25', nextReview: '2026-07-23', status: 'Due in 1 Day', asam: { dim1: '2 – Low', dim2: '2 – Low', dim3: '3 – Moderate', dim4: '2 – Low', dim5: '3 – Moderate', dim6: '3 – Moderate' }, criteria: 'Court-ordered treatment (pretrial diversion). Legal obligations and incomplete treatment goals require continued residential. CJS involvement increases relapse risk substantially. TP goals at 60% completion.', reviewer: 'David Odom, LCADC', lastSubmitted: '2026-06-29' },
                 { patientId: 'p8', patient: 'Patricia Nguyen', mrn: 'MRN-55129', insurance: 'Cigna EAP', level: 'Residential (3.7)', los: 12, authDays: 14, authEnd: '2026-07-23', nextReview: '2026-07-23', status: 'Due in 1 Day', asam: { dim1: '3 – Severe', dim2: '3 – Moderate', dim3: '3 – Moderate', dim4: '2 – Low', dim5: '3 – Moderate', dim6: '2 – Low' }, criteria: 'Trauma-focused EMDR ongoing — session 3 of 8 completed. Active PTSD symptoms with nightmares and hypervigilance. Residential level necessary to maintain safety and support trauma processing work. Discharge to lower LOC would be premature.', reviewer: 'Sarah Jenkins, LCPC', lastSubmitted: '2026-07-09' },
               ].map(r => (
                 <div key={r.patientId} className={`bg-white border rounded-xl p-4 shadow-sm ${r.status.includes('TOMORROW') ? 'border-critical/50' : r.status.includes('Overdue') ? 'border-critical' : 'border-border'}`}>
@@ -535,12 +535,12 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
             <div className="text-sm text-slate">Payer distribution, average reimbursement rates, and contract performance by insurance carrier.</div>
             <div className="grid grid-cols-4 gap-4">
               {[
-                { payer: 'BlueCross BlueShield', patients: 6, pct: 30, avgRate: 875, totalBilled: 142600, collected: 128340, color: 'bg-blue-500' },
-                { payer: 'Aetna', patients: 4, pct: 20, avgRate: 840, totalBilled: 89400, collected: 78672, color: 'bg-red-400' },
-                { payer: 'United Healthcare', patients: 3, pct: 15, avgRate: 780, totalBilled: 67080, collected: 54235, color: 'bg-orange-400' },
-                { payer: 'Humana', patients: 2, pct: 10, avgRate: 810, totalBilled: 46260, collected: 39321, color: 'bg-green-500' },
+                { payer: 'CareFirst BlueCross BlueShield', patients: 6, pct: 30, avgRate: 875, totalBilled: 142600, collected: 128340, color: 'bg-blue-500' },
+                { payer: 'Aetna Better Health MD', patients: 4, pct: 20, avgRate: 840, totalBilled: 89400, collected: 78672, color: 'bg-red-400' },
+                { payer: 'UHC Community Plan MD', patients: 3, pct: 15, avgRate: 780, totalBilled: 67080, collected: 54235, color: 'bg-orange-400' },
+                { payer: 'Kaiser Permanente Mid-Atlantic', patients: 2, pct: 10, avgRate: 810, totalBilled: 46260, collected: 39321, color: 'bg-green-500' },
                 { payer: 'Cigna', patients: 2, pct: 10, avgRate: 790, totalBilled: 43120, collected: 37584, color: 'bg-purple-500' },
-                { payer: 'Maryland Medicaid (Medicaid)', patients: 2, pct: 10, avgRate: 620, totalBilled: 27840, collected: 24504, color: 'bg-teal-500' },
+                { payer: 'Maryland Medicaid / Carelon BH', patients: 2, pct: 10, avgRate: 620, totalBilled: 27840, collected: 24504, color: 'bg-teal-500' },
                 { payer: 'Self-Pay', patients: 1, pct: 5, avgRate: 0, totalBilled: 18500, collected: 5550, color: 'bg-amber-400' },
               ].map(p => (
                 <div key={p.payer} className="bg-white border border-border rounded-xl p-4 shadow-sm">
@@ -569,11 +569,11 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                 <h3 className="font-semibold text-navy text-sm mb-3">Contract Performance</h3>
                 <div className="space-y-3">
                   {[
-                    { payer: 'BlueCross BlueShield', contractRate: 90, realized: 90, note: 'In-network — full contracted rate achieved' },
-                    { payer: 'Aetna', contractRate: 88, realized: 88, note: 'In-network — minor write-offs on missed concurrent review' },
-                    { payer: 'United Healthcare', contractRate: 81, realized: 81, note: '1 denial in review — rate may drop to 73% if not overturned' },
-                    { payer: 'Humana', contractRate: 85, realized: 85, note: 'Auth expired on p4 — pursuing appeal; retroactive auth possible' },
-                    { payer: 'Maryland Medicaid', contractRate: 88, realized: 88, note: 'Medicaid — fixed rate contract; prior auth required every 7 days' },
+                    { payer: 'CareFirst BlueCross BlueShield', contractRate: 90, realized: 90, note: 'In-network — full contracted rate achieved' },
+                    { payer: 'Aetna Better Health MD', contractRate: 88, realized: 88, note: 'In-network — minor write-offs on missed concurrent review' },
+                    { payer: 'UHC Community Plan MD', contractRate: 81, realized: 81, note: '1 denial in review — rate may drop to 73% if not overturned' },
+                    { payer: 'Kaiser Permanente Mid-Atlantic', contractRate: 85, realized: 85, note: 'Auth expired on p4 — pursuing appeal; retroactive auth possible' },
+                    { payer: 'Maryland Medicaid / Carelon BH', contractRate: 88, realized: 88, note: 'Fixed COMAR rate; all BH prior auth via Carelon ProviderConnect — every 7 days UR per COMAR 10.09.80' },
                     { payer: 'Self-Pay', contractRate: 100, realized: 30, note: 'Collected 30% — financial assistance applied; payment plan active' },
                   ].map(r => (
                     <div key={r.payer} className="text-xs">
@@ -602,8 +602,8 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                     <div className="text-green-800">No single payer exceeds 35% of revenue. Top-3 payers (BCBS, Aetna, United) represent 55% combined — within acceptable diversification range.</div>
                   </div>
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="font-bold text-blue-700 mb-1">ℹ Medicaid / Maryland Medicaid Target</div>
-                    <div className="text-blue-800">Current Medicaid census at 10%. State CARF grant requires maintaining ≥15% Medicaid/underinsured access. Consider waitlist priority review for Maryland Medicaid patients.</div>
+                    <div className="font-bold text-blue-700 mb-1">ℹ Maryland Medicaid / Carelon BH Target</div>
+                    <div className="text-blue-800">Current Medicaid census at 10%. State CARF grant and MD BHA provider agreement require maintaining ≥15% Medicaid/underinsured access. All HealthChoice BH authorizations route through Carelon ASO. Consider waitlist priority review for Maryland Medicaid patients.</div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     {[
@@ -657,7 +657,7 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                   <tbody className="divide-y divide-border">
                     {[
                       { payer: 'Commercial', d30: '$68K', d60: '$24K', d90: '$11K', d120: '$4K', d120p: '$2K', total: '$109K' },
-                      { payer: 'Maryland Medicaid / Medicaid', d30: '$44K', d60: '$18K', d90: '$8K', d120: '$3K', d120p: '$1K', total: '$74K' },
+                      { payer: 'Maryland Medicaid / Carelon BH', d30: '$44K', d60: '$18K', d90: '$8K', d120: '$3K', d120p: '$1K', total: '$74K' },
                       { payer: 'Medicare', d30: '$22K', d60: '$9K', d90: '$4K', d120: '$1K', d120p: '$0', total: '$36K' },
                       { payer: 'Self-Pay', d30: '$12K', d60: '$14K', d90: '$8K', d120: '$5K', d120p: '$2K', total: '$41K' },
                       { payer: 'Other / Unknown', d30: '$12K', d60: '$8K', d90: '$4K', d120: '$0', d120p: '$0', total: '$24K' },
@@ -719,7 +719,7 @@ export function RevenueCycle({ navigate, readOnly }: Props) {
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Payer *</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm">
-                    <option>Aetna</option><option>BlueCross BlueShield</option><option>Cigna</option><option>United Healthcare</option><option>Medicaid</option><option>Medicare</option><option>Self-Pay</option>
+                    <option>CareFirst BlueCross BlueShield</option><option>Aetna Better Health of Maryland</option><option>UHC Community Plan MD</option><option>Kaiser Permanente Mid-Atlantic</option><option>Amerigroup Maryland</option><option>Maryland Medicaid / Carelon BH</option><option>Cigna</option><option>Medicare (Novitas J-L)</option><option>Self-Pay</option>
                   </select>
                 </div>
                 <div>

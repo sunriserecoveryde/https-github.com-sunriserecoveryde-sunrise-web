@@ -15,13 +15,13 @@ import {
 // ─── Pipeline mock data ───────────────────────────────────────────────────────
 
 const PIPELINE = [
-  { id: 'pl1', name: 'Thomas Reilly',   source: 'Vanderbilt ER',        program: 'Residential', insurance: 'Aetna',      status: 'Pending Admit',      daysInPipeline: 2, coordinator: 'Amanda Lewis', diagnosis: 'Alcohol Use Disorder' },
+  { id: 'pl1', name: 'Thomas Reilly',   source: 'MedStar Georgetown ER', program: 'Residential', insurance: 'CareFirst BCBS', status: 'Pending Admit',      daysInPipeline: 2, coordinator: 'Amanda Lewis', diagnosis: 'Alcohol Use Disorder' },
   { id: 'pl2', name: 'Nicole Harrison', source: 'Cumberland Heights',    program: 'PHP',         insurance: 'BlueCross',  status: 'VOB / Assessment',   daysInPipeline: 3, coordinator: 'Amanda Lewis', diagnosis: 'Opioid Use Disorder' },
   { id: 'pl3', name: 'Andre Simmons',   source: 'Drug Court',            program: 'Residential', insurance: 'Maryland Medicaid',   status: 'Referral Received',  daysInPipeline: 1, coordinator: 'Amanda Lewis', diagnosis: 'Methamphetamine Use' },
   { id: 'pl4', name: 'Brenda Castillo', source: 'Self-Referral',         program: 'IOP',         insurance: 'Cigna',      status: 'Referral Received',  daysInPipeline: 1, coordinator: 'Amanda Lewis', diagnosis: 'Alcohol + Anxiety' },
   { id: 'pl5', name: 'Marcus Odom',     source: 'Private Therapist',     program: 'Residential', insurance: 'United',     status: 'Active in Tx',       daysInPipeline: 4, coordinator: 'Amanda Lewis', diagnosis: 'Polysubstance' },
   { id: 'pl6', name: 'Yolanda Pierce',  source: 'TriStar Health ER',     program: 'PHP',         insurance: 'BCBS',       status: 'VOB / Assessment',   daysInPipeline: 2, coordinator: 'Amanda Lewis', diagnosis: 'Opioid Use Disorder' },
-  { id: 'pl7', name: 'Derek Moss',      source: 'Vanderbilt ER',         program: 'Residential', insurance: 'Aetna',      status: 'Pending Admit',      daysInPipeline: 2, coordinator: 'Amanda Lewis', diagnosis: 'Alcohol Use Disorder' },
+  { id: 'pl7', name: 'Derek Moss',      source: 'MedStar Georgetown ER',  program: 'Residential', insurance: 'Aetna Better Health MD', status: 'Pending Admit',      daysInPipeline: 2, coordinator: 'Amanda Lewis', diagnosis: 'Alcohol Use Disorder' },
   { id: 'pl8', name: 'Cynthia Grant',   source: 'Monroe Carell Jr.',     program: 'IOP',         insurance: 'Maryland Medicaid',   status: 'Referral Received',  daysInPipeline: 0, coordinator: 'Amanda Lewis', diagnosis: 'Benzodiazepine Use' },
   { id: 'pl9', name: 'Aaron King',      source: 'Drug Court',            program: 'Residential', insurance: 'Self-Pay',   status: 'Active in Tx',       daysInPipeline: 6, coordinator: 'Amanda Lewis', diagnosis: 'Methamphetamine Use' },
   { id: 'pl10', name: 'Fiona Beckett',  source: 'NovaCare Behavioral',   program: 'PHP',         insurance: 'Cigna',      status: 'VOB / Assessment',   daysInPipeline: 1, coordinator: 'Amanda Lewis', diagnosis: 'Alcohol Use Disorder' },
@@ -61,7 +61,7 @@ const MONTHLY_TREND = [
 
 // Per-source volume bar chart
 const SOURCE_VOLUME = [
-  { source: 'Vanderbilt ER',      referrals: 54 },
+  { source: 'MedStar Georgetown ER', referrals: 54 },
   { source: 'Cumberland Heights', referrals: 38 },
   { source: 'Drug Court',         referrals: 32 },
   { source: 'TriStar Health ER',  referrals: 28 },
@@ -108,7 +108,7 @@ function KanbanCard({ item }: { item: typeof PIPELINE[0] }) {
 // ─── Outreach log ─────────────────────────────────────────────────────────────
 
 const OUTREACH_LOG = [
-  { id: 'o1', source: 'Vanderbilt ER', contact: 'Dr. Aaron West', type: 'Call', date: '2026-07-18', note: 'Discussed Q3 capacity. Confirmed 2 pending referrals. Strong relationship.', outcome: 'Positive' },
+  { id: 'o1', source: 'MedStar Georgetown ER', contact: 'Dr. Michelle Park', type: 'Call', date: '2026-07-18', note: 'Discussed Q3 capacity. Confirmed 2 pending referrals. CRISP warm-handoff protocol reviewed. Strong relationship.', outcome: 'Positive' },
   { id: 'o2', source: 'Cumberland Heights', contact: 'Emily Nguyen, LCADC', type: 'Email', date: '2026-07-16', note: 'Sent updated program brochure and IOP schedule.', outcome: 'Positive' },
   { id: 'o3', source: "Dr. Peterson's Clinic", contact: 'Dr. M. Peterson, MD', type: 'Call', date: '2026-06-02', note: 'No answer — left voicemail. Clinic went 47 days without a referral.', outcome: 'At Risk' },
   { id: 'o4', source: 'TriStar Health ER', contact: 'Case Mgmt Team', type: 'Visit', date: '2026-07-14', note: 'In-person lunch & learn with ER case management team. Distributed FAQs and contact cards.', outcome: 'Positive' },
@@ -301,7 +301,7 @@ export function ReferralTracker({ navigate, readOnly }: { navigate: (s: Screen) 
                           <div className="grid grid-cols-3 gap-4 text-sm">
                             <div>
                               <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Contact Info</div>
-                              <div className="flex items-center gap-1.5 text-slate mb-1"><Phone className="w-3 h-3" /> (615) 555-0192</div>
+                              <div className="flex items-center gap-1.5 text-slate mb-1"><Phone className="w-3 h-3" /> (301) 555-0192</div>
                               <div className="flex items-center gap-1.5 text-slate"><Mail className="w-3 h-3" /> {r.contact.split(' ')[0].toLowerCase()}@partner.org</div>
                             </div>
                             <div>
@@ -426,7 +426,7 @@ export function ReferralTracker({ navigate, readOnly }: { navigate: (s: Screen) 
                 </thead>
                 <tbody className="divide-y divide-border">
                   {[
-                    { source: 'Vanderbilt Medical', admits: 18, los: '27d', comp: '78%', s30: '69%', s90: '64%', tier: 'Platinum' },
+                    { source: 'MedStar Georgetown', admits: 18, los: '27d', comp: '78%', s30: '69%', s90: '64%', tier: 'Platinum' },
                     { source: 'Rockville General ER', admits: 12, los: '22d', comp: '67%', s30: '58%', s90: '53%', tier: 'Gold' },
                     { source: 'Davidson Drug Court', admits: 9, los: '28d', comp: '89%', s30: '78%', s90: '71%', tier: 'Platinum' },
                     { source: 'St. Thomas West ER', admits: 8, los: '19d', comp: '63%', s30: '54%', s90: '48%', tier: 'Silver' },
