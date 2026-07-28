@@ -11,7 +11,7 @@ import {
   ArrowLeftRight, Star, CreditCard, MapPin, BookUser, Download,
   Video, UserCheck, FolderOpen, DollarSign, BookOpen, HandHelping,
   Award, ClipboardCheck, MessageSquare, ListOrdered, Grid3X3,
-  Eye, Sparkles, Brain, FlaskConical
+  Eye, Sparkles, Brain, FlaskConical, Building2
 } from 'lucide-react';
 import { Screen } from '../../App';
 import { useRole } from '../../context/RoleContext';
@@ -76,7 +76,6 @@ const ALL_SECTIONS: SidebarSection[] = [
       { id: 'AppointmentCalendar', label: 'Appointment Calendar', icon: CalendarDays },
       { id: 'GroupSchedule', label: 'Group Schedule', icon: CalendarClock },
       { id: 'GroupTherapyCurriculum', label: 'Group Curriculum Library', icon: BookOpen },
-      { id: 'StaffScheduling', label: 'Staff Scheduling', icon: UserCog },
     ]
   },
   {
@@ -120,15 +119,17 @@ const ALL_SECTIONS: SidebarSection[] = [
       { id: 'FinancialCounseling', label: 'Financial Counseling', icon: DollarSign },
       { id: 'AuditCompliance', label: 'Audit Readiness', icon: ShieldCheck },
       { id: 'QualityImprovement', label: 'Quality Improvement', icon: Star },
-      { id: 'Training', label: 'Training', icon: GraduationCap, badge: 2 },
       { id: 'FormularyManagement', label: 'Formulary & Drug Ref', icon: ClipboardCheck },
     ]
   },
   {
-    title: 'SUPERVISION',
+    title: 'WORKFORCE',
     items: [
+      { id: 'WorkforceCompliance', label: 'Workforce Compliance', icon: Building2, badge: 4 },
+      { id: 'CertificationTracker', label: 'Credentialing & Licenses', icon: Award },
+      { id: 'Training', label: 'Training & LMS', icon: GraduationCap, badge: 2 },
       { id: 'ClinicalSupervision', label: 'Clinical Supervision', icon: UserCheck },
-      { id: 'CertificationTracker', label: 'Certification Tracker', icon: Award },
+      { id: 'StaffScheduling', label: 'Staff Scheduling', icon: UserCog },
     ]
   },
   {

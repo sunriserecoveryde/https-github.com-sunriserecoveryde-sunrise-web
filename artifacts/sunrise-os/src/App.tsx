@@ -63,6 +63,7 @@ import { AIAssistant } from './pages/AIAssistant';
 import { DAPNoteWorkflow } from './pages/DAPNoteWorkflow';
 import { MeasurementBasedCare } from './pages/MeasurementBasedCare';
 import { ClinicalIntelligence } from './pages/ClinicalIntelligence';
+import { WorkforceCompliance } from './pages/WorkforceCompliance';
 import { LoginPage } from './pages/LoginPage';
 import { AccessDenied } from './components/common/AccessDenied';
 import { ReadOnlyBanner } from './components/common/ReadOnlyBanner';
@@ -134,7 +135,8 @@ export type Screen =
   | 'AIAssistant'
   | 'DemoPatientDetail'
   | 'ClinicalIntelligence'
-  | 'DAPNoteWorkflow';
+  | 'DAPNoteWorkflow'
+  | 'WorkforceCompliance';
 
 // ─── Inner app (needs RoleContext) ───────────────────────────────────────────
 
@@ -258,6 +260,7 @@ function AppInner() {
       case 'SecureMessaging':         return withAccessReadOnlyProp('SecureMessaging',         ro => <SecureMessaging navigate={navigateTo} readOnly={ro} />);
       case 'FormularyManagement':     return withAccess('FormularyManagement',     <FormularyManagement navigate={navigateTo} />);
       case 'StaffAdmin':              return <StaffAdmin navigate={navigateTo} />;
+      case 'WorkforceCompliance':     return withAccessReadOnlyProp('WorkforceCompliance',     ro => <WorkforceCompliance navigate={navigateTo} readOnly={ro} />);
       case 'WithdrawalMonitor':       return withAccessReadOnlyProp('WithdrawalMonitor', ro => <WithdrawalMonitor navigate={navigateTo} readOnly={ro} />);
       case 'AIAssistant':             return withAccess('AIAssistant', <AIAssistant navigate={navigateTo} />);
       case 'DAPNoteWorkflow':         return withAccess('AIAssistant', <DAPNoteWorkflow navigate={navigateTo} />);

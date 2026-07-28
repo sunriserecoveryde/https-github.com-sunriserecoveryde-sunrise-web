@@ -1,0 +1,425 @@
+Do not try to rebuild ADP, Paychex, or Gusto. SunriseOS should manage the healthcare-specific workforce information those systems do not handle well—and integrate with them for payroll, taxes, and benefits.
+
+1. Employee and Contractor Profiles
+
+Each employee profile should contain:
+
+Legal and preferred name
+Contact and emergency-contact information
+Employment status: employee, contractor, PRN, intern, volunteer
+Job title, department, supervisor, location, and levels of care
+Hire date, probationary period, anniversary date, and termination date
+Full-time, part-time, PRN, salaried, hourly, or contractor classification
+Work schedule and availability
+Required credentials for the position
+Assigned caseload and groups
+System roles and EHR access level
+Personnel documents
+Training and supervision history
+Performance reviews and corrective actions
+Equipment and system access assigned
+
+Clinical, medical, administrative, recovery-housing, and contractor profiles should have different required fields.
+
+2. Credentialing and License Management
+
+This should be one of SunriseOS’s strongest HR features.
+
+Track:
+
+Professional license or certification
+Credential abbreviation
+Licensing board
+License number
+State
+Original issue date
+Expiration and renewal dates
+Active, pending, expired, suspended, or restricted status
+Primary-source verification date
+Verification document or screenshot
+Scope-of-practice limitations
+Required clinical supervision
+Approved supervisor
+Supervision hours completed and remaining
+Continuing-education requirements
+CPR/first aid certification
+NPI and taxonomy code
+CAQH profile and reattestation date
+DEA registration when applicable
+Professional liability insurance
+Driver’s license and motor-vehicle clearance when transporting clients
+
+SunriseOS should generate alerts at:
+
+120 days before expiration
+90 days
+60 days
+30 days
+14 days
+Expiration date
+
+If a required credential expires, the system should alert leadership and restrict the employee from being scheduled or assigned work outside their verified scope. It should not automatically terminate employment.
+
+3. Exclusion and Background Screening
+
+Create a screening checklist for employees, contractors, owners, interns, and volunteers:
+
+HHS-OIG exclusion check
+SAM.gov exclusion check
+State Medicaid exclusion check
+Criminal background check
+Sex-offender registry check when required
+Child or vulnerable-adult registry checks when applicable
+Motor-vehicle record
+Professional disciplinary-history check
+Employment and reference verification
+Drug screening when required by policy
+TB, health screening, or vaccination documentation when applicable
+
+Record:
+
+Search source
+Search date
+Person conducting the search
+Result
+Supporting evidence
+Follow-up required
+Next screening date
+
+Healthcare organizations should routinely screen new hires and current employees against the OIG exclusion list because employing an excluded individual can create civil monetary-penalty exposure. HHS-OIG Exclusions Program
+
+4. Digital Onboarding
+
+Every position should have a configurable onboarding pathway.
+
+Examples:
+
+Clinical employee
+Offer letter and job description
+Background and exclusion screening
+License verification
+Confidentiality agreement
+HIPAA training
+42 CFR Part 2 training
+Clinical-documentation training
+ASAM training
+Suicide-risk and emergency-response training
+Mandated-reporting training
+Cultural humility and trauma-informed care
+EHR competency assessment
+Clinical shadowing
+Supervisor approval
+Final authorization to treat clients independently
+Case manager
+Job description
+Confidentiality requirements
+Scope-of-role acknowledgment
+Resource and referral training
+Transportation policy
+Boundary and ethics training
+Documentation standards
+Crisis-escalation procedures
+EHR competency test
+
+The system should show onboarding as a completion percentage and prevent independent work until designated requirements are approved.
+
+5. Training and Learning Management
+
+Integrate Grow Motivational’s training content directly into this module.
+
+Include:
+
+Mandatory annual training assignments
+Role-specific training pathways
+Videos, courses, quizzes, and competency tests
+Certificates of completion
+CEU tracking
+In-person attendance sheets
+Policy acknowledgment
+Remedial training
+Supervisor observation and competency sign-off
+Training expiration and renewal alerts
+Organization-wide compliance reports
+
+Suggested training categories:
+
+HIPAA and 42 CFR Part 2
+Clinical documentation
+Ethics and professional boundaries
+Suicide prevention
+Overdose response and naloxone
+Trauma-informed care
+Cultural competence
+Medication-assisted treatment
+Emergency preparedness
+Infection control
+Workplace violence
+Harassment and discrimination
+Cybersecurity and phishing
+ASAM placement criteria
+Client rights
+Mandated reporting
+6. Scheduling and Staffing Compliance
+
+Connect HR information to the clinical schedule and census.
+
+SunriseOS should answer:
+
+Do we have enough qualified staff for tomorrow’s census?
+Is every scheduled clinician properly credentialed?
+Does each group have an approved facilitator?
+Who is available to cover a callout?
+Are PHP, IOP, OP, and residential programs appropriately staffed?
+Is anyone scheduled outside their credential or scope?
+Are staff-to-client ratios within organizational requirements?
+Are overtime or burnout risks developing?
+
+Include:
+
+Employee availability
+Shift scheduling
+Group assignments
+PTO and callout requests
+Coverage requests
+On-call rotation
+Float-pool management
+Overtime warnings
+Schedule conflicts
+Credential-based scheduling restrictions
+Census-based staffing recommendations
+7. Clinical Supervision Management
+
+This would distinguish SunriseOS from ordinary HR systems.
+
+Track:
+
+Supervisee and approved supervisor
+Credential and supervision requirement
+Individual and group supervision hours
+Date, duration, and supervision type
+Topics discussed
+Cases reviewed
+Documentation reviewed
+Ethical or risk concerns
+Corrective guidance
+Action items
+Supervisor and supervisee signatures
+Running totals toward licensure
+Missed-supervision alerts
+
+Sensitive supervision notes should be access-restricted and separate from the ordinary employee profile.
+
+8. Performance Management
+
+Performance reviews should combine HR information with appropriate operational data.
+
+Potential measures:
+
+Timely documentation percentage
+Late and unsigned notes
+Treatment-plan completion
+Discharge-summary completion
+Attendance and punctuality
+Caseload management
+Group attendance
+Audit scores
+Clinical-supervision participation
+Training compliance
+Client grievances or compliments
+Teamwork and professional conduct
+Ethical compliance
+Corrective-action follow-through
+
+The system should support:
+
+30-, 60-, and 90-day reviews
+Annual evaluations
+Probationary reviews
+Coaching plans
+Performance-improvement plans
+Employee comments
+Supervisor signatures
+Goals with deadlines
+Follow-up reviews
+
+Do not use AI to automatically discipline, rank, fire, or deny promotion to employees. AI may summarize verified information or identify missing requirements, but a human must review every employment decision.
+
+9. Employee Relations and Incident Management
+
+Create restricted workflows for:
+
+Workplace complaints
+Harassment or discrimination allegations
+Ethical violations
+Boundary concerns
+Confidentiality breaches
+Attendance violations
+Client complaints involving employees
+Medication or safety incidents
+Workplace injuries
+Corrective counseling
+Written warnings
+Performance-improvement plans
+Investigations
+Employee grievances
+Return-to-work requirements
+
+Access should be limited to authorized HR and executive personnel. Clinical supervisors should not automatically see medical, accommodation, or unrelated personnel-investigation records.
+
+10. Role-Based Access and Offboarding
+
+Onboarding and offboarding should connect directly to SunriseOS security.
+
+When an employee is hired:
+
+Assign position.
+Verify credentials.
+Complete training.
+Approve access.
+Assign role-based permissions.
+Record devices and equipment.
+Activate EHR access.
+
+When an employee leaves:
+
+Record last working date.
+Disable SunriseOS access.
+Revoke remote access and integrations.
+Recover devices, keys, and badges.
+Reassign caseload and unfinished documentation.
+Transfer tasks and authorizations.
+Document final payroll notification.
+Preserve the personnel record under the applicable retention schedule.
+
+HHS guidance specifically addresses workforce authorization, clearance, and procedures for ending access to electronic protected health information when employment ends. HHS HIPAA administrative safeguards
+
+11. Employee Self-Service Portal
+
+Employees should be able to:
+
+View their job description
+Update contact information
+Upload renewed licenses
+Review credential status
+Complete assigned training
+Download certificates
+Request PTO
+View schedules
+Acknowledge policies
+Review performance goals
+Complete self-evaluations
+Submit supervision requests
+Report an incident or ethical concern
+View outstanding onboarding requirements
+
+Employees should not be able to alter verification results, disciplinary records, or approved supervision totals.
+
+12. HR Compliance Dashboard
+
+The executive dashboard should display:
+
+Total active employees and contractors
+Vacant positions
+Credential expirations
+Employees missing required training
+Overdue supervision
+Incomplete background or exclusion checks
+Onboarding completion
+Staff scheduled outside verified credentials
+Documentation performance by department
+Turnover rate
+Vacancy duration
+Overtime and callout trends
+Personnel incidents awaiting review
+Unfinished offboarding tasks
+Staffing risk by program and location
+
+Use red, yellow, and green status indicators with the exact responsible person and deadline.
+
+13. Document and Record Management
+
+Store and control:
+
+Applications and résumés
+Interview scoring sheets
+Offer letters
+Job descriptions
+I-9 records
+Tax and payroll forms
+Licenses and certifications
+Background-check documentation
+Signed policies
+Training certificates
+Supervision records
+Performance reviews
+Corrective actions
+Separation documents
+
+Each document needs:
+
+Document type
+Upload date
+Effective date
+Expiration date
+Version
+Employee acknowledgment
+Reviewer approval
+Access restrictions
+Retention rule
+Complete audit history
+
+USCIS permits electronic I-9 storage and requires retention for three years after hire or one year after employment ends, whichever is later. USCIS Form I-9 retention guidance EEOC recordkeeping requirements should also be built into configurable retention rules. EEOC recordkeeping requirements
+
+14. Payroll and Benefits Integrations
+
+Integrate rather than rebuild:
+
+ADP
+Paychex
+Gusto
+QuickBooks Payroll
+Workers’ compensation carriers
+Benefits-administration platforms
+Time-clock systems
+Background-check vendors
+Credential-verification services
+
+SunriseOS should send approved hours, employee identifiers, position, location, and employment status while receiving payroll-status confirmations—not become the payroll tax engine itself.
+
+Recommended Development Order
+Phase 1: Essential and differentiating
+Employee and contractor profiles
+Credential and license tracking
+Expiration alerts
+Exclusion-screening records
+Training and policy acknowledgments
+Clinical-supervision tracking
+Role-based access and offboarding
+Workforce compliance dashboard
+Phase 2: Operational HR
+Digital onboarding
+Employee self-service
+Scheduling and coverage
+PTO and callouts
+Performance reviews
+Corrective-action workflows
+Document retention
+Payroll integrations
+Phase 3: Advanced intelligence
+Census-based staffing forecasts
+Vacancy and turnover forecasting
+Burnout-risk indicators
+Credential-based automatic scheduling checks
+Workforce-cost analysis by level of care
+Staffing recommendations
+Recruitment and applicant tracking
+Multi-location workforce analytics
+My strongest recommendation
+
+Call the module:
+
+SunriseOS Workforce Compliance & Development
+
+Its central promise should be:
+
+Know who is qualified, properly trained, appropriately supervised, correctly scheduled, and authorized to serve clients—before a compliance problem occurs.
