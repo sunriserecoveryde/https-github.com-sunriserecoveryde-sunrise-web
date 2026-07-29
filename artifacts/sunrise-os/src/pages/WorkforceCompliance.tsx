@@ -1960,8 +1960,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             </div>
             {showAuditTrail && (
               <>
-                {/* Filter chips */}
-                <div className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-50/70 border-b border-border flex-wrap">
+                {/* Filter chips — hidden when log is empty */}
+                {auditLog.length > 0 && <div className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-50/70 border-b border-border flex-wrap">
                   {filterChips.map(chip => (
                     <button
                       key={chip.value}
@@ -1980,7 +1980,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       )}
                     </button>
                   ))}
-                </div>
+                </div>}
                 <div className="divide-y divide-border max-h-80 overflow-y-auto">
                   {filtered.length === 0 ? (
                     <div className="px-4 py-6 text-center text-sm text-slate">
@@ -2202,6 +2202,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     };
                     try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_LOG_KEY, JSON.stringify(entry)); } catch { /* unavailable */ }
                     setLastResetEntry(entry);
+                    setAuditFilter('All');
                     setShowResetConfirm(false);
                     setResetPhrase('');
                   }}
