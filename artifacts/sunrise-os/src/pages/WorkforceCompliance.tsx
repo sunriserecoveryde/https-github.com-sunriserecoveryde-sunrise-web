@@ -20,6 +20,7 @@ type ReviewStatus = 'Scheduled' | 'Completed' | 'Overdue' | 'Pending Signature';
 type ReviewType = '30-Day' | '60-Day' | '90-Day' | 'Annual' | 'Probationary' | 'PIP';
 type OnboardStatus = 'In Progress' | 'Pending Approval' | 'Complete' | 'Overdue';
 
+type AuditActionType = 'Marked Met' | 'Evidence Linked' | 'Action Plan Saved';
 interface EmployeeProfile {
   id: string;
   name: string;
@@ -1197,7 +1198,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Medicaid': 'Medicaid',
   'Internal Policy': 'Internal',
 };
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1209,6 +1210,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   setOwnerInputs: (next: Record<string, string>) => void;
   requestedStdFilter?: Exclude<CompStandard, 'All'> | null;
   onRequestedFilterApplied?: () => void;
+  auditLog: AuditLogEntry[];
+  addAuditEntry: (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => void;
 }) {
   // #565 — persist filter selection across tab switches
   const [stdFilter, setStdFilterRaw] = useState<CompStandard>(() => {
@@ -1236,6 +1239,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [exportToast, setExportToast] = useState<number | false>(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetPhrase, setResetPhrase] = useState('');
+  const [showAuditTrail, setShowAuditTrail] = useState(false);
 
   // #589 — free-text "Other" owner mode per requirement
   const EMPLOYEE_NAMES = new Set(EMPLOYEES.filter(e => e.status !== 'Separated').map(e => e.name));
@@ -1692,6 +1696,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           setEvidenceSavedId(req.id);
                           setTimeout(() => setEvidenceSavedId(null), 2000);
                           setEvidenceConfirmed(prev => new Set([...prev, req.id]));
+                          addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer' });
                         }}
                         className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${evidenceSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                         {evidenceSavedId === req.id ? '✓ Saved' : 'Link Evidence'}
@@ -1774,6 +1779,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         setCorrSavedId(req.id);
                         setTimeout(() => setCorrSavedId(null), 2000);
                         setCorrConfirmed(prev => new Set([...prev, req.id]));
+                        addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer' });
                       }}
                       className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${corrSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                       {corrSavedId === req.id ? '✓ Saved' : 'Save Action Plan'}
@@ -1782,6 +1788,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       <LockedButton locked={readOnly} onClick={() => {
                         setCompletedIds(prev => new Set([...prev, req.id]));
                         saveCompAction(`${req.id} marked as Met`);
+                        addAuditEntry({ actionType: 'Marked Met', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer' });
                       }} className="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">
                         Mark as Met ✓
                       </LockedButton>
@@ -1799,6 +1806,65 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           );
         })}
       </div>
+
+      {/* ── Audit Trail ──────────────────────────────────────────────────── */}
+      {(() => {
+        const actionChip: Record<AuditActionType, string> = {
+          'Marked Met':        'bg-green-100 text-green-700',
+          'Evidence Linked':   'bg-blue-100 text-blue-700',
+          'Action Plan Saved': 'bg-amber-100 text-amber-700',
+        };
+        const sorted = [...auditLog].reverse();
+        return (
+          <div className="border border-border rounded-xl overflow-hidden">
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+              onClick={() => setShowAuditTrail(o => !o)}
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-slate" />
+                <span className="text-sm font-semibold text-navy">Audit Trail</span>
+                {auditLog.length > 0 && (
+                  <span className="text-[10px] bg-navy text-white rounded-full px-2 py-0.5 font-semibold">{auditLog.length}</span>
+                )}
+              </div>
+              {showAuditTrail ? <ChevronUp className="w-4 h-4 text-slate" /> : <ChevronDown className="w-4 h-4 text-slate" />}
+            </button>
+            {showAuditTrail && (
+              <div className="divide-y divide-border max-h-80 overflow-y-auto">
+                {sorted.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-sm text-slate">
+                    No audit events yet. Mark a requirement as Met, link evidence, or save a corrective action to begin the log.
+                  </div>
+                ) : sorted.map(entry => {
+                  const dt = new Date(entry.timestamp);
+                  const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                  return (
+                    <div key={entry.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50/60">
+                      <div className="shrink-0 mt-0.5">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${actionChip[entry.actionType]}`}>
+                          {entry.actionType}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-navy truncate" title={entry.reqName}>
+                          <span className="text-slate font-semibold">{entry.reqId}</span> — {entry.reqName}
+                        </div>
+                        <div className="text-[11px] text-slate mt-0.5">by {entry.officer}</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-[11px] text-slate font-medium">{dateStr}</div>
+                        <div className="text-[10px] text-slate">{timeStr}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {warnUnsaved && (
         <div className="fixed bottom-6 right-6 bg-amber-500 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50 max-w-sm">
@@ -1964,6 +2030,7 @@ const COMPLIANCE_EVIDENCE_CONFIRMED_KEY = 'sunrise-os:compliance-evidence-confir
 const COMPLIANCE_STD_FILTER_KEY = 'sunrise-os:compliance-std-filter';
 const COMPLIANCE_GAP_FILTER_KEY = 'sunrise-os:compliance-gap-filter';
 
+const COMPLIANCE_AUDIT_LOG_KEY = 'sunrise-os:compliance-audit-log';
 export function WorkforceCompliance({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<WFTab>('Dashboard');
   // Requested filter from Dashboard ring click — applied once when Standards tab mounts
@@ -2003,6 +2070,28 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       return {};
     }
   });
+  const [auditLog, setAuditLogRaw] = useState<AuditLogEntry[]>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_AUDIT_LOG_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const addAuditEntry = (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => {
+    setAuditLogRaw(prev => {
+      const next: AuditLogEntry[] = [
+        ...prev,
+        {
+          ...entry,
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          timestamp: new Date().toISOString(),
+        },
+      ];
+      try { localStorage.setItem(COMPLIANCE_AUDIT_LOG_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
+      return next;
+    });
+  };
 
   // ── API sync ────────────────────────────────────────────────────────────────
   // hydrated tracks whether the initial GET has settled (success OR failure).
@@ -2167,7 +2256,7 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} />}
       </div>
     </div>
   );
@@ -2350,4 +2439,13 @@ function MiniStandardRing({
       </div>
     </div>
   );
+}
+
+interface AuditLogEntry {
+  id: string;           // unique entry id (timestamp + random suffix)
+  timestamp: string;    // ISO string
+  actionType: AuditActionType;
+  reqId: string;
+  reqName: string;
+  officer: string;
 }
