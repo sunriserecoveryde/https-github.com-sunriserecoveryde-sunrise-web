@@ -8,6 +8,7 @@ import {
   Printer
 } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
+import { useAuth } from '../context/AuthContext';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
 
@@ -1241,6 +1242,16 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [resetPhrase, setResetPhrase] = useState('');
   const [showAuditTrail, setShowAuditTrail] = useState(false);
 
+  // #597 — audit reset log
+  const { currentStaff } = useAuth();
+  interface ResetLogEntry { userName: string; timestamp: string; action: 'AUDIT_RESET' }
+  const [lastResetEntry, setLastResetEntry] = useState<ResetLogEntry | null>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_AUDIT_RESET_LOG_KEY);
+      return stored ? (JSON.parse(stored) as ResetLogEntry) : null;
+    } catch { return null; }
+  });
+
   // #589 — free-text "Other" owner mode per requirement
   const EMPLOYEE_NAMES = new Set(EMPLOYEES.filter(e => e.status !== 'Separated').map(e => e.name));
   const [otherOwnerMode, setOtherOwnerMode] = useState<Set<string>>(() => {
@@ -1501,15 +1512,23 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         <div className="flex items-center gap-2">
           {/* #576 — show Reset whenever any audit data exists, including confirmed-only */}
           {/* #598 — hide Reset entirely for read-only users */}
-          {!readOnly && (completedIds.size > 0 || evidenceConfirmed.size > 0 || corrConfirmed.size > 0 ||
-            Object.values(evidenceInputs).some(v => v.trim()) || Object.values(corrActionInputs).some(v => v.trim()) || Object.values(ownerInputs).some(v => v.trim())) && (
-            <button
-              onClick={() => { setResetPhrase(''); setShowResetConfirm(true); }}
-              className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-red-300 hover:text-red-600 transition-colors"
-            >
-              Reset Audit Cycle
-            </button>
-          )}
+          <div className="flex flex-col items-end gap-1">
+            {!readOnly && (completedIds.size > 0 || evidenceConfirmed.size > 0 || corrConfirmed.size > 0 ||
+              Object.values(evidenceInputs).some(v => v.trim()) || Object.values(corrActionInputs).some(v => v.trim()) || Object.values(ownerInputs).some(v => v.trim())) && (
+              <button
+                onClick={() => { setResetPhrase(''); setShowResetConfirm(true); }}
+                className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-red-300 hover:text-red-600 transition-colors"
+              >
+                Reset Audit Cycle
+              </button>
+            )}
+            {/* #597 — always show last-reset attribution when one exists */}
+            {lastResetEntry && (
+              <span className="text-[10px] text-slate leading-none">
+                Last reset by <span className="font-semibold text-navy">{lastResetEntry.userName}</span> on {new Date(lastResetEntry.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(lastResetEntry.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
           <button
             onClick={() => printGapList()}
             className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-navy/40 transition-colors flex items-center gap-2"
@@ -2056,6 +2075,16 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       try { localStorage.removeItem(COMPLIANCE_CORR_CONFIRMED_KEY); } catch { /* unavailable */ }
                       return new Set<string>();
                     });
+                    // #597 — record who triggered the reset and when
+                    const entry: ResetLogEntry = {
+                      userName: currentStaff
+                        ? `${currentStaff.firstName} ${currentStaff.lastName}`
+                        : 'Unknown user',
+                      timestamp: new Date().toISOString(),
+                      action: 'AUDIT_RESET',
+                    };
+                    try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_LOG_KEY, JSON.stringify(entry)); } catch { /* unavailable */ }
+                    setLastResetEntry(entry);
                     setShowResetConfirm(false);
                     setResetPhrase('');
                   }}
@@ -2084,6 +2113,8 @@ const COMPLIANCE_OWNER_KEY = 'sunrise-os:compliance-owner-inputs';
 const COMPLIANCE_EVIDENCE_CONFIRMED_KEY = 'sunrise-os:compliance-evidence-confirmed';
 const COMPLIANCE_STD_FILTER_KEY = 'sunrise-os:compliance-std-filter';
 const COMPLIANCE_GAP_FILTER_KEY = 'sunrise-os:compliance-gap-filter';
+
+const COMPLIANCE_AUDIT_RESET_LOG_KEY = 'sunrise-os:compliance-audit-reset-log';
 
 const COMPLIANCE_AUDIT_LOG_KEY = 'sunrise-os:compliance-audit-log';
 export function WorkforceCompliance({ navigate, readOnly }: Props) {
