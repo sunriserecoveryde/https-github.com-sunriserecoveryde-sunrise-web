@@ -1179,8 +1179,39 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [evidenceSavedId, setEvidenceSavedId] = useState<string | null>(null);
   const [corrSavedId, setCorrSavedId] = useState<string | null>(null);
   const [warnUnsaved, setWarnUnsaved] = useState<string | null>(null);
-  const [evidenceConfirmed, setEvidenceConfirmed] = useState<Set<string>>(new Set());
-  const [corrConfirmed, setCorrConfirmed] = useState<Set<string>>(new Set());
+  const [evidenceConfirmed, setEvidenceConfirmedRaw] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY);
+      return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const [corrConfirmed, setCorrConfirmedRaw] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_CORR_CONFIRMED_KEY);
+      return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  // Persist confirmed sets to localStorage on every update so they survive
+  // a full page reload and don't produce false "unsaved" warnings.
+  const setEvidenceConfirmed = (updater: (prev: Set<string>) => Set<string>) => {
+    setEvidenceConfirmedRaw(prev => {
+      const next = updater(prev);
+      try { localStorage.setItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY, JSON.stringify([...next])); } catch { /* unavailable */ }
+      return next;
+    });
+  };
+  const setCorrConfirmed = (updater: (prev: Set<string>) => Set<string>) => {
+    setCorrConfirmedRaw(prev => {
+      const next = updater(prev);
+      try { localStorage.setItem(COMPLIANCE_CORR_CONFIRMED_KEY, JSON.stringify([...next])); } catch { /* unavailable */ }
+      return next;
+    });
+  };
 
   const checkUnsavedBeforeClose = (reqId: string) => {
     const hasEvidence = !!evidenceInputs[reqId]?.trim();
@@ -1223,6 +1254,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                   setCompletedIds(new Set());
                   setEvidenceInputs({});
                   setCorrActionInputs({});
+                  setEvidenceConfirmed(() => {
+                    try { localStorage.removeItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY); } catch { /* unavailable */ }
+                    return new Set<string>();
+                  });
+                  setCorrConfirmed(() => {
+                    try { localStorage.removeItem(COMPLIANCE_CORR_CONFIRMED_KEY); } catch { /* unavailable */ }
+                    return new Set<string>();
+                  });
                 }
               }}
               className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-red-300 hover:text-red-600 transition-colors"
@@ -1512,6 +1551,7 @@ const COMPLIANCE_STORAGE_KEY = 'sunrise-os:compliance-completed-ids';
 const COMPLIANCE_EVIDENCE_KEY = 'sunrise-os:compliance-evidence-inputs';
 const COMPLIANCE_CORR_KEY = 'sunrise-os:compliance-corr-action-inputs';
 
+const COMPLIANCE_EVIDENCE_CONFIRMED_KEY = 'sunrise-os:compliance-evidence-confirmed';
 export function WorkforceCompliance({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<WFTab>('Dashboard');
 
@@ -1735,3 +1775,5 @@ function StandardRing({
     </button>
   );
 }
+
+const COMPLIANCE_CORR_CONFIRMED_KEY = 'sunrise-os:compliance-corr-confirmed';
