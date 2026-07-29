@@ -392,7 +392,7 @@ const SUB_MODULES = [
 
 function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evidenceInputs, corrActionInputs }: {
   navigate: (s: Screen) => void;
-  onOpenComplianceStandards: () => void;
+  onOpenComplianceStandards: (filter?: Exclude<CompStandard, 'All'>) => void;
   completedIds: Set<string>;
   evidenceInputs: Record<string, string>;
   corrActionInputs: Record<string, string>;
@@ -415,7 +415,7 @@ function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evide
       label: 'Compliance Audit Score', value: `${compScore}%`,
       sub: `${compMet} of ${compTotal} requirements met or remediated`,
       color: compColor, dot: compDot,
-      detail: 'CARF · HIPAA · 42 CFR Part 2 · MD OHCQ · Medicaid · Internal Policy — tap to open Compliance Standards',
+      detail: '__RINGS__',
       onClick: onOpenComplianceStandards,
     },
     {
@@ -495,19 +495,53 @@ function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evide
         </div>
         <p className="text-sm text-slate mb-5">Know who is qualified, properly trained, appropriately supervised, correctly scheduled, and authorized to serve clients — before a compliance problem occurs.</p>
         <div className="grid grid-cols-3 gap-4">
-          {kpis.map((kpi, i) => (
-            kpi.onClick ? (
-              <button key={i} onClick={kpi.onClick}
-                className="card hover:border-orange/40 hover:bg-orange/5 transition-colors text-left group">
-                <div className="flex items-start justify-between mb-1">
-                  <div className="text-xs font-semibold text-slate uppercase tracking-wide leading-tight pr-2 group-hover:text-orange transition-colors">{kpi.label}</div>
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-0.5 ${dotColor[kpi.dot]}`} />
-                </div>
-                <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
-                <div className="text-xs text-slate mt-0.5 mb-2">{kpi.sub}</div>
-                <div className="text-[10px] text-slate border-t border-border pt-2 leading-relaxed">{kpi.detail}</div>
-              </button>
-            ) : (
+          {kpis.map((kpi, i) => {
+            const isRingsCard = kpi.detail === '__RINGS__';
+            if (kpi.onClick) {
+              return (
+                <button key={i} onClick={() => kpi.onClick!()}
+                  className="card hover:border-orange/40 hover:bg-orange/5 transition-colors text-left group">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="text-xs font-semibold text-slate uppercase tracking-wide leading-tight pr-2 group-hover:text-orange transition-colors">{kpi.label}</div>
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-0.5 ${dotColor[kpi.dot]}`} />
+                  </div>
+                  <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
+                  <div className="text-xs text-slate mt-0.5 mb-2">{kpi.sub}</div>
+                  {isRingsCard ? (
+                    <div className="border-t border-border pt-2">
+                      <div className="grid grid-cols-6 gap-1" onClick={e => e.stopPropagation()}>
+                        {(['CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'] as const).map(std => {
+                          const reqs = COMP_REQUIREMENTS.filter(r => r.standard === std);
+                          const met  = reqs.filter(r => reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length;
+                          const pct  = reqs.length > 0 ? Math.round((met / reqs.length) * 100) : 100;
+                          const col  = pct >= 90 ? '#22c55e' : pct >= 75 ? '#f59e0b' : '#ef4444';
+                          const R = 14; const C = 16; const circ = 2 * Math.PI * R;
+                          return (
+                            <button key={std} title={`${std}: ${met}/${reqs.length} (${pct}%) — click to filter`}
+                              onClick={e => { e.stopPropagation(); onOpenComplianceStandards(std); }}
+                              className="flex flex-col items-center gap-0.5 hover:opacity-80 transition-opacity">
+                              <svg width="32" height="32" viewBox="0 0 32 32">
+                                <circle cx={C} cy={C} r={R} fill="none" stroke="#e5e7eb" strokeWidth="4" />
+                                <circle cx={C} cy={C} r={R} fill="none" stroke={col} strokeWidth="4"
+                                  strokeDasharray={`${(met / (reqs.length || 1)) * circ} ${circ}`}
+                                  transform={`rotate(-90 ${C} ${C})`}
+                                  style={{ transition: 'stroke-dasharray 0.5s ease' }} />
+                                <text x={C} y={C + 1} textAnchor="middle" dominantBaseline="middle" fontSize="7" fontWeight="bold" fill={col}>{pct}%</text>
+                              </svg>
+                              <span className="text-[8px] text-slate text-center leading-none">{STD_SHORT[std]}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="text-[9px] text-slate mt-1.5">Tap a ring to open that framework's requirements</div>
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-slate border-t border-border pt-2 leading-relaxed">{kpi.detail}</div>
+                  )}
+                </button>
+              );
+            }
+            return (
               <div key={i} className="card hover:border-orange/30 transition-colors">
                 <div className="flex items-start justify-between mb-1">
                   <div className="text-xs font-semibold text-slate uppercase tracking-wide leading-tight pr-2">{kpi.label}</div>
@@ -517,8 +551,8 @@ function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evide
                 <div className="text-xs text-slate mt-0.5 mb-2">{kpi.sub}</div>
                 <div className="text-[10px] text-slate border-t border-border pt-2 leading-relaxed">{kpi.detail}</div>
               </div>
-            )
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -1161,17 +1195,38 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Medicaid': 'Medicaid',
   'Internal Policy': 'Internal',
 };
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, requestedStdFilter, onRequestedFilterApplied }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   evidenceInputs: Record<string, string>;
-  setEvidenceInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  setEvidenceInputs: (next: Record<string, string>) => void;
   corrActionInputs: Record<string, string>;
-  setCorrActionInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  setCorrActionInputs: (next: Record<string, string>) => void;
+  requestedStdFilter?: Exclude<CompStandard, 'All'> | null;
+  onRequestedFilterApplied?: () => void;
 }) {
-  const [stdFilter, setStdFilter] = useState<CompStandard>('All');
-  const [gapFilter, setGapFilter] = useState<'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing'>('All');
+  // #565 — persist filter selection across tab switches
+  const [stdFilter, setStdFilterRaw] = useState<CompStandard>(() => {
+    try { return (localStorage.getItem(COMPLIANCE_STD_FILTER_KEY) as CompStandard) || 'All'; } catch { return 'All'; }
+  });
+  const setStdFilter = (v: CompStandard) => {
+    setStdFilterRaw(v);
+    try { localStorage.setItem(COMPLIANCE_STD_FILTER_KEY, v); } catch { /* unavailable */ }
+  };
+  const [gapFilter, setGapFilterRaw] = useState<'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing'>(() => {
+    try { return (localStorage.getItem(COMPLIANCE_GAP_FILTER_KEY) as 'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing') || 'All'; } catch { return 'All'; }
+  });
+  const setGapFilter = (v: 'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing') => {
+    setGapFilterRaw(v);
+    try { localStorage.setItem(COMPLIANCE_GAP_FILTER_KEY, v); } catch { /* unavailable */ }
+  };
+
+  // #581 — apply filter requested from Dashboard ring click
+  useEffect(() => {
+    if (requestedStdFilter) { setStdFilter(requestedStdFilter); onRequestedFilterApplied?.(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedStdFilter]);
   const [selectedReq, setSelectedReq] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [exportToast, setExportToast] = useState(false);
@@ -1287,7 +1342,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       <div className="flex items-center justify-between">
         <div className="text-sm text-slate">Track evidence of compliance, assign corrective actions, and assess audit readiness across all regulatory standards.</div>
         <div className="flex items-center gap-2">
-          {(completedIds.size > 0 || Object.values(evidenceInputs).some(v => v.trim()) || Object.values(corrActionInputs).some(v => v.trim())) && (
+          {/* #576 — show Reset whenever any audit data exists, including confirmed-only */}
+          {(completedIds.size > 0 || evidenceConfirmed.size > 0 || corrConfirmed.size > 0 ||
+            Object.values(evidenceInputs).some(v => v.trim()) || Object.values(corrActionInputs).some(v => v.trim())) && (
             <button
               onClick={() => {
                 if (confirm('Reset all manually-marked requirements? This clears your current audit cycle progress, including evidence notes and corrective action entries.')) {
@@ -1374,13 +1431,28 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         </div>
       </div>
 
+      {/* #566 — count badges on standard filter pills */}
       <div className="flex gap-2 flex-wrap">
-        {standards.map(s => (
-          <button key={s} onClick={() => setStdFilter(s)}
-            className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${stdFilter === s ? 'bg-navy text-white border-navy' : 'bg-white text-slate border-border hover:border-navy/40'}`}>
-            {s}
-          </button>
-        ))}
+        {standards.map(s => {
+          const count = s === 'All' ? COMP_REQUIREMENTS.length : COMP_REQUIREMENTS.filter(r => r.standard === s).length;
+          const open  = s === 'All'
+            ? COMP_REQUIREMENTS.filter(r => !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length
+            : COMP_REQUIREMENTS.filter(r => r.standard === s && !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length;
+          return (
+            <button key={s} onClick={() => setStdFilter(s)}
+              className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors flex items-center gap-1.5 ${stdFilter === s ? 'bg-navy text-white border-navy' : 'bg-white text-slate border-border hover:border-navy/40'}`}>
+              {s}
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${stdFilter === s ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate'}`}>
+                {count}
+              </span>
+              {open > 0 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${stdFilter === s ? 'bg-red-400/80 text-white' : 'bg-red-100 text-red-600'}`}>
+                  {open} open
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -1439,7 +1511,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       <input
                         value={evidenceInputs[req.id] ?? ''}
                         onChange={e => {
-                          setEvidenceInputs(prev => ({ ...prev, [req.id]: e.target.value }));
+                          setEvidenceInputs({ ...evidenceInputs, [req.id]: e.target.value });
                           setEvidenceConfirmed(prev => { const n = new Set(prev); n.delete(req.id); return n; });
                         }}
                         className="flex-1 border border-border rounded-lg px-3 py-2 text-sm"
@@ -1461,7 +1533,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     <textarea
                       value={corrActionInputs[req.id] ?? ''}
                       onChange={e => {
-                        setCorrActionInputs(prev => ({ ...prev, [req.id]: e.target.value }));
+                        setCorrActionInputs({ ...corrActionInputs, [req.id]: e.target.value });
                         setCorrConfirmed(prev => { const n = new Set(prev); n.delete(req.id); return n; });
                       }}
                       className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none"
@@ -1471,10 +1543,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                   {(() => {
                     const evidenceUnsaved = !!evidenceInputs[req.id]?.trim() && !evidenceConfirmed.has(req.id);
                     const corrUnsaved = !!corrActionInputs[req.id]?.trim() && !corrConfirmed.has(req.id);
+                    /* #573 — pulse animation on unsaved dot */
                     return (evidenceUnsaved || corrUnsaved) ? (
                       <div className="flex items-center gap-1.5 text-amber-600 text-[11px] font-semibold">
-                        <span className="w-2 h-2 rounded-full bg-amber-400 inline-block shrink-0" />
-                        Unsaved changes
+                        <span className="w-2 h-2 rounded-full bg-amber-400 inline-block shrink-0 animate-pulse" />
+                        Unsaved changes — click "Link Evidence" or "Save Action Plan" to keep
                       </div>
                     ) : null;
                   })()}
@@ -1604,8 +1677,13 @@ const COMPLIANCE_EVIDENCE_KEY = 'sunrise-os:compliance-evidence-inputs';
 const COMPLIANCE_CORR_KEY = 'sunrise-os:compliance-corr-action-inputs';
 
 const COMPLIANCE_EVIDENCE_CONFIRMED_KEY = 'sunrise-os:compliance-evidence-confirmed';
+const COMPLIANCE_STD_FILTER_KEY = 'sunrise-os:compliance-std-filter';
+const COMPLIANCE_GAP_FILTER_KEY = 'sunrise-os:compliance-gap-filter';
+
 export function WorkforceCompliance({ navigate, readOnly }: Props) {
   const [tab, setTab] = useState<WFTab>('Dashboard');
+  // Requested filter from Dashboard ring click — applied once when Standards tab mounts
+  const [requestedStdFilter, setRequestedStdFilter] = useState<Exclude<CompStandard, 'All'> | null>(null);
 
   // ── Compliance audit state lifted here so resets are atomic and the
   //    Dashboard KPI always reads the same source of truth as the Standards tab.
@@ -1709,13 +1787,13 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       </div>
 
       <div>
-        {tab === 'Dashboard'             && <DashboardTab navigate={navigate} onOpenComplianceStandards={() => setTab('Compliance Standards')} completedIds={completedIds} evidenceInputs={evidenceInputs} corrActionInputs={corrActionInputs} />}
+        {tab === 'Dashboard'             && <DashboardTab navigate={navigate} onOpenComplianceStandards={(filter) => { if (filter) setRequestedStdFilter(filter); setTab('Compliance Standards'); }} completedIds={completedIds} evidenceInputs={evidenceInputs} corrActionInputs={corrActionInputs} />}
         {tab === 'Employee Profiles'     && <EmployeeProfilesTab />}
         {tab === 'Exclusion & Screening' && <ExclusionTab readOnly={readOnly} />}
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} />}
       </div>
     </div>
   );
@@ -1816,14 +1894,28 @@ function StandardRing({
         {STD_SHORT[std]}
       </div>
 
-      {/* Evidence-only badge */}
-      {evidOnlyCount > 0 ? (
-        <div className="text-[9px] text-cyan-600 font-semibold bg-cyan-50 border border-cyan-200 rounded-full px-1.5 py-0.5 leading-none">
-          +{evidOnlyCount} evid.
-        </div>
-      ) : (
-        <div className="h-4" /> /* spacer so heights stay equal */
-      )}
+      {/* #575 — show open gaps count + evidence badge */}
+      {(() => {
+        const openGaps = reqs.filter(r => !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length;
+        return (
+          <div className="flex flex-col items-center gap-0.5">
+            {openGaps > 0 ? (
+              <div className="text-[9px] text-red-600 font-semibold bg-red-50 border border-red-200 rounded-full px-1.5 py-0.5 leading-none">
+                {openGaps} gap{openGaps !== 1 ? 's' : ''}
+              </div>
+            ) : (
+              <div className="text-[9px] text-green-600 font-semibold bg-green-50 border border-green-200 rounded-full px-1.5 py-0.5 leading-none">
+                ✓ all met
+              </div>
+            )}
+            {evidOnlyCount > 0 && (
+              <div className="text-[9px] text-cyan-600 font-semibold bg-cyan-50 border border-cyan-200 rounded-full px-1.5 py-0.5 leading-none">
+                +{evidOnlyCount} evid.
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </button>
   );
 }
