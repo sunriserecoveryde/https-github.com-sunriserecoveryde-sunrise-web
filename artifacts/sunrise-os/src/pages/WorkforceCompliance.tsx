@@ -1170,6 +1170,21 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const saveCompAction = (msg: string) => { setCompSaved(msg); setTimeout(() => setCompSaved(null), 2500); };
   const [evidenceSavedId, setEvidenceSavedId] = useState<string | null>(null);
   const [corrSavedId, setCorrSavedId] = useState<string | null>(null);
+  const [warnUnsaved, setWarnUnsaved] = useState<string | null>(null);
+  const [evidenceConfirmed, setEvidenceConfirmed] = useState<Set<string>>(new Set());
+  const [corrConfirmed, setCorrConfirmed] = useState<Set<string>>(new Set());
+
+  const checkUnsavedBeforeClose = (reqId: string) => {
+    const hasEvidence = !!evidenceInputs[reqId]?.trim();
+    const hasCorr = !!corrActionInputs[reqId]?.trim();
+    const evidenceUnsaved = hasEvidence && !evidenceConfirmed.has(reqId);
+    const corrUnsaved = hasCorr && !corrConfirmed.has(reqId);
+    if (evidenceUnsaved || corrUnsaved) {
+      const fields = [evidenceUnsaved && 'evidence', corrUnsaved && 'corrective action'].filter(Boolean).join(' and ');
+      setWarnUnsaved(`Unsaved ${fields} — click "Link Evidence" or "Save Action Plan" to keep it.`);
+      setTimeout(() => setWarnUnsaved(null), 3500);
+    }
+  };
 
   const standards: CompStandard[] = ['All', 'CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'];
   const gapFilterOptions: Array<'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing'> = ['All', 'Needs Evidence', 'Needs Action Plan', 'Both Missing'];
@@ -1268,7 +1283,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             <div key={req.id} className={`border rounded-xl overflow-hidden transition-all ${isSelected ? 'border-orange shadow-sm' : 'border-border'}`}>
               <div
                 className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50"
-                onClick={() => setSelectedReq(isSelected ? null : req.id)}
+                onClick={() => {
+                  if (selectedReq && selectedReq !== req.id) checkUnsavedBeforeClose(selectedReq);
+                  else if (isSelected) checkUnsavedBeforeClose(req.id);
+                  setSelectedReq(isSelected ? null : req.id);
+                }}
               >
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${STATUS_CHIP[effectiveStatus]}`}>{effectiveStatus}</span>
                 {hasEvidenceAndPlan && !isCompleted && (
@@ -1288,7 +1307,10 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     <div className="flex gap-2">
                       <input
                         value={evidenceInputs[req.id] ?? ''}
-                        onChange={e => setEvidenceInputs(prev => ({ ...prev, [req.id]: e.target.value }))}
+                        onChange={e => {
+                          setEvidenceInputs(prev => ({ ...prev, [req.id]: e.target.value }));
+                          setEvidenceConfirmed(prev => { const n = new Set(prev); n.delete(req.id); return n; });
+                        }}
                         className="flex-1 border border-border rounded-lg px-3 py-2 text-sm"
                         placeholder="e.g. Policy-HIPAA-NPP-v4.pdf, 2026 CARF Self-Study Section 3.docx"
                       />
@@ -1296,6 +1318,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           saveCompAction(`Evidence linked for ${req.id}`);
                           setEvidenceSavedId(req.id);
                           setTimeout(() => setEvidenceSavedId(null), 2000);
+                          setEvidenceConfirmed(prev => new Set([...prev, req.id]));
                         }}
                         className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${evidenceSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                         {evidenceSavedId === req.id ? '✓ Saved' : 'Link Evidence'}
@@ -1306,7 +1329,10 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     <label className="block text-xs font-semibold text-slate uppercase mb-1">Corrective Action Plan</label>
                     <textarea
                       value={corrActionInputs[req.id] ?? ''}
-                      onChange={e => setCorrActionInputs(prev => ({ ...prev, [req.id]: e.target.value }))}
+                      onChange={e => {
+                        setCorrActionInputs(prev => ({ ...prev, [req.id]: e.target.value }));
+                        setCorrConfirmed(prev => { const n = new Set(prev); n.delete(req.id); return n; });
+                      }}
                       className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none"
                       placeholder="Describe corrective actions planned or in progress, responsible person, and target completion date..."
                     />
@@ -1316,6 +1342,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         saveCompAction(`Corrective action saved for ${req.id}`);
                         setCorrSavedId(req.id);
                         setTimeout(() => setCorrSavedId(null), 2000);
+                        setCorrConfirmed(prev => new Set([...prev, req.id]));
                       }}
                       className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${corrSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                       {corrSavedId === req.id ? '✓ Saved' : 'Save Action Plan'}
@@ -1342,7 +1369,12 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         })}
       </div>
 
-      {compSaved && (
+      {warnUnsaved && (
+        <div className="fixed bottom-6 right-6 bg-amber-500 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50 max-w-sm">
+          <AlertTriangle className="w-4 h-4 shrink-0" /> {warnUnsaved}
+        </div>
+      )}
+      {!warnUnsaved && compSaved && (
         <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
           <CheckCircle className="w-4 h-4" /> {compSaved}
         </div>
