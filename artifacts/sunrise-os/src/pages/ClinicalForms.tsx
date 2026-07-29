@@ -111,19 +111,117 @@ function sogsRisk(s: number) {
 }
 
 // ─── SAFE-T ───────────────────────────────────────────────────────────────────
-const SAFET_RISK_FACTORS = [
-  'Current suicidal ideation', 'Suicidal plan', 'Suicidal intent', 'Access to means (firearms, medications)',
-  'Prior suicide attempt(s)', 'Recent psychiatric hospitalization', 'Current hopelessness',
-  'Current severe anxiety / agitation', 'Substance use / intoxication', 'Active psychosis',
-  'Recent major loss or psychosocial stressor', 'Family history of suicide', 'Limited social support',
-  'Male gender + older age', 'Chronic pain / terminal illness',
+// Risk factor indices — used by the auto-scoring algorithm
+const RF = {
+  IDEATION:       0,  // Current suicidal ideation
+  PLAN:           1,  // Suicidal plan
+  INTENT:         2,  // Suicidal intent
+  ACCESS:         3,  // Access to means
+  PRIOR_ATTEMPT:  4,  // Prior suicide attempt(s)
+  HOSPITALIZATION:5,  // Recent psychiatric hospitalization
+  HOPELESSNESS:   6,  // Current hopelessness
+  ANXIETY:        7,  // Severe anxiety / agitation
+  SUBSTANCE:      8,  // Substance use / intoxication
+  PSYCHOSIS:      9,  // Active psychosis
+  LOSS:          10,  // Recent major loss / stressor
+  FAMILY_HX:     11,  // Family history of suicide
+  ISOLATION:     12,  // Limited social support
+  DEMOGRAPHICS:  13,  // Male gender + older age
+  CHRONIC:       14,  // Chronic pain / terminal illness
+} as const;
+
+// Weights: high-acuity items count more toward the net risk index
+const RF_WEIGHTS: Record<number, number> = {
+  [RF.INTENT]: 3, [RF.PLAN]: 2, [RF.IDEATION]: 2,
+  [RF.ACCESS]: 2, [RF.PRIOR_ATTEMPT]: 3, [RF.HOSPITALIZATION]: 2,
+  [RF.PSYCHOSIS]: 2, [RF.HOPELESSNESS]: 1.5,
+};
+const rfWeight = (i: number) => RF_WEIGHTS[i] ?? 1;
+
+const SAFET_RISK_FACTORS: Array<{ label: string; critical?: boolean }> = [
+  { label: 'Current suicidal ideation',               critical: true  },
+  { label: 'Suicidal plan',                           critical: true  },
+  { label: 'Suicidal intent',                         critical: true  },
+  { label: 'Access to means (firearms, medications)', critical: true  },
+  { label: 'Prior suicide attempt(s)',                critical: true  },
+  { label: 'Recent psychiatric hospitalization' },
+  { label: 'Current hopelessness' },
+  { label: 'Current severe anxiety / agitation' },
+  { label: 'Substance use / intoxication' },
+  { label: 'Active psychosis' },
+  { label: 'Recent major loss or psychosocial stressor' },
+  { label: 'Family history of suicide' },
+  { label: 'Limited social support' },
+  { label: 'Male gender + older age' },
+  { label: 'Chronic pain / terminal illness' },
 ];
-const SAFET_PROTECTIVE = [
-  'Strong reasons for living', 'Religious / spiritual beliefs against suicide',
-  'Positive therapeutic alliance', 'Social support present', 'Children at home',
-  'Fear of death or dying', 'Engaged in treatment', 'Future orientation',
+
+const SAFET_PROTECTIVE: Array<{ label: string; weight: number }> = [
+  { label: 'Strong reasons for living',                      weight: 2   },
+  { label: 'Religious / spiritual beliefs against suicide',  weight: 1.5 },
+  { label: 'Positive therapeutic alliance',                  weight: 1.5 },
+  { label: 'Social support present',                         weight: 2   },
+  { label: 'Children at home',                               weight: 1   },
+  { label: 'Fear of death or dying',                         weight: 1   },
+  { label: 'Engaged in treatment',                           weight: 1.5 },
+  { label: 'Future orientation',                             weight: 1.5 },
 ];
+
 type SafetRisk = 'Low' | 'Moderate' | 'High';
+
+/** Auto-suggest risk level using the SAFE-T triage algorithm */
+function calcSafetRisk(rf: boolean[], pf: boolean[]): { level: SafetRisk; triggers: string[] } {
+  const has = (i: number) => rf[i] === true;
+  const triggers: string[] = [];
+
+  // ── High-risk clinical triggers ──────────────────────────────────────────
+  if (has(RF.IDEATION) && has(RF.PLAN) && has(RF.INTENT)) {
+    triggers.push('Suicidal ideation + plan + intent (critical triad)');
+  }
+  if (has(RF.PRIOR_ATTEMPT) && has(RF.IDEATION) && has(RF.PLAN)) {
+    triggers.push('Prior attempt + current ideation + plan');
+  }
+  if (has(RF.ACCESS) && has(RF.INTENT)) {
+    triggers.push('Access to means + suicidal intent');
+  }
+  if (has(RF.PSYCHOSIS) && has(RF.IDEATION)) {
+    triggers.push('Active psychosis with suicidal ideation');
+  }
+  if (has(RF.PRIOR_ATTEMPT) && has(RF.HOSPITALIZATION)) {
+    triggers.push('Prior attempt + recent hospitalization');
+  }
+
+  if (triggers.length > 0) return { level: 'High', triggers };
+
+  // ── Moderate-risk triggers ───────────────────────────────────────────────
+  const riskScore  = rf.reduce((s, v, i) => s + (v ? rfWeight(i) : 0), 0);
+  const protScore  = pf.reduce((s, v, i) => s + (v ? SAFET_PROTECTIVE[i].weight : 0), 0);
+  const netScore   = riskScore - protScore;
+
+  if (has(RF.IDEATION) && has(RF.PLAN) && !has(RF.INTENT)) {
+    triggers.push('Suicidal ideation + plan (without intent)');
+  }
+  if (has(RF.PRIOR_ATTEMPT) && has(RF.IDEATION)) {
+    triggers.push('Prior attempt + current ideation');
+  }
+  if (netScore >= 5 && has(RF.IDEATION)) {
+    triggers.push(`Elevated net risk score (${netScore.toFixed(1)}) with active ideation`);
+  }
+  if (has(RF.HOPELESSNESS) && has(RF.IDEATION) && netScore >= 3) {
+    triggers.push('Hopelessness + ideation + elevated risk factors');
+  }
+
+  if (triggers.length > 0) return { level: 'Moderate', triggers };
+
+  return { level: 'Low', triggers: [] };
+}
+
+/** Compute net risk index for display: weighted risk minus weighted protective */
+function calcSafetNetIndex(rf: boolean[], pf: boolean[]): number {
+  const r = rf.reduce((s, v, i) => s + (v ? rfWeight(i) : 0), 0);
+  const p = pf.reduce((s, v, i) => s + (v ? SAFET_PROTECTIVE[i].weight : 0), 0);
+  return Math.round((r - p) * 10) / 10;
+}
 
 // ─── BAM ──────────────────────────────────────────────────────────────────────
 const BAM_RISK_ITEMS = [
@@ -708,61 +806,132 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       )}
 
       {/* ── SAFE-T ── */}
-      {tab === 'SAFE-T' && (
+      {tab === 'SAFE-T' && (() => {
+        const riskCount      = safetRiskFactors.filter(Boolean).length;
+        const protCount      = safetProtective.filter(Boolean).length;
+        const netIndex       = calcSafetNetIndex(safetRiskFactors, safetProtective);
+        const suggestion     = calcSafetRisk(safetRiskFactors, safetProtective);
+        const suggestedLevel = suggestion.level;
+        const isOverride     = safetRisk !== null && safetRisk !== suggestedLevel;
+
+        const netColor = netIndex >= 8 ? 'text-red-700 bg-red-50 border-red-300'
+                       : netIndex >= 4 ? 'text-amber-700 bg-amber-50 border-amber-300'
+                       : netIndex >= 0 ? 'text-yellow-700 bg-yellow-50 border-yellow-300'
+                       : 'text-green-700 bg-green-50 border-green-300';
+
+        return (
         <div className="space-y-4">
           <div className="card">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-bold text-navy">SAFE-T: Suicide Assessment Five-Step Evaluation &amp; Triage</h2>
               {safetRisk && (
                 <span className={`text-xs font-bold px-3 py-1 rounded-full ${safetRisk === 'High' ? 'bg-red-100 text-red-700' : safetRisk === 'Moderate' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                  {safetRisk} Risk
+                  {safetRisk} Risk{isOverride ? ' (Override)' : ''}
                 </span>
               )}
             </div>
 
-            {/* Step 1: Risk Factors */}
-            <div className="space-y-3">
-              <div className="text-xs font-bold text-slate uppercase tracking-wide border-b border-border pb-1">Step 1 — Identify Risk Factors</div>
-              <div className="grid grid-cols-3 gap-2">
-                {SAFET_RISK_FACTORS.map((f, i) => (
-                  <label key={i} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 border border-transparent hover:border-border">
-                    <input type="checkbox" checked={safetRiskFactors[i]}
-                      onChange={() => { const n = [...safetRiskFactors]; n[i] = !n[i]; setSafetRiskFactors(n); }}
-                      disabled={readOnly} className="accent-red-600" />
-                    <span className="text-xs text-navy">{f}</span>
-                  </label>
+            {/* ── Scoring strip ─────────────────────────────────────────── */}
+            <div className="grid grid-cols-4 gap-2 mb-4 p-3 bg-slate-50 rounded-xl border border-border">
+              <div className="text-center">
+                <div className={`text-xl font-bold ${riskCount >= 8 ? 'text-red-600' : riskCount >= 4 ? 'text-amber-600' : 'text-slate'}`}>{riskCount}<span className="text-sm font-normal text-slate">/{SAFET_RISK_FACTORS.length}</span></div>
+                <div className="text-[10px] text-slate uppercase tracking-wide mt-0.5">Risk Factors</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-xl font-bold ${protCount >= 5 ? 'text-green-600' : protCount >= 3 ? 'text-amber-600' : 'text-red-500'}`}>{protCount}<span className="text-sm font-normal text-slate">/{SAFET_PROTECTIVE.length}</span></div>
+                <div className="text-[10px] text-slate uppercase tracking-wide mt-0.5">Protective</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-xl font-bold ${netIndex >= 6 ? 'text-red-600' : netIndex >= 2 ? 'text-amber-600' : netIndex >= 0 ? 'text-yellow-600' : 'text-green-600'}`}>{netIndex > 0 ? '+' : ''}{netIndex}</div>
+                <div className="text-[10px] text-slate uppercase tracking-wide mt-0.5">Net Risk Index</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-sm font-bold px-2 py-1 rounded-lg border inline-block ${netColor}`}>{suggestedLevel}</div>
+                <div className="text-[10px] text-slate uppercase tracking-wide mt-1">Algorithm</div>
+              </div>
+            </div>
+
+            {/* Clinical triggers */}
+            {suggestion.triggers.length > 0 && (
+              <div className={`mb-4 rounded-xl border px-4 py-3 space-y-1 ${suggestedLevel === 'High' ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'}`}>
+                <div className={`text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 ${suggestedLevel === 'High' ? 'text-red-700' : 'text-amber-700'}`}>
+                  <AlertTriangle className="w-3.5 h-3.5" /> {suggestedLevel === 'High' ? 'High-Risk Clinical Triggers Detected' : 'Moderate-Risk Triggers Detected'}
+                </div>
+                {suggestion.triggers.map((t, i) => (
+                  <div key={i} className={`text-xs flex items-center gap-1.5 ${suggestedLevel === 'High' ? 'text-red-800' : 'text-amber-800'}`}>
+                    <span className="font-bold">•</span> {t}
+                  </div>
                 ))}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {/* Step 1: Risk Factors */}
+              <div className="flex items-center justify-between border-b border-border pb-1">
+                <div className="text-xs font-bold text-slate uppercase tracking-wide">Step 1 — Identify Risk Factors</div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${riskCount >= 8 ? 'bg-red-100 text-red-700 border-red-300' : riskCount >= 4 ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-100 text-slate border-slate-200'}`}>
+                  {riskCount} / {SAFET_RISK_FACTORS.length} present
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {SAFET_RISK_FACTORS.map((f, i) => {
+                  const checked = safetRiskFactors[i];
+                  return (
+                    <label key={i} className={`flex items-center gap-2 cursor-pointer p-2 rounded-lg border transition-colors ${
+                      checked && f.critical ? 'bg-red-50 border-red-300' :
+                      checked             ? 'bg-amber-50 border-amber-300' :
+                      f.critical          ? 'border-red-100 hover:bg-red-50/50' :
+                      'border-transparent hover:bg-gray-50 hover:border-border'
+                    }`}>
+                      <input type="checkbox" checked={checked}
+                        onChange={() => { const n = [...safetRiskFactors]; n[i] = !n[i]; setSafetRiskFactors(n); }}
+                        disabled={readOnly} className="accent-red-600 shrink-0" />
+                      <span className={`text-xs leading-tight ${f.critical ? 'font-semibold text-red-800' : 'text-navy'}`}>
+                        {f.label}
+                        {f.critical && <span className="ml-1 text-[9px] text-red-400 font-bold uppercase">key</span>}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
 
               {/* Step 2: Protective Factors */}
-              <div className="text-xs font-bold text-slate uppercase tracking-wide border-b border-border pb-1 pt-2">Step 2 — Identify Protective Factors</div>
-              <div className="grid grid-cols-2 gap-2">
-                {SAFET_PROTECTIVE.map((f, i) => (
-                  <label key={i} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 border border-transparent hover:border-border">
-                    <input type="checkbox" checked={safetProtective[i]}
-                      onChange={() => { const n = [...safetProtective]; n[i] = !n[i]; setSafetProtective(n); }}
-                      disabled={readOnly} className="accent-green-600" />
-                    <span className="text-xs text-navy">{f}</span>
-                  </label>
-                ))}
+              <div className="flex items-center justify-between border-b border-border pb-1 pt-2">
+                <div className="text-xs font-bold text-slate uppercase tracking-wide">Step 2 — Identify Protective Factors</div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${protCount >= 5 ? 'bg-green-100 text-green-700 border-green-300' : protCount >= 3 ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-red-100 text-red-700 border-red-300'}`}>
+                  {protCount} / {SAFET_PROTECTIVE.length} present
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {SAFET_PROTECTIVE.map((f, i) => {
+                  const checked = safetProtective[i];
+                  return (
+                    <label key={i} className={`flex items-center gap-2 cursor-pointer p-2 rounded-lg border transition-colors ${checked ? 'bg-green-50 border-green-300' : 'border-transparent hover:bg-gray-50 hover:border-border'}`}>
+                      <input type="checkbox" checked={checked}
+                        onChange={() => { const n = [...safetProtective]; n[i] = !n[i]; setSafetProtective(n); }}
+                        disabled={readOnly} className="accent-green-600 shrink-0" />
+                      <span className="text-xs text-navy">{f.label}</span>
+                    </label>
+                  );
+                })}
               </div>
 
-              {/* Step 3: Suicidal Ideation/Behavior */}
+              {/* Step 3: Suicidal Inquiry */}
               <div className="text-xs font-bold text-slate uppercase tracking-wide border-b border-border pb-1 pt-2">Step 3 — Conduct Suicide Inquiry</div>
               <div className="grid grid-cols-2 gap-4">
-                {[
+                {([
                   ['Current Ideation (nature, frequency, duration, intensity)', safetIdeation, setSafetIdeation],
                   ['Suicidal Plan (method, access to means, time, place)', safetPlan, setSafetPlan],
                   ['Suicidal Intent (subjective expectation to act)', safetIntent, setSafetIntent],
                   ['History of Suicidal Behavior (prior attempts, lethality)', safetHistory, setSafetHistory],
-                ].map(([label, val, setter]) => (
-                  <div key={label as string}>
-                    <label className="block text-xs font-semibold text-slate mb-1">{label as string}</label>
+                ] as const).map(([lbl, val, setter]) => (
+                  <div key={lbl}>
+                    <label className="block text-xs font-semibold text-slate mb-1">{lbl}</label>
                     <textarea
-                      value={val as string}
-                      onChange={e => (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)}
+                      value={val}
+                      onChange={e => setter(e.target.value)}
                       disabled={readOnly}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[70px] resize-none"
+                      className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[70px] resize-none ${val.trim() ? 'border-navy/30 bg-navy/5' : 'border-border'}`}
                       placeholder="Clinician narrative..."
                     />
                   </div>
@@ -771,25 +940,67 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
 
               {/* Step 4: Determine Risk Level */}
               <div className="text-xs font-bold text-slate uppercase tracking-wide border-b border-border pb-1 pt-2">Step 4 — Determine Risk Level &amp; Intervention</div>
+
+              {/* Algorithm suggestion banner */}
+              <div className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
+                suggestedLevel === 'High' ? 'bg-red-50 border-red-300' :
+                suggestedLevel === 'Moderate' ? 'bg-amber-50 border-amber-300' :
+                'bg-green-50 border-green-300'
+              }`}>
+                <div className="flex-1">
+                  <div className={`text-xs font-bold uppercase tracking-wide mb-0.5 ${
+                    suggestedLevel === 'High' ? 'text-red-700' :
+                    suggestedLevel === 'Moderate' ? 'text-amber-700' : 'text-green-700'
+                  }`}>Algorithm Suggested: {suggestedLevel} Risk</div>
+                  <div className="text-[11px] text-slate leading-snug">
+                    {suggestedLevel === 'High'
+                      ? 'One or more high-acuity triggers detected. Immediate safety intervention is indicated. Consider hospitalization evaluation.'
+                      : suggestedLevel === 'Moderate'
+                      ? 'Moderate risk indicators present. Increase monitoring, develop safety plan, consider level-of-care adjustment.'
+                      : 'No high-acuity triggers identified. Standard outpatient safety planning and follow-up monitoring indicated.'}
+                  </div>
+                </div>
+                <span className={`shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg border ${
+                  suggestedLevel === 'High'     ? 'bg-red-100 text-red-700 border-red-300' :
+                  suggestedLevel === 'Moderate' ? 'bg-amber-100 text-amber-700 border-amber-300' :
+                  'bg-green-100 text-green-700 border-green-300'
+                }`}>{suggestedLevel}</span>
+              </div>
+
+              <div className="text-[10px] font-semibold text-slate uppercase tracking-wide">Clinician Determination (select to confirm or override)</div>
               <div className="grid grid-cols-3 gap-3">
                 {([
-                  { level: 'Low' as SafetRisk, desc: 'Ideation: none or low frequency, no plan/intent. No prior attempts. No significant acute risk factors.', color: 'border-green-400 bg-green-50', active: 'border-green-600 bg-green-100' },
-                  { level: 'Moderate' as SafetRisk, desc: 'Ideation: frequent, no plan; or ideation with plan but no intent. Some risk factors present.', color: 'border-amber-400 bg-amber-50', active: 'border-amber-600 bg-amber-100' },
-                  { level: 'High' as SafetRisk, desc: 'Ideation: severe with plan, intent, or means access. Prior attempt(s). Requires immediate safety intervention.', color: 'border-red-400 bg-red-50', active: 'border-red-600 bg-red-100' },
-                ] as const).map(({ level, desc, color, active }) => (
-                  <button key={level} onClick={() => { if (!readOnly) setSafetRisk(level); }}
-                    disabled={readOnly}
-                    className={`rounded-xl border-2 p-3 text-left transition-all ${safetRisk === level ? active + ' shadow-sm' : color} hover:shadow`}>
-                    <div className={`font-bold text-sm mb-1 ${level === 'High' ? 'text-red-700' : level === 'Moderate' ? 'text-amber-700' : 'text-green-700'}`}>{level} Risk</div>
-                    <div className="text-xs text-slate leading-relaxed">{desc}</div>
-                  </button>
-                ))}
+                  { level: 'Low'      as SafetRisk, desc: 'Ideation without plan/intent. No prior attempts. Strong protective factors. Standard outpatient safety planning.',           border: 'border-green-400', bg: 'bg-green-50', activeBg: 'bg-green-100', activeBorder: 'border-green-600', textColor: 'text-green-700' },
+                  { level: 'Moderate' as SafetRisk, desc: 'Ideation with plan but no intent, or prior attempts without current plan. Safety planning + increased monitoring.',         border: 'border-amber-400', bg: 'bg-amber-50', activeBg: 'bg-amber-100', activeBorder: 'border-amber-600', textColor: 'text-amber-700' },
+                  { level: 'High'     as SafetRisk, desc: 'Ideation with plan AND intent, means access, or prior attempt with current plan. Immediate safety intervention required.',  border: 'border-red-400',   bg: 'bg-red-50',   activeBg: 'bg-red-100',   activeBorder: 'border-red-600',   textColor: 'text-red-700'   },
+                ] as const).map(({ level, desc, border, bg, activeBg, activeBorder, textColor }) => {
+                  const selected = safetRisk === level;
+                  const isSuggested = suggestedLevel === level;
+                  return (
+                    <button key={level} onClick={() => { if (!readOnly) setSafetRisk(level); }} disabled={readOnly}
+                      className={`rounded-xl border-2 p-3 text-left transition-all hover:shadow ${selected ? `${activeBorder} ${activeBg} shadow-sm` : `${border} ${bg}`}`}>
+                      <div className={`font-bold text-sm mb-1 flex items-center gap-1.5 ${textColor}`}>
+                        {level} Risk
+                        {isSuggested && <span className="text-[9px] font-bold bg-white/80 border px-1 py-0.5 rounded uppercase tracking-wide border-current">Suggested</span>}
+                        {selected && !isSuggested && <span className="text-[9px] font-bold bg-white/80 border px-1 py-0.5 rounded uppercase tracking-wide border-current">Override</span>}
+                      </div>
+                      <div className="text-xs text-slate leading-relaxed">{desc}</div>
+                    </button>
+                  );
+                })}
               </div>
+
+              {isOverride && (
+                <div className="flex items-start gap-2 rounded-lg bg-violet-50 border border-violet-200 px-3 py-2.5 text-xs text-violet-800">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-violet-500" />
+                  <span><strong>Clinical override:</strong> Your determination ({safetRisk}) differs from the algorithm suggestion ({suggestedLevel}). Please document your clinical rationale in Step 5.</span>
+                </div>
+              )}
 
               {/* Step 5: Documentation */}
               <div className="text-xs font-bold text-slate uppercase tracking-wide border-b border-border pb-1 pt-2">Step 5 — Document Assessment &amp; Interventions</div>
               <div>
-                <label className="block text-xs font-semibold text-slate mb-1">Clinical Actions &amp; Plan</label>
+                <label className="block text-xs font-semibold text-slate mb-1">Clinical Actions &amp; Plan{isOverride ? ' — include rationale for override' : ''}</label>
                 <textarea value={safetActions} onChange={e => setSafetActions(e.target.value)} disabled={readOnly}
                   className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none"
                   placeholder="Document interventions: safety contract, means restriction counseling, hospitalization referral, frequency of monitoring, notification of treatment team, family contact plan..." />
@@ -815,7 +1026,8 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ── BAM ── */}
       {tab === 'BAM' && (
