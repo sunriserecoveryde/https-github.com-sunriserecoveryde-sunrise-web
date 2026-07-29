@@ -1681,25 +1681,23 @@ function StandardRing({
         {/* track */}
         <circle cx={CX} cy={CY} r={RADIUS} fill="none" stroke="#e5e7eb" strokeWidth="6" />
         {/* base-met arc */}
-        {baseMetCount > 0 && (
-          <circle
-            cx={CX} cy={CY} r={RADIUS} fill="none"
-            stroke={ringColor} strokeWidth="6"
-            strokeDasharray={`${baseArc} ${circ}`}
-            strokeLinecap="butt"
-            transform={`rotate(${baseDeg} ${CX} ${CY})`}
-          />
-        )}
+        <circle
+          cx={CX} cy={CY} r={RADIUS} fill="none"
+          stroke={ringColor} strokeWidth="6"
+          strokeDasharray={`${baseMetCount > 0 ? baseArc : 0} ${circ}`}
+          strokeLinecap="butt"
+          transform={`rotate(${baseDeg} ${CX} ${CY})`}
+          style={{ transition: 'stroke-dasharray 0.5s ease, stroke 0.4s ease' }}
+        />
         {/* evidence-only arc (cyan) */}
-        {evidOnlyCount > 0 && (
-          <circle
-            cx={CX} cy={CY} r={RADIUS} fill="none"
-            stroke="#06b6d4" strokeWidth="6"
-            strokeDasharray={`${evidArc} ${circ}`}
-            strokeLinecap="butt"
-            transform={`rotate(${evidDeg} ${CX} ${CY})`}
-          />
-        )}
+        <circle
+          cx={CX} cy={CY} r={RADIUS} fill="none"
+          stroke="#06b6d4" strokeWidth="6"
+          strokeDasharray={`${evidOnlyCount > 0 ? evidArc : 0} ${circ}`}
+          strokeLinecap="butt"
+          transform={`rotate(${evidDeg} ${CX} ${CY})`}
+          style={{ transition: 'stroke-dasharray 0.5s ease' }}
+        />
         {/* centre label */}
         <text x={CX} y={CY - 5} textAnchor="middle" dominantBaseline="middle"
           fontSize="11" fontWeight="bold" fill={ringColor}>
