@@ -1406,7 +1406,7 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       return new Set<string>();
     }
   });
-  const [evidenceInputs, setEvidenceInputs] = useState<Record<string, string>>(() => {
+  const [evidenceInputs, setEvidenceInputsRaw] = useState<Record<string, string>>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_KEY);
       return stored ? JSON.parse(stored) : {};
@@ -1414,7 +1414,7 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       return {};
     }
   });
-  const [corrActionInputs, setCorrActionInputs] = useState<Record<string, string>>(() => {
+  const [corrActionInputs, setCorrActionInputsRaw] = useState<Record<string, string>>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_CORR_KEY);
       return stored ? JSON.parse(stored) : {};
@@ -1423,9 +1423,21 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
     }
   });
 
-  // Persist all three pieces of compliance state from one place so a reset
-  // (setCompletedIds + setEvidenceInputs + setCorrActionInputs) is always
-  // reflected in localStorage regardless of which tab is currently mounted.
+  // Synchronous localStorage writers — called directly on every change so no
+  // keystroke can be silently dropped when the user navigates away before
+  // React's effect flush fires.
+  const setEvidenceInputs = (next: Record<string, string>) => {
+    setEvidenceInputsRaw(next);
+    try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
+  };
+
+  const setCorrActionInputs = (next: Record<string, string>) => {
+    setCorrActionInputsRaw(next);
+    try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
+  };
+
+  // completedIds is toggled on button clicks (not keystrokes), so a single
+  // post-render effect is sufficient here.
   useEffect(() => {
     try {
       localStorage.setItem(COMPLIANCE_STORAGE_KEY, JSON.stringify([...completedIds]));
@@ -1433,14 +1445,6 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       // localStorage unavailable — silently continue
     }
   }, [completedIds]);
-
-  useEffect(() => {
-    try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(evidenceInputs)); } catch { /* unavailable */ }
-  }, [evidenceInputs]);
-
-  useEffect(() => {
-    try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(corrActionInputs)); } catch { /* unavailable */ }
-  }, [corrActionInputs]);
 
   const tabs: WFTab[] = ['Dashboard', 'Employee Profiles', 'Exclusion & Screening', 'Onboarding', 'Performance Reviews', 'Offboarding', 'Compliance Standards'];
 
