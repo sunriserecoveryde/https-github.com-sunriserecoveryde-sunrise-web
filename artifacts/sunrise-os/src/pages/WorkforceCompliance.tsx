@@ -1382,6 +1382,16 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       placeholder="Describe corrective actions planned or in progress, responsible person, and target completion date..."
                     />
                   </div>
+                  {(() => {
+                    const evidenceUnsaved = !!evidenceInputs[req.id]?.trim() && !evidenceConfirmed.has(req.id);
+                    const corrUnsaved = !!corrActionInputs[req.id]?.trim() && !corrConfirmed.has(req.id);
+                    return (evidenceUnsaved || corrUnsaved) ? (
+                      <div className="flex items-center gap-1.5 text-amber-600 text-[11px] font-semibold">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 inline-block shrink-0" />
+                        Unsaved changes
+                      </div>
+                    ) : null;
+                  })()}
                   <div className="flex gap-2">
                     <LockedButton locked={readOnly || !corrActionInputs[req.id]?.trim()} onClick={() => {
                         saveCompAction(`Corrective action saved for ${req.id}`);
