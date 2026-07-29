@@ -1478,7 +1478,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         <div className="text-sm text-slate">Track evidence of compliance, assign corrective actions, and assess audit readiness across all regulatory standards.</div>
         <div className="flex items-center gap-2">
           {/* #576 — show Reset whenever any audit data exists, including confirmed-only */}
-          {(completedIds.size > 0 || evidenceConfirmed.size > 0 || corrConfirmed.size > 0 ||
+          {/* #598 — hide Reset entirely for read-only users */}
+          {!readOnly && (completedIds.size > 0 || evidenceConfirmed.size > 0 || corrConfirmed.size > 0 ||
             Object.values(evidenceInputs).some(v => v.trim()) || Object.values(corrActionInputs).some(v => v.trim()) || Object.values(ownerInputs).some(v => v.trim())) && (
             <button
               onClick={() => { setResetPhrase(''); setShowResetConfirm(true); }}
