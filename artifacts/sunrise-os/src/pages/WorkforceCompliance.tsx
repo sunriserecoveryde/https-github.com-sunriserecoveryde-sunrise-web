@@ -1260,6 +1260,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetPhrase, setResetPhrase] = useState('');
   const [showAuditTrail, setShowAuditTrail] = useState(false);
+  const [auditFilter, setAuditFilter] = useState<AuditActionType | 'All'>('All');
 
   // #597 — audit reset log
   const { currentStaff } = useAuth();
@@ -1897,10 +1898,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           'Action Plan Saved': 'bg-amber-100 text-amber-700',
         };
         const sorted = [...auditLog].reverse();
+        const filtered = auditFilter === 'All' ? sorted : sorted.filter(e => e.actionType === auditFilter);
 
         const handleExportCSV = () => {
           const headers = ['Timestamp', 'Action Type', 'Requirement ID', 'Requirement Name', 'Officer'];
-          const rows = sorted.map(entry => [
+          const rows = filtered.map(entry => [
             new Date(entry.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
             entry.actionType,
             entry.reqId,
@@ -1912,10 +1914,18 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'audit-trail.csv';
+          const suffix = auditFilter === 'All' ? '' : `-${auditFilter.toLowerCase().replace(/\s+/g, '-')}`;
+          a.download = `audit-trail${suffix}.csv`;
           a.click();
           URL.revokeObjectURL(url);
         };
+
+        const filterChips: Array<{ label: string; value: AuditActionType | 'All'; activeClass: string }> = [
+          { label: 'All', value: 'All', activeClass: 'bg-navy text-white border-navy' },
+          { label: 'Marked Met', value: 'Marked Met', activeClass: 'bg-green-600 text-white border-green-600' },
+          { label: 'Evidence Linked', value: 'Evidence Linked', activeClass: 'bg-blue-600 text-white border-blue-600' },
+          { label: 'Action Plan Saved', value: 'Action Plan Saved', activeClass: 'bg-amber-500 text-white border-amber-500' },
+        ];
 
         return (
           <div className="border border-border rounded-xl overflow-hidden">
@@ -1927,7 +1937,10 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 <FileText className="w-4 h-4 text-slate" />
                 <span className="text-sm font-semibold text-navy">Audit Trail</span>
                 {auditLog.length > 0 && (
-                  <span className="text-[10px] bg-navy text-white rounded-full px-2 py-0.5 font-semibold">{auditLog.length}</span>
+                  <span className="text-[10px] bg-navy text-white rounded-full px-2 py-0.5 font-semibold">
+                    {auditFilter === 'All' ? auditLog.length : filtered.length}
+                    {auditFilter !== 'All' && <span className="opacity-70"> / {auditLog.length}</span>}
+                  </span>
                 )}
               </button>
               <div className="flex items-center gap-2">
@@ -1937,7 +1950,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    Export Trail
+                    Export {auditFilter !== 'All' ? 'Filtered' : 'Trail'}
                   </button>
                 )}
                 <button onClick={() => setShowAuditTrail(o => !o)} className="hover:opacity-80 transition-opacity">
@@ -1946,36 +1959,61 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               </div>
             </div>
             {showAuditTrail && (
-              <div className="divide-y divide-border max-h-80 overflow-y-auto">
-                {sorted.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-sm text-slate">
-                    No audit events yet. Mark a requirement as Met, link evidence, or save a corrective action to begin the log.
-                  </div>
-                ) : sorted.map(entry => {
-                  const dt = new Date(entry.timestamp);
-                  const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                  const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                  return (
-                    <div key={entry.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50/60">
-                      <div className="shrink-0 mt-0.5">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${actionChip[entry.actionType]}`}>
-                          {entry.actionType}
+              <>
+                {/* Filter chips */}
+                <div className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-50/70 border-b border-border flex-wrap">
+                  {filterChips.map(chip => (
+                    <button
+                      key={chip.value}
+                      onClick={() => setAuditFilter(chip.value)}
+                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                        auditFilter === chip.value
+                          ? chip.activeClass
+                          : 'bg-white text-slate border-border hover:border-gray-400 hover:text-navy'
+                      }`}
+                    >
+                      {chip.label}
+                      {chip.value !== 'All' && (
+                        <span className={`ml-1 opacity-75`}>
+                          ({sorted.filter(e => e.actionType === chip.value).length})
                         </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-navy truncate" title={entry.reqName}>
-                          <span className="text-slate font-semibold">{entry.reqId}</span> — {entry.reqName}
-                        </div>
-                        <div className="text-[11px] text-slate mt-0.5">by {entry.officer}</div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <div className="text-[11px] text-slate font-medium">{dateStr}</div>
-                        <div className="text-[10px] text-slate">{timeStr}</div>
-                      </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="divide-y divide-border max-h-80 overflow-y-auto">
+                  {filtered.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-sm text-slate">
+                      {sorted.length === 0
+                        ? 'No audit events yet. Mark a requirement as Met, link evidence, or save a corrective action to begin the log.'
+                        : `No "${auditFilter}" entries in the audit trail.`}
                     </div>
-                  );
-                })}
-              </div>
+                  ) : filtered.map(entry => {
+                    const dt = new Date(entry.timestamp);
+                    const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    return (
+                      <div key={entry.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50/60">
+                        <div className="shrink-0 mt-0.5">
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${actionChip[entry.actionType]}`}>
+                            {entry.actionType}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-navy truncate" title={entry.reqName}>
+                            <span className="text-slate font-semibold">{entry.reqId}</span> — {entry.reqName}
+                          </div>
+                          <div className="text-[11px] text-slate mt-0.5">by {entry.officer}</div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-[11px] text-slate font-medium">{dateStr}</div>
+                          <div className="text-[10px] text-slate">{timeStr}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         );
