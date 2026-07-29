@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Screen } from '../App';
 import {
   Users, ShieldCheck, AlertTriangle, CheckCircle, Clock, XCircle,
@@ -1913,6 +1913,83 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       return {};
     }
   });
+
+  // ── API sync ────────────────────────────────────────────────────────────────
+  // hydrated tracks whether the initial GET has settled (success OR failure).
+  // The debounced PUT must not fire until then — otherwise a slow GET response
+  // could arrive after an already-sent PUT that carried empty/stale state and
+  // silently wiped the server copy.
+  const hydrated = useRef(false);
+
+  // On mount, fetch from the API server. If it has a saved state, use it and
+  // also refresh the localStorage mirror so the next cold-load is still instant.
+  // hydrated.current is set to true in every exit path so the PUT gate lifts
+  // exactly once, regardless of network outcome.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/compliance/audit-state?orgId=default')
+      .then(r => r.ok ? r.json() : null)
+      .then((data) => {
+        if (cancelled) return;
+        if (!data) { hydrated.current = true; return; }
+        const hasApiData =
+          (data.completedIds?.length > 0) ||
+          Object.keys(data.evidenceInputs ?? {}).length > 0 ||
+          Object.keys(data.corrActionInputs ?? {}).length > 0 ||
+          Object.keys(data.ownerInputs ?? {}).length > 0;
+        if (!hasApiData) {
+          // Server returned the empty default — localStorage copy is authoritative.
+          hydrated.current = true;
+          return;
+        }
+        const ids = new Set<string>(data.completedIds ?? []);
+        const ev: Record<string, string> = data.evidenceInputs ?? {};
+        const ca: Record<string, string> = data.corrActionInputs ?? {};
+        const own: Record<string, string> = data.ownerInputs ?? {};
+        setCompletedIds(ids);
+        setEvidenceInputsRaw(ev);
+        setCorrActionInputsRaw(ca);
+        setOwnerInputsRaw(own);
+        // Refresh localStorage mirror from the authoritative API copy.
+        try { localStorage.setItem(COMPLIANCE_STORAGE_KEY, JSON.stringify([...ids])); } catch { /* unavailable */ }
+        try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(ev)); } catch { /* unavailable */ }
+        try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(ca)); } catch { /* unavailable */ }
+        try { localStorage.setItem(COMPLIANCE_OWNER_KEY, JSON.stringify(own)); } catch { /* unavailable */ }
+        // Lift the PUT gate only after state setters have been called so the
+        // subsequent PUT effect sees the hydrated values, not the boot defaults.
+        hydrated.current = true;
+      })
+      .catch(() => {
+        // Network unavailable — localStorage copy is the fallback.
+        // Still lift the gate so the officer's subsequent edits sync when
+        // connectivity is restored.
+        hydrated.current = true;
+      });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounce-sync all four keys to the API whenever any one changes.
+  // 800 ms debounce prevents flooding on rapid keystrokes while still
+  // ensuring every change is durable within a second.
+  // The hydrated guard prevents an early PUT from overwriting a valid server
+  // copy before the initial GET has returned.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!hydrated.current) return; // GET not yet settled — do not overwrite server
+      fetch('/api/compliance/audit-state?orgId=default', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          completedIds: [...completedIds],
+          evidenceInputs,
+          corrActionInputs,
+          ownerInputs,
+        }),
+      }).catch(() => { /* network unavailable — localStorage copy is the fallback */ });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [completedIds, evidenceInputs, corrActionInputs, ownerInputs]);
 
   // Synchronous localStorage writers — called directly on every change so no
   // keystroke can be silently dropped when the user navigates away before
