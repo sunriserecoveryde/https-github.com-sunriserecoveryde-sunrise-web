@@ -1274,9 +1274,22 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   // #589 — free-text "Other" owner mode per requirement
   const EMPLOYEE_NAMES = new Set(EMPLOYEES.filter(e => e.status !== 'Separated').map(e => e.name));
   const [otherOwnerMode, setOtherOwnerMode] = useState<Set<string>>(() => {
-    // On mount, any existing ownerInputs value not in the employee list means "Other" was already typed
+    // otherOwnerMode is a *transient* session Set — it starts empty on every page load.
+    // That is intentional: free-text owner names survive a reload via ownerInputs, which is
+    // persisted to localStorage. The second branch of isOtherMode (below) re-derives "Other"
+    // state from the stored value at runtime, so this Set only needs to track selections made
+    // during the current session (e.g. when the user picks "Other (type a name)…" and hasn't
+    // typed anything yet). Do NOT replace this empty initialiser with a localStorage read —
+    // isOtherMode already handles the reload case correctly.
     return new Set<string>();
   });
+  // isOtherMode returns true when either:
+  //   (a) the officer chose "Other (type a name)…" during this session (transient Set), OR
+  //   (b) the persisted ownerInput value is non-empty and not in the known employee list.
+  // Branch (b) is what makes free-text owner names survive a full page reload: ownerInputs is
+  // loaded from localStorage on mount, so any previously typed name reactivates the text input
+  // automatically without needing otherOwnerMode to be persisted. Guard against removing branch
+  // (b) — doing so would silently break reload persistence even though the value is still saved.
   const isOtherMode = (reqId: string) =>
     otherOwnerMode.has(reqId) ||
     (!!(ownerInputs[reqId]?.trim()) && !EMPLOYEE_NAMES.has(ownerInputs[reqId]));
