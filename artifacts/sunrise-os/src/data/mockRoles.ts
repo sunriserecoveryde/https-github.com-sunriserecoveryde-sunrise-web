@@ -33,7 +33,7 @@ function perms(full: string[], read: string[]): Record<string, Permission> {
 // ─── convenience screen-group arrays ────────────────────────────────────────
 const SECURITY         = ['StaffAdmin'];
 const CLINICAL_DIRECT  = ['PatientList','PatientDetail','CensusBedBoard','Admissions','Discharges','BedManagement'];
-const CLINICAL_DOCS    = ['ChartReview','ProgressNotes','TreatmentPlans','ASAMAssessments','BiopsychosocialAssessment','DischargeSummary','GroupNotes','MedicalRecords'];
+const CLINICAL_DOCS    = ['ChartReview','ProgressNotes','TreatmentPlans','ASAMAssessments','BiopsychosocialAssessment','DischargeSummary','GroupNotes','MedicalRecords','ClinicalForms'];
 const CLINICAL_QUEUE   = ['CosignQueue','MyCaseload'];
 const CLINICAL_RX      = ['PhysicianOrders','MATManagement','FormularyManagement','NursingMAR'];
 const SCHEDULING_BASE  = ['AppointmentCalendar','GroupSchedule','GroupTherapyCurriculum'];
@@ -41,7 +41,7 @@ const RISK             = ['RiskDashboard','RecoveryEngagementScore','OutcomeTrac
 const CARE_COORD       = ['FamilyEngagement','AftercarePlanning','PeerSupport','TelehealthConsults','AlumniProgram'];
 const SUPERVISION      = ['ClinicalSupervision','CertificationTracker'];
 const OVERVIEW         = ['Dashboard','Settings','HelpSupport'];
-const COMPLIANCE       = ['AuditCompliance','QualityImprovement','Training'];
+const COMPLIANCE       = ['AuditCompliance','QualityImprovement','Training','ChartAuditTool'];
 const FINANCIAL        = ['RevenueCycle','FinancialCounseling'];
 const COMMS            = ['SecureMessaging'];
 const DEMO             = ['RoleExplorer']; // always visible to all roles
