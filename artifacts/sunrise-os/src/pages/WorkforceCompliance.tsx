@@ -1235,6 +1235,16 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [showReport, setShowReport] = useState(false);
   const [exportToast, setExportToast] = useState<number | false>(false);
 
+  // #589 — free-text "Other" owner mode per requirement
+  const EMPLOYEE_NAMES = new Set(EMPLOYEES.filter(e => e.status !== 'Separated').map(e => e.name));
+  const [otherOwnerMode, setOtherOwnerMode] = useState<Set<string>>(() => {
+    // On mount, any existing ownerInputs value not in the employee list means "Other" was already typed
+    return new Set<string>();
+  });
+  const isOtherMode = (reqId: string) =>
+    otherOwnerMode.has(reqId) ||
+    (!!(ownerInputs[reqId]?.trim()) && !EMPLOYEE_NAMES.has(ownerInputs[reqId]));
+
   const exportGapListCsv = () => {
     // Only export requirements that are NOT effectively met — i.e. true open gaps
     const gaps = COMP_REQUIREMENTS.filter(r => {
@@ -1691,8 +1701,16 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     <label className="block text-xs font-semibold text-slate uppercase mb-1">Assign Owner</label>
                     <div className="flex gap-2">
                       <select
-                        value={ownerInputs[req.id] ?? ''}
-                        onChange={e => setOwnerInputs({ ...ownerInputs, [req.id]: e.target.value })}
+                        value={isOtherMode(req.id) ? '__OTHER__' : (ownerInputs[req.id] ?? '')}
+                        onChange={e => {
+                          if (e.target.value === '__OTHER__') {
+                            setOtherOwnerMode(prev => new Set([...prev, req.id]));
+                            setOwnerInputs({ ...ownerInputs, [req.id]: '' });
+                          } else {
+                            setOtherOwnerMode(prev => { const s = new Set(prev); s.delete(req.id); return s; });
+                            setOwnerInputs({ ...ownerInputs, [req.id]: e.target.value });
+                          }
+                        }}
                         disabled={readOnly}
                         className="flex-1 border border-border rounded-lg px-3 py-2 text-sm disabled:opacity-50 focus:outline-none focus:border-orange"
                       >
@@ -1700,16 +1718,31 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         {EMPLOYEES.filter(e => e.status !== 'Separated').map(e => (
                           <option key={e.id} value={e.name}>{e.name} — {e.title}</option>
                         ))}
+                        <option value="__OTHER__">Other (type a name)…</option>
                       </select>
-                      {ownerInputs[req.id]?.trim() && (
+                      {(ownerInputs[req.id]?.trim() || isOtherMode(req.id)) && (
                         <button
-                          onClick={() => setOwnerInputs({ ...ownerInputs, [req.id]: '' })}
+                          onClick={() => {
+                            setOtherOwnerMode(prev => { const s = new Set(prev); s.delete(req.id); return s; });
+                            setOwnerInputs({ ...ownerInputs, [req.id]: '' });
+                          }}
                           disabled={readOnly}
                           className="text-xs text-slate border border-border px-2.5 py-1.5 rounded-lg hover:bg-white shrink-0 disabled:opacity-50"
                           title="Clear owner"
                         >✕</button>
                       )}
                     </div>
+                    {isOtherMode(req.id) && (
+                      <input
+                        type="text"
+                        placeholder="Enter name (e.g. external auditor, consultant…)"
+                        value={ownerInputs[req.id] ?? ''}
+                        onChange={e => setOwnerInputs({ ...ownerInputs, [req.id]: e.target.value })}
+                        disabled={readOnly}
+                        autoFocus
+                        className="mt-2 w-full border border-orange rounded-lg px-3 py-2 text-sm disabled:opacity-50 focus:outline-none focus:border-orange focus:ring-1 focus:ring-orange/30"
+                      />
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <LockedButton locked={readOnly || !corrActionInputs[req.id]?.trim()} onClick={() => {
