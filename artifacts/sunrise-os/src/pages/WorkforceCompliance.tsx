@@ -1153,6 +1153,14 @@ function reqIsEffectivelyMet(
   );
 }
 
+const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
+  'CARF': 'CARF',
+  'HIPAA': 'HIPAA',
+  '42 CFR Part 2': '42 CFR §2',
+  'State (MD OHCQ)': 'MD OHCQ',
+  'Medicaid': 'Medicaid',
+  'Internal Policy': 'Internal',
+};
 function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs }: {
   readOnly?: boolean;
   completedIds: Set<string>;
@@ -1228,19 +1236,56 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { label: 'Overall Score', value: `${score}%`, color: score >= 90 ? 'text-green-600' : score >= 75 ? 'text-amber-600' : 'text-red-600', sub: `${met} of ${total} requirements met or remediated` },
-          { label: 'CARF Requirements', value: `${COMP_REQUIREMENTS.filter(r => r.standard === 'CARF' && reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length}/${COMP_REQUIREMENTS.filter(r => r.standard === 'CARF').length}`, color: 'text-navy', sub: 'Standards satisfied' },
-          { label: 'Open Gaps', value: COMP_REQUIREMENTS.filter(r => r.status === 'Gap' && !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length, color: 'text-red-600', sub: 'Require corrective action' },
-          { label: 'Partial / Incomplete', value: COMP_REQUIREMENTS.filter(r => r.status === 'Partial' && !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length, color: 'text-amber-600', sub: 'Evidence or remediation needed' },
-        ].map(k => (
-          <div key={k.label} className="card">
-            <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
-            <div className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</div>
-            <div className="text-xs text-slate mt-0.5">{k.sub}</div>
+      {/* ── Per-standard evidence progress rings ────────────────────────────── */}
+      <div className="card p-4">
+        {/* Overall stat strip */}
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+          <div className="flex items-baseline gap-2">
+            <span className={`text-3xl font-bold ${score >= 90 ? 'text-green-600' : score >= 75 ? 'text-amber-600' : 'text-red-600'}`}>{score}%</span>
+            <span className="text-sm text-slate">Overall — {met} of {total} requirements met or remediated</span>
           </div>
-        ))}
+          <div className="flex gap-5 text-xs text-right">
+            <div>
+              <span className="text-red-600 font-bold text-lg">{COMP_REQUIREMENTS.filter(r => r.status === 'Gap' && !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length}</span>
+              <div className="text-slate">Open Gaps</div>
+            </div>
+            <div>
+              <span className="text-amber-600 font-bold text-lg">{COMP_REQUIREMENTS.filter(r => r.status === 'Partial' && !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length}</span>
+              <div className="text-slate">Partial</div>
+            </div>
+            <div>
+              <span className="text-cyan-600 font-bold text-lg">{COMP_REQUIREMENTS.filter(r => !r.status.startsWith('Met') && !completedIds.has(r.id) && !!evidenceInputs[r.id]?.trim() && !!corrActionInputs[r.id]?.trim()).length}</span>
+              <div className="text-slate">Evid. + Plan</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Per-standard rings — clicking filters the list */}
+        <div className="grid grid-cols-6 gap-2">
+          {(['CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'] as const).map(std => (
+            <StandardRing
+              key={std} std={std}
+              completedIds={completedIds}
+              evidenceInputs={evidenceInputs}
+              corrActionInputs={corrActionInputs}
+              isActive={stdFilter === std}
+              onClick={() => setStdFilter(stdFilter === std ? 'All' : std)}
+            />
+          ))}
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+          <p className="text-[10px] text-slate">
+            <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1 align-middle" />Met / manually marked&ensp;
+            <span className="inline-block w-2 h-2 rounded-full bg-cyan-500 mr-1 align-middle" />Evidence + corrective-action plan filed (counts toward score)&ensp;
+            <span className="inline-block w-2 h-2 rounded-full bg-gray-200 mr-1 align-middle" />Still open
+          </p>
+          {stdFilter !== 'All' && (
+            <button onClick={() => setStdFilter('All')} className="text-[10px] text-orange font-semibold hover:underline shrink-0 ml-4">
+              Clear filter ×
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -1571,5 +1616,114 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
         {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} />}
       </div>
     </div>
+  );
+}
+
+function StandardRing({
+  std, completedIds, evidenceInputs, corrActionInputs, isActive, onClick,
+}: {
+  std: Exclude<CompStandard, 'All'>;
+  completedIds: Set<string>;
+  evidenceInputs: Record<string, string>;
+  corrActionInputs: Record<string, string>;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const reqs = COMP_REQUIREMENTS.filter(r => r.standard === std);
+  const total = reqs.length;
+
+  // Requirements that are "base met" — original status Met or manually checked
+  const baseMetCount = reqs.filter(
+    r => r.status === 'Met' || completedIds.has(r.id),
+  ).length;
+
+  // Requirements that reach "effectively met" only via evidence + corrective-action
+  // (not already base-met) — shown as a distinct cyan arc
+  const evidOnlyCount = reqs.filter(
+    r =>
+      r.status !== 'Met' &&
+      !completedIds.has(r.id) &&
+      !!evidenceInputs[r.id]?.trim() &&
+      !!corrActionInputs[r.id]?.trim(),
+  ).length;
+
+  const effectiveMet = baseMetCount + evidOnlyCount;
+  const pct = total > 0 ? Math.round((effectiveMet / total) * 100) : 100;
+
+  const RADIUS = 26;
+  const CX = 32;
+  const CY = 32;
+  const circ = 2 * Math.PI * RADIUS;
+
+  const baseArc = total > 0 ? (baseMetCount / total) * circ : circ;
+  const evidArc = total > 0 ? (evidOnlyCount / total) * circ : 0;
+  // rotation offsets so arcs don't overlap
+  const baseDeg = -90; // starts at 12 o'clock
+  const evidDeg = baseDeg + (baseMetCount / (total || 1)) * 360;
+
+  const ringColor =
+    pct >= 90 ? '#22c55e' : pct >= 75 ? '#f59e0b' : '#ef4444';
+  const textColor =
+    pct >= 90 ? 'text-green-600' : pct >= 75 ? 'text-amber-600' : 'text-red-600';
+
+  return (
+    <button
+      onClick={onClick}
+      title={`${std}: ${effectiveMet}/${total} requirements met or remediated${evidOnlyCount > 0 ? ` (${evidOnlyCount} via evidence + plan)` : ''}`}
+      className={`flex flex-col items-center gap-1 px-2 py-3 rounded-xl border transition-all ${
+        isActive
+          ? 'border-orange bg-orange/5 shadow-sm'
+          : 'border-border hover:border-navy/30 hover:bg-gray-50'
+      }`}
+    >
+      {/* SVG donut ring */}
+      <svg width="64" height="64" viewBox="0 0 64 64" className="shrink-0">
+        {/* track */}
+        <circle cx={CX} cy={CY} r={RADIUS} fill="none" stroke="#e5e7eb" strokeWidth="6" />
+        {/* base-met arc */}
+        {baseMetCount > 0 && (
+          <circle
+            cx={CX} cy={CY} r={RADIUS} fill="none"
+            stroke={ringColor} strokeWidth="6"
+            strokeDasharray={`${baseArc} ${circ}`}
+            strokeLinecap="butt"
+            transform={`rotate(${baseDeg} ${CX} ${CY})`}
+          />
+        )}
+        {/* evidence-only arc (cyan) */}
+        {evidOnlyCount > 0 && (
+          <circle
+            cx={CX} cy={CY} r={RADIUS} fill="none"
+            stroke="#06b6d4" strokeWidth="6"
+            strokeDasharray={`${evidArc} ${circ}`}
+            strokeLinecap="butt"
+            transform={`rotate(${evidDeg} ${CX} ${CY})`}
+          />
+        )}
+        {/* centre label */}
+        <text x={CX} y={CY - 5} textAnchor="middle" dominantBaseline="middle"
+          fontSize="11" fontWeight="bold" fill={ringColor}>
+          {effectiveMet}/{total}
+        </text>
+        <text x={CX} y={CY + 9} textAnchor="middle" dominantBaseline="middle"
+          fontSize="9" fill="#64748b">
+          {pct}%
+        </text>
+      </svg>
+
+      {/* Standard name */}
+      <div className={`text-[11px] font-semibold text-center leading-tight ${isActive ? 'text-orange' : 'text-navy'}`}>
+        {STD_SHORT[std]}
+      </div>
+
+      {/* Evidence-only badge */}
+      {evidOnlyCount > 0 ? (
+        <div className="text-[9px] text-cyan-600 font-semibold bg-cyan-50 border border-cyan-200 rounded-full px-1.5 py-0.5 leading-none">
+          +{evidOnlyCount} evid.
+        </div>
+      ) : (
+        <div className="h-4" /> /* spacer so heights stay equal */
+      )}
+    </button>
   );
 }
