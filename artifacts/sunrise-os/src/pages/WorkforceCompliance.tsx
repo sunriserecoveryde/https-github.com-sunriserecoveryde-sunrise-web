@@ -4,7 +4,8 @@ import {
   Users, ShieldCheck, AlertTriangle, CheckCircle, Clock, XCircle,
   Plus, ChevronDown, ChevronUp, Award, GraduationCap, UserCheck,
   UserCog, FileText, TrendingUp, BarChart2, Briefcase, Calendar,
-  LogOut, Search, Building2, MapPin, Star, ClipboardList, Download
+  LogOut, Search, Building2, MapPin, Star, ClipboardList, Download,
+  Printer
 } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
@@ -1269,6 +1270,125 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     setExportToast(true);
     setTimeout(() => setExportToast(false), 2500);
   };
+
+  const printGapList = () => {
+    const gaps = COMP_REQUIREMENTS.filter(r => {
+      if (stdFilter !== 'All' && r.standard !== stdFilter) return false;
+      return !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs);
+    });
+
+    const scopeLabel = stdFilter !== 'All' ? ` — ${stdFilter}` : '';
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const rows = gaps.map(r => {
+      const evidFiled = evidenceInputs[r.id]?.trim() ? `Yes — ${evidenceInputs[r.id].trim()}` : 'No';
+      const corrFiled = corrActionInputs[r.id]?.trim() ? `Yes — ${corrActionInputs[r.id].trim()}` : 'No';
+      const statusColor = r.status === 'Gap' ? '#dc2626' : r.status === 'Partial' ? '#d97706' : '#1e3a5f';
+      return `
+        <tr>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;font-weight:600;white-space:nowrap;">${r.id}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;white-space:nowrap;">${r.standard}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;white-space:nowrap;">${r.category}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;line-height:1.4;">${r.requirement}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:center;white-space:nowrap;">
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:${r.status === 'Gap' ? '#fee2e2' : r.status === 'Partial' ? '#fef3c7' : '#f1f5f9'};color:${statusColor};">${r.status}</span>
+          </td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;white-space:nowrap;text-align:center;">${r.dueDate ?? '—'}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:10px;color:${evidenceInputs[r.id]?.trim() ? '#15803d' : '#94a3b8'};">${evidFiled}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:10px;color:${corrActionInputs[r.id]?.trim() ? '#15803d' : '#94a3b8'};">${corrFiled}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;"></td>
+        </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Compliance Gap List${scopeLabel} — Sunrise Recovery Center</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e293b; background: #fff; padding: 32px 40px; }
+    @media print {
+      body { padding: 20px 28px; }
+      .no-print { display: none !important; }
+      @page { margin: 1.5cm 1.8cm; size: landscape; }
+    }
+    header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 3px solid #f97316; padding-bottom: 14px; margin-bottom: 18px; }
+    .org-name { font-size: 18px; font-weight: 800; color: #1e3a5f; }
+    .report-title { font-size: 13px; font-weight: 600; color: #f97316; margin-top: 3px; }
+    .meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+    .header-right { text-align: right; }
+    .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+    .stat-bar { display: flex; gap: 24px; margin-bottom: 18px; padding: 12px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
+    .stat { text-align: center; }
+    .stat-val { font-size: 22px; font-weight: 800; }
+    .stat-lbl { font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead { background: #1e3a5f; color: #fff; }
+    thead th { padding: 10px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; text-align: left; }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody tr:hover { background: #fff7ed; }
+    footer { margin-top: 22px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; }
+    .print-btn { margin-bottom: 18px; padding: 10px 22px; background: #1e3a5f; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .print-btn:hover { background: #f97316; }
+  </style>
+</head>
+<body>
+  <button class="print-btn no-print" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <header>
+    <div>
+      <div class="org-name">Sunrise Recovery Center</div>
+      <div class="report-title">Compliance Gap List${scopeLabel}</div>
+      <div class="meta">Rockville, MD &nbsp;·&nbsp; Generated ${today} &nbsp;·&nbsp; CONFIDENTIAL — For Internal Use Only</div>
+    </div>
+    <div class="header-right">
+      <div class="meta" style="font-size:12px;font-weight:700;color:#1e3a5f;">Open Gaps</div>
+      <div style="font-size:32px;font-weight:800;color:${gaps.length > 0 ? '#dc2626' : '#22c55e'};">${gaps.length}</div>
+      <div class="meta">of ${COMP_REQUIREMENTS.length} total requirements</div>
+    </div>
+  </header>
+
+  <div class="stat-bar">
+    <div class="stat"><div class="stat-val" style="color:#dc2626;">${gaps.filter(r => r.status === 'Gap').length}</div><div class="stat-lbl">Open Gaps</div></div>
+    <div class="stat"><div class="stat-val" style="color:#d97706;">${gaps.filter(r => r.status === 'Partial').length}</div><div class="stat-lbl">Partial</div></div>
+    <div class="stat"><div class="stat-val" style="color:#0891b2;">${gaps.filter(r => evidenceInputs[r.id]?.trim()).length}</div><div class="stat-lbl">Evidence Filed</div></div>
+    <div class="stat"><div class="stat-val" style="color:#0891b2;">${gaps.filter(r => corrActionInputs[r.id]?.trim()).length}</div><div class="stat-lbl">Action Plan Filed</div></div>
+    <div class="stat"><div class="stat-val" style="color:#475569;">${gaps.filter(r => !evidenceInputs[r.id]?.trim() && !corrActionInputs[r.id]?.trim()).length}</div><div class="stat-lbl">No Action Yet</div></div>
+  </div>
+
+  ${gaps.length === 0
+    ? `<div style="text-align:center;padding:48px;color:#22c55e;font-size:18px;font-weight:700;">✓ All requirements met or remediated${stdFilter !== 'All' ? ` for ${stdFilter}` : ''}.</div>`
+    : `<table>
+    <thead>
+      <tr>
+        <th style="width:52px;">ID</th>
+        <th style="width:100px;">Standard</th>
+        <th style="width:110px;">Category</th>
+        <th>Requirement</th>
+        <th style="width:68px;text-align:center;">Status</th>
+        <th style="width:80px;text-align:center;">Due Date</th>
+        <th style="width:130px;">Evidence Filed</th>
+        <th style="width:130px;">Corrective Plan</th>
+        <th style="width:110px;">Owner</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`}
+
+  <footer>
+    <span>SunriseOS Compliance Module &nbsp;·&nbsp; This list reflects open gaps as of the print date. Verify all items against source documentation before audit submission.</span>
+    <span>Page <span class="pagenum"></span></span>
+  </footer>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=1100,height=750');
+    if (!win) { alert('Pop-up blocked — please allow pop-ups for this page to print.'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+  };
+
   const [compSaved, setCompSaved] = useState<string | null>(null);
   const saveCompAction = (msg: string) => { setCompSaved(msg); setTimeout(() => setCompSaved(null), 2500); };
   const [evidenceSavedId, setEvidenceSavedId] = useState<string | null>(null);
@@ -1366,6 +1486,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               Reset Audit Cycle
             </button>
           )}
+          <button
+            onClick={printGapList}
+            className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-navy/40 transition-colors flex items-center gap-2"
+          >
+            <Printer className="w-4 h-4" />
+            Print Gap List{stdFilter !== 'All' ? ` — ${stdFilter}` : ''}
+          </button>
           <button
             onClick={exportGapListCsv}
             className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-navy/40 transition-colors flex items-center gap-2"
