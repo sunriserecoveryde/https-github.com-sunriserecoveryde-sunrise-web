@@ -390,10 +390,12 @@ const SUB_MODULES = [
 
 // ─── Dashboard KPIs ────────────────────────────────────────────────────────────
 
-function DashboardTab({ navigate, onOpenComplianceStandards, completedIds }: {
+function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evidenceInputs, corrActionInputs }: {
   navigate: (s: Screen) => void;
   onOpenComplianceStandards: () => void;
   completedIds: Set<string>;
+  evidenceInputs: Record<string, string>;
+  corrActionInputs: Record<string, string>;
 }) {
   const activeCount = EMPLOYEES.filter(e => e.status === 'Active').length;
   const onboardingCount = EMPLOYEES.filter(e => e.status === 'Onboarding').length;
@@ -402,7 +404,7 @@ function DashboardTab({ navigate, onOpenComplianceStandards, completedIds }: {
   const supervisionOverdue = EMPLOYEES.filter(e => e.supervisionStatus === 'Overdue').length;
   const reviewsOverdue = PERFORMANCE_REVIEWS.filter(r => r.status === 'Overdue').length;
 
-  const compMet = COMP_REQUIREMENTS.filter(r => r.status === 'Met' || completedIds.has(r.id)).length;
+  const compMet = COMP_REQUIREMENTS.filter(r => reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length;
   const compTotal = COMP_REQUIREMENTS.length;
   const compScore = Math.round((compMet / compTotal) * 100);
   const compDot = compScore >= 90 ? 'green' : compScore >= 75 ? 'amber' : 'red';
@@ -411,7 +413,7 @@ function DashboardTab({ navigate, onOpenComplianceStandards, completedIds }: {
   const kpis: Array<{ label: string; value: string | number; sub: string; color: string; dot: string; detail: string; onClick?: () => void }> = [
     {
       label: 'Compliance Audit Score', value: `${compScore}%`,
-      sub: `${compMet} of ${compTotal} requirements met`,
+      sub: `${compMet} of ${compTotal} requirements met or remediated`,
       color: compColor, dot: compDot,
       detail: 'CARF · HIPAA · 42 CFR Part 2 · MD OHCQ · Medicaid · Internal Policy — tap to open Compliance Standards',
       onClick: onOpenComplianceStandards,
@@ -1131,6 +1133,26 @@ const STATUS_CHIP: Record<CompRequirement['status'], string> = {
   'N/A': 'bg-gray-100 text-gray-500',
 };
 
+/**
+ * A requirement counts toward the "met" total when:
+ *   (a) its base status is 'Met', or
+ *   (b) the officer manually marked it via completedIds, or
+ *   (c) the officer linked evidence AND saved a corrective action plan —
+ *       indicating substantive remediation work has been done.
+ */
+function reqIsEffectivelyMet(
+  req: CompRequirement,
+  completedIds: Set<string>,
+  evidence: Record<string, string>,
+  corrAction: Record<string, string>,
+): boolean {
+  return (
+    req.status === 'Met' ||
+    completedIds.has(req.id) ||
+    (!!evidence[req.id]?.trim() && !!corrAction[req.id]?.trim())
+  );
+}
+
 function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs }: {
   readOnly?: boolean;
   completedIds: Set<string>;
@@ -1151,7 +1173,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const standards: CompStandard[] = ['All', 'CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'];
   const filtered = COMP_REQUIREMENTS.filter(r => stdFilter === 'All' || r.standard === stdFilter);
 
-  const met = COMP_REQUIREMENTS.filter(r => r.status === 'Met' || completedIds.has(r.id)).length;
+  const met = COMP_REQUIREMENTS.filter(r => reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length;
   const total = COMP_REQUIREMENTS.length;
   const score = Math.round((met / total) * 100);
 
@@ -1182,10 +1204,10 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'Overall Score', value: `${score}%`, color: score >= 90 ? 'text-green-600' : score >= 75 ? 'text-amber-600' : 'text-red-600', sub: `${met} of ${total} requirements met` },
-          { label: 'CARF Requirements', value: `${COMP_REQUIREMENTS.filter(r => r.standard === 'CARF' && (r.status === 'Met' || completedIds.has(r.id))).length}/${COMP_REQUIREMENTS.filter(r => r.standard === 'CARF').length}`, color: 'text-navy', sub: 'Standards satisfied' },
-          { label: 'Open Gaps', value: COMP_REQUIREMENTS.filter(r => r.status === 'Gap' && !completedIds.has(r.id)).length, color: 'text-red-600', sub: 'Require corrective action' },
-          { label: 'Partial / Incomplete', value: COMP_REQUIREMENTS.filter(r => r.status === 'Partial' && !completedIds.has(r.id)).length, color: 'text-amber-600', sub: 'Evidence or remediation needed' },
+          { label: 'Overall Score', value: `${score}%`, color: score >= 90 ? 'text-green-600' : score >= 75 ? 'text-amber-600' : 'text-red-600', sub: `${met} of ${total} requirements met or remediated` },
+          { label: 'CARF Requirements', value: `${COMP_REQUIREMENTS.filter(r => r.standard === 'CARF' && reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length}/${COMP_REQUIREMENTS.filter(r => r.standard === 'CARF').length}`, color: 'text-navy', sub: 'Standards satisfied' },
+          { label: 'Open Gaps', value: COMP_REQUIREMENTS.filter(r => r.status === 'Gap' && !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length, color: 'text-red-600', sub: 'Require corrective action' },
+          { label: 'Partial / Incomplete', value: COMP_REQUIREMENTS.filter(r => r.status === 'Partial' && !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length, color: 'text-amber-600', sub: 'Evidence or remediation needed' },
         ].map(k => (
           <div key={k.label} className="card">
             <div className="text-xs font-semibold text-slate uppercase tracking-wide">{k.label}</div>
@@ -1207,6 +1229,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       <div className="space-y-2">
         {filtered.map(req => {
           const isCompleted = completedIds.has(req.id);
+          const hasEvidenceAndPlan = !!evidenceInputs[req.id]?.trim() && !!corrActionInputs[req.id]?.trim();
           const effectiveStatus = isCompleted ? 'Met' : req.status;
           const isSelected = selectedReq === req.id;
           return (
@@ -1216,6 +1239,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 onClick={() => setSelectedReq(isSelected ? null : req.id)}
               >
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${STATUS_CHIP[effectiveStatus]}`}>{effectiveStatus}</span>
+                {hasEvidenceAndPlan && !isCompleted && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-green-50 text-green-700 border border-green-200" title="Evidence linked and corrective action plan saved — counted toward audit score">✓ Evidence + Plan</span>
+                )}
                 <span className="text-[10px] font-semibold text-slate uppercase tracking-wider shrink-0 w-28">{req.standard}</span>
                 <span className="text-xs font-medium text-navy flex-1">{req.requirement}</span>
                 <span className="text-[10px] text-slate shrink-0">{req.category}</span>
@@ -1323,7 +1349,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 </div>
                 {(['CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'] as const).map(std => {
                   const stdReqs = COMP_REQUIREMENTS.filter(r => r.standard === std);
-                  const stdMet = stdReqs.filter(r => r.status === 'Met' || completedIds.has(r.id)).length;
+                  const stdMet = stdReqs.filter(r => reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length;
                   const stdPct = Math.round((stdMet / stdReqs.length) * 100);
                   return (
                     <div key={std}>
@@ -1468,7 +1494,7 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       </div>
 
       <div>
-        {tab === 'Dashboard'             && <DashboardTab navigate={navigate} onOpenComplianceStandards={() => setTab('Compliance Standards')} completedIds={completedIds} />}
+        {tab === 'Dashboard'             && <DashboardTab navigate={navigate} onOpenComplianceStandards={() => setTab('Compliance Standards')} completedIds={completedIds} evidenceInputs={evidenceInputs} corrActionInputs={corrActionInputs} />}
         {tab === 'Employee Profiles'     && <EmployeeProfilesTab />}
         {tab === 'Exclusion & Screening' && <ExclusionTab readOnly={readOnly} />}
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
