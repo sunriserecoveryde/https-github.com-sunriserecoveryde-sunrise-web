@@ -1920,6 +1920,114 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           URL.revokeObjectURL(url);
         };
 
+        const handleExportPDF = () => {
+          const filterLabel = auditFilter === 'All' ? 'All Actions' : auditFilter;
+          const generatedDate = new Date().toLocaleString('en-US', {
+            month: 'long', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit', hour12: true,
+          });
+          const actionColors: Record<AuditActionType, string> = {
+            'Marked Met':        '#15803d',
+            'Evidence Linked':   '#1d4ed8',
+            'Action Plan Saved': '#b45309',
+          };
+          const actionBg: Record<AuditActionType, string> = {
+            'Marked Met':        '#dcfce7',
+            'Evidence Linked':   '#dbeafe',
+            'Action Plan Saved': '#fef3c7',
+          };
+          const rows = filtered.map(entry => {
+            const dt = new Date(entry.timestamp);
+            const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            const bg = actionBg[entry.actionType];
+            const color = actionColors[entry.actionType];
+            return `
+              <tr>
+                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151;white-space:nowrap">${dateStr}<br/><span style="color:#6b7280;font-size:10px">${timeStr}</span></td>
+                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">
+                  <span style="background:${bg};color:${color};font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px">${entry.actionType}</span>
+                </td>
+                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;color:#6b7280;white-space:nowrap">${entry.reqId}</td>
+                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#111827">${entry.reqName}</td>
+                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151">${entry.officer}</td>
+              </tr>`;
+          }).join('');
+
+          const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+            <title>Audit Trail — Sunrise Recovery Center</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 32px; color: #111827; }
+              @media print { .no-print { display: none !important; } body { padding: 16px; } }
+              .header { border-bottom: 2px solid #1e3a5f; padding-bottom: 16px; margin-bottom: 24px; }
+              .logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+              .logo-mark { width: 36px; height: 36px; background: #f97316; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 18px; flex-shrink: 0; }
+              .facility { font-size: 18px; font-weight: 800; color: #1e3a5f; }
+              .subtitle { font-size: 13px; color: #6b7280; margin-top: 2px; }
+              .meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px; }
+              .meta-cell { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; }
+              .meta-label { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+              .meta-value { font-size: 13px; font-weight: 700; color: #1e3a5f; margin-top: 2px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+              thead th { background: #1e3a5f; color: #fff; text-align: left; padding: 9px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+              tbody tr:hover { background: #f9fafb; }
+              .empty { text-align: center; padding: 40px; color: #6b7280; font-size: 13px; }
+              .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; }
+              .print-btn { margin-bottom: 18px; padding: 10px 22px; background: #1e3a5f; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+              .print-btn:hover { background: #f97316; }
+            </style>
+          </head><body>
+            <button class="print-btn no-print" onclick="window.print()">🖨 Print / Save as PDF</button>
+            <div class="header">
+              <div class="logo-row">
+                <div class="logo-mark">S</div>
+                <div>
+                  <div class="facility">Sunrise Recovery Center</div>
+                  <div class="subtitle">SunriseOS Compliance Module — Audit Trail Export</div>
+                </div>
+              </div>
+              <div class="meta-grid">
+                <div class="meta-cell">
+                  <div class="meta-label">Generated</div>
+                  <div class="meta-value">${generatedDate}</div>
+                </div>
+                <div class="meta-cell">
+                  <div class="meta-label">Filter Applied</div>
+                  <div class="meta-value">${filterLabel}</div>
+                </div>
+                <div class="meta-cell">
+                  <div class="meta-label">Total Entries</div>
+                  <div class="meta-value">${filtered.length}</div>
+                </div>
+              </div>
+            </div>
+            ${filtered.length === 0
+              ? '<div class="empty">No audit entries match the selected filter.</div>'
+              : `<table>
+                <thead>
+                  <tr>
+                    <th style="width:130px">Date / Time</th>
+                    <th style="width:130px">Action Type</th>
+                    <th style="width:80px">Req. ID</th>
+                    <th>Requirement</th>
+                    <th style="width:140px">Officer</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>`
+            }
+            <div class="footer">
+              <strong>Disclaimer:</strong> This report is auto-generated from the SunriseOS compliance module for internal quality improvement purposes. It does not constitute a formal audit opinion. All findings should be verified against source documentation before any regulatory submission. &nbsp;·&nbsp; Sunrise Recovery Center, Rockville, MD
+            </div>
+          </body></html>`;
+
+          const win = window.open('', '_blank');
+          if (!win) { alert('Pop-up blocked — please allow pop-ups for this page to print.'); return; }
+          win.document.write(html);
+          win.document.close();
+          win.focus();
+        };
+
         const filterChips: Array<{ label: string; value: AuditActionType | 'All'; activeClass: string }> = [
           { label: 'All', value: 'All', activeClass: 'bg-navy text-white border-navy' },
           { label: 'Marked Met', value: 'Marked Met', activeClass: 'bg-green-600 text-white border-green-600' },
@@ -1945,13 +2053,22 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               </button>
               <div className="flex items-center gap-2">
                 {auditLog.length > 0 && (
-                  <button
-                    onClick={handleExportCSV}
-                    className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Export {auditFilter !== 'All' ? 'Filtered' : 'Trail'}
-                  </button>
+                  <>
+                    <button
+                      onClick={handleExportPDF}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      Export as PDF
+                    </button>
+                    <button
+                      onClick={handleExportCSV}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Export {auditFilter !== 'All' ? 'Filtered' : 'Trail'}
+                    </button>
+                  </>
                 )}
                 <button onClick={() => setShowAuditTrail(o => !o)} className="hover:opacity-80 transition-opacity">
                   {showAuditTrail ? <ChevronUp className="w-4 h-4 text-slate" /> : <ChevronDown className="w-4 h-4 text-slate" />}
