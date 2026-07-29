@@ -1629,9 +1629,21 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 <span className="text-xs font-medium text-navy flex-1">{req.requirement}</span>
                 <span className="text-[10px] text-slate shrink-0">{req.category}</span>
                 {req.dueDate && !isCompleted && <span className="text-[10px] text-slate shrink-0">Due: {req.dueDate}</span>}
-                {ownerInputs[req.id]?.trim() && (
-                  <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full shrink-0 font-medium" title="Assigned owner">
+                {ownerInputs[req.id]?.trim() ? (
+                  <span
+                    className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full shrink-0 font-medium hover:bg-blue-100 transition-colors cursor-pointer"
+                    title="Owner — click to edit"
+                    onClick={e => { e.stopPropagation(); setSelectedReq(req.id); }}
+                  >
                     👤 {ownerInputs[req.id]}
+                  </span>
+                ) : (
+                  <span
+                    className="text-[10px] text-slate/50 border border-dashed border-slate/20 px-1.5 py-0.5 rounded-full shrink-0 hover:border-slate/40 hover:text-slate/70 transition-colors cursor-pointer whitespace-nowrap"
+                    title="No owner assigned — click to assign"
+                    onClick={e => { e.stopPropagation(); setSelectedReq(req.id); }}
+                  >
+                    — Unassigned
                   </span>
                 )}
                 <span className="text-slate shrink-0">{isSelected ? '▲' : '▼'}</span>
