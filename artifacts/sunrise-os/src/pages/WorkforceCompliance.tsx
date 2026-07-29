@@ -1897,21 +1897,54 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           'Action Plan Saved': 'bg-amber-100 text-amber-700',
         };
         const sorted = [...auditLog].reverse();
+
+        const handleExportCSV = () => {
+          const headers = ['Timestamp', 'Action Type', 'Requirement ID', 'Requirement Name', 'Officer'];
+          const rows = sorted.map(entry => [
+            new Date(entry.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
+            entry.actionType,
+            entry.reqId,
+            `"${entry.reqName.replace(/"/g, '""')}"`,
+            entry.officer,
+          ]);
+          const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'audit-trail.csv';
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
         return (
           <div className="border border-border rounded-xl overflow-hidden">
-            <button
-              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-              onClick={() => setShowAuditTrail(o => !o)}
-            >
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
+              <button
+                className="flex items-center gap-2 flex-1 text-left hover:opacity-80 transition-opacity"
+                onClick={() => setShowAuditTrail(o => !o)}
+              >
                 <FileText className="w-4 h-4 text-slate" />
                 <span className="text-sm font-semibold text-navy">Audit Trail</span>
                 {auditLog.length > 0 && (
                   <span className="text-[10px] bg-navy text-white rounded-full px-2 py-0.5 font-semibold">{auditLog.length}</span>
                 )}
+              </button>
+              <div className="flex items-center gap-2">
+                {auditLog.length > 0 && (
+                  <button
+                    onClick={handleExportCSV}
+                    className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Export Trail
+                  </button>
+                )}
+                <button onClick={() => setShowAuditTrail(o => !o)} className="hover:opacity-80 transition-opacity">
+                  {showAuditTrail ? <ChevronUp className="w-4 h-4 text-slate" /> : <ChevronDown className="w-4 h-4 text-slate" />}
+                </button>
               </div>
-              {showAuditTrail ? <ChevronUp className="w-4 h-4 text-slate" /> : <ChevronDown className="w-4 h-4 text-slate" />}
-            </button>
+            </div>
             {showAuditTrail && (
               <div className="divide-y divide-border max-h-80 overflow-y-auto">
                 {sorted.length === 0 ? (
