@@ -1234,6 +1234,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [selectedReq, setSelectedReq] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [exportToast, setExportToast] = useState<number | false>(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetPhrase, setResetPhrase] = useState('');
 
   // #589 — free-text "Other" owner mode per requirement
   const EMPLOYEE_NAMES = new Set(EMPLOYEES.filter(e => e.status !== 'Separated').map(e => e.name));
@@ -1479,22 +1481,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           {(completedIds.size > 0 || evidenceConfirmed.size > 0 || corrConfirmed.size > 0 ||
             Object.values(evidenceInputs).some(v => v.trim()) || Object.values(corrActionInputs).some(v => v.trim()) || Object.values(ownerInputs).some(v => v.trim())) && (
             <button
-              onClick={() => {
-                if (confirm('Reset all manually-marked requirements? This clears your current audit cycle progress, including evidence notes, corrective action entries, and owner assignments.')) {
-                  setCompletedIds(new Set());
-                  setEvidenceInputs({});
-                  setCorrActionInputs({});
-                  setOwnerInputs({});
-                  setEvidenceConfirmed(() => {
-                    try { localStorage.removeItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY); } catch { /* unavailable */ }
-                    return new Set<string>();
-                  });
-                  setCorrConfirmed(() => {
-                    try { localStorage.removeItem(COMPLIANCE_CORR_CONFIRMED_KEY); } catch { /* unavailable */ }
-                    return new Set<string>();
-                  });
-                }
-              }}
+              onClick={() => { setResetPhrase(''); setShowResetConfirm(true); }}
               className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-red-300 hover:text-red-600 transition-colors"
             >
               Reset Audit Cycle
@@ -1853,6 +1840,72 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             <div className="px-6 pb-6 flex gap-3">
               <button onClick={() => setShowReport(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Close</button>
               <button onClick={() => { setShowReport(false); saveCompAction('Report exported — PDF queued (demo)'); }} className="flex-1 btn-primary text-sm py-2.5">Export PDF (Demo)</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Audit Cycle Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4" onClick={() => setShowResetConfirm(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3 px-6 pt-6 pb-4">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-navy">Reset Entire Audit Cycle?</h2>
+                <p className="text-sm text-slate mt-1 leading-relaxed">
+                  This will permanently delete <strong>all manually-marked requirements, evidence notes, corrective action plans, and owner assignments</strong> for the current audit cycle. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="px-6 pb-2">
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-800 font-medium">
+                ⚠ Permanent &amp; irreversible — days of evidence-gathering work will be lost.
+              </div>
+            </div>
+            <div className="px-6 pb-5 pt-3 space-y-3">
+              <label className="block text-xs font-semibold text-slate uppercase tracking-wide">
+                Type <span className="font-bold text-red-600">RESET</span> to confirm
+              </label>
+              <input
+                autoFocus
+                value={resetPhrase}
+                onChange={e => setResetPhrase(e.target.value)}
+                placeholder="RESET"
+                className="w-full border border-border rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-300"
+              />
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={resetPhrase.trim() !== 'RESET'}
+                  onClick={() => {
+                    setCompletedIds(new Set());
+                    setEvidenceInputs({});
+                    setCorrActionInputs({});
+                    setOwnerInputs({});
+                    setEvidenceConfirmed(() => {
+                      try { localStorage.removeItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY); } catch { /* unavailable */ }
+                      return new Set<string>();
+                    });
+                    setCorrConfirmed(() => {
+                      try { localStorage.removeItem(COMPLIANCE_CORR_CONFIRMED_KEY); } catch { /* unavailable */ }
+                      return new Set<string>();
+                    });
+                    setShowResetConfirm(false);
+                    setResetPhrase('');
+                  }}
+                  className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Reset Audit Cycle
+                </button>
+              </div>
             </div>
           </div>
         </div>
