@@ -1251,7 +1251,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     otherOwnerMode.has(reqId) ||
     (!!(ownerInputs[reqId]?.trim()) && !EMPLOYEE_NAMES.has(ownerInputs[reqId]));
 
-  const exportGapListCsv = () => {
+  const doExportGapListCsv = () => {
     // Only export requirements that are NOT effectively met — i.e. true open gaps
     const gaps = COMP_REQUIREMENTS.filter(r => {
       if (stdFilter !== 'All' && r.standard !== stdFilter) return false;
@@ -1288,6 +1288,22 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     URL.revokeObjectURL(url);
     setExportToast(gaps.length);
     setTimeout(() => setExportToast(false), 2500);
+  };
+
+  const exportGapListCsv = () => {
+    // Check for unsaved evidence or corrective action text scoped to the current filter
+    const unsavedCount = COMP_REQUIREMENTS.filter(r => {
+      if (stdFilter !== 'All' && r.standard !== stdFilter) return false;
+      const evidenceUnsaved = !!evidenceInputs[r.id]?.trim() && !evidenceConfirmed.has(r.id);
+      const corrUnsaved = !!corrActionInputs[r.id]?.trim() && !corrConfirmed.has(r.id);
+      return evidenceUnsaved || corrUnsaved;
+    }).length;
+
+    if (unsavedCount > 0) {
+      setShowUnsavedExportWarn(unsavedCount);
+      return;
+    }
+    doExportGapListCsv();
   };
 
   const printGapList = (overrideStd?: Exclude<CompStandard, 'All'>) => {
@@ -1414,6 +1430,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [evidenceSavedId, setEvidenceSavedId] = useState<string | null>(null);
   const [corrSavedId, setCorrSavedId] = useState<string | null>(null);
   const [warnUnsaved, setWarnUnsaved] = useState<string | null>(null);
+  const [showUnsavedExportWarn, setShowUnsavedExportWarn] = useState<number | false>(false);
   const [evidenceConfirmed, setEvidenceConfirmedRaw] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY);
@@ -1943,6 +1960,44 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             <div className="px-6 pb-6 flex gap-3">
               <button onClick={() => setShowReport(false)} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Close</button>
               <button onClick={() => { setShowReport(false); saveCompAction('Report exported — PDF queued (demo)'); }} className="flex-1 btn-primary text-sm py-2.5">Export PDF (Demo)</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unsaved Work — Export Warning Dialog */}
+      {showUnsavedExportWarn !== false && (
+        <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4" onClick={() => setShowUnsavedExportWarn(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3 px-6 pt-6 pb-4">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-navy">Unsaved Work Detected</h2>
+                <p className="text-sm text-slate mt-1 leading-relaxed">
+                  <strong>{showUnsavedExportWarn} requirement{showUnsavedExportWarn !== 1 ? 's have' : ' has'} typed evidence or corrective action text that {showUnsavedExportWarn !== 1 ? 'hasn\'t' : 'haven\'t'} been saved yet.</strong> The CSV will show these items as open gaps because the text was never confirmed via "Link Evidence" or "Save Action Plan".
+                </p>
+              </div>
+            </div>
+            <div className="px-6 pb-2">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 font-medium">
+                To save your work first: close this dialog, scroll to the flagged requirement{showUnsavedExportWarn !== 1 ? 's' : ''}, and click <strong>"Link Evidence"</strong> or <strong>"Save Action Plan"</strong>.
+              </div>
+            </div>
+            <div className="px-6 pb-6 pt-3 flex gap-3">
+              <button
+                onClick={() => setShowUnsavedExportWarn(false)}
+                className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50 transition-colors"
+              >
+                Cancel and save first
+              </button>
+              <button
+                onClick={() => { setShowUnsavedExportWarn(false); doExportGapListCsv(); }}
+                className="flex-1 bg-amber-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-amber-700 transition-colors"
+              >
+                Export anyway
+              </button>
             </div>
           </div>
         </div>
