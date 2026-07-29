@@ -1196,7 +1196,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Medicaid': 'Medicaid',
   'Internal Policy': 'Internal',
 };
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, requestedStdFilter, onRequestedFilterApplied }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1204,6 +1204,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   setEvidenceInputs: (next: Record<string, string>) => void;
   corrActionInputs: Record<string, string>;
   setCorrActionInputs: (next: Record<string, string>) => void;
+  ownerInputs: Record<string, string>;
+  setOwnerInputs: (next: Record<string, string>) => void;
   requestedStdFilter?: Exclude<CompStandard, 'All'> | null;
   onRequestedFilterApplied?: () => void;
 }) {
@@ -1255,7 +1257,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       escape(r.dueDate ?? ''),
       escape(evidenceInputs[r.id]?.trim() ? 'Yes' : 'No'),
       escape(corrActionInputs[r.id]?.trim() ? 'Yes' : 'No'),
-      escape(''),   // Owner — for team to fill in
+      escape(ownerInputs[r.id]?.trim() ?? ''),
     ]);
 
     const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\r\n');
@@ -1296,7 +1298,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;white-space:nowrap;text-align:center;">${r.dueDate ?? '—'}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:10px;color:${evidenceInputs[r.id]?.trim() ? '#15803d' : '#94a3b8'};">${evidFiled}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:10px;color:${corrActionInputs[r.id]?.trim() ? '#15803d' : '#94a3b8'};">${corrFiled}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;"></td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;">${ownerInputs[r.id] ?? '—'}</td>
         </tr>`;
     }).join('');
 
@@ -1464,13 +1466,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         <div className="flex items-center gap-2">
           {/* #576 — show Reset whenever any audit data exists, including confirmed-only */}
           {(completedIds.size > 0 || evidenceConfirmed.size > 0 || corrConfirmed.size > 0 ||
-            Object.values(evidenceInputs).some(v => v.trim()) || Object.values(corrActionInputs).some(v => v.trim())) && (
+            Object.values(evidenceInputs).some(v => v.trim()) || Object.values(corrActionInputs).some(v => v.trim()) || Object.values(ownerInputs).some(v => v.trim())) && (
             <button
               onClick={() => {
-                if (confirm('Reset all manually-marked requirements? This clears your current audit cycle progress, including evidence notes and corrective action entries.')) {
+                if (confirm('Reset all manually-marked requirements? This clears your current audit cycle progress, including evidence notes, corrective action entries, and owner assignments.')) {
                   setCompletedIds(new Set());
                   setEvidenceInputs({});
                   setCorrActionInputs({});
+                  setOwnerInputs({});
                   setEvidenceConfirmed(() => {
                     try { localStorage.removeItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY); } catch { /* unavailable */ }
                     return new Set<string>();
@@ -1627,6 +1630,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 <span className="text-xs font-medium text-navy flex-1">{req.requirement}</span>
                 <span className="text-[10px] text-slate shrink-0">{req.category}</span>
                 {req.dueDate && !isCompleted && <span className="text-[10px] text-slate shrink-0">Due: {req.dueDate}</span>}
+                {ownerInputs[req.id]?.trim() && (
+                  <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full shrink-0 font-medium" title="Assigned owner">
+                    👤 {ownerInputs[req.id]}
+                  </span>
+                )}
                 <span className="text-slate shrink-0">{isSelected ? '▲' : '▼'}</span>
               </div>
               {isSelected && (
@@ -1678,6 +1686,30 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       </div>
                     ) : null;
                   })()}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate uppercase mb-1">Assign Owner</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={ownerInputs[req.id] ?? ''}
+                        onChange={e => setOwnerInputs({ ...ownerInputs, [req.id]: e.target.value })}
+                        disabled={readOnly}
+                        className="flex-1 border border-border rounded-lg px-3 py-2 text-sm disabled:opacity-50 focus:outline-none focus:border-orange"
+                      >
+                        <option value="">— Unassigned —</option>
+                        {EMPLOYEES.filter(e => e.status !== 'Separated').map(e => (
+                          <option key={e.id} value={e.name}>{e.name} — {e.title}</option>
+                        ))}
+                      </select>
+                      {ownerInputs[req.id]?.trim() && (
+                        <button
+                          onClick={() => setOwnerInputs({ ...ownerInputs, [req.id]: '' })}
+                          disabled={readOnly}
+                          className="text-xs text-slate border border-border px-2.5 py-1.5 rounded-lg hover:bg-white shrink-0 disabled:opacity-50"
+                          title="Clear owner"
+                        >✕</button>
+                      )}
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <LockedButton locked={readOnly || !corrActionInputs[req.id]?.trim()} onClick={() => {
                         saveCompAction(`Corrective action saved for ${req.id}`);
@@ -1803,6 +1835,7 @@ const COMPLIANCE_STORAGE_KEY = 'sunrise-os:compliance-completed-ids';
 const COMPLIANCE_EVIDENCE_KEY = 'sunrise-os:compliance-evidence-inputs';
 const COMPLIANCE_CORR_KEY = 'sunrise-os:compliance-corr-action-inputs';
 
+const COMPLIANCE_OWNER_KEY = 'sunrise-os:compliance-owner-inputs';
 const COMPLIANCE_EVIDENCE_CONFIRMED_KEY = 'sunrise-os:compliance-evidence-confirmed';
 const COMPLIANCE_STD_FILTER_KEY = 'sunrise-os:compliance-std-filter';
 const COMPLIANCE_GAP_FILTER_KEY = 'sunrise-os:compliance-gap-filter';
@@ -1838,6 +1871,14 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
       return {};
     }
   });
+  const [ownerInputs, setOwnerInputsRaw] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_OWNER_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
 
   // Synchronous localStorage writers — called directly on every change so no
   // keystroke can be silently dropped when the user navigates away before
@@ -1850,6 +1891,11 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
   const setCorrActionInputs = (next: Record<string, string>) => {
     setCorrActionInputsRaw(next);
     try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
+  };
+
+  const setOwnerInputs = (next: Record<string, string>) => {
+    setOwnerInputsRaw(next);
+    try { localStorage.setItem(COMPLIANCE_OWNER_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
   };
 
   // completedIds is toggled on button clicks (not keystrokes), so a single
@@ -1920,7 +1966,7 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} />}
       </div>
     </div>
   );
