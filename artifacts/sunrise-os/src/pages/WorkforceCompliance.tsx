@@ -1286,13 +1286,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     setTimeout(() => setExportToast(false), 2500);
   };
 
-  const printGapList = () => {
+  const printGapList = (overrideStd?: Exclude<CompStandard, 'All'>) => {
+    const activeStd: CompStandard = overrideStd ?? stdFilter;
     const gaps = COMP_REQUIREMENTS.filter(r => {
-      if (stdFilter !== 'All' && r.standard !== stdFilter) return false;
+      if (activeStd !== 'All' && r.standard !== activeStd) return false;
       return !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs);
     });
 
-    const scopeLabel = stdFilter !== 'All' ? ` — ${stdFilter}` : '';
+    const scopeLabel = activeStd !== 'All' ? ` — ${activeStd}` : '';
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const rows = gaps.map(r => {
@@ -1372,7 +1373,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   </div>
 
   ${gaps.length === 0
-    ? `<div style="text-align:center;padding:48px;color:#22c55e;font-size:18px;font-weight:700;">✓ All requirements met or remediated${stdFilter !== 'All' ? ` for ${stdFilter}` : ''}.</div>`
+    ? `<div style="text-align:center;padding:48px;color:#22c55e;font-size:18px;font-weight:700;">✓ All requirements met or remediated${activeStd !== 'All' ? ` for ${activeStd}` : ''}.</div>`
     : `<table>
     <thead>
       <tr>
@@ -1489,7 +1490,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             </button>
           )}
           <button
-            onClick={printGapList}
+            onClick={() => printGapList()}
             className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-navy/40 transition-colors flex items-center gap-2"
           >
             <Printer className="w-4 h-4" />
@@ -1557,6 +1558,29 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               Clear filter ×
             </button>
           )}
+        </div>
+
+        {/* Per-standard quick-print buttons */}
+        <div className="mt-3 pt-3 border-t border-border">
+          <p className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-2">Quick-print by standard</p>
+          <div className="flex flex-wrap gap-2">
+            {(['CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'] as const).map(std => {
+              const openCount = COMP_REQUIREMENTS.filter(r => r.standard === std && !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length;
+              return (
+                <button
+                  key={std}
+                  onClick={() => printGapList(std)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[11px] font-medium text-slate hover:bg-gray-50 hover:border-navy/40 transition-colors"
+                >
+                  <Printer className="w-3 h-3 shrink-0" />
+                  Print {STD_SHORT[std]}
+                  {openCount > 0 && (
+                    <span className="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{openCount}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
