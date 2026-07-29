@@ -4,7 +4,7 @@ import {
   Users, ShieldCheck, AlertTriangle, CheckCircle, Clock, XCircle,
   Plus, ChevronDown, ChevronUp, Award, GraduationCap, UserCheck,
   UserCog, FileText, TrendingUp, BarChart2, Briefcase, Calendar,
-  LogOut, Search, Building2, MapPin, Star, ClipboardList
+  LogOut, Search, Building2, MapPin, Star, ClipboardList, Download
 } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 
@@ -1174,6 +1174,46 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [gapFilter, setGapFilter] = useState<'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing'>('All');
   const [selectedReq, setSelectedReq] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
+  const [exportToast, setExportToast] = useState(false);
+
+  const exportGapListCsv = () => {
+    // Only export requirements that are NOT effectively met — i.e. true open gaps
+    const gaps = COMP_REQUIREMENTS.filter(r => {
+      if (stdFilter !== 'All' && r.standard !== stdFilter) return false;
+      return !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs);
+    });
+
+    if (gaps.length === 0) {
+      alert('No open gaps to export' + (stdFilter !== 'All' ? ` for ${stdFilter}` : '') + '. All requirements are currently met or remediated.');
+      return;
+    }
+
+    const escape = (s: string) => `"${s.replace(/"/g, '""')}"`;
+    const header = ['ID', 'Standard', 'Category', 'Requirement', 'Status', 'Due Date', 'Evidence Filed', 'Corrective Plan Filed', 'Owner'];
+    const rows = gaps.map(r => [
+      escape(r.id),
+      escape(r.standard),
+      escape(r.category),
+      escape(r.requirement),
+      escape(r.status),
+      escape(r.dueDate ?? ''),
+      escape(evidenceInputs[r.id]?.trim() ? 'Yes' : 'No'),
+      escape(corrActionInputs[r.id]?.trim() ? 'Yes' : 'No'),
+      escape(''),   // Owner — for team to fill in
+    ]);
+
+    const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const scopeLabel = stdFilter !== 'All' ? `-${stdFilter.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+    a.href = url;
+    a.download = `compliance-gap-list${scopeLabel}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportToast(true);
+    setTimeout(() => setExportToast(false), 2500);
+  };
   const [compSaved, setCompSaved] = useState<string | null>(null);
   const saveCompAction = (msg: string) => { setCompSaved(msg); setTimeout(() => setCompSaved(null), 2500); };
   const [evidenceSavedId, setEvidenceSavedId] = useState<string | null>(null);
@@ -1269,6 +1309,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               Reset Audit Cycle
             </button>
           )}
+          <button
+            onClick={exportGapListCsv}
+            className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-navy/40 transition-colors flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Export Gap List{stdFilter !== 'All' ? ` — ${stdFilter}` : ''}
+          </button>
           <button onClick={() => setShowReport(true)} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
             <ClipboardList className="w-4 h-4" /> Generate Readiness Report
           </button>
@@ -1468,7 +1515,12 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           <AlertTriangle className="w-4 h-4 shrink-0" /> {warnUnsaved}
         </div>
       )}
-      {!warnUnsaved && compSaved && (
+      {!warnUnsaved && exportToast && (
+        <div className="fixed bottom-6 right-6 bg-navy text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <Download className="w-4 h-4" /> Gap list CSV downloaded
+        </div>
+      )}
+      {!warnUnsaved && !exportToast && compSaved && (
         <div className="fixed bottom-6 right-6 bg-green-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
           <CheckCircle className="w-4 h-4" /> {compSaved}
         </div>
