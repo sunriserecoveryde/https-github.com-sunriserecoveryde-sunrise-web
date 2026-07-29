@@ -146,7 +146,21 @@ export type Screen =
 // ─── Inner app (needs RoleContext) ───────────────────────────────────────────
 
 function AppInner() {
-  const [activeScreen, setActiveScreen] = useState<Screen>('Dashboard');
+  // ── Deep-link bootstrap: parse #WorkforceCompliance?req=CARF-001 on first load
+  const [deepLinkedReqId] = useState<string | null>(() => {
+    try {
+      const hash = window.location.hash.slice(1); // strip leading #
+      const [, query] = hash.split('?');
+      return query ? new URLSearchParams(query).get('req') : null;
+    } catch { return null; }
+  });
+  const [activeScreen, setActiveScreen] = useState<Screen>(() => {
+    try {
+      const screenPart = window.location.hash.slice(1).split('?')[0];
+      if (screenPart) return screenPart as Screen;
+    } catch { /* ignore */ }
+    return 'Dashboard';
+  });
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [lastDemoPatientId, setLastDemoPatientId] = useState<string | null>(null);
   const [tourOpen, setTourOpen] = useState(false);
@@ -158,7 +172,8 @@ function AppInner() {
   // ── Browser Back / Forward support ──────────────────────────────────────────
   useEffect(() => {
     // Stamp the initial entry so the first Back press has a state to pop to.
-    window.history.replaceState({ screen: 'Dashboard', patientId: null }, '', '#Dashboard');
+    // Preserve a deep-link screen if present (e.g. #WorkforceCompliance?req=CARF-001).
+    window.history.replaceState({ screen: activeScreen, patientId: null }, '', `#${activeScreen}`);
 
     const handlePop = (e: PopStateEvent) => {
       const s = e.state as { screen: Screen; patientId: string | null } | null;
@@ -269,7 +284,7 @@ function AppInner() {
       case 'SecureMessaging':         return withAccessReadOnlyProp('SecureMessaging',         ro => <SecureMessaging navigate={navigateTo} readOnly={ro} />);
       case 'FormularyManagement':     return withAccess('FormularyManagement',     <FormularyManagement navigate={navigateTo} />);
       case 'StaffAdmin':              return <StaffAdmin navigate={navigateTo} />;
-      case 'WorkforceCompliance':     return withAccessReadOnlyProp('WorkforceCompliance',     ro => <WorkforceCompliance navigate={navigateTo} readOnly={ro} />);
+      case 'WorkforceCompliance':     return withAccessReadOnlyProp('WorkforceCompliance',     ro => <WorkforceCompliance navigate={navigateTo} readOnly={ro} requestedReqId={deepLinkedReqId} />);
       case 'WithdrawalMonitor':       return withAccessReadOnlyProp('WithdrawalMonitor', ro => <WithdrawalMonitor navigate={navigateTo} readOnly={ro} />);
       case 'AIAssistant':             return withAccess('AIAssistant', <AIAssistant navigate={navigateTo} />);
       case 'DAPNoteWorkflow':         return withAccess('AIAssistant', <DAPNoteWorkflow navigate={navigateTo} />);

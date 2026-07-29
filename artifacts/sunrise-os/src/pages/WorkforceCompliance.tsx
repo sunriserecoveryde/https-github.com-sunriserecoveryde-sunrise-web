@@ -10,7 +10,7 @@ import {
 import { LockedButton } from '../components/common/LockedButton';
 import { useAuth } from '../context/AuthContext';
 
-interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; }
+interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; requestedReqId?: string | null; }
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1199,7 +1199,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Medicaid': 'Medicaid',
   'Internal Policy': 'Internal',
 };
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, requestedReqId }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1213,6 +1213,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   onRequestedFilterApplied?: () => void;
   auditLog: AuditLogEntry[];
   addAuditEntry: (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => void;
+  requestedReqId?: string | null;
 }) {
   // #565 — persist filter selection across tab switches
   const [stdFilter, setStdFilterRaw] = useState<CompStandard>(() => {
@@ -1235,6 +1236,24 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     if (requestedStdFilter) { setStdFilter(requestedStdFilter); onRequestedFilterApplied?.(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestedStdFilter]);
+
+  // #591 — deep-link: auto-expand and scroll to a specific requirement on mount
+  useEffect(() => {
+    if (!requestedReqId) return;
+    const req = COMP_REQUIREMENTS.find(r => r.id === requestedReqId);
+    if (!req) return;
+    // Ensure the row is visible by aligning filters to include it
+    setStdFilter(req.standard as CompStandard);
+    setGapFilter('All');
+    setSelectedReq(requestedReqId);
+    // Scroll to the row after React has rendered the expanded state
+    const timer = setTimeout(() => {
+      document.getElementById(`comp-req-${requestedReqId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [selectedReq, setSelectedReq] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [exportToast, setExportToast] = useState<number | false>(false);
@@ -1327,10 +1346,17 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     const scopeLabel = activeStd !== 'All' ? ` — ${activeStd}` : '';
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
+    // #591 — Build deep-link URL so each QR code lands directly on that requirement row
+    const appBase = window.location.href.split('#')[0];
+    const deepLinkUrl = (reqId: string) =>
+      `${appBase}#WorkforceCompliance?req=${encodeURIComponent(reqId)}`;
+
     const rows = gaps.map(r => {
       const evidFiled = evidenceInputs[r.id]?.trim() ? `Yes — ${evidenceInputs[r.id].trim()}` : 'No';
       const corrFiled = corrActionInputs[r.id]?.trim() ? `Yes — ${corrActionInputs[r.id].trim()}` : 'No';
       const statusColor = r.status === 'Gap' ? '#dc2626' : r.status === 'Partial' ? '#d97706' : '#1e3a5f';
+      const url = deepLinkUrl(r.id);
+      const qrSrc = `https://chart.googleapis.com/chart?chs=72x72&cht=qr&chl=${encodeURIComponent(url)}&choe=UTF-8`;
       return `
         <tr>
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;font-weight:600;white-space:nowrap;">${r.id}</td>
@@ -1344,6 +1370,10 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:10px;color:${evidenceInputs[r.id]?.trim() ? '#15803d' : '#94a3b8'};">${evidFiled}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:10px;color:${corrActionInputs[r.id]?.trim() ? '#15803d' : '#94a3b8'};">${corrFiled}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;">${ownerInputs[r.id] ?? '—'}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center;vertical-align:middle;">
+            <img src="${qrSrc}" width="64" height="64" alt="Open ${r.id} in app" style="display:block;margin:0 auto 3px;" />
+            <div style="font-size:8px;color:#94a3b8;word-break:break-all;max-width:80px;line-height:1.2;">${r.id}</div>
+          </td>
         </tr>`;
     }).join('');
 
@@ -1378,6 +1408,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     footer { margin-top: 22px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; }
     .print-btn { margin-bottom: 18px; padding: 10px 22px; background: #1e3a5f; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
     .print-btn:hover { background: #f97316; }
+    .qr-note { margin-bottom: 14px; font-size: 11px; color: #64748b; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 14px; }
   </style>
 </head>
 <body>
@@ -1405,7 +1436,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
   ${gaps.length === 0
     ? `<div style="text-align:center;padding:48px;color:#22c55e;font-size:18px;font-weight:700;">✓ All requirements met or remediated${activeStd !== 'All' ? ` for ${activeStd}` : ''}.</div>`
-    : `<table>
+    : `<p class="qr-note">📱 <strong>Assign owners without opening the app:</strong> scan the QR code in the last column to jump directly to that requirement in SunriseOS, then use the Owner dropdown to delegate.</p>
+    <table>
     <thead>
       <tr>
         <th style="width:52px;">ID</th>
@@ -1417,6 +1449,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         <th style="width:130px;">Evidence Filed</th>
         <th style="width:130px;">Corrective Plan</th>
         <th style="width:110px;">Owner</th>
+        <th style="width:90px;text-align:center;">Open in App</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
@@ -1676,7 +1709,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           const effectiveStatus = isCompleted ? 'Met' : req.status;
           const isSelected = selectedReq === req.id;
           return (
-            <div key={req.id} className={`border rounded-xl overflow-hidden transition-all ${isSelected ? 'border-orange shadow-sm' : 'border-border'}`}>
+            <div key={req.id} id={`comp-req-${req.id}`} className={`border rounded-xl overflow-hidden transition-all ${isSelected ? 'border-orange shadow-sm' : requestedReqId === req.id ? 'border-blue-400 shadow-sm ring-2 ring-blue-200' : 'border-border'}`}>
               <div
                 className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50"
                 onClick={() => {
@@ -2117,8 +2150,9 @@ const COMPLIANCE_GAP_FILTER_KEY = 'sunrise-os:compliance-gap-filter';
 const COMPLIANCE_AUDIT_RESET_LOG_KEY = 'sunrise-os:compliance-audit-reset-log';
 
 const COMPLIANCE_AUDIT_LOG_KEY = 'sunrise-os:compliance-audit-log';
-export function WorkforceCompliance({ navigate, readOnly }: Props) {
-  const [tab, setTab] = useState<WFTab>('Dashboard');
+export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Props) {
+  // #591 — if launched via deep-link with a specific req, jump straight to Compliance Standards tab
+  const [tab, setTab] = useState<WFTab>(() => requestedReqId ? 'Compliance Standards' : 'Dashboard');
   // Requested filter from Dashboard ring click — applied once when Standards tab mounts
   const [requestedStdFilter, setRequestedStdFilter] = useState<Exclude<CompStandard, 'All'> | null>(null);
 
@@ -2342,7 +2376,7 @@ export function WorkforceCompliance({ navigate, readOnly }: Props) {
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} requestedReqId={requestedReqId} />}
       </div>
     </div>
   );
