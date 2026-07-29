@@ -1163,6 +1163,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   setCorrActionInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }) {
   const [stdFilter, setStdFilter] = useState<CompStandard>('All');
+  const [gapFilter, setGapFilter] = useState<'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing'>('All');
   const [selectedReq, setSelectedReq] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [compSaved, setCompSaved] = useState<string | null>(null);
@@ -1171,7 +1172,17 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [corrSavedId, setCorrSavedId] = useState<string | null>(null);
 
   const standards: CompStandard[] = ['All', 'CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy'];
-  const filtered = COMP_REQUIREMENTS.filter(r => stdFilter === 'All' || r.standard === stdFilter);
+  const gapFilterOptions: Array<'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing'> = ['All', 'Needs Evidence', 'Needs Action Plan', 'Both Missing'];
+
+  const filtered = COMP_REQUIREMENTS.filter(r => {
+    if (stdFilter !== 'All' && r.standard !== stdFilter) return false;
+    const missingEvidence = !evidenceInputs[r.id]?.trim();
+    const missingPlan = !corrActionInputs[r.id]?.trim();
+    if (gapFilter === 'Needs Evidence') return missingEvidence;
+    if (gapFilter === 'Needs Action Plan') return missingPlan;
+    if (gapFilter === 'Both Missing') return missingEvidence && missingPlan;
+    return true;
+  });
 
   const met = COMP_REQUIREMENTS.filter(r => reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs)).length;
   const total = COMP_REQUIREMENTS.length;
@@ -1224,6 +1235,27 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             {s}
           </button>
         ))}
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] font-semibold text-slate uppercase tracking-wide shrink-0">Show:</span>
+        {gapFilterOptions.map(opt => (
+          <button key={opt} onClick={() => setGapFilter(opt)}
+            className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${
+              gapFilter === opt
+                ? opt === 'All' ? 'bg-navy text-white border-navy'
+                  : opt === 'Both Missing' ? 'bg-red-600 text-white border-red-600'
+                  : 'bg-amber-500 text-white border-amber-500'
+                : 'bg-white text-slate border-border hover:border-navy/40'
+            }`}>
+            {opt}
+          </button>
+        ))}
+        {gapFilter !== 'All' && (
+          <span className="text-[11px] text-slate ml-1">
+            — {filtered.length} requirement{filtered.length !== 1 ? 's' : ''} shown
+          </span>
+        )}
       </div>
 
       <div className="space-y-2">
