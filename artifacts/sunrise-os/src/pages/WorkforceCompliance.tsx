@@ -389,8 +389,9 @@ const SUB_MODULES = [
   { label: 'Staff Scheduling', icon: UserCog, screen: 'StaffScheduling' as Screen, alerts: 0, desc: 'Shift coverage · Credential-based restrictions · Census staffing' },
 ];
 
-// ─── Dashboard KPIs ────────────────────────────────────────────────────────────
-
+const COMP_STANDARDS: Array<Exclude<CompStandard, 'All'>> = [
+  'CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy',
+];
 function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evidenceInputs, corrActionInputs }: {
   navigate: (s: Screen) => void;
   onOpenComplianceStandards: (filter?: Exclude<CompStandard, 'All'>) => void;
@@ -2094,3 +2095,59 @@ function StandardRing({
 }
 
 const COMPLIANCE_CORR_CONFIRMED_KEY = 'sunrise-os:compliance-corr-confirmed';
+
+function MiniStandardRing({
+  std,
+  completedIds,
+  evidenceInputs,
+  corrActionInputs,
+}: {
+  std: Exclude<CompStandard, 'All'>;
+  completedIds: Set<string>;
+  evidenceInputs: Record<string, string>;
+  corrActionInputs: Record<string, string>;
+}) {
+  const reqs = COMP_REQUIREMENTS.filter(r => r.standard === std);
+  const total = reqs.length;
+  const effectiveMet = reqs.filter(r =>
+    reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs),
+  ).length;
+  const pct = total > 0 ? Math.round((effectiveMet / total) * 100) : 100;
+
+  const RADIUS = 12;
+  const CX = 16;
+  const CY = 16;
+  const circ = 2 * Math.PI * RADIUS;
+  const arc = total > 0 ? (effectiveMet / total) * circ : circ;
+
+  const ringColor = pct >= 90 ? '#22c55e' : pct >= 75 ? '#f59e0b' : '#ef4444';
+  const textColor = pct >= 90 ? 'text-green-600' : pct >= 75 ? 'text-amber-600' : 'text-red-600';
+
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <svg width="32" height="32" viewBox="0 0 32 32" className="shrink-0">
+        {/* track */}
+        <circle cx={CX} cy={CY} r={RADIUS} fill="none" stroke="#e5e7eb" strokeWidth="3" />
+        {/* progress arc */}
+        {effectiveMet > 0 && (
+          <circle
+            cx={CX} cy={CY} r={RADIUS} fill="none"
+            stroke={ringColor} strokeWidth="3"
+            strokeDasharray={`${arc} ${circ}`}
+            strokeLinecap="butt"
+            transform={`rotate(-90 ${CX} ${CY})`}
+          />
+        )}
+        {/* centre pct label */}
+        <text
+          x={CX} y={CY} textAnchor="middle" dominantBaseline="middle"
+          fontSize="6.5" fontWeight="bold" fill={ringColor}>
+          {pct}%
+        </text>
+      </svg>
+      <div className={`text-[8.5px] font-semibold text-center leading-tight ${textColor}`} style={{ maxWidth: 36 }}>
+        {STD_SHORT[std]}
+      </div>
+    </div>
+  );
+}
