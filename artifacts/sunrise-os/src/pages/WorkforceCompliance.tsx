@@ -1230,7 +1230,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   }, [requestedStdFilter]);
   const [selectedReq, setSelectedReq] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
-  const [exportToast, setExportToast] = useState(false);
+  const [exportToast, setExportToast] = useState<number | false>(false);
 
   const exportGapListCsv = () => {
     // Only export requirements that are NOT effectively met — i.e. true open gaps
@@ -1267,7 +1267,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     a.download = `compliance-gap-list${scopeLabel}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    setExportToast(true);
+    setExportToast(gaps.length);
     setTimeout(() => setExportToast(false), 2500);
   };
 
@@ -1715,9 +1715,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           <AlertTriangle className="w-4 h-4 shrink-0" /> {warnUnsaved}
         </div>
       )}
-      {!warnUnsaved && exportToast && (
+      {!warnUnsaved && exportToast !== false && (
         <div className="fixed bottom-6 right-6 bg-navy text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
-          <Download className="w-4 h-4" /> Gap list CSV downloaded
+          <Download className="w-4 h-4" /> {exportToast} gap{exportToast !== 1 ? 's' : ''} exported
         </div>
       )}
       {!warnUnsaved && !exportToast && compSaved && (
