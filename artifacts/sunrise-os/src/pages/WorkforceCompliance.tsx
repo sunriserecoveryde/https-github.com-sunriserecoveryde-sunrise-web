@@ -1287,7 +1287,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
 };
 
 // hint: Structural and logic conflict. Both design and behavior differ.
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared, isTourActive }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared, onAuditCycleStarted, isTourActive }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1305,6 +1305,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   requestedReqId?: string | null;
   appendScoreHistory: (ids: Set<string>, evidence: Record<string, string>, corrAction: Record<string, string>) => void;
   onDemoDataCleared?: () => void;
+  /** Called when a reset is confirmed so the parent can hide the "Load Sample Audit" CTA. */
+  onAuditCycleStarted?: () => void;
   /** When true, add id="tour-first-gap-row" to the first non-met requirement row */
   isTourActive?: boolean;
 }) {
@@ -2694,7 +2696,12 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       // Mark as seeded so the useState initializer knows this
                       // is "reset to empty" rather than a truly fresh session.
                       localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1');
+                      // Hide the "Load Sample Audit" CTA permanently — the
+                      // officer chose to reset, so the blank-state prompt must
+                      // not reappear even though completedIds is now size 0.
+                      localStorage.setItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1');
                     } catch { /* unavailable */ }
+                    onAuditCycleStarted?.();
                     // #597 — record who triggered the reset and when
                     const resetTimestamp = new Date().toISOString();
                     const entry: ResetLogEntry = {
@@ -2759,6 +2766,7 @@ const COMPLIANCE_AUDIT_LOG_KEY = 'sunrise-os:compliance-audit-log';
 // (flag present → keep empty so seeds don't re-appear after a reset + reload).
 const COMPLIANCE_AUDIT_SEEDED_KEY = 'sunrise-os:compliance-audit-seeded';
 
+const COMPLIANCE_AUDIT_CYCLE_STARTED_KEY = 'sunrise-os:compliance-audit-cycle-started';
 const AUDIT_LOG_MAX_ENTRIES = 500;
 
 const COMPLIANCE_AUDIT_RESET_AT_KEY = 'sunrise-os:compliance-audit-reset-at';
@@ -2807,6 +2815,12 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   // ── Demo data state ─────────────────────────────────────────────────────────
   const [isDemoData, setIsDemoData] = useState<boolean>(() => {
     try { return localStorage.getItem(COMPLIANCE_DEMO_DATA_KEY) === '1'; } catch { return false; }
+  });
+  // True once an officer has ever loaded sample data OR confirmed a reset.
+  // Keeps the "Load Sample Audit" CTA hidden after a reset even though
+  // completedIds returns to size 0.
+  const [auditCycleStarted, setAuditCycleStarted] = useState<boolean>(() => {
+    try { return localStorage.getItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY) === '1'; } catch { return false; }
   });
   // Bumping this key remounts ComplianceStandardsTab so it re-reads localStorage
   // (needed to pick up evidenceConfirmed / corrConfirmed written during seeding).
@@ -3110,6 +3124,10 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
     // Mark demo data active
     try { localStorage.setItem(COMPLIANCE_DEMO_DATA_KEY, '1'); } catch { /* unavailable */ }
     setIsDemoData(true);
+    // Hide the "Load Sample Audit" CTA permanently — the officer has now
+    // interacted with the audit, so the blank-state prompt should never return.
+    try { localStorage.setItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); } catch { /* unavailable */ }
+    setAuditCycleStarted(true);
     // Remount ComplianceStandardsTab so it re-reads confirmed sets from localStorage
     setCompStandardsKey(k => k + 1);
   };
@@ -3231,7 +3249,11 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       </div>
 
       {/* ── Load Sample Audit CTA — visible only on a completely blank session ── */}
-      {completedIds.size === 0 && !readOnly && (
+      {/* auditCycleStarted gates the CTA independently of completedIds.size so  */}
+      {/* that a reset (which clears completedIds back to 0) does not re-surface  */}
+      {/* the prompt — the officer already chose to start fresh, not reload demo  */}
+      {/* data.                                                                   */}
+      {completedIds.size === 0 && !auditCycleStarted && !readOnly && (
         <div id="wc-tour-load-sample" className="flex items-center justify-between bg-gradient-to-r from-navy/5 to-orange/5 border border-orange/20 rounded-xl px-5 py-4">
           <div>
             <div className="text-sm font-bold text-navy">No audit data yet</div>
@@ -3277,7 +3299,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} appendScoreHistory={appendScoreHistory} isTourActive={isTourActive} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} onAuditCycleStarted={() => { try { localStorage.setItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); } catch { /* unavailable */ } setAuditCycleStarted(true); }} appendScoreHistory={appendScoreHistory} isTourActive={isTourActive} />}
       </div>
 
       {/* ── Demo tour overlay ─────────────────────────────────────────────── */}
