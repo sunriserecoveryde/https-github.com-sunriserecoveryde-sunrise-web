@@ -1779,7 +1779,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           setEvidenceSavedId(req.id);
                           setTimeout(() => setEvidenceSavedId(null), 2000);
                           setEvidenceConfirmed(prev => new Set([...prev, req.id]));
-                          addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer' });
+                          addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer', detail: evidenceInputs[req.id]?.trim() });
                         }}
                         className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${evidenceSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                         {evidenceSavedId === req.id ? '✓ Saved' : 'Link Evidence'}
@@ -1862,7 +1862,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         setCorrSavedId(req.id);
                         setTimeout(() => setCorrSavedId(null), 2000);
                         setCorrConfirmed(prev => new Set([...prev, req.id]));
-                        addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer' });
+                        addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer', detail: corrActionInputs[req.id]?.trim() });
                       }}
                       className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${corrSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                       {corrSavedId === req.id ? '✓ Saved' : 'Save Action Plan'}
@@ -1942,16 +1942,25 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
             const bg = actionBg[entry.actionType];
             const color = actionColors[entry.actionType];
+            const detailLabel = entry.actionType === 'Evidence Linked' ? 'Evidence document:' : entry.actionType === 'Action Plan Saved' ? 'Action plan:' : '';
+            const detailRow = (entry.detail && detailLabel)
+              ? `<tr>
+                  <td colspan="5" style="padding:4px 10px 10px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;color:#374151">
+                    <span style="font-weight:700;color:#6b7280;">${detailLabel}</span>
+                    <span style="margin-left:4px;font-style:italic;">${entry.detail.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+                  </td>
+                </tr>`
+              : '';
             return `
               <tr>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151;white-space:nowrap">${dateStr}<br/><span style="color:#6b7280;font-size:10px">${timeStr}</span></td>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">
+                <td style="padding:8px 10px;${entry.detail && detailLabel ? '' : 'border-bottom:1px solid #e5e7eb;'}font-size:12px;color:#374151;white-space:nowrap">${dateStr}<br/><span style="color:#6b7280;font-size:10px">${timeStr}</span></td>
+                <td style="padding:8px 10px;${entry.detail && detailLabel ? '' : 'border-bottom:1px solid #e5e7eb;'}">
                   <span style="background:${bg};color:${color};font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px">${entry.actionType}</span>
                 </td>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;color:#6b7280;white-space:nowrap">${entry.reqId}</td>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#111827">${entry.reqName}</td>
-                <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151">${entry.officer}</td>
-              </tr>`;
+                <td style="padding:8px 10px;${entry.detail && detailLabel ? '' : 'border-bottom:1px solid #e5e7eb;'}font-size:11px;color:#6b7280;white-space:nowrap">${entry.reqId}</td>
+                <td style="padding:8px 10px;${entry.detail && detailLabel ? '' : 'border-bottom:1px solid #e5e7eb;'}font-size:12px;color:#111827">${entry.reqName}</td>
+                <td style="padding:8px 10px;${entry.detail && detailLabel ? '' : 'border-bottom:1px solid #e5e7eb;'}font-size:12px;color:#374151">${entry.officer}</td>
+              </tr>${detailRow}`;
           }).join('');
 
           const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
@@ -2770,4 +2779,5 @@ interface AuditLogEntry {
   reqId: string;
   reqName: string;
   officer: string;
+  detail?: string;      // evidence doc name or corrective action text (when applicable)
 }
