@@ -1792,6 +1792,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           setEvidenceSavedId(req.id);
                           setTimeout(() => setEvidenceSavedId(null), 2000);
                           setEvidenceConfirmed(prev => new Set([...prev, req.id]));
+                          // detail: snapshot of input value at click time — a new string primitive,
+                          // not a reference; editing the field afterward cannot mutate this entry.
                           addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: currentStaff ? `${currentStaff.firstName} ${currentStaff.lastName}` : 'Compliance Officer', detail: evidenceInputs[req.id]?.trim() });
                         }}
                         className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${evidenceSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
@@ -1875,6 +1877,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         setCorrSavedId(req.id);
                         setTimeout(() => setCorrSavedId(null), 2000);
                         setCorrConfirmed(prev => new Set([...prev, req.id]));
+                        // detail: snapshot of input value at click time — a new string primitive,
+                        // not a reference; editing the field afterward cannot mutate this entry.
                         addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: currentStaff ? `${currentStaff.firstName} ${currentStaff.lastName}` : 'Compliance Officer', detail: corrActionInputs[req.id]?.trim() });
                       }}
                       className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${corrSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
@@ -2712,6 +2716,11 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       return SEED_AUDIT_LOG;
     }
   });
+  // Callers must pass `detail` as a plain string value (a snapshot of the
+  // input at click time), never as a reference to a state variable that can
+  // change later.  Because JS strings are primitives, spreading `entry` into
+  // the new object copies the value — subsequent mutations to the source input
+  // cannot retroactively change what was recorded here.
   const addAuditEntry = (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => {
     setAuditLogRaw(prev => {
       const appended: AuditLogEntry[] = [
@@ -3129,7 +3138,11 @@ interface AuditLogEntry {
   reqId: string;
   reqName: string;
   officer: string;
-  detail?: string;      // evidence doc name or corrective action text (when applicable)
+  // SNAPSHOT — this is the string value captured at the moment the officer
+  // clicked Save, not a reference to the live input state.  Subsequent edits
+  // to the evidence or corrective-action field do NOT mutate this field; each
+  // new save appends a fresh AuditLogEntry instead.
+  detail?: string;
 }
 
 function pruneAuditLog(entries: AuditLogEntry[]): AuditLogEntry[] {
