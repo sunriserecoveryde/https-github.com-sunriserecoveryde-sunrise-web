@@ -2551,14 +2551,23 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1');
                     } catch { /* unavailable */ }
                     // #597 — record who triggered the reset and when
+                    const resetTimestamp = new Date().toISOString();
                     const entry: ResetLogEntry = {
                       userName: currentStaff
                         ? `${currentStaff.firstName} ${currentStaff.lastName}`
                         : 'Unknown user',
-                      timestamp: new Date().toISOString(),
+                      timestamp: resetTimestamp,
                       action: 'AUDIT_RESET',
                     };
                     try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_LOG_KEY, JSON.stringify(entry)); } catch { /* unavailable */ }
+                    // Persist the reset timestamp so the next mount can tell
+                    // whether the server's auditResetAt has already been applied.
+                    try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_AT_KEY, resetTimestamp); } catch { /* unavailable */ }
+                    // Wipe the server-side audit log so a GET on reload returns
+                    // empty state instead of the pre-reset snapshot (#643).
+                    fetch('/api/compliance/audit-log?orgId=default', { method: 'DELETE' })
+                      .catch(() => { /* network unavailable — server copy will be
+                                       cleared on the next successful request */ });
                     setLastResetEntry(entry);
                     setAuditFilter('All');
                     setAuditDateFrom('');
@@ -2600,6 +2609,7 @@ const COMPLIANCE_AUDIT_LOG_KEY = 'sunrise-os:compliance-audit-log';
 // (flag present → keep empty so seeds don't re-appear after a reset + reload).
 const COMPLIANCE_AUDIT_SEEDED_KEY = 'sunrise-os:compliance-audit-seeded';
 
+const COMPLIANCE_AUDIT_RESET_AT_KEY = 'sunrise-os:compliance-audit-reset-at';
 const SEED_AUDIT_LOG: Array<{ id: string; timestamp: string; actionType: AuditActionType; reqId: string; reqName: string; officer: string; detail?: string }> = [
   { id: 'seed-01', timestamp: '2026-07-01T08:14:00.000Z', actionType: 'Marked Met',        reqId: 'CR-001', reqName: 'Written access to services policy with eligibility criteria and referral processes',        officer: 'Renée M. Caldwell' },
   { id: 'seed-02', timestamp: '2026-07-01T09:02:00.000Z', actionType: 'Evidence Linked',   reqId: 'CR-002', reqName: 'Individual service plan present for all clients within 30 days of admission',              officer: 'James S. Collins III', detail: 'ISP-template-v4.pdf' },
@@ -2720,6 +2730,27 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       .then((data) => {
         if (cancelled) return;
         if (!data) { hydrated.current = true; return; }
+
+        // ── Audit-reset check (#643) ──────────────────────────────────────────
+        // If the server has a newer auditResetAt than the one we last processed
+        // locally, the reset was committed server-side (possibly from another
+        // device or tab).  Clear the local audit log and advance our local
+        // reset-at timestamp so this branch only fires once per reset.
+        if (data.auditResetAt) {
+          const serverResetTime = new Date(data.auditResetAt).getTime();
+          const localResetIso   = localStorage.getItem(COMPLIANCE_AUDIT_RESET_AT_KEY);
+          const localResetTime  = localResetIso ? new Date(localResetIso).getTime() : 0;
+          if (serverResetTime > localResetTime) {
+            // Erase local audit log so the trail starts empty after reload.
+            setAuditLogRaw([]);
+            try { localStorage.removeItem(COMPLIANCE_AUDIT_LOG_KEY); } catch { /* unavailable */ }
+            // Mark as seeded so the useState initializer never re-injects seed rows.
+            try { localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1'); } catch { /* unavailable */ }
+            // Record the server's reset timestamp so subsequent mounts skip this.
+            try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_AT_KEY, data.auditResetAt); } catch { /* unavailable */ }
+          }
+        }
+
         const hasApiData =
           (data.completedIds?.length > 0) ||
           Object.keys(data.evidenceInputs ?? {}).length > 0 ||

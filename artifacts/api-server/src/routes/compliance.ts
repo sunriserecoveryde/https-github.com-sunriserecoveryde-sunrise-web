@@ -13,6 +13,8 @@ export interface ComplianceAuditState {
   corrActionInputs: Record<string, string>;
   ownerInputs: Record<string, string>;
   updatedAt: string;
+  /** ISO string of the last full audit reset, or null if never reset. */
+  auditResetAt: string | null;
 }
 
 const DEFAULT_STATE: ComplianceAuditState = {
@@ -21,6 +23,7 @@ const DEFAULT_STATE: ComplianceAuditState = {
   corrActionInputs: {},
   ownerInputs: {},
   updatedAt: new Date().toISOString(),
+  auditResetAt: null,
 };
 
 const router = Router();
@@ -48,6 +51,7 @@ router.get("/compliance/audit-state", async (req, res) => {
       corrActionInputs: row.corrActionInputs ?? {},
       ownerInputs:      row.ownerInputs      ?? {},
       updatedAt:        row.updatedAt.toISOString(),
+      auditResetAt:     row.auditResetAt ? row.auditResetAt.toISOString() : null,
     } satisfies ComplianceAuditState);
   } catch (err) {
     res.status(500).json({ error: "Failed to read audit state", detail: String(err) });
@@ -77,6 +81,7 @@ router.put("/compliance/audit-state", async (req, res) => {
         corrActionInputs: row.corrActionInputs ?? {},
         ownerInputs:      row.ownerInputs      ?? {},
         updatedAt:        row.updatedAt.toISOString(),
+        auditResetAt:     row.auditResetAt ? row.auditResetAt.toISOString() : null,
       };
     }
   } catch (err) {
@@ -113,6 +118,42 @@ router.put("/compliance/audit-state", async (req, res) => {
     res.json({ ok: true, updatedAt: new Date().toISOString() });
   } catch (err) {
     res.status(500).json({ error: "Failed to save audit state", detail: String(err) });
+  }
+});
+
+// DELETE /api/compliance/audit-log?orgId=default
+// Stamps auditResetAt = now() on the server so that any subsequent GET returns
+// a reset timestamp the client can compare against its local copy.  The client
+// uses this to detect "the reset was committed server-side" and clears its own
+// cached audit log, preventing a slow GET response from re-populating a trail
+// the officer already erased.
+router.delete("/compliance/audit-log", async (req, res) => {
+  const orgId = String(req.query["orgId"] ?? "default");
+  const now = new Date();
+
+  try {
+    await db
+      .insert(complianceAuditState)
+      .values({
+        orgId,
+        completedIds:     [],
+        evidenceInputs:   {},
+        corrActionInputs: {},
+        ownerInputs:      {},
+        updatedAt:        now,
+        auditResetAt:     now,
+      })
+      .onConflictDoUpdate({
+        target: complianceAuditState.orgId,
+        set: {
+          auditResetAt: now,
+          updatedAt:    now,
+        },
+      });
+
+    res.json({ ok: true, auditResetAt: now.toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to record audit reset", detail: String(err) });
   }
 });
 
