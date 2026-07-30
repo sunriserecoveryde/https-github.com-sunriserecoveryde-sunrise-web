@@ -26,6 +26,13 @@ type ReviewType = '30-Day' | '60-Day' | '90-Day' | 'Annual' | 'Probationary' | '
 type OnboardStatus = 'In Progress' | 'Pending Approval' | 'Complete' | 'Overdue';
 
 type AuditActionType = 'Marked Met' | 'Evidence Linked' | 'Action Plan Saved';
+
+interface DateRangePreset {
+  id: string;
+  name: string;
+  from: string;
+  to: string;
+}
 interface EmployeeProfile {
   id: string;
   name: string;
@@ -1367,6 +1374,35 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [auditFilter, setAuditFilter] = useState<AuditActionType | 'All'>('All');
   const [auditDateFrom, setAuditDateFrom] = useState('');
   const [auditDateTo, setAuditDateTo] = useState('');
+  const [auditPresets, setAuditPresets] = useState<DateRangePreset[]>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_AUDIT_PRESETS_KEY);
+      return stored ? (JSON.parse(stored) as DateRangePreset[]) : [];
+    } catch { return []; }
+  });
+  const [showPresetSave, setShowPresetSave] = useState(false);
+  const [presetNameInput, setPresetNameInput] = useState('');
+
+  const saveAuditPreset = () => {
+    const trimmed = presetNameInput.trim();
+    if (!trimmed || !auditDateFrom || !auditDateTo) return;
+    const next: DateRangePreset[] = [
+      ...auditPresets,
+      { id: `preset-${Date.now()}`, name: trimmed, from: auditDateFrom, to: auditDateTo },
+    ];
+    setAuditPresets(next);
+    safeSet(COMPLIANCE_AUDIT_PRESETS_KEY, JSON.stringify(next));
+    setPresetNameInput('');
+    setShowPresetSave(false);
+    toast({ title: `Preset "${trimmed}" saved`, description: `${auditDateFrom} – ${auditDateTo}` });
+  };
+
+  const deleteAuditPreset = (id: string) => {
+    const next = auditPresets.filter(p => p.id !== id);
+    setAuditPresets(next);
+    safeSet(COMPLIANCE_AUDIT_PRESETS_KEY, JSON.stringify(next));
+  };
+
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [csvExporting, setCsvExporting] = useState(false);
   const [csvExportError, setCsvExportError] = useState(false);
@@ -2707,60 +2743,123 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             )}
             {showAuditTrail && (
               <>
-                {/* Filter chips — hidden when log is empty */}
-                {auditLog.length > 0 && <div className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-50/70 border-b border-border flex-wrap">
-                  {filterChips.map(chip => (
-                    <button
-                      key={chip.value}
-                      onClick={() => setAuditFilter(chip.value)}
-                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
-                        auditFilter === chip.value
-                          ? chip.activeClass
-                          : 'bg-white text-slate border-border hover:border-gray-400 hover:text-navy'
-                      }`}
-                    >
-                      {chip.label}
-                      {chip.value !== 'All' && (
-                        <span className={`ml-1 opacity-75`}>
-                          ({sorted.filter(e => e.actionType === chip.value).length})
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                  <div className="flex items-center gap-1.5 ml-auto">
-                    <span className="text-[11px] text-slate font-medium shrink-0">Date range:</span>
-                    <input
-                      type="date"
-                      value={auditDateFrom}
-                      onChange={e => setAuditDateFrom(e.target.value)}
-                      max={auditDateTo || undefined}
-                      className="text-[11px] text-navy border border-border rounded-lg px-2 py-0.5 bg-white focus:outline-none focus:border-orange focus:ring-1 focus:ring-orange/30"
-                    />
-                    <span className="text-[11px] text-slate">–</span>
-                    <input
-                      type="date"
-                      value={auditDateTo}
-                      onChange={e => setAuditDateTo(e.target.value)}
-                      min={auditDateFrom || undefined}
-                      className="text-[11px] text-navy border border-border rounded-lg px-2 py-0.5 bg-white focus:outline-none focus:border-orange focus:ring-1 focus:ring-orange/30"
-                    />
-                    {(auditDateFrom || auditDateTo) && (
-                      <button
-                        onClick={() => { setAuditDateFrom(''); setAuditDateTo(''); }}
-                        className="text-[11px] text-slate hover:text-navy ml-0.5"
-                        title="Clear date range"
-                      >
-                        ✕
-                      </button>
+                {/* Filter chips + date range row — hidden when log is empty */}
+                {auditLog.length > 0 && (
+                  <div className="bg-gray-50/70 border-b border-border">
+                    {/* Saved preset chips */}
+                    {auditPresets.length > 0 && (
+                      <div className="flex items-center gap-1.5 px-4 pt-2.5 pb-1 flex-wrap">
+                        <span className="text-[10px] text-slate font-semibold uppercase tracking-wide shrink-0 mr-0.5">Saved windows:</span>
+                        {auditPresets.map(preset => {
+                          const isActive = auditDateFrom === preset.from && auditDateTo === preset.to;
+                          return (
+                            <span
+                              key={preset.id}
+                              className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                                isActive
+                                  ? 'bg-orange text-white border-orange'
+                                  : 'bg-white text-navy border-border hover:border-orange hover:text-orange'
+                              }`}
+                              onClick={() => { setAuditDateFrom(preset.from); setAuditDateTo(preset.to); setShowPresetSave(false); }}
+                              title={`${preset.from} – ${preset.to}`}
+                            >
+                              {preset.name}
+                              <button
+                                onClick={e => { e.stopPropagation(); deleteAuditPreset(preset.id); }}
+                                className={`ml-0.5 leading-none opacity-60 hover:opacity-100 transition-opacity ${isActive ? 'text-white' : 'text-slate'}`}
+                                title="Remove preset"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
                     )}
-                  </div>
-                </div>}
-                {filtered.length > 0 && (
-                  <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 px-4 py-1.5 bg-gray-100/80 border-b border-border">
-                    <span className="text-[10px] font-semibold text-slate uppercase tracking-wide">Action</span>
-                    <span className="text-[10px] font-semibold text-slate uppercase tracking-wide">Requirement</span>
-                    <span className="text-[10px] font-semibold text-slate uppercase tracking-wide">Officer</span>
-                    <span className="text-[10px] font-semibold text-slate uppercase tracking-wide text-right">Timestamp</span>
+                    {/* Action type chips + date range inputs */}
+                    <div className="flex items-center gap-1.5 px-4 py-2.5 flex-wrap">
+                      {filterChips.map(chip => (
+                        <button
+                          key={chip.value}
+                          onClick={() => setAuditFilter(chip.value)}
+                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                            auditFilter === chip.value
+                              ? chip.activeClass
+                              : 'bg-white text-slate border-border hover:border-gray-400 hover:text-navy'
+                          }`}
+                        >
+                          {chip.label}
+                          {chip.value !== 'All' && (
+                            <span className="ml-1 opacity-75">
+                              ({sorted.filter(e => e.actionType === chip.value).length})
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                      <div className="flex items-center gap-1.5 ml-auto flex-wrap">
+                        <span className="text-[11px] text-slate font-medium shrink-0">Date range:</span>
+                        <input
+                          type="date"
+                          value={auditDateFrom}
+                          onChange={e => { setAuditDateFrom(e.target.value); setShowPresetSave(false); }}
+                          max={auditDateTo || undefined}
+                          className="text-[11px] text-navy border border-border rounded-lg px-2 py-0.5 bg-white focus:outline-none focus:border-orange focus:ring-1 focus:ring-orange/30"
+                        />
+                        <span className="text-[11px] text-slate">–</span>
+                        <input
+                          type="date"
+                          value={auditDateTo}
+                          onChange={e => { setAuditDateTo(e.target.value); setShowPresetSave(false); }}
+                          min={auditDateFrom || undefined}
+                          className="text-[11px] text-navy border border-border rounded-lg px-2 py-0.5 bg-white focus:outline-none focus:border-orange focus:ring-1 focus:ring-orange/30"
+                        />
+                        {(auditDateFrom || auditDateTo) && (
+                          <button
+                            onClick={() => { setAuditDateFrom(''); setAuditDateTo(''); setShowPresetSave(false); }}
+                            className="text-[11px] text-slate hover:text-navy"
+                            title="Clear date range"
+                          >
+                            ✕
+                          </button>
+                        )}
+                        {auditDateFrom && auditDateTo && !showPresetSave && (
+                          <button
+                            onClick={() => { setPresetNameInput(''); setShowPresetSave(true); }}
+                            className="text-[11px] font-semibold text-orange border border-orange/40 bg-orange/5 hover:bg-orange/10 rounded-lg px-2 py-0.5 transition-colors shrink-0"
+                          >
+                            + Save preset
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {/* Inline save-preset form */}
+                    {showPresetSave && (
+                      <div className="flex items-center gap-2 px-4 pb-2.5">
+                        <input
+                          autoFocus
+                          type="text"
+                          value={presetNameInput}
+                          onChange={e => setPresetNameInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveAuditPreset(); if (e.key === 'Escape') setShowPresetSave(false); }}
+                          placeholder='e.g. "CARF 2026 Survey Window"'
+                          maxLength={60}
+                          className="flex-1 text-[11px] text-navy border border-orange/50 rounded-lg px-2.5 py-1 bg-white focus:outline-none focus:border-orange focus:ring-1 focus:ring-orange/30 min-w-0"
+                        />
+                        <button
+                          onClick={saveAuditPreset}
+                          disabled={!presetNameInput.trim()}
+                          className="text-[11px] font-semibold bg-orange text-white rounded-lg px-3 py-1 hover:bg-orange/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setShowPresetSave(false)}
+                          className="text-[11px] text-slate hover:text-navy shrink-0"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="divide-y divide-border max-h-80 overflow-y-auto">
@@ -2772,7 +2871,15 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           ? `No entries match the selected filters${auditFilter !== 'All' ? ` and action type "${auditFilter}"` : ''} in this date range.`
                           : `No "${auditFilter}" entries in the audit trail.`}
                     </div>
-                  ) : filtered.map(entry => {
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 px-4 py-1.5 bg-gray-100/80 border-b border-border">
+                        <span className="text-[10px] font-semibold text-slate uppercase tracking-wide">Action</span>
+                        <span className="text-[10px] font-semibold text-slate uppercase tracking-wide">Requirement</span>
+                        <span className="text-[10px] font-semibold text-slate uppercase tracking-wide">Officer</span>
+                        <span className="text-[10px] font-semibold text-slate uppercase tracking-wide text-right">Timestamp</span>
+                      </div>
+                      {filtered.map(entry => {
                     const dt = new Date(entry.timestamp);
                     const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                     const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -2810,6 +2917,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       </div>
                     );
                   })}
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -3058,7 +3167,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             </div>
             <div className="px-6 pb-6 pt-1 flex gap-3">
               <button
-                onClick={() => closeWarnModal()}
+                onClick={() => setShowUnsavedExportWarn(false)}
                 className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50 transition-colors"
               >
                 {showUnsavedExportWarn.cleared > 0 ? 'Go back and re-link' : 'Cancel and save first'}
@@ -3067,7 +3176,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                   Only allow bypass when there is unsaved typed text with no cleared evidence. */}
               {showUnsavedExportWarn.cleared === 0 && (
                 <button
-                  onClick={() => { const fn = showUnsavedExportWarn.onContinue; closeWarnModal(); fn(); }}
+                  onClick={() => { const fn = showUnsavedExportWarn.onContinue; setShowUnsavedExportWarn(false); fn(); }}
                   className="flex-1 bg-amber-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-amber-700 transition-colors"
                 >
                   {showUnsavedExportWarn.action === 'print' ? 'Print anyway' : 'Export anyway'}
@@ -3216,6 +3325,8 @@ const AUDIT_LOG_MAX_ENTRIES = 500;
 const COMPLIANCE_AUDIT_RESET_AT_KEY = 'sunrise-os:compliance-audit-reset-at';
 
 const COMPLIANCE_SCORE_HISTORY_KEY = 'sunrise-os:compliance-score-history';
+
+const COMPLIANCE_AUDIT_PRESETS_KEY = 'sunrise-os:compliance-audit-date-presets';
 const SEED_AUDIT_LOG: Array<{ id: string; timestamp: string; actionType: AuditActionType; reqId: string; reqName: string; officer: string; detail?: string }> = [
   { id: 'seed-01', timestamp: '2026-07-01T08:14:00.000Z', actionType: 'Marked Met',        reqId: 'CR-001', reqName: 'Written access to services policy with eligibility criteria and referral processes',        officer: 'Renée M. Caldwell' },
   { id: 'seed-02', timestamp: '2026-07-01T09:02:00.000Z', actionType: 'Evidence Linked',   reqId: 'CR-002', reqName: 'Individual service plan present for all clients within 30 days of admission',              officer: 'James S. Collins III', detail: 'ISP-template-v4.pdf' },
