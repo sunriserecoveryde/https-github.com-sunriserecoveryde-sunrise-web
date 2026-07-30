@@ -2947,7 +2947,17 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   // Keeps the "Load Sample Audit" CTA hidden after a reset even though
   // completedIds returns to size 0.
   const [auditCycleStarted, setAuditCycleStarted] = useState<boolean>(() => {
-    try { return localStorage.getItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY) === '1'; } catch { return false; }
+    try {
+      if (localStorage.getItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY) === '1') return true;
+      // If evidence or corrective-action inputs were saved (e.g. the user saved
+      // data but reloaded before a Met mark wrote the flag), treat the cycle as
+      // already started so the "Load Sample Audit" CTA stays hidden.
+      const ev = JSON.parse(localStorage.getItem(COMPLIANCE_EVIDENCE_KEY) ?? '{}');
+      if (Object.values(ev).some((v) => typeof v === 'string' && v.trim() !== '')) return true;
+      const ca = JSON.parse(localStorage.getItem(COMPLIANCE_CORR_KEY) ?? '{}');
+      if (Object.values(ca).some((v) => typeof v === 'string' && v.trim() !== '')) return true;
+      return false;
+    } catch { return false; }
   });
   // Bumping this key remounts ComplianceStandardsTab so it re-reads localStorage
   // (needed to pick up evidenceConfirmed / corrConfirmed written during seeding).
