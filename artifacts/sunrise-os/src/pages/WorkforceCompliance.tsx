@@ -1617,8 +1617,27 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   // Track fields that were previously confirmed but then cleared — these need
   // a "re-link" indicator even though the input is now empty (so the normal
   // "Unsaved changes" check, which requires non-empty text, won't fire alone).
-  const [evidenceCleared, setEvidenceCleared] = useState<Set<string>>(new Set());
-  const [corrCleared, setCorrCleared] = useState<Set<string>>(new Set());
+  // On mount, re-seed from persisted confirmed sets so the indicator survives
+  // a full page reload: any ID that was confirmed but whose input is now empty
+  // must still show the "Evidence removed — re-link to restore" banner.
+  const [evidenceCleared, setEvidenceCleared] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY);
+      const confirmed: string[] = stored ? JSON.parse(stored) : [];
+      return new Set<string>(confirmed.filter(id => !evidenceInputs[id]?.trim()));
+    } catch {
+      return new Set<string>();
+    }
+  });
+  const [corrCleared, setCorrCleared] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(COMPLIANCE_CORR_CONFIRMED_KEY);
+      const confirmed: string[] = stored ? JSON.parse(stored) : [];
+      return new Set<string>(confirmed.filter(id => !corrActionInputs[id]?.trim()));
+    } catch {
+      return new Set<string>();
+    }
+  });
   const [showUnsavedExportWarn, setShowUnsavedExportWarn] = useState<number | false>(false);
   const [evidenceConfirmed, setEvidenceConfirmedRaw] = useState<Set<string>>(() => {
     try {
