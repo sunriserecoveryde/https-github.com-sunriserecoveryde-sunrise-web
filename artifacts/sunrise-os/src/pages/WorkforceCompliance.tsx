@@ -1614,6 +1614,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [evidenceSavedId, setEvidenceSavedId] = useState<string | null>(null);
   const [corrSavedId, setCorrSavedId] = useState<string | null>(null);
   const [warnUnsaved, setWarnUnsaved] = useState<string | null>(null);
+  // Track fields that were previously confirmed but then cleared — these need
+  // a "re-link" indicator even though the input is now empty (so the normal
+  // "Unsaved changes" check, which requires non-empty text, won't fire alone).
+  const [evidenceCleared, setEvidenceCleared] = useState<Set<string>>(new Set());
+  const [corrCleared, setCorrCleared] = useState<Set<string>>(new Set());
   const [showUnsavedExportWarn, setShowUnsavedExportWarn] = useState<number | false>(false);
   const [evidenceConfirmed, setEvidenceConfirmedRaw] = useState<Set<string>>(() => {
     try {
@@ -1907,6 +1912,15 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           const nextEv = { ...evidenceInputs, [req.id]: e.target.value };
                           setEvidenceInputs(nextEv);
                           setEvidenceConfirmed(prev => { const n = new Set(prev); n.delete(req.id); return n; });
+                          // Track when a confirmed evidence field is cleared so the per-row
+                          // indicator can fire even though the input is now empty.
+                          if (!e.target.value.trim()) {
+                            if (evidenceConfirmed.has(req.id)) {
+                              setEvidenceCleared(prev => new Set([...prev, req.id]));
+                            }
+                          } else {
+                            setEvidenceCleared(prev => { const n = new Set(prev); n.delete(req.id); return n; });
+                          }
                           // When the last piece of work is erased, restore the "Load Sample Audit" CTA
                           if (!e.target.value.trim() && completedIds.size === 0) {
                             const allEvidEmpty = Object.values(nextEv).every(v => !v?.trim());
@@ -1928,6 +1942,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           saveCompAction(`Evidence linked for ${req.id}`);
                           setEvidenceSavedId(req.id);
                           setTimeout(() => setEvidenceSavedId(null), 2000);
+                          // Clear the "re-link" indicator now that the field is re-saved.
+                          setEvidenceCleared(prev => { const n = new Set(prev); n.delete(req.id); return n; });
                           setEvidenceConfirmed(prev => new Set([...prev, req.id]));
                           // detail: snapshot of input value at click time — a new string primitive,
                           // not a reference; editing the field afterward cannot mutate this entry.
@@ -1947,6 +1963,15 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         const nextCorr = { ...corrActionInputs, [req.id]: e.target.value };
                         setCorrActionInputs(nextCorr);
                         setCorrConfirmed(prev => { const n = new Set(prev); n.delete(req.id); return n; });
+                        // Track when a confirmed corrective-action field is cleared so the
+                        // per-row indicator fires even though the textarea is now empty.
+                        if (!e.target.value.trim()) {
+                          if (corrConfirmed.has(req.id)) {
+                            setCorrCleared(prev => new Set([...prev, req.id]));
+                          }
+                        } else {
+                          setCorrCleared(prev => { const n = new Set(prev); n.delete(req.id); return n; });
+                        }
                         // When the last piece of work is erased, restore the "Load Sample Audit" CTA
                         if (!e.target.value.trim() && completedIds.size === 0) {
                           const allEvidEmpty = Object.values(evidenceInputs).every(v => !v?.trim());
@@ -1965,7 +1990,20 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                   {(() => {
                     const evidenceUnsaved = !!evidenceInputs[req.id]?.trim() && !evidenceConfirmed.has(req.id);
                     const corrUnsaved = !!corrActionInputs[req.id]?.trim() && !corrConfirmed.has(req.id);
+                    const evidenceWasCleared = evidenceCleared.has(req.id);
+                    const corrWasCleared = corrCleared.has(req.id);
                     /* #573 — pulse animation on unsaved dot */
+                    /* #713 — also fire when a confirmed field was cleared (input is now empty
+                               but the prior confirmation is gone — officer must re-link) */
+                    if (evidenceWasCleared || corrWasCleared) {
+                      const what = [evidenceWasCleared && 'evidence', corrWasCleared && 'action plan'].filter(Boolean).join(' and ');
+                      return (
+                        <div className="flex items-center gap-1.5 text-amber-600 text-[11px] font-semibold">
+                          <span className="w-2 h-2 rounded-full bg-amber-400 inline-block shrink-0 animate-pulse" />
+                          {`${what.charAt(0).toUpperCase()}${what.slice(1)} removed — re-link to restore`}
+                        </div>
+                      );
+                    }
                     return (evidenceUnsaved || corrUnsaved) ? (
                       <div className="flex items-center gap-1.5 text-amber-600 text-[11px] font-semibold">
                         <span className="w-2 h-2 rounded-full bg-amber-400 inline-block shrink-0 animate-pulse" />
@@ -2028,6 +2066,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         saveCompAction(`Corrective action saved for ${req.id}`);
                         setCorrSavedId(req.id);
                         setTimeout(() => setCorrSavedId(null), 2000);
+                        // Clear the "re-link" indicator now that the field is re-saved.
+                        setCorrCleared(prev => { const n = new Set(prev); n.delete(req.id); return n; });
                         setCorrConfirmed(prev => new Set([...prev, req.id]));
                         // detail: snapshot of input value at click time — a new string primitive,
                         // not a reference; editing the field afterward cannot mutate this entry.
@@ -2818,6 +2858,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       try { localStorage.removeItem(COMPLIANCE_CORR_CONFIRMED_KEY); } catch { /* unavailable */ }
                       return new Set<string>();
                     });
+                    // #713 — also clear the "field was cleared after confirm" tracking sets
+                    setEvidenceCleared(new Set());
+                    setCorrCleared(new Set());
                     // Clear the audit trail so a reload shows an empty log
                     // instead of re-seeding from SEED_AUDIT_LOG.
                     clearAuditLog();
