@@ -1287,6 +1287,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Internal Policy': 'Internal',
 };
 
+  const missingShortLabels = COMP_STANDARDS.filter(s => !STD_SHORT[s]);
 function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, rollbackScoreHistory, onDemoDataCleared, onAuditCycleStarted, onAuditCycleReset, isTourActive, storageQuotaFull, onQuotaFlagCleared }: {
   readOnly?: boolean;
   completedIds: Set<string>;
@@ -2933,7 +2934,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                             : 'bg-gray-50 text-slate border-border hover:bg-gray-100'
                         }`}
                       >
-                        {std === 'All' ? 'All' : STD_SHORT[std as Exclude<CompStandard, 'All'>]}
+                        {std === 'All' ? 'All' : (STD_SHORT[std as Exclude<CompStandard, 'All'>] || std)}
                       </button>
                     ))}
                   </div>
