@@ -1902,13 +1902,26 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       <input
                         value={evidenceInputs[req.id] ?? ''}
                         onChange={e => {
-                          setEvidenceInputs({ ...evidenceInputs, [req.id]: e.target.value });
+                          const nextEv = { ...evidenceInputs, [req.id]: e.target.value };
+                          setEvidenceInputs(nextEv);
                           setEvidenceConfirmed(prev => { const n = new Set(prev); n.delete(req.id); return n; });
+                          // When the last piece of work is erased, restore the "Load Sample Audit" CTA
+                          if (!e.target.value.trim() && completedIds.size === 0) {
+                            const allEvidEmpty = Object.values(nextEv).every(v => !v?.trim());
+                            const allCorrEmpty = Object.values(corrActionInputs).every(v => !v?.trim());
+                            const newEvConf = new Set(evidenceConfirmed); newEvConf.delete(req.id);
+                            if (allEvidEmpty && allCorrEmpty && newEvConf.size === 0 && corrConfirmed.size === 0) {
+                              onAuditCycleReset?.();
+                            }
+                          }
                         }}
                         className="flex-1 border border-border rounded-lg px-3 py-2 text-sm"
                         placeholder="e.g. Policy-HIPAA-NPP-v4.pdf, 2026 CARF Self-Study Section 3.docx"
                       />
                       <LockedButton locked={readOnly || !evidenceInputs[req.id]?.trim()} onClick={() => {
+                          // Fire on the first evidence save so the CTA hides even if nothing is
+                          // marked Met yet — mirrors the same guard on the Mark-as-Met button.
+                          if (completedIds.size === 0 && evidenceConfirmed.size === 0 && corrConfirmed.size === 0) onAuditCycleStarted?.();
                           saveCompAction(`Evidence linked for ${req.id}`);
                           setEvidenceSavedId(req.id);
                           setTimeout(() => setEvidenceSavedId(null), 2000);
@@ -1928,8 +1941,18 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     <textarea
                       value={corrActionInputs[req.id] ?? ''}
                       onChange={e => {
-                        setCorrActionInputs({ ...corrActionInputs, [req.id]: e.target.value });
+                        const nextCorr = { ...corrActionInputs, [req.id]: e.target.value };
+                        setCorrActionInputs(nextCorr);
                         setCorrConfirmed(prev => { const n = new Set(prev); n.delete(req.id); return n; });
+                        // When the last piece of work is erased, restore the "Load Sample Audit" CTA
+                        if (!e.target.value.trim() && completedIds.size === 0) {
+                          const allEvidEmpty = Object.values(evidenceInputs).every(v => !v?.trim());
+                          const allCorrEmpty = Object.values(nextCorr).every(v => !v?.trim());
+                          const newCorrConf = new Set(corrConfirmed); newCorrConf.delete(req.id);
+                          if (allEvidEmpty && allCorrEmpty && evidenceConfirmed.size === 0 && newCorrConf.size === 0) {
+                            onAuditCycleReset?.();
+                          }
+                        }
                       }}
                       className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[60px] resize-none"
                       placeholder="Describe corrective actions planned or in progress, responsible person, and target completion date..."
@@ -1995,6 +2018,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                   </div>
                   <div className="flex gap-2">
                     <LockedButton locked={readOnly || !corrActionInputs[req.id]?.trim()} onClick={() => {
+                        // Fire on the first action-plan save so the CTA hides even if nothing is
+                        // marked Met yet — mirrors the same guard on the Mark-as-Met button.
+                        if (completedIds.size === 0 && evidenceConfirmed.size === 0 && corrConfirmed.size === 0) onAuditCycleStarted?.();
                         saveCompAction(`Corrective action saved for ${req.id}`);
                         setCorrSavedId(req.id);
                         setTimeout(() => setCorrSavedId(null), 2000);
