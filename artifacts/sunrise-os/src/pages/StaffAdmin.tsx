@@ -46,9 +46,9 @@ const SCREEN_LABELS: Partial<Record<Screen, string>> = {
 
 const SCREEN_SECTIONS: { title: string; screens: Screen[] }[] = [
   { title: 'Overview', screens: ['Dashboard', 'CommandCenter'] },
-  { title: 'Scheduling, Intake & Admissions', screens: ['Admissions', 'ClinicalForms', 'WaitlistManager', 'ReferralTracker', 'AppointmentCalendar', 'GroupSchedule', 'GroupTherapyCurriculum', 'StaffScheduling'] },
+  { title: 'Scheduling, Intake & Admissions', screens: ['Admissions', 'ClinicalForms', 'WaitlistManager', 'ReferralTracker', 'AppointmentCalendar', 'GroupSchedule', 'StaffScheduling'] },
   { title: 'Clinical', screens: ['CensusBedBoard', 'PatientList', 'Discharges', 'MATManagement', 'FamilyEngagement', 'PhysicianOrders', 'PeerSupport', 'TelehealthConsults'] },
-  { title: 'Documentation', screens: ['ChartReview', 'ProgressNotes', 'TreatmentPlans', 'ASAMAssessments', 'BiopsychosocialAssessment', 'DischargeSummary', 'MedicalRecords', 'GroupNotes', 'CosignQueue', 'MyCaseload'] },
+  { title: 'Documentation', screens: ['ChartReview', 'ProgressNotes', 'TreatmentPlans', 'ASAMAssessments', 'BiopsychosocialAssessment', 'DischargeSummary', 'MedicalRecords', 'GroupNotes', 'GroupTherapyCurriculum', 'CosignQueue', 'MyCaseload'] },
   { title: 'Risk & Outcomes', screens: ['RiskDashboard', 'RecoveryEngagementScore', 'OutcomeTracking', 'PopulationAnalytics', 'UADrugTesting', 'IncidentReporting', 'CrisisAssessment'] },
   { title: 'Nursing', screens: ['NursingMAR', 'ShiftHandoff'] },
   { title: 'Operations', screens: ['BusinessDevelopment', 'BedManagement', 'InsuranceAuthorization', 'AftercarePlanning', 'AlumniProgram'] },

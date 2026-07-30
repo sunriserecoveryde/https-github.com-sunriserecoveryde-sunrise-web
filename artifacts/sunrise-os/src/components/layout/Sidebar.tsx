@@ -65,6 +65,7 @@ const ALL_SECTIONS: SidebarSection[] = [
       { id: 'DischargeSummary', label: 'Discharge Summary', icon: Download },
       { id: 'MedicalRecords', label: 'Medical Records / ROI', icon: FolderOpen },
       { id: 'GroupNotes', label: 'Group Notes', icon: UsersRound },
+      { id: 'GroupTherapyCurriculum', label: 'Group Curriculum Library', icon: BookOpen },
       { id: 'CosignQueue', label: 'Co-sign Queue', icon: FileWarning, badge: 4 },
       { id: 'MyCaseload', label: 'My Caseload', icon: BookUser },
     ]
@@ -78,7 +79,6 @@ const ALL_SECTIONS: SidebarSection[] = [
       { id: 'ReferralTracker', label: 'Referral Tracker', icon: Network },
       { id: 'AppointmentCalendar', label: 'Appointment Calendar', icon: CalendarDays },
       { id: 'GroupSchedule', label: 'Group Schedule', icon: CalendarClock },
-      { id: 'GroupTherapyCurriculum', label: 'Group Curriculum Library', icon: BookOpen },
     ]
   },
   {

@@ -8,7 +8,7 @@ interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: 
 type EvidenceLevel = 'Level I (RCT)' | 'Level II (Quasi-exp)' | 'Level III (Expert)' | 'SAMHSA EBP';
 type CurriculumStatus = 'Active' | 'Pilot' | 'Archived';
 
-interface Curriculum {
+export interface Curriculum {
   id: string;
   name: string;
   abbreviation: string;
@@ -28,7 +28,7 @@ interface Curriculum {
   externalUrl?: string;
 }
 
-const CURRICULA: Curriculum[] = [
+export const CURRICULA: Curriculum[] = [
   {
     id: 'CB-001', name: 'Cognitive Behavioral Therapy for Substance Use Disorders', abbreviation: 'CBT-SUD',
     developer: 'Carroll, K.M. (Yale) / NIDA CTN', evidenceLevel: 'Level I (RCT)',

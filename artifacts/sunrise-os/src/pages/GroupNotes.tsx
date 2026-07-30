@@ -3,13 +3,14 @@ import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
-import { Sparkles, Zap, Brain, Target, ChevronDown, ChevronUp, RotateCcw, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Sparkles, Zap, Brain, Target, ChevronDown, ChevronUp, RotateCcw, AlertTriangle, CheckCircle, BookOpen, X } from 'lucide-react';
 import { parseQuickCapture, scoreNoteQuality, type ParsedSignal } from '../lib/quickCaptureParser';
 import { useAuth } from '../context/AuthContext';
 import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
 import { generateGroupNote, GroupNoteInput } from '../lib/aiNoteEngine';
 import { TopicPicker } from '../components/ui/TopicPicker';
 import { getTopicById } from '../lib/topicLibrary';
+import { CURRICULA } from './GroupTherapyCurriculum';
 import { useDocumentForm } from '../hooks/useDocumentForm';
 import { DocumentFormBar } from '../components/ui/DocumentFormBar';
 
@@ -119,6 +120,8 @@ export function GroupNotes({ navigate, readOnly }: Props) {
   const [aiDraftOpen, setAiDraftOpen] = useState(false);
   const [aiInput, setAiInput] = useState<Partial<GroupNoteInput>>({});
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [selectedCurriculumId, setSelectedCurriculumId] = useState<string | null>(null);
+  const [curriculumPickerOpen, setCurriculumPickerOpen] = useState(false);
   const [sigModal, setSigModal] = useState<string | null>(null); // session ID
   const [sessionSigs, setSessionSigs] = useState<Record<string, SignatureRecord>>({});
   // Quick Capture state
@@ -198,6 +201,32 @@ export function GroupNotes({ navigate, readOnly }: Props) {
       program: selected.program, ...parsedGroupInput, ...aiInput,
     });
     setNoteText(draft);
+  }
+
+  function handleCurriculumSelect(curriculumId: string) {
+    const cur = CURRICULA.find(c => c.id === curriculumId);
+    if (!cur || !selected) return;
+    setSelectedCurriculumId(curriculumId);
+    // Clear any active topic selection so they don't conflict
+    setSelectedTopicId(null);
+    const domains = cur.primaryDomains.slice(0, 4).join(', ');
+    const draft = generateGroupNote({
+      groupName: selected.name,
+      groupType: selected.type,
+      topic: `${cur.abbreviation} — ${cur.name}`,
+      objectives: [
+        `Apply ${cur.abbreviation} framework to session content`,
+        ...cur.primaryDomains.slice(0, 2).map(d => `Explore ${d.toLowerCase()}`),
+      ],
+      facilitator: selected.facilitator,
+      attendance: selected.actualAttendance,
+      expectedCensus: selected.expectedCensus,
+      program: selected.program,
+      notableThemes: domains,
+      groupDynamics: `Session structured per ${cur.abbreviation} protocol (${cur.developer.split('/')[0].trim()}, ${cur.evidenceLevel}).`,
+    });
+    setNoteText(draft);
+    setCurriculumPickerOpen(false);
   }
 
   function handleTopicSelect(topicId: string) {
@@ -562,6 +591,42 @@ export function GroupNotes({ navigate, readOnly }: Props) {
                         {aiDraftOpen && (
                           <div className="border-t border-border bg-white p-3">
                             <TopicPicker staffTitle={currentStaff?.title} selectedId={selectedTopicId} onSelect={id => handleTopicSelect(id)} onClear={() => setSelectedTopicId(null)} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Curriculum Picker (collapsible) */}
+                      <div className="border border-border rounded-xl overflow-hidden">
+                        <button onClick={() => setCurriculumPickerOpen(o => !o)} className="w-full flex items-center gap-2 px-3 py-2.5 bg-white hover:bg-slate-50 transition-colors text-left">
+                          <BookOpen className="w-4 h-4 text-slate" />
+                          <span className="text-xs font-semibold text-navy">
+                            {selectedCurriculumId
+                              ? `Curriculum: ${CURRICULA.find(c => c.id === selectedCurriculumId)?.abbreviation}`
+                              : 'Use Curriculum Library'}
+                          </span>
+                          {selectedCurriculumId && (
+                            <button onClick={e => { e.stopPropagation(); setSelectedCurriculumId(null); }} className="ml-1 text-slate hover:text-red-500">
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                          <span className="ml-auto">{curriculumPickerOpen ? <ChevronUp className="w-3.5 h-3.5 text-slate" /> : <ChevronDown className="w-3.5 h-3.5 text-slate" />}</span>
+                        </button>
+                        {curriculumPickerOpen && (
+                          <div className="border-t border-border bg-white p-3 space-y-1.5 max-h-52 overflow-y-auto">
+                            {CURRICULA.filter(c => c.modality !== 'Individual').map(cur => (
+                              <button
+                                key={cur.id}
+                                onClick={() => handleCurriculumSelect(cur.id)}
+                                className={`w-full text-left px-3 py-2 rounded-lg border text-xs transition-colors ${selectedCurriculumId === cur.id ? 'border-orange bg-orange/5 text-navy font-semibold' : 'border-border hover:bg-slate-50 text-navy'}`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-orange">{cur.abbreviation}</span>
+                                  <span className="flex-1 truncate">{cur.name}</span>
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${cur.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{cur.status}</span>
+                                </div>
+                                <div className="text-slate mt-0.5 truncate">{cur.primaryDomains.slice(0, 3).join(' · ')}</div>
+                              </button>
+                            ))}
                           </div>
                         )}
                       </div>

@@ -474,7 +474,8 @@ function FieldLabel({ children, action }: { children: React.ReactNode; action?: 
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-type FormTab = 'Screening' | 'PHQ-9' | 'DAST-10' | 'MAST' | 'SOGS' | 'SAFE-T' | 'BAM' | 'BPS' | 'Summary';
+type SectionTab = 'Screening Forms' | 'BPS';
+type FormTab = 'Screening' | 'PHQ-9' | 'DAST-10' | 'MAST' | 'SOGS' | 'SAFE-T' | 'BAM' | 'Summary';
 
 const PATIENTS = MOCK_PATIENTS.filter(p => !p.id.startsWith('demo'));
 
@@ -483,6 +484,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
   const canDoBps = hasBpsCred(role.description);
 
   const [selectedPatient, setSelectedPatient] = useState(PATIENTS[0]?.id ?? '');
+  const [sectionTab, setSectionTab] = useState<SectionTab>('Screening Forms');
   const [tab, setTab] = useState<FormTab>('Screening');
   const [saved, setSaved] = useState<string | null>(null);
   const saveMsg = (m: string) => { setSaved(m); setTimeout(() => setSaved(null), 2500); };
@@ -612,8 +614,8 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
   const reviewFlags      = exclusions.filter(e => !e.fatal);
   const hasExclusions    = fatalExclusions.length > 0;
 
-  const tabs: FormTab[] = ['Screening', 'PHQ-9', 'DAST-10', 'MAST', 'SOGS', 'SAFE-T', 'BAM', 'BPS', 'Summary'];
-  const completedForms  = [screeningDone, phq9Done, dastDone, mastDone, sogsDone, safetDone, bamDone, bpsDone];
+  const tabs: FormTab[] = ['Screening', 'PHQ-9', 'DAST-10', 'MAST', 'SOGS', 'SAFE-T', 'BAM', 'Summary'];
+  const completedForms  = [screeningDone, phq9Done, dastDone, mastDone, sogsDone, safetDone, bamDone];
   const completedCount  = completedForms.filter(Boolean).length;
 
   useEffect(() => {
@@ -647,16 +649,16 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-navy">Admissions Screening &amp; Clinical Assessments</h1>
+          <h1 className="text-2xl font-bold text-navy">Screening Forms</h1>
           <p className="text-slate text-sm mt-0.5">Intake Screening · PHQ-9 · DAST-10 · MAST · SOGS · SAFE-T · BAM · Biopsychosocial</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
             <div className="text-xs text-slate">Sections complete</div>
-            <div className="text-lg font-bold text-navy">{completedCount} <span className="text-slate font-normal text-sm">/ 8</span></div>
+            <div className="text-lg font-bold text-navy">{completedCount} <span className="text-slate font-normal text-sm">/ 7</span></div>
           </div>
           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ${completedCount === 8 ? 'bg-green-500' : 'bg-navy/20 text-navy'}`}>
-            {completedCount === 8 ? '✓' : `${completedCount}/8`}
+            {completedCount === 7 ? '✓' : `${completedCount}/7`}
           </div>
         </div>
       </div>
@@ -745,25 +747,35 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-0 border-b border-border overflow-x-auto no-scrollbar">
-        {tabs.map((t, i) => {
-          const isDone = t === 'Summary' ? false : completedForms[i];
-          return (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
-              {isDone && <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />}
-              {t === 'Screening' && hasExclusions && !screeningDone && <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />}
-              {t}
-            </button>
-          );
-        })}
+      {/* Section pills */}
+      <div className="flex gap-2">
+        {(['Screening Forms', 'BPS'] as SectionTab[]).map(s => (
+          <button key={s} onClick={() => setSectionTab(s)}
+            className={`px-5 py-2 rounded-full text-sm font-semibold border-2 transition-colors ${sectionTab === s ? 'border-orange bg-orange/10 text-orange' : 'border-border text-slate hover:border-orange/40'}`}>
+            {s === 'BPS' && bpsDone && <span className="w-2 h-2 rounded-full bg-green-500 inline-block mr-1.5" />}
+            {s}
+          </button>
+        ))}
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════════
-          ADMISSIONS SCREENING TAB
-          ════════════════════════════════════════════════════════════════════ */}
-      {tab === 'Screening' && (
+      {/* Sub-tabs (Screening Forms only) */}
+      {sectionTab === 'Screening Forms' && (
+        <div className="flex gap-0 border-b border-border overflow-x-auto no-scrollbar">
+          {tabs.map((t, i) => {
+            const isDone = t === 'Summary' ? false : completedForms[i];
+            return (
+              <button key={t} onClick={() => setTab(t)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
+                {isDone && <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />}
+                {t === 'Screening' && hasExclusions && !screeningDone && <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />}
+                {t}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {sectionTab === 'Screening Forms' && tab === 'Screening' && (
         <div className="space-y-6">
 
           {/* Program Type */}
@@ -1227,7 +1239,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       {/* ════════════════════════════════════════════════════════════════════
           PHQ-9
           ════════════════════════════════════════════════════════════════════ */}
-      {tab === 'PHQ-9' && (
+      {sectionTab === 'Screening Forms' && tab === 'PHQ-9' && (
         <div className="space-y-4">
           <div className="card">
             <h2 className="text-base font-bold text-navy mb-1">Patient Health Questionnaire (PHQ-9)</h2>
@@ -1281,7 +1293,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       {/* ════════════════════════════════════════════════════════════════════
           DAST-10
           ════════════════════════════════════════════════════════════════════ */}
-      {tab === 'DAST-10' && (
+      {sectionTab === 'Screening Forms' && tab === 'DAST-10' && (
         <div className="space-y-4">
           <div className="card">
             <h2 className="text-base font-bold text-navy mb-1">Drug Abuse Screening Test (DAST-10)</h2>
@@ -1318,7 +1330,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       {/* ════════════════════════════════════════════════════════════════════
           MAST
           ════════════════════════════════════════════════════════════════════ */}
-      {tab === 'MAST' && (
+      {sectionTab === 'Screening Forms' && tab === 'MAST' && (
         <div className="space-y-4">
           <div className="card">
             <h2 className="text-base font-bold text-navy mb-1">Michigan Alcohol Screening Test (MAST)</h2>
@@ -1355,7 +1367,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       {/* ════════════════════════════════════════════════════════════════════
           SOGS
           ════════════════════════════════════════════════════════════════════ */}
-      {tab === 'SOGS' && (
+      {sectionTab === 'Screening Forms' && tab === 'SOGS' && (
         <div className="space-y-4">
           <div className="card">
             <h2 className="text-base font-bold text-navy mb-1">South Oaks Gambling Screen (SOGS)</h2>
@@ -1409,7 +1421,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       {/* ════════════════════════════════════════════════════════════════════
           SAFE-T  (unchanged from prior implementation)
           ════════════════════════════════════════════════════════════════════ */}
-      {tab === 'SAFE-T' && (
+      {sectionTab === 'Screening Forms' && tab === 'SAFE-T' && (
         <div className="space-y-4">
           {/* Auto-score strip */}
           {(safetRiskFactors.some(Boolean) || safetProtective.some(Boolean)) && (() => {
@@ -1541,7 +1553,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       {/* ════════════════════════════════════════════════════════════════════
           BAM
           ════════════════════════════════════════════════════════════════════ */}
-      {tab === 'BAM' && (
+      {sectionTab === 'Screening Forms' && tab === 'BAM' && (
         <div className="space-y-4">
           <div className="card">
             <h2 className="text-base font-bold text-navy mb-1">Brief Addiction Monitor (BAM)</h2>
@@ -1605,7 +1617,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       {/* ════════════════════════════════════════════════════════════════════
           BIOPSYCHOSOCIAL ASSESSMENT
           ════════════════════════════════════════════════════════════════════ */}
-      {tab === 'BPS' && (
+      {sectionTab === 'BPS' && (
         <div className="space-y-5">
           {/* Credential gate */}
           {!canDoBps ? (
@@ -1833,7 +1845,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       {/* ════════════════════════════════════════════════════════════════════
           SUMMARY
           ════════════════════════════════════════════════════════════════════ */}
-      {tab === 'Summary' && (
+      {sectionTab === 'Screening Forms' && tab === 'Summary' && (
         <div className="space-y-4">
           <div className="card">
             <h2 className="text-base font-bold text-navy mb-4">Screening &amp; Assessment Summary — {patient ? `${patient.firstName} ${patient.lastName}` : 'Patient'}</h2>
