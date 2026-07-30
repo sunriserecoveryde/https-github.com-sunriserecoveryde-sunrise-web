@@ -2609,6 +2609,8 @@ const COMPLIANCE_AUDIT_LOG_KEY = 'sunrise-os:compliance-audit-log';
 // (flag present → keep empty so seeds don't re-appear after a reset + reload).
 const COMPLIANCE_AUDIT_SEEDED_KEY = 'sunrise-os:compliance-audit-seeded';
 
+const AUDIT_LOG_MAX_ENTRIES = 500;
+
 const COMPLIANCE_AUDIT_RESET_AT_KEY = 'sunrise-os:compliance-audit-reset-at';
 const SEED_AUDIT_LOG: Array<{ id: string; timestamp: string; actionType: AuditActionType; reqId: string; reqName: string; officer: string; detail?: string }> = [
   { id: 'seed-01', timestamp: '2026-07-01T08:14:00.000Z', actionType: 'Marked Met',        reqId: 'CR-001', reqName: 'Written access to services policy with eligibility criteria and referral processes',        officer: 'Renée M. Caldwell' },
@@ -2683,7 +2685,12 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   const [auditLog, setAuditLogRaw] = useState<AuditLogEntry[]>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_AUDIT_LOG_KEY);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        // Prune age + cap on every cold load so stale entries are cleaned up.
+        const pruned = pruneAuditLog(JSON.parse(stored));
+        try { localStorage.setItem(COMPLIANCE_AUDIT_LOG_KEY, JSON.stringify(pruned)); } catch { /* unavailable */ }
+        return pruned;
+      }
       // No stored log — check whether we've ever seeded before.
       // If the seeded flag exists the officer has visited (or reset) previously;
       // keep the trail empty so a reset + reload doesn't re-inject seed rows.
@@ -2699,7 +2706,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   });
   const addAuditEntry = (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => {
     setAuditLogRaw(prev => {
-      const next: AuditLogEntry[] = [
+      const appended: AuditLogEntry[] = [
         ...prev,
         {
           ...entry,
@@ -2707,6 +2714,10 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
           timestamp: new Date().toISOString(),
         },
       ];
+      // Cap the log: trim oldest entries beyond the max size.
+      const next = appended.length > AUDIT_LOG_MAX_ENTRIES
+        ? appended.slice(appended.length - AUDIT_LOG_MAX_ENTRIES)
+        : appended;
       try { localStorage.setItem(COMPLIANCE_AUDIT_LOG_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
       return next;
     });
@@ -3112,3 +3123,14 @@ interface AuditLogEntry {
   officer: string;
   detail?: string;      // evidence doc name or corrective action text (when applicable)
 }
+
+function pruneAuditLog(entries: AuditLogEntry[]): AuditLogEntry[] {
+  const cutoff = Date.now() - AUDIT_LOG_MAX_AGE_MS;
+  const recent = entries.filter(e => new Date(e.timestamp).getTime() >= cutoff);
+  // If still over the hard cap, keep the newest AUDIT_LOG_MAX_ENTRIES.
+  return recent.length > AUDIT_LOG_MAX_ENTRIES
+    ? recent.slice(recent.length - AUDIT_LOG_MAX_ENTRIES)
+    : recent;
+}
+
+const AUDIT_LOG_MAX_AGE_MS  = 90 * 24 * 60 * 60 * 1000; // 90 days in ms
