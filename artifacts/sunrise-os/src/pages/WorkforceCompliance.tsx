@@ -1461,16 +1461,23 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   };
 
   const exportGapListCsv = () => {
-    // Check for unsaved evidence or corrective action text scoped to the current filter
-    const unsavedCount = COMP_REQUIREMENTS.filter(r => {
-      if (stdFilter !== 'All' && r.standard !== stdFilter) return false;
-      const evidenceUnsaved = !!evidenceInputs[r.id]?.trim() && !evidenceConfirmed.has(r.id);
-      const corrUnsaved = !!corrActionInputs[r.id]?.trim() && !corrConfirmed.has(r.id);
-      return evidenceUnsaved || corrUnsaved;
-    }).length;
+    // Check for unsaved evidence/corrective-action text AND for evidence that was
+    // previously saved but has since been cleared without being re-linked.
+    let unsavedCount = 0;
+    let clearedCount = 0;
+    COMP_REQUIREMENTS.forEach(r => {
+      if (stdFilter !== 'All' && r.standard !== stdFilter) return;
+      if ((!!evidenceInputs[r.id]?.trim() && !evidenceConfirmed.has(r.id)) ||
+          (!!corrActionInputs[r.id]?.trim() && !corrConfirmed.has(r.id))) {
+        unsavedCount++;
+      }
+      if (evidenceCleared.has(r.id) || corrCleared.has(r.id)) {
+        clearedCount++;
+      }
+    });
 
-    if (unsavedCount > 0) {
-      setShowUnsavedExportWarn(unsavedCount);
+    if (unsavedCount > 0 || clearedCount > 0) {
+      setShowUnsavedExportWarn({ unsaved: unsavedCount, cleared: clearedCount, action: 'csv', onContinue: doExportGapListCsv });
       return;
     }
     doExportGapListCsv();
@@ -1478,10 +1485,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
   const printGapList = (overrideStd?: Exclude<CompStandard, 'All'>) => {
     const activeStd: CompStandard = overrideStd ?? stdFilter;
-    const gaps = COMP_REQUIREMENTS.filter(r => {
-      if (activeStd !== 'All' && r.standard !== activeStd) return false;
-      return !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs);
-    });
+
+    // Wrap the actual print body so it can be reused by the bypass path in the
+    // unsaved-export warning modal.
+    const doPrint = () => {
+      const gaps = COMP_REQUIREMENTS.filter(r => {
+        if (activeStd !== 'All' && r.standard !== activeStd) return false;
+        return !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs);
+      });
 
     const scopeLabel = activeStd !== 'All' ? ` — ${activeStd}` : '';
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -1602,11 +1613,32 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 </body>
 </html>`;
 
-    const win = window.open('', '_blank', 'width=1100,height=750');
-    if (!win) { alert('Pop-up blocked — please allow pop-ups for this page to print.'); return; }
-    win.document.write(html);
-    win.document.close();
-    win.focus();
+      const win = window.open('', '_blank', 'width=1100,height=750');
+      if (!win) { alert('Pop-up blocked — please allow pop-ups for this page to print.'); return; }
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+    }; // end doPrint
+
+    // Same pre-flight guard as exportGapListCsv — block if any evidence was
+    // cleared but not re-linked, or if there is unsaved typed text.
+    let unsavedCount = 0;
+    let clearedCount = 0;
+    COMP_REQUIREMENTS.forEach(r => {
+      if (activeStd !== 'All' && r.standard !== activeStd) return;
+      if ((!!evidenceInputs[r.id]?.trim() && !evidenceConfirmed.has(r.id)) ||
+          (!!corrActionInputs[r.id]?.trim() && !corrConfirmed.has(r.id))) {
+        unsavedCount++;
+      }
+      if (evidenceCleared.has(r.id) || corrCleared.has(r.id)) {
+        clearedCount++;
+      }
+    });
+    if (unsavedCount > 0 || clearedCount > 0) {
+      setShowUnsavedExportWarn({ unsaved: unsavedCount, cleared: clearedCount, action: 'print', onContinue: doPrint });
+      return;
+    }
+    doPrint();
   };
 
   const [compSaved, setCompSaved] = useState<string | null>(null);
@@ -1638,7 +1670,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       return new Set<string>();
     }
   });
-  const [showUnsavedExportWarn, setShowUnsavedExportWarn] = useState<number | false>(false);
+  const [showUnsavedExportWarn, setShowUnsavedExportWarn] = useState<{ unsaved: number; cleared: number; action: 'csv' | 'print'; onContinue: () => void } | false>(false);
   const [evidenceConfirmed, setEvidenceConfirmedRaw] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY);
@@ -2793,7 +2825,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         </div>
       )}
 
-      {/* Unsaved Work — Export Warning Dialog */}
+      {/* Unsaved Work / Cleared Evidence — Export Warning Dialog */}
       {showUnsavedExportWarn !== false && (
         <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4" onClick={() => setShowUnsavedExportWarn(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
@@ -2802,15 +2834,31 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-navy">Unsaved Work Detected</h2>
-                <p className="text-sm text-slate mt-1 leading-relaxed">
-                  <strong>{showUnsavedExportWarn} requirement{showUnsavedExportWarn !== 1 ? 's have' : ' has'} typed evidence or corrective action text that {showUnsavedExportWarn !== 1 ? 'hasn\'t' : 'haven\'t'} been saved yet.</strong> The CSV will show these items as open gaps because the text was never confirmed via "Link Evidence" or "Save Action Plan".
-                </p>
+                <h2 className="text-base font-bold text-navy">
+                  {showUnsavedExportWarn.cleared > 0 ? 'Export Blocked — Evidence Removed' : 'Unsaved Work Detected'}
+                </h2>
+                <div className="text-sm text-slate mt-1 leading-relaxed space-y-2">
+                  {showUnsavedExportWarn.cleared > 0 && (
+                    <p>
+                      <strong>{showUnsavedExportWarn.cleared} requirement{showUnsavedExportWarn.cleared !== 1 ? 's have' : ' has'} evidence or a corrective action that was previously saved but has since been cleared without being re-linked.</strong> The exported file would misrepresent {showUnsavedExportWarn.cleared !== 1 ? 'those rows' : 'that row'} as never having had evidence on file.
+                    </p>
+                  )}
+                  {showUnsavedExportWarn.unsaved > 0 && (
+                    <p>
+                      <strong>{showUnsavedExportWarn.unsaved} requirement{showUnsavedExportWarn.unsaved !== 1 ? 's have' : ' has'} typed evidence or corrective action text that {showUnsavedExportWarn.unsaved !== 1 ? "hasn't" : "haven't"} been confirmed yet.</strong> The export will show {showUnsavedExportWarn.unsaved !== 1 ? 'these items' : 'this item'} as open gaps because the text was never saved.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
             <div className="px-6 pb-2">
-              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 font-medium">
-                To save your work first: close this dialog, scroll to the flagged requirement{showUnsavedExportWarn !== 1 ? 's' : ''}, and click <strong>"Link Evidence"</strong> or <strong>"Save Action Plan"</strong>.
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 font-medium space-y-1">
+                {showUnsavedExportWarn.cleared > 0 && (
+                  <p>To resolve: close this dialog, find the flagged requirement{showUnsavedExportWarn.cleared !== 1 ? 's' : ''}, and click <strong>"Link Evidence"</strong> or <strong>"Save Action Plan"</strong> to re-attach the documentation.</p>
+                )}
+                {showUnsavedExportWarn.unsaved > 0 && (
+                  <p>To save typed text first: close this dialog, scroll to the flagged requirement{showUnsavedExportWarn.unsaved !== 1 ? 's' : ''}, and click <strong>"Link Evidence"</strong> or <strong>"Save Action Plan"</strong>.</p>
+                )}
               </div>
             </div>
             <div className="px-6 pb-6 pt-3 flex gap-3">
@@ -2818,14 +2866,18 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 onClick={() => setShowUnsavedExportWarn(false)}
                 className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50 transition-colors"
               >
-                Cancel and save first
+                {showUnsavedExportWarn.cleared > 0 ? 'Go back and re-link' : 'Cancel and save first'}
               </button>
-              <button
-                onClick={() => { setShowUnsavedExportWarn(false); doExportGapListCsv(); }}
-                className="flex-1 bg-amber-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-amber-700 transition-colors"
-              >
-                Export anyway
-              </button>
+              {/* Hard-block when cleared evidence exists — bypass not permitted.
+                  Only allow bypass when there is unsaved typed text with no cleared evidence. */}
+              {showUnsavedExportWarn.cleared === 0 && (
+                <button
+                  onClick={() => { const fn = showUnsavedExportWarn.onContinue; setShowUnsavedExportWarn(false); fn(); }}
+                  className="flex-1 bg-amber-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-amber-700 transition-colors"
+                >
+                  {showUnsavedExportWarn.action === 'print' ? 'Print anyway' : 'Export anyway'}
+                </button>
+              )}
             </div>
           </div>
         </div>
