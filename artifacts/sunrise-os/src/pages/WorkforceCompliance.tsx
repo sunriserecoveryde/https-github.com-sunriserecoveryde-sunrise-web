@@ -1287,7 +1287,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Internal Policy': 'Internal',
 };
 
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared, onAuditCycleStarted, onAuditCycleReset, isTourActive, storageQuotaFull, onQuotaFlagCleared }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, rollbackScoreHistory, onDemoDataCleared, onAuditCycleStarted, onAuditCycleReset, isTourActive, storageQuotaFull, onQuotaFlagCleared }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1304,6 +1304,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   clearAuditLog: () => void;
   requestedReqId?: string | null;
   appendScoreHistory: (ids: Set<string>, evidence: Record<string, string>, corrAction: Record<string, string>) => void;
+  /** Removes score-history entries added on or after the given ISO timestamp, rolling back phantom sparkline points. */
+  rollbackScoreHistory?: () => void;
   onDemoDataCleared?: () => void;
   /** Called when a reset is confirmed so the parent can hide the "Load Sample Audit" CTA. */
   onAuditCycleStarted?: () => void;
@@ -1911,6 +1913,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                             const allCorrEmpty = Object.values(corrActionInputs).every(v => !v?.trim());
                             const newEvConf = new Set(evidenceConfirmed); newEvConf.delete(req.id);
                             if (allEvidEmpty && allCorrEmpty && newEvConf.size === 0 && corrConfirmed.size === 0) {
+                              rollbackScoreHistory?.();
                               onAuditCycleReset?.();
                             }
                           }
@@ -1950,6 +1953,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           const allCorrEmpty = Object.values(nextCorr).every(v => !v?.trim());
                           const newCorrConf = new Set(corrConfirmed); newCorrConf.delete(req.id);
                           if (allEvidEmpty && allCorrEmpty && evidenceConfirmed.size === 0 && newCorrConf.size === 0) {
+                            rollbackScoreHistory?.();
                             onAuditCycleReset?.();
                           }
                         }
@@ -3085,6 +3089,27 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
     });
   };
 
+  // ── Cycle-start timestamp — used to roll back phantom sparkline entries ───
+  // Stores the ISO timestamp of the moment the current audit cycle began.
+  // When the cycle is fully reset (all evidence cleared), any score-history
+  // entries added after this timestamp are removed so the sparkline does not
+  // show phantom upticks from work that was undone.
+  const [cycleStartedAt, setCycleStartedAt] = useState<string | null>(null);
+
+  const rollbackScoreHistory = () => {
+    if (!cycleStartedAt) return;
+    setScoreHistory(prev => {
+      // Remove all entries that were appended on or after the cycle started.
+      const next = prev.filter(e => e.timestamp < cycleStartedAt);
+      // If the rollback empties the history fall back to the seed so the
+      // sparkline doesn't disappear entirely.
+      const final = next.length >= 2 ? next : prev;
+      safeSet(COMPLIANCE_SCORE_HISTORY_KEY, JSON.stringify(final));
+      return final;
+    });
+    setCycleStartedAt(null);
+  };
+
   // Callers must pass `detail` as a plain string value (a snapshot of the
   // input at click time), never as a reference to a state variable that can
   // change later.  Because JS strings are primitives, spreading `entry` into
@@ -3474,7 +3499,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} onAuditCycleStarted={() => { safeSet(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); setAuditCycleStarted(true); }} onAuditCycleReset={() => { try { localStorage.removeItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY); } catch { /* unavailable */ } setAuditCycleStarted(false); }} appendScoreHistory={appendScoreHistory} isTourActive={isTourActive} storageQuotaFull={storageQuotaFull} onQuotaFlagCleared={() => setStorageQuotaFull(false)} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} onAuditCycleStarted={() => { safeSet(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); setAuditCycleStarted(true); setCycleStartedAt(new Date().toISOString()); }} onAuditCycleReset={() => { try { localStorage.removeItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY); } catch { /* unavailable */ } setAuditCycleStarted(false); }} appendScoreHistory={appendScoreHistory} rollbackScoreHistory={rollbackScoreHistory} isTourActive={isTourActive} storageQuotaFull={storageQuotaFull} onQuotaFlagCleared={() => setStorageQuotaFull(false)} />}
       </div>
 
       {/* ── Demo tour overlay ─────────────────────────────────────────────── */}
