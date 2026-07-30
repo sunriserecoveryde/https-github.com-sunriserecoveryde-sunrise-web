@@ -2463,6 +2463,15 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       try { localStorage.removeItem(COMPLIANCE_CORR_CONFIRMED_KEY); } catch { /* unavailable */ }
                       return new Set<string>();
                     });
+                    // Clear the audit trail so a reload shows an empty log
+                    // instead of re-seeding from SEED_AUDIT_LOG.
+                    setAuditLogRaw([]);
+                    try {
+                      localStorage.removeItem(COMPLIANCE_AUDIT_LOG_KEY);
+                      // Mark as seeded so the useState initializer knows this
+                      // is "reset to empty" rather than a truly fresh session.
+                      localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1');
+                    } catch { /* unavailable */ }
                     // #597 — record who triggered the reset and when
                     const entry: ResetLogEntry = {
                       userName: currentStaff
@@ -2507,6 +2516,9 @@ const COMPLIANCE_GAP_FILTER_KEY = 'sunrise-os:compliance-gap-filter';
 const COMPLIANCE_AUDIT_RESET_LOG_KEY = 'sunrise-os:compliance-audit-reset-log';
 
 const COMPLIANCE_AUDIT_LOG_KEY = 'sunrise-os:compliance-audit-log';
+// Distinguishes "never visited" (no flag → show seeds) from "reset to empty"
+// (flag present → keep empty so seeds don't re-appear after a reset + reload).
+const COMPLIANCE_AUDIT_SEEDED_KEY = 'sunrise-os:compliance-audit-seeded';
 
 const SEED_AUDIT_LOG: Array<{ id: string; timestamp: string; actionType: AuditActionType; reqId: string; reqName: string; officer: string; detail?: string }> = [
   { id: 'seed-01', timestamp: '2026-07-01T08:14:00.000Z', actionType: 'Marked Met',        reqId: 'CR-001', reqName: 'Written access to services policy with eligibility criteria and referral processes',        officer: 'Renée M. Caldwell' },
@@ -2581,9 +2593,16 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   const [auditLog, setAuditLogRaw] = useState<AuditLogEntry[]>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_AUDIT_LOG_KEY);
-      // Fall back to seed data on a fresh session so the multi-page PDF
-      // export path is always exercisable without manual data entry.
-      return stored ? JSON.parse(stored) : SEED_AUDIT_LOG;
+      if (stored) return JSON.parse(stored);
+      // No stored log — check whether we've ever seeded before.
+      // If the seeded flag exists the officer has visited (or reset) previously;
+      // keep the trail empty so a reset + reload doesn't re-inject seed rows.
+      const alreadySeeded = localStorage.getItem(COMPLIANCE_AUDIT_SEEDED_KEY);
+      if (alreadySeeded) return [];
+      // Truly fresh session: show seed data and mark as seeded so we never
+      // re-inject it automatically again.
+      try { localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1'); } catch { /* unavailable */ }
+      return SEED_AUDIT_LOG;
     } catch {
       return SEED_AUDIT_LOG;
     }
