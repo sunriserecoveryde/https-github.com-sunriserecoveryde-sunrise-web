@@ -11,6 +11,7 @@ import {
 import { LockedButton } from '../components/common/LockedButton';
 import { useAuth } from '../context/AuthContext';
 import { toast } from '../hooks/use-toast';
+import { ToastAction } from '../components/ui/toast';
 import { ComplianceDemoTour, TOUR_STEPS } from '../components/ComplianceDemoTour';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; requestedReqId?: string | null; }
@@ -1287,7 +1288,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
 };
 
 // hint: Structural and logic conflict. Both design and behavior differ.
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared, onAuditCycleStarted, isTourActive }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared, onAuditCycleStarted, isTourActive, storageQuotaFull, onQuotaFlagCleared }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1309,6 +1310,10 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   onAuditCycleStarted?: () => void;
   /** When true, add id="tour-first-gap-row" to the first non-met requirement row */
   isTourActive?: boolean;
+  /** #685 — true when the last localStorage write hit a quota error; triggers auto-scroll + export highlight */
+  storageQuotaFull?: boolean;
+  /** Called once the highlight has been acknowledged (user clicks an export button) */
+  onQuotaFlagCleared?: () => void;
 }) {
   // #565 — persist filter selection across tab switches
   const [stdFilter, setStdFilterRaw] = useState<CompStandard>(() => {
@@ -1366,6 +1371,19 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   useEffect(() => {
     if (auditLog.length === 0) setShowAuditTrail(false);
   }, [auditLog.length]);
+
+  // #685 — ref for the audit trail container so we can scroll to it
+  const auditTrailRef = useRef<HTMLDivElement>(null);
+
+  // #685 — when a storage-quota warning fires, expand the audit trail and scroll to it
+  useEffect(() => {
+    if (!storageQuotaFull) return;
+    setShowAuditTrail(true);
+    const timer = setTimeout(() => {
+      auditTrailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [storageQuotaFull]);
 
   // #597 — audit reset log
   const { currentStaff } = useAuth();
@@ -2361,7 +2379,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         ];
 
         return (
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div ref={auditTrailRef} className={`border rounded-xl overflow-hidden transition-shadow ${storageQuotaFull ? 'border-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.35)]' : 'border-border'}`}>
             <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
               <button
                 className="flex items-center gap-2 flex-1 text-left hover:opacity-80 transition-opacity"
@@ -2384,9 +2402,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 {auditLog.length > 0 && (
                   <>
                     <button
-                      onClick={handleExportPDF}
+                      onClick={() => { onQuotaFlagCleared?.(); handleExportPDF(); }}
                       disabled={pdfGenerating}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      className={`flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${storageQuotaFull ? 'border-amber-400 ring-2 ring-amber-300' : 'border-border'}`}
                     >
                       {pdfGenerating ? (
                         <>
@@ -2404,9 +2422,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       )}
                     </button>
                     <button
-                      onClick={handleExportCSV}
+                      onClick={() => { onQuotaFlagCleared?.(); handleExportCSV(); }}
                       disabled={csvExporting}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      className={`flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${storageQuotaFull ? 'border-amber-400 ring-2 ring-amber-300' : 'border-border'}`}
                     >
                       {csvExporting ? (
                         <>
@@ -2850,6 +2868,8 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   // Bumping this key remounts ComplianceStandardsTab so it re-reads localStorage
   // (needed to pick up evidenceConfirmed / corrConfirmed written during seeding).
   const [compStandardsKey, setCompStandardsKey] = useState(0);
+  // #685 — tracks whether the last localStorage write for the audit log hit a quota error
+  const [storageQuotaFull, setStorageQuotaFull] = useState(false);
 
   // ── Compliance audit state lifted here so resets are atomic and the
   //    Dashboard KPI always reads the same source of truth as the Standards tab.
@@ -2985,9 +3005,23 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         localStorage.setItem(COMPLIANCE_AUDIT_LOG_KEY, JSON.stringify(next));
       } catch (err) {
         if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+          // #685 — flag triggers auto-scroll + highlight of export buttons in ComplianceStandardsTab
+          setStorageQuotaFull(true);
           toast({
-            title: 'Audit log could not be saved locally — export a copy now',
+            title: 'Storage full — audit log not saved locally',
+            description: 'Export a copy now to preserve the full trail.',
             variant: 'destructive',
+            action: (
+              <ToastAction
+                altText="Export now"
+                onClick={() => {
+                  setTab('Compliance Standards');
+                  setStorageQuotaFull(true);
+                }}
+              >
+                Export now
+              </ToastAction>
+            ),
           });
         }
         // In-memory state (next) is still returned so the current session is unaffected.
@@ -3324,7 +3358,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} onAuditCycleStarted={() => { try { localStorage.setItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); } catch { /* unavailable */ } setAuditCycleStarted(true); }} appendScoreHistory={appendScoreHistory} isTourActive={isTourActive} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} onAuditCycleStarted={() => { try { localStorage.setItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); } catch { /* unavailable */ } setAuditCycleStarted(true); }} appendScoreHistory={appendScoreHistory} isTourActive={isTourActive} storageQuotaFull={storageQuotaFull} onQuotaFlagCleared={() => setStorageQuotaFull(false)} />}
       </div>
 
       {/* ── Demo tour overlay ─────────────────────────────────────────────── */}
