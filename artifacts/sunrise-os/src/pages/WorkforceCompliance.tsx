@@ -1713,6 +1713,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     onContinue: () => void;
   } | false>(false);
   const [warnStdFilter, setWarnStdFilter] = useState<CompStandard>('All');
+  // Reset both the modal visibility and the modal's internal standard filter so
+  // that a future open never inherits a stale in-modal pill selection.
+  const closeWarnModal = () => { setShowUnsavedExportWarn(false); setWarnStdFilter('All'); };
   const [evidenceConfirmed, setEvidenceConfirmedRaw] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY);
@@ -2884,7 +2887,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
       {/* Unsaved Work / Cleared Evidence — Export Warning Dialog */}
       {showUnsavedExportWarn !== false && (
-        <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4" onClick={() => setShowUnsavedExportWarn(false)}>
+        <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4" onClick={() => closeWarnModal()}>
           <div className="bg-white rounded-2xl shadow-2xl w-[500px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start gap-3 px-6 pt-6 pb-4">
               <div className="shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
@@ -2960,7 +2963,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         className="w-full flex items-start gap-2 text-left bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-3 py-2 transition-colors group"
                         onClick={() => {
                           const req = COMP_REQUIREMENTS.find(r => r.id === id);
-                          setShowUnsavedExportWarn(false);
+                          closeWarnModal();
                           if (req) {
                             setStdFilter(warnStdFilter !== 'All' ? warnStdFilter : req.standard as CompStandard);
                             setGapFilter('All');
@@ -3001,7 +3004,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         className="w-full flex items-start gap-2 text-left bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg px-3 py-2 transition-colors group"
                         onClick={() => {
                           const req = COMP_REQUIREMENTS.find(r => r.id === id);
-                          setShowUnsavedExportWarn(false);
+                          closeWarnModal();
                           if (req) {
                             setStdFilter(warnStdFilter !== 'All' ? warnStdFilter : req.standard as CompStandard);
                             setGapFilter('All');
@@ -3036,7 +3039,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             </div>
             <div className="px-6 pb-6 pt-1 flex gap-3">
               <button
-                onClick={() => setShowUnsavedExportWarn(false)}
+                onClick={() => closeWarnModal()}
                 className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50 transition-colors"
               >
                 {showUnsavedExportWarn.cleared > 0 ? 'Go back and re-link' : 'Cancel and save first'}
@@ -3045,7 +3048,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                   Only allow bypass when there is unsaved typed text with no cleared evidence. */}
               {showUnsavedExportWarn.cleared === 0 && (
                 <button
-                  onClick={() => { const fn = showUnsavedExportWarn.onContinue; setShowUnsavedExportWarn(false); fn(); }}
+                  onClick={() => { const fn = showUnsavedExportWarn.onContinue; closeWarnModal(); fn(); }}
                   className="flex-1 bg-amber-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-amber-700 transition-colors"
                 >
                   {showUnsavedExportWarn.action === 'print' ? 'Print anyway' : 'Export anyway'}
