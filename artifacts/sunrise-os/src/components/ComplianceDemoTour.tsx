@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 
 export interface TourStep {
   targetId: string;
@@ -44,6 +44,7 @@ export const TOUR_STEPS: TourStep[] = [
 interface Props {
   steps: TourStep[];
   step: number;
+  visitedSteps: Set<number>;
   onNext: () => void;
   onPrev: () => void;
   onEnd: () => void;
@@ -52,7 +53,7 @@ interface Props {
 
 const PAD = 10;
 
-export function ComplianceDemoTour({ steps, step, onNext, onPrev, onEnd, onGoTo }: Props) {
+export function ComplianceDemoTour({ steps, step, visitedSteps, onNext, onPrev, onEnd, onGoTo }: Props) {
   const current = steps[step];
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [cardPos, setCardPos] = useState<{ top: number; left: number }>({ top: 200, left: 200 });
@@ -174,21 +175,46 @@ export function ComplianceDemoTour({ steps, step, onNext, onPrev, onEnd, onGoTo 
 
         {/* Progress dots — click to jump to any step */}
         <div className="flex items-center gap-2 mb-3">
-          {steps.map((s, i) => (
-            <button
-              key={i}
-              onClick={() => onGoTo(i)}
-              title={s.title}
-              aria-label={`Go to step ${i + 1}: ${s.title}`}
-              className="rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange/60 hover:scale-125"
-              style={{
-                width:  i === step ? 20 : 8,
-                height: 8,
-                background: i <= step ? '#f97316' : '#e5e7eb',
-                flexShrink: 0,
-              }}
-            />
-          ))}
+          {steps.map((s, i) => {
+            const isCurrent = i === step;
+            const isVisited = visitedSteps.has(i) && !isCurrent;
+            if (isCurrent) {
+              return (
+                <button
+                  key={i}
+                  onClick={() => onGoTo(i)}
+                  title={s.title}
+                  aria-label={`Go to step ${i + 1}: ${s.title} (current)`}
+                  className="rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange/60"
+                  style={{ width: 20, height: 8, background: '#f97316', flexShrink: 0 }}
+                />
+              );
+            }
+            if (isVisited) {
+              return (
+                <button
+                  key={i}
+                  onClick={() => onGoTo(i)}
+                  title={s.title}
+                  aria-label={`Go to step ${i + 1}: ${s.title} (visited)`}
+                  className="rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange/60 hover:scale-125"
+                  style={{ width: 16, height: 16, background: '#f97316', flexShrink: 0 }}
+                >
+                  <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                </button>
+              );
+            }
+            return (
+              <button
+                key={i}
+                onClick={() => onGoTo(i)}
+                title={s.title}
+                aria-label={`Go to step ${i + 1}: ${s.title}`}
+                className="rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange/60 hover:scale-125"
+                style={{ width: 8, height: 8, background: '#e5e7eb', flexShrink: 0 }}
+              />
+            );
+          })}
         </div>
 
         <h3 className="text-[15px] font-bold text-navy mb-1.5 leading-tight">

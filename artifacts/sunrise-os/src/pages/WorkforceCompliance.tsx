@@ -3130,32 +3130,9 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   }, [completedIds]);
 
   // ── Demo tour state ─────────────────────────────────────────────────────────
-  const TOUR_STEP_KEY = 'wf-compliance-tour-step';
-
   const [isTourActive, setIsTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
-
-  /** Persist step to sessionStorage so a page refresh can resume mid-tour. */
-  const saveTourStep = (index: number) => {
-    try { sessionStorage.setItem(TOUR_STEP_KEY, String(index)); } catch { /* unavailable */ }
-  };
-
-  /** Remove the persisted step (called on tour end). */
-  const clearTourStep = () => {
-    try { sessionStorage.removeItem(TOUR_STEP_KEY); } catch { /* unavailable */ }
-  };
-
-  /** Read back the saved step; returns 0 if absent or out-of-range. */
-  const loadTourStep = (): number => {
-    try {
-      const raw = sessionStorage.getItem(TOUR_STEP_KEY);
-      if (raw !== null) {
-        const n = parseInt(raw, 10);
-        if (!isNaN(n) && n >= 0 && n < TOUR_STEPS.length) return n;
-      }
-    } catch { /* unavailable */ }
-    return 0;
-  };
+  const [visitedTourSteps, setVisitedTourSteps] = useState<Set<number>>(new Set());
 
   // #671 — auto-start tour when ?tour=1 is present in the URL on mount.
   // Remove the param immediately so a hard-reload doesn't re-trigger it.
@@ -3172,16 +3149,16 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   }, []);
 
   const handleTourStart = () => {
-    const resumeStep = loadTourStep();
-    setTourStep(resumeStep);
-    setTab(TOUR_STEPS[resumeStep].tab as WFTab);
+    setTourStep(0);
+    setVisitedTourSteps(new Set([0]));
+    setTab(TOUR_STEPS[0].tab as WFTab);
     setIsTourActive(true);
   };
   const handleTourNext = () => {
     const next = tourStep + 1;
     if (next < TOUR_STEPS.length) {
       setTourStep(next);
-      saveTourStep(next);
+      setVisitedTourSteps(prev => new Set(prev).add(next));
       setTab(TOUR_STEPS[next].tab as WFTab);
     }
   };
@@ -3189,19 +3166,19 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
     const prev = tourStep - 1;
     if (prev >= 0) {
       setTourStep(prev);
-      saveTourStep(prev);
+      setVisitedTourSteps(p => new Set(p).add(prev));
       setTab(TOUR_STEPS[prev].tab as WFTab);
     }
   };
   const handleTourEnd = () => {
     setIsTourActive(false);
     setTourStep(0);
-    clearTourStep();
+    setVisitedTourSteps(new Set());
   };
   const handleTourGoTo = (index: number) => {
     if (index >= 0 && index < TOUR_STEPS.length) {
       setTourStep(index);
-      saveTourStep(index);
+      setVisitedTourSteps(prev => new Set(prev).add(index));
       setTab(TOUR_STEPS[index].tab as WFTab);
     }
   };
@@ -3308,6 +3285,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         <ComplianceDemoTour
           steps={TOUR_STEPS}
           step={tourStep}
+          visitedSteps={visitedTourSteps}
           onNext={handleTourNext}
           onPrev={handleTourPrev}
           onEnd={handleTourEnd}
