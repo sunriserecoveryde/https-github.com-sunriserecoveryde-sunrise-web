@@ -2026,14 +2026,18 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             let rowY = tableTop + headerH;
             let page = 1;
             const footerY = pageH - 30;
+            // rowOnPage resets to 0 after each page break so alternating
+            // stripes always start white on page 2+, matching page 1.
+            let rowOnPage = 0;
 
-            filtered.forEach((entry, idx) => {
+            filtered.forEach((entry) => {
               // Page break if needed
               if (rowY + rowHeight > footerY) {
                 doc.addPage();
                 page++;
                 rowY = 36;
-                // Repeat header on new page
+                rowOnPage = 0;
+                // Repeat column header on new page
                 doc.setFillColor(30, 58, 95);
                 doc.rect(marginL, rowY, contentW, headerH, 'F');
                 doc.setFontSize(8);
@@ -2047,11 +2051,12 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 rowY += headerH;
               }
 
-              // Row background (alternating)
-              if (idx % 2 === 1) {
+              // Row background (alternating, resets at each page boundary)
+              if (rowOnPage % 2 === 1) {
                 doc.setFillColor(249, 250, 251);
                 doc.rect(marginL, rowY, contentW, rowHeight, 'F');
               }
+              rowOnPage++;
 
               // Row border
               doc.setDrawColor(229, 231, 235);
@@ -2479,6 +2484,37 @@ const COMPLIANCE_GAP_FILTER_KEY = 'sunrise-os:compliance-gap-filter';
 const COMPLIANCE_AUDIT_RESET_LOG_KEY = 'sunrise-os:compliance-audit-reset-log';
 
 const COMPLIANCE_AUDIT_LOG_KEY = 'sunrise-os:compliance-audit-log';
+
+const SEED_AUDIT_LOG: Array<{ id: string; timestamp: string; actionType: AuditActionType; reqId: string; reqName: string; officer: string; detail?: string }> = [
+  { id: 'seed-01', timestamp: '2026-07-01T08:14:00.000Z', actionType: 'Marked Met',        reqId: 'CR-001', reqName: 'Written access to services policy with eligibility criteria and referral processes',        officer: 'Renée M. Caldwell' },
+  { id: 'seed-02', timestamp: '2026-07-01T09:02:00.000Z', actionType: 'Evidence Linked',   reqId: 'CR-002', reqName: 'Individual service plan present for all clients within 30 days of admission',              officer: 'James S. Collins III', detail: 'ISP-template-v4.pdf' },
+  { id: 'seed-03', timestamp: '2026-07-02T10:30:00.000Z', actionType: 'Marked Met',        reqId: 'CR-003', reqName: 'Written job descriptions for all positions with required qualifications',                  officer: 'Renée M. Caldwell' },
+  { id: 'seed-04', timestamp: '2026-07-02T11:45:00.000Z', actionType: 'Action Plan Saved', reqId: 'CR-004', reqName: 'Annual performance measurement plan with documented QAPI projects',                        officer: 'Renée M. Caldwell', detail: 'Engage QAPI consultant by Aug 1; complete draft plan by Sep 15; submit for board approval by Oct 1.' },
+  { id: 'seed-05', timestamp: '2026-07-03T08:55:00.000Z', actionType: 'Marked Met',        reqId: 'CR-005', reqName: 'Client rights and responsibilities document provided at admission and signed',             officer: 'James S. Collins III' },
+  { id: 'seed-06', timestamp: '2026-07-03T13:10:00.000Z', actionType: 'Marked Met',        reqId: 'CR-006', reqName: 'Notice of Privacy Practices (NPP) provided to every patient at intake',                  officer: 'Renée M. Caldwell' },
+  { id: 'seed-07', timestamp: '2026-07-07T09:00:00.000Z', actionType: 'Evidence Linked',   reqId: 'CR-007', reqName: 'Annual HIPAA security risk assessment completed and documented',                          officer: 'Renée M. Caldwell', detail: 'HIPAA-SRA-2026-draft.pdf' },
+  { id: 'seed-08', timestamp: '2026-07-07T10:15:00.000Z', actionType: 'Action Plan Saved', reqId: 'CR-007', reqName: 'Annual HIPAA security risk assessment completed and documented',                          officer: 'Renée M. Caldwell', detail: 'Finalize SRA with IT vendor by Aug 15; remediate critical findings by Sep 1; document closure.' },
+  { id: 'seed-09', timestamp: '2026-07-08T08:30:00.000Z', actionType: 'Marked Met',        reqId: 'CR-008', reqName: 'All staff complete HIPAA training within 30 days of hire and annually',                  officer: 'Renée M. Caldwell' },
+  { id: 'seed-10', timestamp: '2026-07-08T09:45:00.000Z', actionType: 'Marked Met',        reqId: 'CR-009', reqName: 'Breach notification policy and designated HIPAA Privacy Officer in place',                officer: 'Renée M. Caldwell' },
+  { id: 'seed-11', timestamp: '2026-07-09T11:00:00.000Z', actionType: 'Marked Met',        reqId: 'CR-010', reqName: 'Written consent for disclosure of SUD records separate from HIPAA consent',              officer: 'James S. Collins III' },
+  { id: 'seed-12', timestamp: '2026-07-09T14:20:00.000Z', actionType: 'Marked Met',        reqId: 'CR-011', reqName: 'SUD treatment records stored separately with additional access controls',                 officer: 'Renée M. Caldwell' },
+  { id: 'seed-13', timestamp: '2026-07-10T08:10:00.000Z', actionType: 'Evidence Linked',   reqId: 'CR-012', reqName: 'All clinical staff trained on 42 CFR Part 2 vs. HIPAA distinctions',                    officer: 'James S. Collins III', detail: '42CFR-training-completion-Jul2026.pdf' },
+  { id: 'seed-14', timestamp: '2026-07-10T09:30:00.000Z', actionType: 'Action Plan Saved', reqId: 'CR-012', reqName: 'All clinical staff trained on 42 CFR Part 2 vs. HIPAA distinctions',                    officer: 'James S. Collins III', detail: 'Schedule make-up training for Kevin Wright and Marcus Thomas by Aug 15.' },
+  { id: 'seed-15', timestamp: '2026-07-14T09:00:00.000Z', actionType: 'Marked Met',        reqId: 'CR-013', reqName: 'Residential and PHP/IOP programs licensed annually by MD BHBIS / OHCQ',                 officer: 'Renée M. Caldwell' },
+  { id: 'seed-16', timestamp: '2026-07-14T10:30:00.000Z', actionType: 'Marked Met',        reqId: 'CR-014', reqName: 'Critical incidents reported to OHCQ within 24 hours of occurrence',                     officer: 'James S. Collins III' },
+  { id: 'seed-17', timestamp: '2026-07-15T08:45:00.000Z', actionType: 'Marked Met',        reqId: 'CR-015', reqName: 'Minimum staffing ratios maintained per MD OHCQ COMAR 10.47 requirements',               officer: 'Jessica Torres' },
+  { id: 'seed-18', timestamp: '2026-07-15T11:00:00.000Z', actionType: 'Marked Met',        reqId: 'CR-016', reqName: 'All billing providers enrolled in Maryland Medicaid with current NPIs',                  officer: 'Linda Vance' },
+  { id: 'seed-19', timestamp: '2026-07-16T09:15:00.000Z', actionType: 'Evidence Linked',   reqId: 'CR-017', reqName: 'Prior authorization obtained before rendering billable Level of Care services',           officer: 'Linda Vance', detail: 'PA-process-SOP-v2.pdf' },
+  { id: 'seed-20', timestamp: '2026-07-16T10:45:00.000Z', actionType: 'Action Plan Saved', reqId: 'CR-017', reqName: 'Prior authorization obtained before rendering billable Level of Care services',           officer: 'Linda Vance', detail: 'Update UR coordinator workflow to require PA confirmation before Level of Care change; deadline Aug 1.' },
+  { id: 'seed-21', timestamp: '2026-07-17T08:30:00.000Z', actionType: 'Evidence Linked',   reqId: 'CR-018', reqName: 'All Medicaid-billable services documented within 24 hours per billing standards',        officer: 'James S. Collins III', detail: 'doc-timeliness-audit-Q2-2026.pdf' },
+  { id: 'seed-22', timestamp: '2026-07-17T09:50:00.000Z', actionType: 'Action Plan Saved', reqId: 'CR-018', reqName: 'All Medicaid-billable services documented within 24 hours per billing standards',        officer: 'James S. Collins III', detail: 'Weekly timeliness report added to supervisor dashboard; counselors below 80% to receive coaching by Aug 1.' },
+  { id: 'seed-23', timestamp: '2026-07-21T09:00:00.000Z', actionType: 'Evidence Linked',   reqId: 'CR-019', reqName: 'Annual performance reviews completed for all staff on anniversary dates',                officer: 'Renée M. Caldwell', detail: 'PR-schedule-2026-Q3.pdf' },
+  { id: 'seed-24', timestamp: '2026-07-21T10:20:00.000Z', actionType: 'Action Plan Saved', reqId: 'CR-019', reqName: 'Annual performance reviews completed for all staff on anniversary dates',                officer: 'Renée M. Caldwell', detail: 'Kevin Wright review rescheduled to Aug 5 with James Collins. Tracking dashboard deployed for supervisors.' },
+  { id: 'seed-25', timestamp: '2026-07-22T08:15:00.000Z', actionType: 'Marked Met',        reqId: 'CR-020', reqName: 'Group therapy sessions documented with attendance and participation notes',               officer: 'James S. Collins III' },
+  { id: 'seed-26', timestamp: '2026-07-24T09:30:00.000Z', actionType: 'Evidence Linked',   reqId: 'CR-004', reqName: 'Annual performance measurement plan with documented QAPI projects',                       officer: 'Renée M. Caldwell', detail: 'QAPI-charter-draft-Jul2026.pdf' },
+  { id: 'seed-27', timestamp: '2026-07-25T11:00:00.000Z', actionType: 'Marked Met',        reqId: 'CR-012', reqName: 'All clinical staff trained on 42 CFR Part 2 vs. HIPAA distinctions',                    officer: 'James S. Collins III' },
+  { id: 'seed-28', timestamp: '2026-07-28T09:45:00.000Z', actionType: 'Marked Met',        reqId: 'CR-019', reqName: 'Annual performance reviews completed for all staff on anniversary dates',                officer: 'Renée M. Caldwell' },
+];
 export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Props) {
   // #591 — if launched via deep-link with a specific req, jump straight to Compliance Standards tab
   const [tab, setTab] = useState<WFTab>(() => requestedReqId ? 'Compliance Standards' : 'Dashboard');
@@ -2522,9 +2558,11 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   const [auditLog, setAuditLogRaw] = useState<AuditLogEntry[]>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_AUDIT_LOG_KEY);
-      return stored ? JSON.parse(stored) : [];
+      // Fall back to seed data on a fresh session so the multi-page PDF
+      // export path is always exercisable without manual data entry.
+      return stored ? JSON.parse(stored) : SEED_AUDIT_LOG;
     } catch {
-      return [];
+      return SEED_AUDIT_LOG;
     }
   });
   const addAuditEntry = (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => {
