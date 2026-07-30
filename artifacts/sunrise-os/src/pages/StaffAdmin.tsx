@@ -18,7 +18,7 @@ import type { Screen } from '../App';
 const SCREEN_LABELS: Partial<Record<Screen, string>> = {
   Dashboard: 'Dashboard', CommandCenter: 'Command Center',
   CensusBedBoard: 'Census & Bed Board', PatientList: 'Patient List',
-  Admissions: 'Admissions / Intake', ClinicalForms: 'Clinical Intake Forms', Discharges: 'Discharges',
+  Admissions: 'Admissions / Intake', ClinicalForms: 'Admissions Screening', Discharges: 'Discharges',
   MATManagement: 'MAT Management', FamilyEngagement: 'Family Engagement',
   PhysicianOrders: 'Physician Orders', PeerSupport: 'Peer Support Program',
   TelehealthConsults: 'Telehealth Consults', ChartReview: 'Chart Review',
@@ -46,10 +46,9 @@ const SCREEN_LABELS: Partial<Record<Screen, string>> = {
 
 const SCREEN_SECTIONS: { title: string; screens: Screen[] }[] = [
   { title: 'Overview', screens: ['Dashboard', 'CommandCenter'] },
-  { title: 'Admissions & Intake', screens: ['Admissions', 'ClinicalForms', 'WaitlistManager', 'ReferralTracker'] },
+  { title: 'Scheduling, Intake & Admissions', screens: ['Admissions', 'ClinicalForms', 'WaitlistManager', 'ReferralTracker', 'AppointmentCalendar', 'GroupSchedule', 'GroupTherapyCurriculum', 'StaffScheduling'] },
   { title: 'Clinical', screens: ['CensusBedBoard', 'PatientList', 'Discharges', 'MATManagement', 'FamilyEngagement', 'PhysicianOrders', 'PeerSupport', 'TelehealthConsults'] },
   { title: 'Documentation', screens: ['ChartReview', 'ProgressNotes', 'TreatmentPlans', 'ASAMAssessments', 'BiopsychosocialAssessment', 'DischargeSummary', 'MedicalRecords', 'GroupNotes', 'CosignQueue', 'MyCaseload'] },
-  { title: 'Scheduling', screens: ['AppointmentCalendar', 'GroupSchedule', 'GroupTherapyCurriculum', 'StaffScheduling'] },
   { title: 'Risk & Outcomes', screens: ['RiskDashboard', 'RecoveryEngagementScore', 'OutcomeTracking', 'PopulationAnalytics', 'UADrugTesting', 'IncidentReporting', 'CrisisAssessment'] },
   { title: 'Nursing', screens: ['NursingMAR', 'ShiftHandoff'] },
   { title: 'Operations', screens: ['BusinessDevelopment', 'BedManagement', 'InsuranceAuthorization', 'AftercarePlanning', 'AlumniProgram'] },

@@ -46,7 +46,6 @@ const ALL_SECTIONS: SidebarSection[] = [
     items: [
       { id: 'CensusBedBoard', label: 'Census & Bed Board', icon: Bed },
       { id: 'PatientList', label: 'Patient List', icon: Users, badge: 18 },
-      { id: 'ClinicalForms', label: 'Clinical Intake Forms', icon: ClipboardCheck },
       { id: 'Discharges', label: 'Discharges', icon: LogOut },
       { id: 'MATManagement', label: 'MAT Management', icon: Pill },
       { id: 'FamilyEngagement', label: 'Family Engagement', icon: Heart },
@@ -71,8 +70,12 @@ const ALL_SECTIONS: SidebarSection[] = [
     ]
   },
   {
-    title: 'SCHEDULING',
+    title: 'SCHEDULING, INTAKE & ADMISSIONS',
     items: [
+      { id: 'Admissions', label: 'Admissions / Intake', icon: UserPlus },
+      { id: 'ClinicalForms', label: 'Admissions Screening', icon: ClipboardCheck },
+      { id: 'WaitlistManager', label: 'Waitlist Manager', icon: ListOrdered },
+      { id: 'ReferralTracker', label: 'Referral Tracker', icon: Network },
       { id: 'AppointmentCalendar', label: 'Appointment Calendar', icon: CalendarDays },
       { id: 'GroupSchedule', label: 'Group Schedule', icon: CalendarClock },
       { id: 'GroupTherapyCurriculum', label: 'Group Curriculum Library', icon: BookOpen },
@@ -98,14 +101,6 @@ const ALL_SECTIONS: SidebarSection[] = [
       { id: 'NursingMAR', label: 'Medication MAR', icon: Clipboard },
       { id: 'ShiftHandoff', label: 'Shift Handoff', icon: ArrowLeftRight },
       { id: 'WithdrawalMonitor', label: 'Withdrawal Monitor', icon: Activity },
-    ]
-  },
-  {
-    title: 'ADMISSIONS & INTAKE',
-    items: [
-      { id: 'Admissions', label: 'Admissions / Intake', icon: UserPlus },
-      { id: 'WaitlistManager', label: 'Waitlist Manager', icon: ListOrdered },
-      { id: 'ReferralTracker', label: 'Referral Tracker', icon: Network },
     ]
   },
   {
