@@ -2265,16 +2265,19 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
               let rx = marginL;
 
-              // Date / Time — use pre-split single-line strings so neither can
-              // overflow colWidths[0] horizontally. maxWidth is a belt-and-suspenders
-              // guard in case the font metric differs slightly at render time.
+              // Date / Time — vertically centre the date+time pair within the
+              // dynamic row height so they don't look top-pinned in tall rows.
+              // The block spans ~16 pt (date baseline 4 pt above midpoint, time
+              // baseline 4 pt below). Both strings are pre-split to one line so
+              // they never overflow colWidths[0] horizontally.
+              const dtMidY = rowY + rowHeight / 2;
               doc.setFontSize(9);
               doc.setFont('helvetica', 'normal');
               doc.setTextColor(55, 65, 81);
-              doc.text(safeDateStr, rx + 6, rowY + 10, { maxWidth: dtColInner });
+              doc.text(safeDateStr, rx + 6, dtMidY - 4, { maxWidth: dtColInner });
               doc.setFontSize(7.5);
               doc.setTextColor(107, 114, 128);
-              doc.text(safeTimeStr, rx + 6, rowY + 18, { maxWidth: dtColInner });
+              doc.text(safeTimeStr, rx + 6, dtMidY + 4, { maxWidth: dtColInner });
               rx += colWidths[0];
 
               // Action type badge
@@ -2292,11 +2295,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               doc.text(entry.actionType, badgeX + badgeW / 2, badgeY + 8.5, { align: 'center' });
               rx += colWidths[1];
 
-              // Req ID
+              // Req ID — vertically centre the single-line ID within the row.
+              // Adding ~3 pt to the midpoint compensates for cap-height so the
+              // glyph appears optically centred rather than sitting above centre.
               doc.setFontSize(8.5);
               doc.setFont('helvetica', 'normal');
               doc.setTextColor(107, 114, 128);
-              doc.text(entry.reqId, rx + 6, rowY + 13);
+              doc.text(entry.reqId, rx + 6, rowY + rowHeight / 2 + 3);
               rx += colWidths[2];
 
               // Requirement name — render all wrapped lines
