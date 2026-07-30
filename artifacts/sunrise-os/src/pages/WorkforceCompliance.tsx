@@ -1287,7 +1287,6 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Internal Policy': 'Internal',
 };
 
-// hint: Structural and logic conflict. Both design and behavior differ.
 function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared, onAuditCycleStarted, isTourActive, storageQuotaFull, onQuotaFlagCleared }: {
   readOnly?: boolean;
   completedIds: Set<string>;
@@ -2076,7 +2075,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           // Yield to the browser so the loading state renders before Blob assembly blocks the thread
           setTimeout(() => {
             try {
-              const headers = ['Timestamp', 'Action Type', 'Requirement ID', 'Requirement Name', 'Officer', 'Detail'];
+              const headers = ['Timestamp', 'Action Type', 'Requirement ID', 'Requirement Name', 'Officer', 'Detail', 'Previous Detail'];
               const rows = filtered.map(entry => [
                 new Date(entry.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
                 entry.actionType,
@@ -2084,6 +2083,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 `"${entry.reqName.replace(/"/g, '""')}"`,
                 entry.officer,
                 `"${(entry.detail ?? '').replace(/"/g, '""')}"`,
+                `"${(entry.previousDetail ?? '').replace(/"/g, '""')}"`,
               ]);
               const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
               const blob = new Blob([csv], { type: 'text/csv' });
@@ -2226,28 +2226,43 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               doc.setFontSize(7.5);
               const safeTimeStr = (doc.splitTextToSize(timeStr, dtColInner) as string[])[0] ?? timeStr;
 
-              // Pre-calculate name lines to determine dynamic row height.
-              // Cap at 4 lines so a very long name can never push a row past
-              // the footer (max rowHeight = 8 + 4×11 = 52 pt, well within the
-              // ~220 pt body height available on a fresh page).
+              // Pre-calculate name/detail lines to determine dynamic row height.
+              // Caps prevent any single row from overrunning the page footer.
               doc.setFontSize(9);
               doc.setFont('helvetica', 'normal');
-              const MAX_NAME_LINES = 4;
+              const MAX_NAME_LINES = 3;
               const rawNameLines: string[] = doc.splitTextToSize(entry.reqName, colWidths[3] - 12);
               const nameLines: string[] = rawNameLines.length > MAX_NAME_LINES
                 ? [...rawNameLines.slice(0, MAX_NAME_LINES - 1), rawNameLines[MAX_NAME_LINES - 1].replace(/\.{0,3}$/, '…')]
                 : rawNameLines;
+              const MAX_DETAIL_LINES = 2;
+              const rawDetailLines: string[] = entry.detail
+                ? doc.splitTextToSize(entry.detail, colWidths[3] - 12)
+                : [];
+              const detailLines: string[] = rawDetailLines.length > MAX_DETAIL_LINES
+                ? [...rawDetailLines.slice(0, MAX_DETAIL_LINES - 1), rawDetailLines[MAX_DETAIL_LINES - 1].replace(/\.{0,3}$/, '…')]
+                : rawDetailLines;
+              const MAX_PREV_LINES = 2;
+              const rawPrevLines: string[] = entry.previousDetail
+                ? doc.splitTextToSize(`was: ${entry.previousDetail}`, colWidths[3] - 12)
+                : [];
+              const prevLines: string[] = rawPrevLines.length > MAX_PREV_LINES
+                ? [...rawPrevLines.slice(0, MAX_PREV_LINES - 1), rawPrevLines[MAX_PREV_LINES - 1].replace(/\.{0,3}$/, '…')]
+                : rawPrevLines;
               const MAX_OFFICER_LINES = 4;
               const rawOfficerLines: string[] = doc.splitTextToSize(entry.officer, colWidths[4] - 12);
               const officerLines: string[] = rawOfficerLines.length > MAX_OFFICER_LINES
                 ? [...rawOfficerLines.slice(0, MAX_OFFICER_LINES - 1), rawOfficerLines[MAX_OFFICER_LINES - 1].replace(/\.{0,3}$/, '…')]
                 : rawOfficerLines;
               const nameLineH = 11; // ~11 pt per line at fontSize 9
-              // Date/Time column always occupies 2 stacked items (date at offset 10,
-              // time at offset 18) — represent as 2 virtual lines so rowHeight is
-              // always tall enough for all five columns.
+              const detailLineH = 10; // slightly tighter for sub-lines
+              // Date/Time column always occupies 2 stacked items — represent as
+              // 2 virtual lines so rowHeight is always tall enough.
               const DT_VIRTUAL_LINES = 2;
-              const rowHeight = Math.max(rowHeightBase, 8 + Math.max(nameLines.length, officerLines.length, DT_VIRTUAL_LINES) * nameLineH);
+              const reqColLines = nameLines.length
+                + (detailLines.length > 0 ? detailLines.length + 0.3 : 0)
+                + (prevLines.length   > 0 ? prevLines.length   + 0.3 : 0);
+              const rowHeight = Math.max(rowHeightBase, 8 + Math.max(reqColLines * nameLineH, officerLines.length * nameLineH, DT_VIRTUAL_LINES * nameLineH));
 
               // Page break if needed
               if (rowY + rowHeight > footerY) {
@@ -2329,6 +2344,28 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               nameLines.forEach((line: string, idx: number) => {
                 doc.text(line, rx + 6, rowY + 10 + idx * nameLineH);
               });
+              // Detail (current value) — rendered below requirement name
+              if (detailLines.length > 0) {
+                const detailStartY = rowY + 10 + nameLines.length * nameLineH + 1;
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(55, 65, 81);
+                detailLines.forEach((line: string, idx: number) => {
+                  doc.text(line, rx + 6, detailStartY + idx * detailLineH);
+                });
+              }
+              // Previous detail — rendered below current detail in italic gray
+              if (prevLines.length > 0) {
+                const prevStartY = rowY + 10
+                  + nameLines.length * nameLineH + 1
+                  + (detailLines.length > 0 ? detailLines.length * detailLineH + 1 : 0);
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(156, 163, 175);
+                prevLines.forEach((line: string, idx: number) => {
+                  doc.text(line, rx + 6, prevStartY + idx * detailLineH);
+                });
+              }
               rx += colWidths[3];
 
               // Officer — render all wrapped lines
@@ -2538,6 +2575,16 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                             <span className="text-slate font-semibold">{entry.reqId}</span> — {entry.reqName}
                           </div>
                           <div className="text-[11px] text-slate mt-0.5">by {entry.officer}</div>
+                          {entry.detail && (
+                            <div className="text-[11px] text-navy/80 mt-1 truncate" title={entry.detail}>
+                              {entry.detail}
+                            </div>
+                          )}
+                          {entry.previousDetail && (
+                            <div className="text-[10px] text-slate/60 italic mt-0.5 truncate" title={`was: ${entry.previousDetail}`}>
+                              was: {entry.previousDetail}
+                            </div>
+                          )}
                         </div>
                         <div className="shrink-0 text-right">
                           <div className="text-[11px] text-slate font-medium">{dateStr}</div>
@@ -2989,14 +3036,19 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   // cannot retroactively change what was recorded here.
   const addAuditEntry = (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => {
     setAuditLogRaw(prev => {
-      const appended: AuditLogEntry[] = [
-        ...prev,
-        {
-          ...entry,
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          timestamp: new Date().toISOString(),
-        },
-      ];
+      // Find the most recent prior entry for this reqId + actionType combination.
+      // If one exists and carried a detail value, capture it as previousDetail so
+      // reviewers can see the before/after without cross-referencing timestamps.
+      const priorEntry = [...prev].reverse().find(
+        e => e.reqId === entry.reqId && e.actionType === entry.actionType
+      );
+      const newEntry: AuditLogEntry = {
+        ...entry,
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        timestamp: new Date().toISOString(),
+        ...(priorEntry?.detail !== undefined ? { previousDetail: priorEntry.detail } : {}),
+      };
+      const appended: AuditLogEntry[] = [...prev, newEntry];
       // Cap the log: trim oldest entries beyond the max size.
       const next = appended.length > AUDIT_LOG_MAX_ENTRIES
         ? appended.slice(appended.length - AUDIT_LOG_MAX_ENTRIES)
@@ -3569,6 +3621,10 @@ interface AuditLogEntry {
   // to the evidence or corrective-action field do NOT mutate this field; each
   // new save appends a fresh AuditLogEntry instead.
   detail?: string;
+  // When a reqId + actionType pair is saved more than once, previousDetail
+  // captures the detail value from the immediately preceding entry so
+  // reviewers can see exactly what changed without cross-referencing rows.
+  previousDetail?: string;
 }
 
 function pruneAuditLog(entries: AuditLogEntry[]): AuditLogEntry[] {
