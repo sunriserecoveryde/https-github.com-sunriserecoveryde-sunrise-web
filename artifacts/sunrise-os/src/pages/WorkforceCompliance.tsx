@@ -1320,14 +1320,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   });
   const setStdFilter = (v: CompStandard) => {
     setStdFilterRaw(v);
-    try { localStorage.setItem(COMPLIANCE_STD_FILTER_KEY, v); } catch { /* unavailable */ }
+    safeSet(COMPLIANCE_STD_FILTER_KEY, v);
   };
   const [gapFilter, setGapFilterRaw] = useState<'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing'>(() => {
     try { return (localStorage.getItem(COMPLIANCE_GAP_FILTER_KEY) as 'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing') || 'All'; } catch { return 'All'; }
   });
   const setGapFilter = (v: 'All' | 'Needs Evidence' | 'Needs Action Plan' | 'Both Missing') => {
     setGapFilterRaw(v);
-    try { localStorage.setItem(COMPLIANCE_GAP_FILTER_KEY, v); } catch { /* unavailable */ }
+    safeSet(COMPLIANCE_GAP_FILTER_KEY, v);
   };
 
   // #581 — apply filter requested from Dashboard ring click
@@ -1633,14 +1633,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const setEvidenceConfirmed = (updater: (prev: Set<string>) => Set<string>) => {
     setEvidenceConfirmedRaw(prev => {
       const next = updater(prev);
-      try { localStorage.setItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY, JSON.stringify([...next])); } catch { /* unavailable */ }
+      safeSet(COMPLIANCE_EVIDENCE_CONFIRMED_KEY, JSON.stringify([...next]));
       return next;
     });
   };
   const setCorrConfirmed = (updater: (prev: Set<string>) => Set<string>) => {
     setCorrConfirmedRaw(prev => {
       const next = updater(prev);
-      try { localStorage.setItem(COMPLIANCE_CORR_CONFIRMED_KEY, JSON.stringify([...next])); } catch { /* unavailable */ }
+      safeSet(COMPLIANCE_CORR_CONFIRMED_KEY, JSON.stringify([...next]));
       return next;
     });
   };
@@ -2787,16 +2787,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     // Clear the audit trail so a reload shows an empty log
                     // instead of re-seeding from SEED_AUDIT_LOG.
                     clearAuditLog();
-                    try {
-                      localStorage.removeItem(COMPLIANCE_AUDIT_LOG_KEY);
-                      // Mark as seeded so the useState initializer knows this
-                      // is "reset to empty" rather than a truly fresh session.
-                      localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1');
-                      // Hide the "Load Sample Audit" CTA permanently — the
-                      // officer chose to reset, so the blank-state prompt must
-                      // not reappear even though completedIds is now size 0.
-                      localStorage.setItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1');
-                    } catch { /* unavailable */ }
+                    try { localStorage.removeItem(COMPLIANCE_AUDIT_LOG_KEY); } catch { /* unavailable */ }
+                    // Mark as seeded so the useState initializer knows this
+                    // is "reset to empty" rather than a truly fresh session.
+                    safeSet(COMPLIANCE_AUDIT_SEEDED_KEY, '1');
+                    // Hide the "Load Sample Audit" CTA permanently — the
+                    // officer chose to reset, so the blank-state prompt must
+                    // not reappear even though completedIds is now size 0.
+                    safeSet(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1');
                     onAuditCycleStarted?.();
                     // #597 — record who triggered the reset and when
                     const resetTimestamp = new Date().toISOString();
@@ -2807,10 +2805,10 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       timestamp: resetTimestamp,
                       action: 'AUDIT_RESET',
                     };
-                    try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_LOG_KEY, JSON.stringify(entry)); } catch { /* unavailable */ }
+                    safeSet(COMPLIANCE_AUDIT_RESET_LOG_KEY, JSON.stringify(entry));
                     // Persist the reset timestamp so the next mount can tell
                     // whether the server's auditResetAt has already been applied.
-                    try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_AT_KEY, resetTimestamp); } catch { /* unavailable */ }
+                    safeSet(COMPLIANCE_AUDIT_RESET_AT_KEY, resetTimestamp);
                     // Wipe the server-side audit log so a GET on reload returns
                     // empty state instead of the pre-reset snapshot (#643).
                     fetch('/api/compliance/audit-log?orgId=default', { method: 'DELETE' })
@@ -2901,7 +2899,10 @@ const SEED_AUDIT_LOG: Array<{ id: string; timestamp: string; actionType: AuditAc
 
 const SAMPLE_COMPLETED_IDS = ['CR-007', 'CR-012'];
 
-// hint: Structural and logic conflict. Both design and behavior differ.
+let _storageFullToastAt = 0;
+// Set to true by any useState initializer that hits QuotaExceededError; consumed
+// by a one-time useEffect so the toast fires safely after the first render.
+let _initStorageFull = false;
 export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Props) {
   // #591 — if launched via deep-link with a specific req, jump straight to Compliance Standards tab
   const [tab, setTab] = useState<WFTab>(() => requestedReqId ? 'Compliance Standards' : 'Dashboard');
@@ -2964,7 +2965,8 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       if (stored) {
         // Prune age + cap on every cold load so stale entries are cleaned up.
         const pruned = pruneAuditLog(JSON.parse(stored));
-        try { localStorage.setItem(COMPLIANCE_AUDIT_LOG_KEY, JSON.stringify(pruned)); } catch { /* unavailable */ }
+        try { localStorage.setItem(COMPLIANCE_AUDIT_LOG_KEY, JSON.stringify(pruned)); }
+        catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') _initStorageFull = true; }
         return pruned;
       }
       // No stored log — check whether we've ever seeded before.
@@ -2974,7 +2976,8 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       if (alreadySeeded) return [];
       // Truly fresh session: show seed data and mark as seeded so we never
       // re-inject it automatically again.
-      try { localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1'); } catch { /* unavailable */ }
+      try { localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1'); }
+      catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') _initStorageFull = true; }
       return SEED_AUDIT_LOG;
     } catch {
       return SEED_AUDIT_LOG;
@@ -2989,7 +2992,8 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       // On a truly fresh session, seed a realistic improvement trajectory.
       if (history.length === 0) {
         history = SEED_SCORE_HISTORY;
-        try { localStorage.setItem(COMPLIANCE_SCORE_HISTORY_KEY, JSON.stringify(history)); } catch { /* unavailable */ }
+        try { localStorage.setItem(COMPLIANCE_SCORE_HISTORY_KEY, JSON.stringify(history)); }
+        catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') _initStorageFull = true; }
       }
 
       // Reconcile: compute the current score from the same localStorage keys
@@ -3006,7 +3010,8 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         if (!lastEntry || lastEntry.score !== currentScore) {
           const reconciled = [...history, { timestamp: new Date().toISOString(), score: currentScore }]
             .slice(-SCORE_HISTORY_MAX_ENTRIES);
-          try { localStorage.setItem(COMPLIANCE_SCORE_HISTORY_KEY, JSON.stringify(reconciled)); } catch { /* unavailable */ }
+          try { localStorage.setItem(COMPLIANCE_SCORE_HISTORY_KEY, JSON.stringify(reconciled)); }
+          catch (e) { if (e instanceof DOMException && e.name === 'QuotaExceededError') _initStorageFull = true; }
           return reconciled;
         }
       } catch { /* reconciliation is best-effort — fall through to stored history */ }
@@ -3030,7 +3035,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       const last = prev[prev.length - 1];
       if (last && last.score === score) return prev;
       const next = [...prev, entry].slice(-SCORE_HISTORY_MAX_ENTRIES);
-      try { localStorage.setItem(COMPLIANCE_SCORE_HISTORY_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
+      safeSet(COMPLIANCE_SCORE_HISTORY_KEY, JSON.stringify(next));
       return next;
     });
   };
@@ -3088,6 +3093,18 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
     });
   };
 
+  // ── Deferred init-storage-full toast ────────────────────────────────────────
+  // useState initializers cannot call toast() during render. If any of them
+  // detected a QuotaExceededError they set the module-level flag; we fire the
+  // toast here, safely after the first render, and reset the flag.
+  useEffect(() => {
+    if (_initStorageFull) {
+      _initStorageFull = false;
+      toast({ title: 'Changes could not be saved locally — storage is full', variant: 'destructive' });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── API sync ────────────────────────────────────────────────────────────────
   // hydrated tracks whether the initial GET has settled (success OR failure).
   // The debounced PUT must not fire until then — otherwise a slow GET response
@@ -3121,9 +3138,9 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
             setAuditLogRaw([]);
             try { localStorage.removeItem(COMPLIANCE_AUDIT_LOG_KEY); } catch { /* unavailable */ }
             // Mark as seeded so the useState initializer never re-injects seed rows.
-            try { localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1'); } catch { /* unavailable */ }
+            safeSet(COMPLIANCE_AUDIT_SEEDED_KEY, '1');
             // Record the server's reset timestamp so subsequent mounts skip this.
-            try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_AT_KEY, data.auditResetAt); } catch { /* unavailable */ }
+            safeSet(COMPLIANCE_AUDIT_RESET_AT_KEY, data.auditResetAt);
           }
         }
 
@@ -3146,10 +3163,10 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         setCorrActionInputsRaw(ca);
         setOwnerInputsRaw(own);
         // Refresh localStorage mirror from the authoritative API copy.
-        try { localStorage.setItem(COMPLIANCE_STORAGE_KEY, JSON.stringify([...ids])); } catch { /* unavailable */ }
-        try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(ev)); } catch { /* unavailable */ }
-        try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(ca)); } catch { /* unavailable */ }
-        try { localStorage.setItem(COMPLIANCE_OWNER_KEY, JSON.stringify(own)); } catch { /* unavailable */ }
+        safeSet(COMPLIANCE_STORAGE_KEY, JSON.stringify([...ids]));
+        safeSet(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(ev));
+        safeSet(COMPLIANCE_CORR_KEY, JSON.stringify(ca));
+        safeSet(COMPLIANCE_OWNER_KEY, JSON.stringify(own));
         // Lift the PUT gate only after state setters have been called so the
         // subsequent PUT effect sees the hydrated values, not the boot defaults.
         hydrated.current = true;
@@ -3196,7 +3213,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         // Another tab cleared the audit log — clear this tab's in-memory copy.
         setAuditLogRaw([]);
         // Make sure the seeded flag is present so we don't re-seed on next load.
-        try { localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1'); } catch { /* unavailable */ }
+        safeSet(COMPLIANCE_AUDIT_SEEDED_KEY, '1');
       }
       if (e.key === COMPLIANCE_AUDIT_SEEDED_KEY && e.newValue === '1') {
         // Another tab set the seeded flag (e.g. after writing fresh seeds on
@@ -3213,12 +3230,12 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   // React's effect flush fires.
   const setEvidenceInputs = (next: Record<string, string>) => {
     setEvidenceInputsRaw(next);
-    try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
+    safeSet(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(next));
   };
 
   const setCorrActionInputs = (next: Record<string, string>) => {
     setCorrActionInputsRaw(next);
-    try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
+    safeSet(COMPLIANCE_CORR_KEY, JSON.stringify(next));
   };
 
   // ── Load Sample Audit ───────────────────────────────────────────────────────
@@ -3229,21 +3246,21 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
     setCorrActionInputsRaw(SAMPLE_CORR_ACTION_INPUTS);
     setOwnerInputsRaw(SAMPLE_OWNER_INPUTS);
     // Persist to localStorage so everything survives a reload
-    try { localStorage.setItem(COMPLIANCE_STORAGE_KEY, JSON.stringify([...ids])); } catch { /* unavailable */ }
-    try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(SAMPLE_EVIDENCE_INPUTS)); } catch { /* unavailable */ }
-    try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(SAMPLE_CORR_ACTION_INPUTS)); } catch { /* unavailable */ }
-    try { localStorage.setItem(COMPLIANCE_OWNER_KEY, JSON.stringify(SAMPLE_OWNER_INPUTS)); } catch { /* unavailable */ }
+    safeSet(COMPLIANCE_STORAGE_KEY, JSON.stringify([...ids]));
+    safeSet(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(SAMPLE_EVIDENCE_INPUTS));
+    safeSet(COMPLIANCE_CORR_KEY, JSON.stringify(SAMPLE_CORR_ACTION_INPUTS));
+    safeSet(COMPLIANCE_OWNER_KEY, JSON.stringify(SAMPLE_OWNER_INPUTS));
     // Write evidenceConfirmed / corrConfirmed directly to localStorage; the
     // ComplianceStandardsTab remount (key bump below) will pick them up via
     // its useState initializer.
-    try { localStorage.setItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY, JSON.stringify(SAMPLE_EVIDENCE_CONFIRMED)); } catch { /* unavailable */ }
-    try { localStorage.setItem(COMPLIANCE_CORR_CONFIRMED_KEY, JSON.stringify(SAMPLE_CORR_CONFIRMED)); } catch { /* unavailable */ }
+    safeSet(COMPLIANCE_EVIDENCE_CONFIRMED_KEY, JSON.stringify(SAMPLE_EVIDENCE_CONFIRMED));
+    safeSet(COMPLIANCE_CORR_CONFIRMED_KEY, JSON.stringify(SAMPLE_CORR_CONFIRMED));
     // Mark demo data active
-    try { localStorage.setItem(COMPLIANCE_DEMO_DATA_KEY, '1'); } catch { /* unavailable */ }
+    safeSet(COMPLIANCE_DEMO_DATA_KEY, '1');
     setIsDemoData(true);
     // Hide the "Load Sample Audit" CTA permanently — the officer has now
     // interacted with the audit, so the blank-state prompt should never return.
-    try { localStorage.setItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); } catch { /* unavailable */ }
+    safeSet(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1');
     setAuditCycleStarted(true);
     // Remount ComplianceStandardsTab so it re-reads confirmed sets from localStorage
     setCompStandardsKey(k => k + 1);
@@ -3251,17 +3268,13 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
 
   const setOwnerInputs = (next: Record<string, string>) => {
     setOwnerInputsRaw(next);
-    try { localStorage.setItem(COMPLIANCE_OWNER_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
+    safeSet(COMPLIANCE_OWNER_KEY, JSON.stringify(next));
   };
 
   // completedIds is toggled on button clicks (not keystrokes), so a single
   // post-render effect is sufficient here.
   useEffect(() => {
-    try {
-      localStorage.setItem(COMPLIANCE_STORAGE_KEY, JSON.stringify([...completedIds]));
-    } catch {
-      // localStorage unavailable — silently continue
-    }
+    safeSet(COMPLIANCE_STORAGE_KEY, JSON.stringify([...completedIds]));
   }, [completedIds]);
 
   // ── Demo tour state ─────────────────────────────────────────────────────────
@@ -3416,7 +3429,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} onAuditCycleStarted={() => { try { localStorage.setItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); } catch { /* unavailable */ } setAuditCycleStarted(true); }} appendScoreHistory={appendScoreHistory} isTourActive={isTourActive} storageQuotaFull={storageQuotaFull} onQuotaFlagCleared={() => setStorageQuotaFull(false)} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} onAuditCycleStarted={() => { safeSet(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); setAuditCycleStarted(true); }} appendScoreHistory={appendScoreHistory} isTourActive={isTourActive} storageQuotaFull={storageQuotaFull} onQuotaFlagCleared={() => setStorageQuotaFull(false)} />}
       </div>
 
       {/* ── Demo tour overlay ─────────────────────────────────────────────── */}
@@ -3682,3 +3695,20 @@ const SEED_SCORE_HISTORY: ScoreHistoryEntry[] = [
 ];
 
 const SCORE_HISTORY_MAX_ENTRIES = 30;
+
+function safeSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+      const now = Date.now();
+      if (now - _storageFullToastAt > 2000) {
+        _storageFullToastAt = now;
+        toast({
+          title: 'Changes could not be saved locally — storage is full',
+          variant: 'destructive',
+        });
+      }
+    }
+  }
+}
