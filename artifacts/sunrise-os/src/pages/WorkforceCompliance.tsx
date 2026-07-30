@@ -1267,6 +1267,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [csvExporting, setCsvExporting] = useState(false);
 
+  // Collapse the audit trail automatically whenever the log is empty (e.g. after a reset)
+  useEffect(() => {
+    if (auditLog.length === 0) setShowAuditTrail(false);
+  }, [auditLog.length]);
+
   // #597 — audit reset log
   const { currentStaff } = useAuth();
   interface ResetLogEntry { userName: string; timestamp: string; action: 'AUDIT_RESET' }
@@ -2182,11 +2187,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               >
                 <FileText className="w-4 h-4 text-slate" />
                 <span className="text-sm font-semibold text-navy">Audit Trail</span>
-                {auditLog.length > 0 && (
+                {auditLog.length > 0 ? (
                   <span className="text-[10px] bg-navy text-white rounded-full px-2 py-0.5 font-semibold">
                     {auditFilter === 'All' ? auditLog.length : filtered.length}
                     {auditFilter !== 'All' && <span className="opacity-70"> / {auditLog.length}</span>}
                   </span>
+                ) : (
+                  <span className="text-[11px] text-slate italic">Start marking requirements to build the trail</span>
                 )}
               </button>
               <div className="flex items-center gap-2">
