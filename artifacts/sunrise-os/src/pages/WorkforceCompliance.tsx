@@ -2088,8 +2088,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               const nameLines: string[] = rawNameLines.length > MAX_NAME_LINES
                 ? [...rawNameLines.slice(0, MAX_NAME_LINES - 1), rawNameLines[MAX_NAME_LINES - 1].replace(/\.{0,3}$/, '…')]
                 : rawNameLines;
+              const officerLines: string[] = doc.splitTextToSize(entry.officer, colWidths[4] - 12);
               const nameLineH = 11; // ~11 pt per line at fontSize 9
-              const rowHeight = Math.max(rowHeightBase, 8 + nameLines.length * nameLineH);
+              const rowHeight = Math.max(rowHeightBase, 8 + Math.max(nameLines.length, officerLines.length) * nameLineH);
 
               // Page break if needed
               if (rowY + rowHeight > footerY) {
@@ -2170,11 +2171,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               });
               rx += colWidths[3];
 
-              // Officer
+              // Officer — render all wrapped lines
               doc.setFontSize(9);
               doc.setFont('helvetica', 'normal');
               doc.setTextColor(55, 65, 81);
-              doc.text(entry.officer, rx + 6, rowY + 13, { maxWidth: colWidths[4] - 12 });
+              officerLines.forEach((line: string, idx: number) => {
+                doc.text(line, rx + 6, rowY + 10 + idx * nameLineH);
+              });
 
               rowY += rowHeight;
             });
