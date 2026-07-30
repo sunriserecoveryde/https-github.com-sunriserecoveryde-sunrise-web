@@ -2580,7 +2580,10 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           // ── Save ─────────────────────────────────────────────────────────────
           const suffix = auditFilter === 'All' ? '' : `-${auditFilter.toLowerCase().replace(/\s+/g, '-')}`;
           const exportDateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-          doc.save(`compliance-audit-${exportDateStr}${suffix}${dateRangeSuffix}.pdf`);
+          // When a date range is selected, use it as the filename identifier instead of
+          // today's date (e.g. compliance-audit-2025-07-30-to-2026-07-30.pdf).
+          const fileDatePart = dateRangeSuffix || `-${exportDateStr}`;
+          doc.save(`compliance-audit${fileDatePart}${suffix}.pdf`);
           } finally {
             setPdfGenerating(false);
           }
