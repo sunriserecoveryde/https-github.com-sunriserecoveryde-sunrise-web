@@ -1287,7 +1287,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Internal Policy': 'Internal',
 };
 
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared, onAuditCycleStarted, isTourActive, storageQuotaFull, onQuotaFlagCleared }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared, onAuditCycleStarted, onAuditCycleReset, isTourActive, storageQuotaFull, onQuotaFlagCleared }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1307,6 +1307,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   onDemoDataCleared?: () => void;
   /** Called when a reset is confirmed so the parent can hide the "Load Sample Audit" CTA. */
   onAuditCycleStarted?: () => void;
+  /** Called when the last Met mark is undone (completedIds drops to 0) so the parent can restore the "Load Sample Audit" CTA. */
+  onAuditCycleReset?: () => void;
   /** When true, add id="tour-first-gap-row" to the first non-met requirement row */
   isTourActive?: boolean;
   /** #685 — true when the last localStorage write hit a quota error; triggers auto-scroll + export highlight */
@@ -2025,6 +2027,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         newIds.delete(req.id);
                         setCompletedIds(newIds);
                         appendScoreHistory(newIds, evidenceInputs, corrActionInputs);
+                        // If this undo removed the last Met mark, restore the "Load Sample Audit" CTA
+                        if (newIds.size === 0) onAuditCycleReset?.();
                       }}
                         className="text-xs text-slate border border-border px-3 py-1.5 rounded-lg hover:bg-white">
                         Undo
@@ -3429,7 +3433,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} onAuditCycleStarted={() => { safeSet(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); setAuditCycleStarted(true); }} appendScoreHistory={appendScoreHistory} isTourActive={isTourActive} storageQuotaFull={storageQuotaFull} onQuotaFlagCleared={() => setStorageQuotaFull(false)} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} onAuditCycleStarted={() => { safeSet(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY, '1'); setAuditCycleStarted(true); }} onAuditCycleReset={() => { try { localStorage.removeItem(COMPLIANCE_AUDIT_CYCLE_STARTED_KEY); } catch { /* unavailable */ } setAuditCycleStarted(false); }} appendScoreHistory={appendScoreHistory} isTourActive={isTourActive} storageQuotaFull={storageQuotaFull} onQuotaFlagCleared={() => setStorageQuotaFull(false)} />}
       </div>
 
       {/* ── Demo tour overlay ─────────────────────────────────────────────── */}
