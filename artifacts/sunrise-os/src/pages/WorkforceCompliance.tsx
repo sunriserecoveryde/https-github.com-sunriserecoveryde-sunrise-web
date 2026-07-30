@@ -2009,6 +2009,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       <LockedButton locked={readOnly} onClick={() => {
                         const newIds = new Set([...completedIds, req.id]);
                         setCompletedIds(newIds);
+                        // #690 — fire onAuditCycleStarted on the first manual mark-met so the
+                        // "Load Sample Audit" CTA is hidden even when sample data was never used.
+                        if (completedIds.size === 0) onAuditCycleStarted?.();
                         saveCompAction(`${req.id} marked as Met`);
                         addAuditEntry({ actionType: 'Marked Met', reqId: req.id, reqName: req.requirement, officer: currentStaff ? `${currentStaff.firstName} ${currentStaff.lastName}` : 'Compliance Officer' });
                         appendScoreHistory(newIds, evidenceInputs, corrActionInputs);
