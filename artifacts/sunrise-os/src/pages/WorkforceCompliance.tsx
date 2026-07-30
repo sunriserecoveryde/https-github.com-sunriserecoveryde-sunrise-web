@@ -2089,7 +2089,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               const nameLines: string[] = rawNameLines.length > MAX_NAME_LINES
                 ? [...rawNameLines.slice(0, MAX_NAME_LINES - 1), rawNameLines[MAX_NAME_LINES - 1].replace(/\.{0,3}$/, '…')]
                 : rawNameLines;
-              const officerLines: string[] = doc.splitTextToSize(entry.officer, colWidths[4] - 12);
+              const MAX_OFFICER_LINES = 4;
+              const rawOfficerLines: string[] = doc.splitTextToSize(entry.officer, colWidths[4] - 12);
+              const officerLines: string[] = rawOfficerLines.length > MAX_OFFICER_LINES
+                ? [...rawOfficerLines.slice(0, MAX_OFFICER_LINES - 1), rawOfficerLines[MAX_OFFICER_LINES - 1].replace(/\.{0,3}$/, '…')]
+                : rawOfficerLines;
               const nameLineH = 11; // ~11 pt per line at fontSize 9
               const rowHeight = Math.max(rowHeightBase, 8 + Math.max(nameLines.length, officerLines.length) * nameLineH);
 
