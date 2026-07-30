@@ -1264,6 +1264,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [showAuditTrail, setShowAuditTrail] = useState(false);
   const [auditFilter, setAuditFilter] = useState<AuditActionType | 'All'>('All');
   const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [csvExporting, setCsvExporting] = useState(false);
 
   // #597 — audit reset log
   const { currentStaff } = useAuth();
@@ -1904,23 +1905,32 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         const filtered = auditFilter === 'All' ? sorted : sorted.filter(e => e.actionType === auditFilter);
 
         const handleExportCSV = () => {
-          const headers = ['Timestamp', 'Action Type', 'Requirement ID', 'Requirement Name', 'Officer'];
-          const rows = filtered.map(entry => [
-            new Date(entry.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
-            entry.actionType,
-            entry.reqId,
-            `"${entry.reqName.replace(/"/g, '""')}"`,
-            entry.officer,
-          ]);
-          const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-          const blob = new Blob([csv], { type: 'text/csv' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          const suffix = auditFilter === 'All' ? '' : `-${auditFilter.toLowerCase().replace(/\s+/g, '-')}`;
-          a.download = `audit-trail${suffix}.csv`;
-          a.click();
-          URL.revokeObjectURL(url);
+          if (csvExporting) return;
+          setCsvExporting(true);
+          // Yield to the browser so the loading state renders before Blob assembly blocks the thread
+          setTimeout(() => {
+            try {
+              const headers = ['Timestamp', 'Action Type', 'Requirement ID', 'Requirement Name', 'Officer'];
+              const rows = filtered.map(entry => [
+                new Date(entry.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
+                entry.actionType,
+                entry.reqId,
+                `"${entry.reqName.replace(/"/g, '""')}"`,
+                entry.officer,
+              ]);
+              const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              const suffix = auditFilter === 'All' ? '' : `-${auditFilter.toLowerCase().replace(/\s+/g, '-')}`;
+              a.download = `audit-trail${suffix}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+            } finally {
+              setCsvExporting(false);
+            }
+          }, 0);
         };
 
         const handleExportPDF = () => {
@@ -2194,10 +2204,23 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     </button>
                     <button
                       onClick={handleExportCSV}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors"
+                      disabled={csvExporting}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      Export {auditFilter !== 'All' ? 'Filtered' : 'Trail'}
+                      {csvExporting ? (
+                        <>
+                          <svg className="w-3.5 h-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Exporting…
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-3.5 h-3.5" />
+                          Export {auditFilter !== 'All' ? 'Filtered' : 'Trail'}
+                        </>
+                      )}
                     </button>
                   </>
                 )}
