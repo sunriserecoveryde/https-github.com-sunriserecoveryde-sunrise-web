@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 import { useAuth } from '../context/AuthContext';
+import { toast } from '../hooks/use-toast';
 import { ComplianceDemoTour, TOUR_STEPS } from '../components/ComplianceDemoTour';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; requestedReqId?: string | null; }
@@ -2925,7 +2926,17 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       const next = appended.length > AUDIT_LOG_MAX_ENTRIES
         ? appended.slice(appended.length - AUDIT_LOG_MAX_ENTRIES)
         : appended;
-      try { localStorage.setItem(COMPLIANCE_AUDIT_LOG_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
+      try {
+        localStorage.setItem(COMPLIANCE_AUDIT_LOG_KEY, JSON.stringify(next));
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+          toast({
+            title: 'Audit log could not be saved locally — export a copy now',
+            variant: 'destructive',
+          });
+        }
+        // In-memory state (next) is still returned so the current session is unaffected.
+      }
       return next;
     });
   };
