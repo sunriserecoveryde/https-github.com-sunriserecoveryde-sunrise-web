@@ -1461,19 +1461,31 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   };
 
   const exportGapListCsv = () => {
-    // Check for unsaved evidence/corrective-action text AND for evidence that was
-    // previously saved but has since been cleared without being re-linked.
+    // Pre-flight guard: check for unsaved evidence/corrective-action text AND for
+    // evidence that was previously confirmed but has since been cleared without
+    // being re-linked.
+    //
+    // The `stdFilter` early-return below is intentional: doExportGapListCsv also
+    // skips requirements that don't match stdFilter, so a cleared-evidence entry
+    // on a row that won't appear in the export would produce a false warning.
+    // By applying the same filter here, clearedIds is always a strict subset of
+    // the IDs that will actually be written to the CSV — the warning stays accurate
+    // no matter which standard the officer has selected.
     let unsavedCount = 0;
     let clearedCount = 0;
     const clearedIds: Array<{ id: string; title: string }> = [];
     const unsavedIds: Array<{ id: string; title: string }> = [];
     COMP_REQUIREMENTS.forEach(r => {
+      // Skip requirements excluded by the active standard filter — these rows are
+      // also excluded from the export itself, so flagging them would be inaccurate.
       if (stdFilter !== 'All' && r.standard !== stdFilter) return;
       if ((!!evidenceInputs[r.id]?.trim() && !evidenceConfirmed.has(r.id)) ||
           (!!corrActionInputs[r.id]?.trim() && !corrConfirmed.has(r.id))) {
         unsavedCount++;
         unsavedIds.push({ id: r.id, title: r.requirement });
       }
+      // Invariant: every id pushed to clearedIds passes the stdFilter check above,
+      // so it is guaranteed to appear in the exported CSV rows.
       if (evidenceCleared.has(r.id) || corrCleared.has(r.id)) {
         clearedCount++;
         clearedIds.push({ id: r.id, title: r.requirement });
@@ -1626,17 +1638,28 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
     // Same pre-flight guard as exportGapListCsv — block if any evidence was
     // cleared but not re-linked, or if there is unsaved typed text.
+    //
+    // The `activeStd` early-return below is intentional: doPrint also filters
+    // requirements by activeStd, so a cleared-evidence entry on a row that won't
+    // appear in the printed output would produce a false warning. By applying the
+    // same filter here, clearedIds is always a strict subset of the IDs that will
+    // actually be rendered in the print view — the warning stays accurate no matter
+    // which standard the officer has selected.
     let unsavedCount = 0;
     let clearedCount = 0;
     const clearedIds: Array<{ id: string; title: string }> = [];
     const unsavedIds: Array<{ id: string; title: string }> = [];
     COMP_REQUIREMENTS.forEach(r => {
+      // Skip requirements excluded by the active standard filter — these rows are
+      // also excluded from the print output itself, so flagging them would be inaccurate.
       if (activeStd !== 'All' && r.standard !== activeStd) return;
       if ((!!evidenceInputs[r.id]?.trim() && !evidenceConfirmed.has(r.id)) ||
           (!!corrActionInputs[r.id]?.trim() && !corrConfirmed.has(r.id))) {
         unsavedCount++;
         unsavedIds.push({ id: r.id, title: r.requirement });
       }
+      // Invariant: every id pushed to clearedIds passes the activeStd check above,
+      // so it is guaranteed to appear in the printed rows.
       if (evidenceCleared.has(r.id) || corrCleared.has(r.id)) {
         clearedCount++;
         clearedIds.push({ id: r.id, title: r.requirement });
