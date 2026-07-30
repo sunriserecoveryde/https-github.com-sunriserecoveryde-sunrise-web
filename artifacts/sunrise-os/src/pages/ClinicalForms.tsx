@@ -649,8 +649,8 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-navy">Screening Forms</h1>
-          <p className="text-slate text-sm mt-0.5">Intake Screening · PHQ-9 · DAST-10 · MAST · SOGS · SAFE-T · BAM · Biopsychosocial</p>
+          <h1 className="text-2xl font-bold text-navy">Admissions Screening</h1>
+          <p className="text-slate text-sm mt-0.5">Documentation · PHQ-9 · DAST-10 · MAST · SOGS · SAFE-T · BAM · Biopsychosocial</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
