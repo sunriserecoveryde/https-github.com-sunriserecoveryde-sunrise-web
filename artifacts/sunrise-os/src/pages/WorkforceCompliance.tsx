@@ -2732,6 +2732,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     )}
                   </div>
                 </div>}
+                {filtered.length > 0 && (
+                  <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 px-4 py-1.5 bg-gray-100/80 border-b border-border">
+                    <span className="text-[10px] font-semibold text-slate uppercase tracking-wide">Action</span>
+                    <span className="text-[10px] font-semibold text-slate uppercase tracking-wide">Requirement</span>
+                    <span className="text-[10px] font-semibold text-slate uppercase tracking-wide">Officer</span>
+                    <span className="text-[10px] font-semibold text-slate uppercase tracking-wide text-right">Timestamp</span>
+                  </div>
+                )}
                 <div className="divide-y divide-border max-h-80 overflow-y-auto">
                   {filtered.length === 0 ? (
                     <div className="px-4 py-6 text-center text-sm text-slate">
@@ -2746,17 +2754,16 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                     const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                     return (
-                      <div key={entry.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50/60">
+                      <div key={entry.id} className="grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 px-4 py-3 hover:bg-gray-50/60">
                         <div className="shrink-0 mt-0.5">
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${actionChip[entry.actionType]}`}>
                             {entry.actionType}
                           </span>
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0">
                           <div className="text-xs font-medium text-navy truncate" title={entry.reqName}>
                             <span className="text-slate font-semibold">{entry.reqId}</span> — {entry.reqName}
                           </div>
-                          <div className="text-[11px] text-slate mt-0.5">by {entry.officer}</div>
                           {entry.detail && (
                             <div className="text-[11px] text-navy/80 mt-1 truncate" title={entry.detail}>
                               {entry.detail}
@@ -2767,6 +2774,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                               was: {entry.previousDetail}
                             </div>
                           )}
+                        </div>
+                        <div className="shrink-0 min-w-[100px] max-w-[160px]">
+                          <div className="text-[11px] font-semibold text-navy truncate" title={entry.officer}>
+                            {entry.officer}
+                          </div>
                         </div>
                         <div className="shrink-0 text-right">
                           <div className="text-[11px] text-slate font-medium">{dateStr}</div>
