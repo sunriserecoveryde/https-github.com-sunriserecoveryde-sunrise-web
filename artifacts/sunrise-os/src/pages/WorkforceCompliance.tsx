@@ -1201,7 +1201,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Internal Policy': 'Internal',
 };
 
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, requestedReqId }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1215,6 +1215,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   onRequestedFilterApplied?: () => void;
   auditLog: AuditLogEntry[];
   addAuditEntry: (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => void;
+  clearAuditLog: () => void;
   requestedReqId?: string | null;
 }) {
   // #565 — persist filter selection across tab switches
@@ -1783,7 +1784,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           setEvidenceSavedId(req.id);
                           setTimeout(() => setEvidenceSavedId(null), 2000);
                           setEvidenceConfirmed(prev => new Set([...prev, req.id]));
-                          addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer' });
+                          addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer', detail: evidenceInputs[req.id]?.trim() });
                         }}
                         className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${evidenceSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                         {evidenceSavedId === req.id ? '✓ Saved' : 'Link Evidence'}
@@ -1866,7 +1867,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         setCorrSavedId(req.id);
                         setTimeout(() => setCorrSavedId(null), 2000);
                         setCorrConfirmed(prev => new Set([...prev, req.id]));
-                        addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer' });
+                        addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer', detail: corrActionInputs[req.id]?.trim() });
                       }}
                       className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${corrSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                       {corrSavedId === req.id ? '✓ Saved' : 'Save Action Plan'}
@@ -1910,13 +1911,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           // Yield to the browser so the loading state renders before Blob assembly blocks the thread
           setTimeout(() => {
             try {
-              const headers = ['Timestamp', 'Action Type', 'Requirement ID', 'Requirement Name', 'Officer'];
+              const headers = ['Timestamp', 'Action Type', 'Requirement ID', 'Requirement Name', 'Officer', 'Detail'];
               const rows = filtered.map(entry => [
                 new Date(entry.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
                 entry.actionType,
                 entry.reqId,
                 `"${entry.reqName.replace(/"/g, '""')}"`,
                 entry.officer,
+                `"${(entry.detail ?? '').replace(/"/g, '""')}"`,
               ]);
               const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
               const blob = new Blob([csv], { type: 'text/csv' });
@@ -1930,7 +1932,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             } finally {
               setCsvExporting(false);
             }
-          }, 0);
+          }, 50);
         };
 
         const handleExportPDF = () => {
@@ -2209,9 +2211,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     >
                       {csvExporting ? (
                         <>
-                          <svg className="w-3.5 h-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
                           </svg>
                           Exporting…
                         </>
@@ -2465,7 +2467,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     });
                     // Clear the audit trail so a reload shows an empty log
                     // instead of re-seeding from SEED_AUDIT_LOG.
-                    setAuditLogRaw([]);
+                    clearAuditLog();
                     try {
                       localStorage.removeItem(COMPLIANCE_AUDIT_LOG_KEY);
                       // Mark as seeded so the useState initializer knows this
@@ -2785,7 +2787,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} requestedReqId={requestedReqId} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} />}
       </div>
     </div>
   );
