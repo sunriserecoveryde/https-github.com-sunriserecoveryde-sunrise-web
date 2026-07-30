@@ -2187,6 +2187,20 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             let rowOnPage = 0;
 
             filtered.forEach((entry) => {
+              const dt = new Date(entry.timestamp);
+              const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+              // Guard Date/Time strings: split to size and cap at 1 line each so
+              // they can never overflow colWidths[0] horizontally regardless of
+              // locale or month-name length.
+              doc.setFontSize(9);
+              doc.setFont('helvetica', 'normal');
+              const dtColInner = colWidths[0] - 12;
+              const safeDateStr = (doc.splitTextToSize(dateStr, dtColInner) as string[])[0] ?? dateStr;
+              doc.setFontSize(7.5);
+              const safeTimeStr = (doc.splitTextToSize(timeStr, dtColInner) as string[])[0] ?? timeStr;
+
               // Pre-calculate name lines to determine dynamic row height.
               // Cap at 4 lines so a very long name can never push a row past
               // the footer (max rowHeight = 8 + 4×11 = 52 pt, well within the
@@ -2204,7 +2218,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 ? [...rawOfficerLines.slice(0, MAX_OFFICER_LINES - 1), rawOfficerLines[MAX_OFFICER_LINES - 1].replace(/\.{0,3}$/, '…')]
                 : rawOfficerLines;
               const nameLineH = 11; // ~11 pt per line at fontSize 9
-              const rowHeight = Math.max(rowHeightBase, 8 + Math.max(nameLines.length, officerLines.length) * nameLineH);
+              // Date/Time column always occupies 2 stacked items (date at offset 10,
+              // time at offset 18) — represent as 2 virtual lines so rowHeight is
+              // always tall enough for all five columns.
+              const DT_VIRTUAL_LINES = 2;
+              const rowHeight = Math.max(rowHeightBase, 8 + Math.max(nameLines.length, officerLines.length, DT_VIRTUAL_LINES) * nameLineH);
 
               // Page break if needed
               if (rowY + rowHeight > footerY) {
@@ -2238,20 +2256,18 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               doc.setLineWidth(0.4);
               doc.line(marginL, rowY + rowHeight, marginL + contentW, rowY + rowHeight);
 
-              const dt = new Date(entry.timestamp);
-              const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-              const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-
               let rx = marginL;
 
-              // Date / Time
+              // Date / Time — use pre-split single-line strings so neither can
+              // overflow colWidths[0] horizontally. maxWidth is a belt-and-suspenders
+              // guard in case the font metric differs slightly at render time.
               doc.setFontSize(9);
               doc.setFont('helvetica', 'normal');
               doc.setTextColor(55, 65, 81);
-              doc.text(dateStr, rx + 6, rowY + 10);
+              doc.text(safeDateStr, rx + 6, rowY + 10, { maxWidth: dtColInner });
               doc.setFontSize(7.5);
               doc.setTextColor(107, 114, 128);
-              doc.text(timeStr, rx + 6, rowY + 18);
+              doc.text(safeTimeStr, rx + 6, rowY + 18, { maxWidth: dtColInner });
               rx += colWidths[0];
 
               // Action type badge
