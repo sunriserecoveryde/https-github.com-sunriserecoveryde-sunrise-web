@@ -1659,7 +1659,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     const hasCorr = !!corrActionInputs[reqId]?.trim();
     const evidenceUnsaved = hasEvidence && !evidenceConfirmed.has(reqId);
     const corrUnsaved = hasCorr && !corrConfirmed.has(reqId);
-    if (evidenceUnsaved || corrUnsaved) {
+    const evidenceClearedForRow = evidenceCleared.has(reqId);
+    const corrClearedForRow = corrCleared.has(reqId);
+
+    if (evidenceClearedForRow || corrClearedForRow) {
+      const clearedFields = [evidenceClearedForRow && 'evidence', corrClearedForRow && 'corrective action'].filter(Boolean).join(' and ');
+      setWarnUnsaved(`Saved ${clearedFields} removed — re-link to restore before closing.`);
+      setTimeout(() => setWarnUnsaved(null), 4000);
+    } else if (evidenceUnsaved || corrUnsaved) {
       const fields = [evidenceUnsaved && 'evidence', corrUnsaved && 'corrective action'].filter(Boolean).join(' and ');
       setWarnUnsaved(`Unsaved ${fields} — click "Link Evidence" or "Save Action Plan" to keep it.`);
       setTimeout(() => setWarnUnsaved(null), 3500);
