@@ -1266,6 +1266,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [auditFilter, setAuditFilter] = useState<AuditActionType | 'All'>('All');
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [csvExporting, setCsvExporting] = useState(false);
+  const [csvExportError, setCsvExportError] = useState(false);
 
   // Collapse the audit trail automatically whenever the log is empty (e.g. after a reset)
   useEffect(() => {
@@ -1934,6 +1935,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               a.download = `audit-trail${suffix}.csv`;
               a.click();
               URL.revokeObjectURL(url);
+            } catch {
+              setCsvExportError(true);
+              setTimeout(() => setCsvExportError(false), 3500);
             } finally {
               setCsvExporting(false);
             }
@@ -2315,6 +2319,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       {!warnUnsaved && exportToast !== false && (
         <div className="fixed bottom-6 right-6 bg-navy text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
           <Download className="w-4 h-4" /> {exportToast} gap{exportToast !== 1 ? 's' : ''} exported
+        </div>
+      )}
+      {!warnUnsaved && exportToast === false && csvExportError && (
+        <div className="fixed bottom-6 right-6 bg-red-600 text-white rounded-xl shadow-lg px-5 py-3 text-sm font-semibold flex items-center gap-2 z-50">
+          <XCircle className="w-4 h-4" /> CSV export failed — please try again
         </div>
       )}
       {!warnUnsaved && !exportToast && compSaved && (
