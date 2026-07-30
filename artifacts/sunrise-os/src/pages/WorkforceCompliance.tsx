@@ -1752,6 +1752,24 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   // Reset both the modal visibility and the modal's internal standard filter so
   // that a future open never inherits a stale in-modal pill selection.
   const closeWarnModal = () => { setShowUnsavedExportWarn(false); setWarnStdFilter('All'); };
+  // Guard: if the modal opens (or its payload changes) while warnStdFilter is
+  // pinned to a standard that has no remaining affected requirements in the new
+  // payload, fall back to 'All' so the pill never shows "0 items".
+  useEffect(() => {
+    if (showUnsavedExportWarn === false || warnStdFilter === 'All') return;
+    const allAffected = [
+      ...showUnsavedExportWarn.clearedIds,
+      ...showUnsavedExportWarn.unsavedIds,
+    ];
+    const presentStds = new Set(
+      allAffected
+        .map(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard)
+        .filter(Boolean)
+    );
+    if (!presentStds.has(warnStdFilter)) {
+      setWarnStdFilter('All');
+    }
+  }, [showUnsavedExportWarn, warnStdFilter]);
   const [evidenceConfirmed, setEvidenceConfirmedRaw] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY);
