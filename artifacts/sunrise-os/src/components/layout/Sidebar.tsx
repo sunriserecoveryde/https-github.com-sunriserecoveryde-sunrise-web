@@ -61,6 +61,7 @@ const ALL_SECTIONS: SidebarSection[] = [
       { id: 'ProgressNotes', label: 'Progress Notes', icon: ClipboardList, badge: 5 },
       { id: 'TreatmentPlans', label: 'Treatment Plans', icon: CheckSquare, badge: 3 },
       { id: 'ASAMAssessments', label: 'ASAM Assessments', icon: ListTodo },
+      { id: 'ClinicalForms', label: 'Admissions Screening', icon: ClipboardCheck },
       { id: 'BiopsychosocialAssessment', label: 'Biopsychosocial Intake', icon: ClipboardList },
       { id: 'DischargeSummary', label: 'Discharge Summary', icon: Download },
       { id: 'MedicalRecords', label: 'Medical Records / ROI', icon: FolderOpen },
@@ -74,7 +75,6 @@ const ALL_SECTIONS: SidebarSection[] = [
     title: 'SCHEDULING, INTAKE & ADMISSIONS',
     items: [
       { id: 'Admissions', label: 'Admissions / Intake', icon: UserPlus },
-      { id: 'ClinicalForms', label: 'Admissions Screening', icon: ClipboardCheck },
       { id: 'WaitlistManager', label: 'Waitlist Manager', icon: ListOrdered },
       { id: 'ReferralTracker', label: 'Referral Tracker', icon: Network },
       { id: 'AppointmentCalendar', label: 'Appointment Calendar', icon: CalendarDays },
