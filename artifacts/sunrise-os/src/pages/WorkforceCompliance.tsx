@@ -2325,7 +2325,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               doc.setFontSize(7.5);
               doc.setFont('helvetica', 'bold');
               doc.setTextColor(tr2, tg, tb);
-              doc.text(entry.actionType, badgeX + badgeW / 2, badgeY + 8.5, { align: 'center' });
+              doc.text(entry.actionType, badgeX + badgeW / 2, badgeY + 8.5, { align: 'center', maxWidth: badgeW - 8 });
               rx += colWidths[1];
 
               // Req ID — vertically centre the single-line ID within the row.
