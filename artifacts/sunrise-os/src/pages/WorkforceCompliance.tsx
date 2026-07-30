@@ -1792,7 +1792,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           setEvidenceSavedId(req.id);
                           setTimeout(() => setEvidenceSavedId(null), 2000);
                           setEvidenceConfirmed(prev => new Set([...prev, req.id]));
-                          addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer', detail: evidenceInputs[req.id]?.trim() });
+                          addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: currentStaff ? `${currentStaff.firstName} ${currentStaff.lastName}` : 'Compliance Officer', detail: evidenceInputs[req.id]?.trim() });
                         }}
                         className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${evidenceSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                         {evidenceSavedId === req.id ? '✓ Saved' : 'Link Evidence'}
@@ -1875,7 +1875,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         setCorrSavedId(req.id);
                         setTimeout(() => setCorrSavedId(null), 2000);
                         setCorrConfirmed(prev => new Set([...prev, req.id]));
-                        addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer', detail: corrActionInputs[req.id]?.trim() });
+                        addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: currentStaff ? `${currentStaff.firstName} ${currentStaff.lastName}` : 'Compliance Officer', detail: corrActionInputs[req.id]?.trim() });
                       }}
                       className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${corrSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                       {corrSavedId === req.id ? '✓ Saved' : 'Save Action Plan'}
@@ -1884,7 +1884,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       <LockedButton locked={readOnly} onClick={() => {
                         setCompletedIds(prev => new Set([...prev, req.id]));
                         saveCompAction(`${req.id} marked as Met`);
-                        addAuditEntry({ actionType: 'Marked Met', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer' });
+                        addAuditEntry({ actionType: 'Marked Met', reqId: req.id, reqName: req.requirement, officer: currentStaff ? `${currentStaff.firstName} ${currentStaff.lastName}` : 'Compliance Officer' });
                       }} className="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">
                         Mark as Met ✓
                       </LockedButton>
