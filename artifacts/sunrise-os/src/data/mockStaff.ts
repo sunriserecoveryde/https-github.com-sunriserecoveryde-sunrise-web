@@ -1,4 +1,5 @@
 import type { Permission } from './mockRoles';
+import { EXTRA_STAFF } from './demoExpansion';
 
 export interface Certification {
   id: string;
@@ -760,6 +761,27 @@ export const STAFF_MEMBERS: StaffMember[] = [
     permissionOverrides: {},
   },
 
+  // ── Demo Administrator — full-access demo account ────────────────────────────
+  {
+    id: 'demo_admin',
+    firstName: 'Alex', lastName: 'Brooks',
+    credentials: ['MHA', 'FACHE'],
+    title: 'System Administrator (Demo)',
+    roleId: 'cmo',
+    department: 'Executive Leadership',
+    facility: 'Sunrise Recovery Center — Rockville, MD (HQ)',
+    email: 'demo@sunriseos.com', phone: '(301) 555-0200',
+    photoInitials: 'AB', avatarBg: 'bg-violet-600',
+    hireDate: '2020-01-01', lastLogin: '2026-07-30 08:00',
+    status: 'active',
+    certifications: [
+      { id: 'cdemo1', name: 'FACHE — Fellow, American College of Healthcare Executives', issuingBody: 'ACHE', number: 'FACHE-99001', issueDate: '2018-01-01', expiryDate: '2028-01-01', status: 'active' },
+    ],
+    specializations: ['Healthcare Administration', 'EHR Strategy', 'Regulatory Compliance', 'Quality Improvement'],
+    accessFlags: { diagnosticCodes: true, ePrescribe: false, marAccess: true, billingCodes: true, reportAccess: 'full' },
+    permissionOverrides: {},
+  },
+
   // ── 16. Alex Kim — IT Security Administrator ────────────────────────────────
   {
     id: 's15',
@@ -801,6 +823,9 @@ export const STAFF_MEMBERS: StaffMember[] = [
     permissionOverrides: {},
   },
 ];
+
+// Seed demo expansion staff
+STAFF_MEMBERS.push(...EXTRA_STAFF);
 
 export function getStaffById(id: string): StaffMember | undefined {
   return STAFF_MEMBERS.find(s => s.id === id);

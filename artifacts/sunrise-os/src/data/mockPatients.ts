@@ -1,3 +1,5 @@
+import { EXTRA_ACTIVE_PATIENTS, DISCHARGED_PATIENTS } from './demoExpansion';
+
 export type Acuity = 'Critical' | 'High' | 'Moderate' | 'Routine';
 export type Program = 'Residential' | 'PHP' | 'IOP' | 'OP';
 export type FlagType = 'Medical' | 'Behavioral' | 'Legal' | 'Insurance' | 'Success' | 'Psychiatric' | 'AMA' | 'Medication' | 'Risk';
@@ -823,3 +825,6 @@ MOCK_PATIENTS.push(
     status: 'Occupied',
   }
 );
+
+// Seed demo expansion patients
+MOCK_PATIENTS.push(...EXTRA_ACTIVE_PATIENTS, ...DISCHARGED_PATIENTS);

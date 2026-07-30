@@ -26,6 +26,8 @@ import {
   Eye,
   EyeOff,
   Minus,
+  Lock,
+  LogIn,
 } from 'lucide-react';
 import { STAFF_MEMBERS, StaffMember } from '../data/mockStaff';
 import { getRoleById, RoleDefinition, getPermission, Permission } from '../data/mockRoles';
@@ -532,9 +534,28 @@ export function LoginPage() {
   const listId   = useId();
   const prefersReducedMotion = useReducedMotion() ?? false;
 
+  const [showDemoLogin, setShowDemoLogin] = useState(false);
+  const [demoEmail, setDemoEmail]         = useState('');
+  const [demoPass, setDemoPass]           = useState('');
+  const [demoShowPass, setDemoShowPass]   = useState(false);
+  const [demoErr, setDemoErr]             = useState('');
+
   const handleSelect = (staffId: string) => {
     setLoadingId(staffId);
     setTimeout(() => login(staffId), prefersReducedMotion ? 0 : 680);
+  };
+
+  const handleDemoLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      demoEmail.trim().toLowerCase() === 'demo@sunriseos.com' &&
+      demoPass === 'SunriseDemo2026!'
+    ) {
+      setDemoErr('');
+      handleSelect('demo_admin');
+    } else {
+      setDemoErr('Invalid demo credentials. Please check email and password.');
+    }
   };
 
   const filtered = STAFF_MEMBERS.filter(s => {
@@ -667,6 +688,110 @@ export function LoginPage() {
                 Choose your profile to continue securely.
               </p>
             </header>
+
+            {/* Demo account sign-in */}
+            <div className="mb-4 shrink-0">
+              <button
+                type="button"
+                onClick={() => { setShowDemoLogin(v => !v); setDemoErr(''); }}
+                className="flex items-center gap-2 text-[13px] font-medium w-full rounded-xl px-3 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F80ED]"
+                style={{
+                  background: showDemoLogin ? 'rgba(139,92,246,0.12)' : 'rgba(139,92,246,0.07)',
+                  border: '1px solid rgba(139,92,246,0.25)',
+                  color: '#C4B5FD',
+                }}
+              >
+                <Lock className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <span className="flex-1 text-left">Sign in with demo credentials</span>
+                <span className="text-[11px] opacity-60">{showDemoLogin ? '▲' : '▼'}</span>
+              </button>
+
+              <AnimatePresence>
+                {showDemoLogin && (
+                  <motion.form
+                    onSubmit={handleDemoLogin}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div
+                      className="mt-2 rounded-xl p-3 space-y-2"
+                      style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.18)' }}
+                    >
+                      {/* Email */}
+                      <div>
+                        <label className="sr-only">Demo email</label>
+                        <input
+                          type="email"
+                          autoComplete="username"
+                          placeholder="demo@sunriseos.com"
+                          value={demoEmail}
+                          onChange={e => { setDemoEmail(e.target.value); setDemoErr(''); }}
+                          className="w-full px-3 py-2 rounded-lg text-[13px] placeholder:text-[#4A5A6B] focus:outline-none transition-colors"
+                          style={{
+                            background: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.10)',
+                            color: '#F8FAFC',
+                            caretColor: '#A78BFA',
+                          }}
+                          onFocus={e => { e.currentTarget.style.borderColor = 'rgba(139,92,246,0.5)'; }}
+                          onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'; }}
+                        />
+                      </div>
+
+                      {/* Password */}
+                      <div className="relative">
+                        <label className="sr-only">Demo password</label>
+                        <input
+                          type={demoShowPass ? 'text' : 'password'}
+                          autoComplete="current-password"
+                          placeholder="Password"
+                          value={demoPass}
+                          onChange={e => { setDemoPass(e.target.value); setDemoErr(''); }}
+                          className="w-full pl-3 pr-9 py-2 rounded-lg text-[13px] placeholder:text-[#4A5A6B] focus:outline-none transition-colors"
+                          style={{
+                            background: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.10)',
+                            color: '#F8FAFC',
+                            caretColor: '#A78BFA',
+                          }}
+                          onFocus={e => { e.currentTarget.style.borderColor = 'rgba(139,92,246,0.5)'; }}
+                          onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'; }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setDemoShowPass(v => !v)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded focus:outline-none"
+                          aria-label={demoShowPass ? 'Hide password' : 'Show password'}
+                        >
+                          {demoShowPass
+                            ? <EyeOff className="w-3.5 h-3.5" style={{ color: '#8A9BAD' }} />
+                            : <Eye className="w-3.5 h-3.5" style={{ color: '#8A9BAD' }} />}
+                        </button>
+                      </div>
+
+                      {/* Error */}
+                      {demoErr && (
+                        <p className="text-[12px] px-1" style={{ color: '#F87171' }}>{demoErr}</p>
+                      )}
+
+                      {/* Submit */}
+                      <button
+                        type="submit"
+                        disabled={loadingId === 'demo_admin'}
+                        className="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-[13px] font-semibold transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A78BFA] disabled:opacity-60"
+                        style={{ background: 'linear-gradient(135deg,#7C3AED,#6D28D9)', color: '#fff' }}
+                      >
+                        <LogIn className="w-3.5 h-3.5" aria-hidden />
+                        {loadingId === 'demo_admin' ? 'Signing in…' : 'Sign in to Demo'}
+                      </button>
+                    </div>
+                  </motion.form>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Search */}
             <div className="relative mb-4 shrink-0">
