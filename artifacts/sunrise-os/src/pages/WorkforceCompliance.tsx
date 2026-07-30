@@ -3003,6 +3003,11 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       if (Object.values(ev).some((v) => typeof v === 'string' && v.trim() !== '')) return true;
       const ca = JSON.parse(localStorage.getItem(COMPLIANCE_CORR_KEY) ?? '{}');
       if (Object.values(ca).some((v) => typeof v === 'string' && v.trim() !== '')) return true;
+      // If completed IDs exist (e.g. the cycle-started flag was evicted/cleared via
+      // a partial reset but the officer already marked requirements Met), treat the
+      // cycle as started so the "Load Sample Audit" CTA stays hidden.
+      const ids = JSON.parse(localStorage.getItem(COMPLIANCE_STORAGE_KEY) ?? '[]');
+      if (Array.isArray(ids) && ids.length > 0) return true;
       // If the audit log already has entries (e.g. a "Marked Met" write succeeded
       // but the cycle-started flag was never flushed due to a quota error), treat
       // the cycle as started so the "Load Sample Audit" CTA stays hidden.
