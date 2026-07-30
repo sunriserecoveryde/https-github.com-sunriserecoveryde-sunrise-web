@@ -1404,6 +1404,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   };
 
   const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<{ row: number; total: number; page: number } | null>(null);
   const [csvExporting, setCsvExporting] = useState(false);
   const [csvExportError, setCsvExportError] = useState(false);
 
@@ -2340,8 +2341,19 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         const handleExportPDF = () => {
           if (pdfGenerating) return;
           setPdfGenerating(true);
-          // Yield to the browser so the loading state renders before jsPDF blocks the thread
-          setTimeout(() => {
+          setPdfProgress({ row: 0, total: filtered.length, page: 1 });
+
+          // Helper: yield control to the browser so React can repaint the
+          // progress label between row batches, keeping the UI responsive.
+          const yieldToBrowser = () => new Promise<void>(res => setTimeout(res, 0));
+
+          // Rows are rendered in batches of BATCH_SIZE. After each batch the
+          // function yields once so the browser can repaint the progress label.
+          // This prevents jsPDF's synchronous layout work from blocking the
+          // main thread long enough to time-out or produce a blank file.
+          const BATCH_SIZE = 30;
+
+          (async () => {
           try {
           const filterLabel = auditFilter === 'All' ? 'All Actions' : auditFilter;
           const pdfDateRangeLabel = dateRangeLabel;
@@ -2445,187 +2457,200 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             // stripes always start white on page 2+, matching page 1.
             let rowOnPage = 0;
 
-            filtered.forEach((entry) => {
-              const dt = new Date(entry.timestamp);
-              const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-              const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            // ── Batched row loop ──────────────────────────────────────────────
+            // Process BATCH_SIZE rows, then yield so the browser repaints the
+            // progress indicator before the next batch starts.
+            for (let batchStart = 0; batchStart < filtered.length; batchStart += BATCH_SIZE) {
+              const batchEnd = Math.min(batchStart + BATCH_SIZE, filtered.length);
 
-              // Guard Date/Time strings: split to size and cap at 1 line each so
-              // they can never overflow colWidths[0] horizontally regardless of
-              // locale or month-name length.
-              doc.setFontSize(9);
-              doc.setFont('helvetica', 'normal');
-              const dtColInner = colWidths[0] - 12;
-              const safeDateStr = (doc.splitTextToSize(dateStr, dtColInner) as string[])[0] ?? dateStr;
-              doc.setFontSize(7.5);
-              const safeTimeStr = (doc.splitTextToSize(timeStr, dtColInner) as string[])[0] ?? timeStr;
+              for (let i = batchStart; i < batchEnd; i++) {
+                const entry = filtered[i];
+                const dt = new Date(entry.timestamp);
+                const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
-              // Pre-calculate name/detail lines to determine dynamic row height.
-              // Caps prevent any single row from overrunning the page footer.
-              doc.setFontSize(9);
-              doc.setFont('helvetica', 'normal');
-              const MAX_NAME_LINES = 3;
-              const rawNameLines: string[] = doc.splitTextToSize(entry.reqName, colWidths[3] - 12);
-              const nameLines: string[] = rawNameLines.length > MAX_NAME_LINES
-                ? [...rawNameLines.slice(0, MAX_NAME_LINES - 1), rawNameLines[MAX_NAME_LINES - 1].replace(/\.{0,3}$/, '…')]
-                : rawNameLines;
-              const MAX_DETAIL_LINES = 2;
-              const rawDetailLines: string[] = entry.detail
-                ? doc.splitTextToSize(entry.detail, colWidths[3] - 12)
-                : [];
-              const detailLines: string[] = rawDetailLines.length > MAX_DETAIL_LINES
-                ? [...rawDetailLines.slice(0, MAX_DETAIL_LINES - 1), rawDetailLines[MAX_DETAIL_LINES - 1].replace(/\.{0,3}$/, '…')]
-                : rawDetailLines;
-              const MAX_PREV_LINES = 2;
-              const rawPrevLines: string[] = entry.previousDetail
-                ? doc.splitTextToSize(`was: ${entry.previousDetail}`, colWidths[3] - 12)
-                : [];
-              const prevLines: string[] = rawPrevLines.length > MAX_PREV_LINES
-                ? [...rawPrevLines.slice(0, MAX_PREV_LINES - 1), rawPrevLines[MAX_PREV_LINES - 1].replace(/\.{0,3}$/, '…')]
-                : rawPrevLines;
-              const MAX_OFFICER_LINES = 4;
-              const rawOfficerLines: string[] = doc.splitTextToSize(entry.officer, colWidths[4] - 12);
-              const officerLines: string[] = rawOfficerLines.length > MAX_OFFICER_LINES
-                ? [...rawOfficerLines.slice(0, MAX_OFFICER_LINES - 1), rawOfficerLines[MAX_OFFICER_LINES - 1].replace(/\.{0,3}$/, '…')]
-                : rawOfficerLines;
-              const nameLineH = 11; // ~11 pt per line at fontSize 9
-              const detailLineH = 10; // slightly tighter for sub-lines
-              // Date/Time column always occupies 2 stacked items — represent as
-              // 2 virtual lines so rowHeight is always tall enough.
-              const DT_VIRTUAL_LINES = 2;
-              const reqColLines = nameLines.length
-                + (detailLines.length > 0 ? detailLines.length + 0.3 : 0)
-                + (prevLines.length   > 0 ? prevLines.length   + 0.3 : 0);
-              const rowHeight = Math.max(rowHeightBase, 8 + Math.max(reqColLines * nameLineH, officerLines.length * nameLineH, DT_VIRTUAL_LINES * nameLineH));
-
-              // Page break if needed
-              if (rowY + rowHeight > footerY) {
-                doc.addPage();
-                page++;
-                rowY = 36;
-                rowOnPage = 0;
-                // Repeat column header on new page
-                doc.setFillColor(30, 58, 95);
-                doc.rect(marginL, rowY, contentW, headerH, 'F');
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(255, 255, 255);
-                let hcx = marginL;
-                colHeaders.forEach((h, i) => {
-                  doc.text(h, hcx + 6, rowY + 13);
-                  hcx += colWidths[i];
-                });
-                // Date range stamp — right-aligned in the repeated header bar so
-                // reviewers can identify the scope on every continuation page.
-                doc.setFontSize(7);
+                // Guard Date/Time strings: split to size and cap at 1 line each so
+                // they can never overflow colWidths[0] horizontally regardless of
+                // locale or month-name length.
+                doc.setFontSize(9);
                 doc.setFont('helvetica', 'normal');
-                doc.setTextColor(180, 200, 230);
-                doc.text(
-                  `Date range: ${dateRangeLabel}`,
-                  marginL + contentW - 6,
-                  rowY + 13,
-                  { align: 'right' },
-                );
-                rowY += headerH;
-              }
+                const dtColInner = colWidths[0] - 12;
+                const safeDateStr = (doc.splitTextToSize(dateStr, dtColInner) as string[])[0] ?? dateStr;
+                doc.setFontSize(7.5);
+                const safeTimeStr = (doc.splitTextToSize(timeStr, dtColInner) as string[])[0] ?? timeStr;
 
-              // Row background (alternating, resets at each page boundary)
-              if (rowOnPage % 2 === 1) {
-                doc.setFillColor(249, 250, 251);
-                doc.rect(marginL, rowY, contentW, rowHeight, 'F');
-              }
-              rowOnPage++;
+                // Pre-calculate name/detail lines to determine dynamic row height.
+                // Caps prevent any single row from overrunning the page footer.
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                const MAX_NAME_LINES = 3;
+                const rawNameLines: string[] = doc.splitTextToSize(entry.reqName, colWidths[3] - 12);
+                const nameLines: string[] = rawNameLines.length > MAX_NAME_LINES
+                  ? [...rawNameLines.slice(0, MAX_NAME_LINES - 1), rawNameLines[MAX_NAME_LINES - 1].replace(/\.{0,3}$/, '…')]
+                  : rawNameLines;
+                const MAX_DETAIL_LINES = 2;
+                const rawDetailLines: string[] = entry.detail
+                  ? doc.splitTextToSize(entry.detail, colWidths[3] - 12)
+                  : [];
+                const detailLines: string[] = rawDetailLines.length > MAX_DETAIL_LINES
+                  ? [...rawDetailLines.slice(0, MAX_DETAIL_LINES - 1), rawDetailLines[MAX_DETAIL_LINES - 1].replace(/\.{0,3}$/, '…')]
+                  : rawDetailLines;
+                const MAX_PREV_LINES = 2;
+                const rawPrevLines: string[] = entry.previousDetail
+                  ? doc.splitTextToSize(`was: ${entry.previousDetail}`, colWidths[3] - 12)
+                  : [];
+                const prevLines: string[] = rawPrevLines.length > MAX_PREV_LINES
+                  ? [...rawPrevLines.slice(0, MAX_PREV_LINES - 1), rawPrevLines[MAX_PREV_LINES - 1].replace(/\.{0,3}$/, '…')]
+                  : rawPrevLines;
+                const MAX_OFFICER_LINES = 4;
+                const rawOfficerLines: string[] = doc.splitTextToSize(entry.officer, colWidths[4] - 12);
+                const officerLines: string[] = rawOfficerLines.length > MAX_OFFICER_LINES
+                  ? [...rawOfficerLines.slice(0, MAX_OFFICER_LINES - 1), rawOfficerLines[MAX_OFFICER_LINES - 1].replace(/\.{0,3}$/, '…')]
+                  : rawOfficerLines;
+                const nameLineH = 11; // ~11 pt per line at fontSize 9
+                const detailLineH = 10; // slightly tighter for sub-lines
+                // Date/Time column always occupies 2 stacked items — represent as
+                // 2 virtual lines so rowHeight is always tall enough.
+                const DT_VIRTUAL_LINES = 2;
+                const reqColLines = nameLines.length
+                  + (detailLines.length > 0 ? detailLines.length + 0.3 : 0)
+                  + (prevLines.length   > 0 ? prevLines.length   + 0.3 : 0);
+                const rowHeight = Math.max(rowHeightBase, 8 + Math.max(reqColLines * nameLineH, officerLines.length * nameLineH, DT_VIRTUAL_LINES * nameLineH));
 
-              // Row border
-              doc.setDrawColor(229, 231, 235);
-              doc.setLineWidth(0.4);
-              doc.line(marginL, rowY + rowHeight, marginL + contentW, rowY + rowHeight);
+                // Page break if needed
+                if (rowY + rowHeight > footerY) {
+                  doc.addPage();
+                  page++;
+                  rowY = 36;
+                  rowOnPage = 0;
+                  // Repeat column header on new page
+                  doc.setFillColor(30, 58, 95);
+                  doc.rect(marginL, rowY, contentW, headerH, 'F');
+                  doc.setFontSize(8);
+                  doc.setFont('helvetica', 'bold');
+                  doc.setTextColor(255, 255, 255);
+                  let hcx = marginL;
+                  colHeaders.forEach((h, i) => {
+                    doc.text(h, hcx + 6, rowY + 13);
+                    hcx += colWidths[i];
+                  });
+                  // Date range stamp — right-aligned in the repeated header bar so
+                  // reviewers can identify the scope on every continuation page.
+                  doc.setFontSize(7);
+                  doc.setFont('helvetica', 'normal');
+                  doc.setTextColor(180, 200, 230);
+                  doc.text(
+                    `Date range: ${dateRangeLabel}`,
+                    marginL + contentW - 6,
+                    rowY + 13,
+                    { align: 'right' },
+                  );
+                  rowY += headerH;
+                }
 
-              let rx = marginL;
+                // Row background (alternating, resets at each page boundary)
+                if (rowOnPage % 2 === 1) {
+                  doc.setFillColor(249, 250, 251);
+                  doc.rect(marginL, rowY, contentW, rowHeight, 'F');
+                }
+                rowOnPage++;
 
-              // Date / Time — vertically centre the date+time pair within the
-              // dynamic row height so they don't look top-pinned in tall rows.
-              // The block spans ~16 pt (date baseline 4 pt above midpoint, time
-              // baseline 4 pt below). Both strings are pre-split to one line so
-              // they never overflow colWidths[0] horizontally.
-              const dtMidY = rowY + rowHeight / 2;
-              doc.setFontSize(9);
-              doc.setFont('helvetica', 'normal');
-              doc.setTextColor(55, 65, 81);
-              doc.text(safeDateStr, rx + 6, dtMidY - 4, { maxWidth: dtColInner });
-              doc.setFontSize(7.5);
-              doc.setTextColor(107, 114, 128);
-              doc.text(safeTimeStr, rx + 6, dtMidY + 4, { maxWidth: dtColInner });
-              rx += colWidths[0];
+                // Row border
+                doc.setDrawColor(229, 231, 235);
+                doc.setLineWidth(0.4);
+                doc.line(marginL, rowY + rowHeight, marginL + contentW, rowY + rowHeight);
 
-              // Action type badge
-              const [br, bg, bb] = actionBgRGB[entry.actionType];
-              const [tr2, tg, tb] = actionTextRGB[entry.actionType];
-              const badgeW = colWidths[1] - 12;
-              const badgeH = 13;
-              const badgeX = rx + 6;
-              const badgeY = rowY + 4;
-              doc.setFillColor(br, bg, bb);
-              doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 3, 3, 'F');
-              doc.setFontSize(7.5);
-              doc.setFont('helvetica', 'bold');
-              doc.setTextColor(tr2, tg, tb);
-              doc.text(entry.actionType, badgeX + badgeW / 2, badgeY + 8.5, { align: 'center', maxWidth: badgeW - 8 });
-              rx += colWidths[1];
+                let rx = marginL;
 
-              // Req ID — vertically centre the single-line ID within the row.
-              // Adding ~3 pt to the midpoint compensates for cap-height so the
-              // glyph appears optically centred rather than sitting above centre.
-              // splitTextToSize + maxWidth guard prevent a long ID from bleeding
-              // into the Requirement column to its right.
-              doc.setFontSize(8.5);
-              doc.setFont('helvetica', 'normal');
-              doc.setTextColor(107, 114, 128);
-              const reqIdLines = doc.splitTextToSize(entry.reqId, colWidths[2] - 12);
-              doc.text(reqIdLines[0], rx + 6, rowY + rowHeight / 2 + 3, { maxWidth: colWidths[2] - 12 });
-              rx += colWidths[2];
-
-              // Requirement name — render all wrapped lines
-              doc.setFontSize(9);
-              doc.setFont('helvetica', 'normal');
-              doc.setTextColor(17, 24, 39);
-              nameLines.forEach((line: string, idx: number) => {
-                doc.text(line, rx + 6, rowY + 10 + idx * nameLineH);
-              });
-              // Detail (current value) — rendered below requirement name
-              if (detailLines.length > 0) {
-                const detailStartY = rowY + 10 + nameLines.length * nameLineH + 1;
-                doc.setFontSize(8);
+                // Date / Time — vertically centre the date+time pair within the
+                // dynamic row height so they don't look top-pinned in tall rows.
+                // The block spans ~16 pt (date baseline 4 pt above midpoint, time
+                // baseline 4 pt below). Both strings are pre-split to one line so
+                // they never overflow colWidths[0] horizontally.
+                const dtMidY = rowY + rowHeight / 2;
+                doc.setFontSize(9);
                 doc.setFont('helvetica', 'normal');
                 doc.setTextColor(55, 65, 81);
-                detailLines.forEach((line: string, idx: number) => {
-                  doc.text(line, rx + 6, detailStartY + idx * detailLineH);
-                });
-              }
-              // Previous detail — rendered below current detail in italic gray
-              if (prevLines.length > 0) {
-                const prevStartY = rowY + 10
-                  + nameLines.length * nameLineH + 1
-                  + (detailLines.length > 0 ? detailLines.length * detailLineH + 1 : 0);
+                doc.text(safeDateStr, rx + 6, dtMidY - 4, { maxWidth: dtColInner });
                 doc.setFontSize(7.5);
-                doc.setFont('helvetica', 'italic');
-                doc.setTextColor(156, 163, 175);
-                prevLines.forEach((line: string, idx: number) => {
-                  doc.text(line, rx + 6, prevStartY + idx * detailLineH);
+                doc.setTextColor(107, 114, 128);
+                doc.text(safeTimeStr, rx + 6, dtMidY + 4, { maxWidth: dtColInner });
+                rx += colWidths[0];
+
+                // Action type badge
+                const [br, bg, bb] = actionBgRGB[entry.actionType];
+                const [tr2, tg, tb] = actionTextRGB[entry.actionType];
+                const badgeW = colWidths[1] - 12;
+                const badgeH = 13;
+                const badgeX = rx + 6;
+                const badgeY = rowY + 4;
+                doc.setFillColor(br, bg, bb);
+                doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 3, 3, 'F');
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(tr2, tg, tb);
+                doc.text(entry.actionType, badgeX + badgeW / 2, badgeY + 8.5, { align: 'center', maxWidth: badgeW - 8 });
+                rx += colWidths[1];
+
+                // Req ID — vertically centre the single-line ID within the row.
+                // Adding ~3 pt to the midpoint compensates for cap-height so the
+                // glyph appears optically centred rather than sitting above centre.
+                // splitTextToSize + maxWidth guard prevent a long ID from bleeding
+                // into the Requirement column to its right.
+                doc.setFontSize(8.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(107, 114, 128);
+                const reqIdLines = doc.splitTextToSize(entry.reqId, colWidths[2] - 12);
+                doc.text(reqIdLines[0], rx + 6, rowY + rowHeight / 2 + 3, { maxWidth: colWidths[2] - 12 });
+                rx += colWidths[2];
+
+                // Requirement name — render all wrapped lines
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(17, 24, 39);
+                nameLines.forEach((line: string, idx: number) => {
+                  doc.text(line, rx + 6, rowY + 10 + idx * nameLineH);
                 });
-              }
-              rx += colWidths[3];
+                // Detail (current value) — rendered below requirement name
+                if (detailLines.length > 0) {
+                  const detailStartY = rowY + 10 + nameLines.length * nameLineH + 1;
+                  doc.setFontSize(8);
+                  doc.setFont('helvetica', 'normal');
+                  doc.setTextColor(55, 65, 81);
+                  detailLines.forEach((line: string, idx: number) => {
+                    doc.text(line, rx + 6, detailStartY + idx * detailLineH);
+                  });
+                }
+                // Previous detail — rendered below current detail in italic gray
+                if (prevLines.length > 0) {
+                  const prevStartY = rowY + 10
+                    + nameLines.length * nameLineH + 1
+                    + (detailLines.length > 0 ? detailLines.length * detailLineH + 1 : 0);
+                  doc.setFontSize(7.5);
+                  doc.setFont('helvetica', 'italic');
+                  doc.setTextColor(156, 163, 175);
+                  prevLines.forEach((line: string, idx: number) => {
+                    doc.text(line, rx + 6, prevStartY + idx * detailLineH);
+                  });
+                }
+                rx += colWidths[3];
 
-              // Officer — render all wrapped lines
-              doc.setFontSize(9);
-              doc.setFont('helvetica', 'normal');
-              doc.setTextColor(55, 65, 81);
-              officerLines.forEach((line: string, idx: number) => {
-                doc.text(line, rx + 6, rowY + 10 + idx * nameLineH);
-              });
+                // Officer — render all wrapped lines
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(55, 65, 81);
+                officerLines.forEach((line: string, idx: number) => {
+                  doc.text(line, rx + 6, rowY + 10 + idx * nameLineH);
+                });
 
-              rowY += rowHeight;
-            });
+                rowY += rowHeight;
+              } // end inner for (entries in batch)
+
+              // Yield after each batch — let React repaint the progress label
+              // before we start the next batch.
+              setPdfProgress({ row: batchEnd, total: filtered.length, page });
+              await yieldToBrowser();
+            } // end batched for loop
           }
 
           // ── Footer ───────────────────────────────────────────────────────────
@@ -2654,7 +2679,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             }
           }
 
-          // ── Save ─────────────────────────────────────────────────────────────
+          // ── Save — only triggered after all pages are committed ───────────────
           const suffix = auditFilter === 'All' ? '' : `-${auditFilter.toLowerCase().replace(/\s+/g, '-')}`;
           const exportDateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
           // When a date range is selected, use it as the filename identifier instead of
@@ -2663,8 +2688,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           doc.save(`compliance-audit${fileDatePart}${suffix}.pdf`);
           } finally {
             setPdfGenerating(false);
+            setPdfProgress(null);
           }
-          }, 0);
+          })();
         };
 
         const filterChips: Array<{ label: string; value: AuditActionType | 'All'; activeClass: string }> = [
@@ -2704,11 +2730,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     >
                       {pdfGenerating ? (
                         <>
-                          <svg className="w-3.5 h-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5 animate-spin shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                           </svg>
-                          Generating…
+                          {pdfProgress && pdfProgress.total > 0
+                            ? `Page ${pdfProgress.page} · row ${pdfProgress.row} / ${pdfProgress.total}`
+                            : 'Generating…'}
                         </>
                       ) : (
                         <>
