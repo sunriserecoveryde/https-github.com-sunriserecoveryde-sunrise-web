@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
 import { useAuth } from '../context/AuthContext';
+import { ComplianceDemoTour, TOUR_STEPS } from '../components/ComplianceDemoTour';
 
 interface Props { navigate: (s: Screen, patientId?: string) => void; readOnly?: boolean; requestedReqId?: string | null; }
 
@@ -584,6 +585,7 @@ function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evide
             if (kpi.onClick) {
               return (
                 <button key={i} onClick={() => kpi.onClick!()}
+                  id={i === 0 ? 'tour-compliance-score-card' : undefined}
                   className="card hover:border-orange/40 hover:bg-orange/5 transition-colors text-left group">
                   <div className="flex items-start justify-between mb-1">
                     <div className="text-xs font-semibold text-slate uppercase tracking-wide leading-tight pr-2 group-hover:text-orange transition-colors">{kpi.label}</div>
@@ -1284,7 +1286,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
 };
 
 // hint: Structural and logic conflict. Both design and behavior differ.
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared, isTourActive }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1302,6 +1304,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   requestedReqId?: string | null;
   appendScoreHistory: (ids: Set<string>, evidence: Record<string, string>, corrAction: Record<string, string>) => void;
   onDemoDataCleared?: () => void;
+  /** When true, add id="tour-first-gap-row" to the first non-met requirement row */
+  isTourActive?: boolean;
 }) {
   // #565 — persist filter selection across tab switches
   const [stdFilter, setStdFilterRaw] = useState<CompStandard>(() => {
@@ -1682,6 +1686,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             Print Gap List{stdFilter !== 'All' ? ` — ${stdFilter}` : ''}
           </button>
           <button
+            id="tour-gap-export"
             onClick={exportGapListCsv}
             className="border border-border text-sm px-4 py-2 rounded-xl text-slate hover:bg-gray-50 hover:border-navy/40 transition-colors flex items-center gap-2"
           >
@@ -1695,7 +1700,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       </div>
 
       {/* ── Per-standard evidence progress rings ────────────────────────────── */}
-      <div className="card p-4">
+      <div id="tour-standards-rings" className="card p-4">
         {/* Overall stat strip */}
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
           <div className="flex items-baseline gap-2">
@@ -1815,13 +1820,22 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       </div>
 
       <div className="space-y-2">
-        {filtered.map(req => {
+        {(() => {
+          // Identify the first requirement that is not effectively met — the
+          // tour spotlight (id="tour-first-gap-row") is placed on this row when
+          // the demo tour is active, so the callout ring wraps exactly that row.
+          const firstGapReqId = isTourActive
+            ? (filtered.find(r => !reqIsEffectivelyMet(r, completedIds, evidenceInputs, corrActionInputs))?.id ?? null)
+            : null;
+
+          return filtered.map(req => {
           const isCompleted = completedIds.has(req.id);
           const hasEvidenceAndPlan = !!evidenceInputs[req.id]?.trim() && !!corrActionInputs[req.id]?.trim();
           const effectiveStatus = isCompleted ? 'Met' : req.status;
           const isSelected = selectedReq === req.id;
+          const isTourFirstGap = isTourActive && req.id === firstGapReqId;
           return (
-            <div key={req.id} id={`comp-req-${req.id}`} className={`border rounded-xl overflow-hidden transition-all ${isSelected ? 'border-orange shadow-sm' : requestedReqId === req.id ? 'border-blue-400 shadow-sm ring-2 ring-blue-200' : 'border-border'}`}>
+            <div key={req.id} id={isTourFirstGap ? 'tour-first-gap-row' : `comp-req-${req.id}`} className={`border rounded-xl overflow-hidden transition-all ${isSelected ? 'border-orange shadow-sm' : requestedReqId === req.id ? 'border-blue-400 shadow-sm ring-2 ring-blue-200' : 'border-border'}`}>
               <div
                 className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50"
                 onClick={() => {
@@ -1998,7 +2012,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               )}
             </div>
           );
-        })}
+          });
+        })()}
       </div>
 
       {/* ── Audit Trail ──────────────────────────────────────────────────── */}
@@ -3086,6 +3101,34 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
     }
   }, [completedIds]);
 
+  // ── Demo tour state ─────────────────────────────────────────────────────────
+  const [isTourActive, setIsTourActive] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
+
+  const handleTourStart = () => {
+    setTourStep(0);
+    setTab(TOUR_STEPS[0].tab as WFTab);
+    setIsTourActive(true);
+  };
+  const handleTourNext = () => {
+    const next = tourStep + 1;
+    if (next < TOUR_STEPS.length) {
+      setTourStep(next);
+      setTab(TOUR_STEPS[next].tab as WFTab);
+    }
+  };
+  const handleTourPrev = () => {
+    const prev = tourStep - 1;
+    if (prev >= 0) {
+      setTourStep(prev);
+      setTab(TOUR_STEPS[prev].tab as WFTab);
+    }
+  };
+  const handleTourEnd = () => {
+    setIsTourActive(false);
+    setTourStep(0);
+  };
+
   const tabs: WFTab[] = ['Dashboard', 'Employee Profiles', 'Exclusion & Screening', 'Onboarding', 'Performance Reviews', 'Offboarding', 'Compliance Standards'];
 
   const alerts: Partial<Record<WFTab, number>> = {
@@ -3103,9 +3146,19 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
           <h1 className="text-2xl font-bold text-navy">Workforce Compliance & Development</h1>
           <p className="text-slate text-sm mt-0.5">Credentialing · Background screening · Onboarding · Performance · Offboarding · Behavioral-health specific</p>
         </div>
-        <LockedButton locked={readOnly} onClick={() => {}} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
-          <Plus className="w-4 h-4" />Add Employee
-        </LockedButton>
+        <div className="flex items-center gap-2">
+          {!isTourActive && (
+            <button
+              onClick={handleTourStart}
+              className="border border-orange/40 text-orange text-sm px-3 py-2 rounded-xl hover:bg-orange/5 transition-colors flex items-center gap-1.5 font-medium"
+            >
+              ▶ Demo Tour
+            </button>
+          )}
+          <LockedButton locked={readOnly} onClick={() => {}} className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+            <Plus className="w-4 h-4" />Add Employee
+          </LockedButton>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -3170,8 +3223,19 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} appendScoreHistory={appendScoreHistory} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} appendScoreHistory={appendScoreHistory} isTourActive={isTourActive} />}
       </div>
+
+      {/* ── Demo tour overlay ─────────────────────────────────────────────── */}
+      {isTourActive && (
+        <ComplianceDemoTour
+          steps={TOUR_STEPS}
+          step={tourStep}
+          onNext={handleTourNext}
+          onPrev={handleTourPrev}
+          onEnd={handleTourEnd}
+        />
+      )}
     </div>
   );
 }

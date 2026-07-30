@@ -9,6 +9,38 @@ export interface TourStep {
   tab: string;
 }
 
+/**
+ * Ordered steps for the Compliance module demo tour.
+ * Step index 2 ("Open a Gap Row") targets the first open gap row in the
+ * requirements list — the host page adds id="tour-first-gap-row" to that
+ * element only while the tour is active.
+ */
+export const TOUR_STEPS: TourStep[] = [
+  {
+    targetId: 'tour-compliance-score-card',
+    title: 'Live Compliance Audit Score',
+    description: 'This card shows your real-time audit readiness score — how many regulatory requirements across all six frameworks are met, remediated, or still open. The sparkline tracks improvement over time.',
+    tab: 'Dashboard',
+  },
+  {
+    targetId: 'tour-standards-rings',
+    title: 'Per-Standard Readiness Rings',
+    description: 'Each ring shows readiness for one regulatory framework — CARF, HIPAA, 42 CFR Part 2, MD OHCQ, Medicaid, and Internal Policy. Click any ring to filter the requirements list to just that framework.',
+    tab: 'Compliance Standards',
+  },
+  {
+    targetId: 'tour-first-gap-row',
+    title: 'Open a Gap Row',
+    description: 'This row is an open compliance gap. Click it to expand the detail panel, then link evidence and save a corrective action plan. Filing both instantly counts the item toward your audit score.',
+    tab: 'Compliance Standards',
+  },
+  {
+    targetId: 'tour-gap-export',
+    title: 'Export & Print Gap List',
+    description: 'Export your open gaps as a CSV or print a formatted PDF. Use this to share your remediation plan with auditors, distribute action items to department heads, or track progress in a spreadsheet.',
+    tab: 'Compliance Standards',
+  },
+];
 interface Props {
   steps: TourStep[];
   step: number;
