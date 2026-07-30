@@ -2943,7 +2943,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           const req = COMP_REQUIREMENTS.find(r => r.id === id);
                           setShowUnsavedExportWarn(false);
                           if (req) {
-                            setStdFilter(req.standard as CompStandard);
+                            setStdFilter(warnStdFilter !== 'All' ? warnStdFilter : req.standard as CompStandard);
                             setGapFilter('All');
                             setSelectedReq(id);
                           }
@@ -2984,7 +2984,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           const req = COMP_REQUIREMENTS.find(r => r.id === id);
                           setShowUnsavedExportWarn(false);
                           if (req) {
-                            setStdFilter(req.standard as CompStandard);
+                            setStdFilter(warnStdFilter !== 'All' ? warnStdFilter : req.standard as CompStandard);
                             setGapFilter('All');
                             setSelectedReq(id);
                           }
