@@ -2036,6 +2036,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             if (dateTo   && ts > dateTo)   return false;
             return true;
           });
+        const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+        const nearingCap = auditLog.length >= 450;
+        const expiryWarningCutoff = Date.now() - (AUDIT_LOG_MAX_AGE_MS - SEVEN_DAYS_MS);
+        const expiringCount = auditLog.filter(e => new Date(e.timestamp).getTime() < expiryWarningCutoff).length;
+        const showLogWarning = nearingCap || expiringCount > 0;
         const dateRangeSuffix = (auditDateFrom || auditDateTo)
           ? `-${auditDateFrom || 'start'}-to-${auditDateTo || 'end'}`
           : '';
@@ -2420,6 +2425,21 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 </button>
               </div>
             </div>
+            {showLogWarning && (
+              <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border-b border-amber-200">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-amber-800">
+                    {nearingCap && expiringCount > 0
+                      ? `Audit log is approaching the 500-entry cap (${auditLog.length} entries) and ${expiringCount} ${expiringCount === 1 ? 'entry is' : 'entries are'} expiring within 7 days.`
+                      : nearingCap
+                        ? `Audit log is approaching the 500-entry cap (${auditLog.length} / 500 entries). Oldest entries will be dropped when the cap is reached.`
+                        : `${expiringCount} audit ${expiringCount === 1 ? 'entry' : 'entries'} will be permanently removed within 7 days (90-day retention limit).`}
+                  </p>
+                  <p className="text-[11px] text-amber-700 mt-0.5">Export the audit trail now to preserve the full record before entries are trimmed.</p>
+                </div>
+              </div>
+            )}
             {showAuditTrail && (
               <>
                 {/* Filter chips — hidden when log is empty */}
