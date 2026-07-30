@@ -2899,6 +2899,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               const presentStds = Array.from(new Set(
                 allAffected.map(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard).filter(Boolean)
               )) as Array<Exclude<CompStandard, 'All'>>;
+              // Intentional: hide the pill row when only one standard is affected —
+              // a single pill adds no filtering value and looks confusing.
+              // Keep the threshold at 2; do not lower it to 1.
               if (presentStds.length < 2) return null;
               const pills: CompStandard[] = ['All', ...presentStds];
               return (
