@@ -1465,19 +1465,23 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     // previously saved but has since been cleared without being re-linked.
     let unsavedCount = 0;
     let clearedCount = 0;
+    const clearedIds: Array<{ id: string; title: string }> = [];
+    const unsavedIds: Array<{ id: string; title: string }> = [];
     COMP_REQUIREMENTS.forEach(r => {
       if (stdFilter !== 'All' && r.standard !== stdFilter) return;
       if ((!!evidenceInputs[r.id]?.trim() && !evidenceConfirmed.has(r.id)) ||
           (!!corrActionInputs[r.id]?.trim() && !corrConfirmed.has(r.id))) {
         unsavedCount++;
+        unsavedIds.push({ id: r.id, title: r.requirement });
       }
       if (evidenceCleared.has(r.id) || corrCleared.has(r.id)) {
         clearedCount++;
+        clearedIds.push({ id: r.id, title: r.requirement });
       }
     });
 
     if (unsavedCount > 0 || clearedCount > 0) {
-      setShowUnsavedExportWarn({ unsaved: unsavedCount, cleared: clearedCount, action: 'csv', onContinue: doExportGapListCsv });
+      setShowUnsavedExportWarn({ unsaved: unsavedCount, cleared: clearedCount, clearedIds, unsavedIds, action: 'csv', onContinue: doExportGapListCsv });
       return;
     }
     doExportGapListCsv();
@@ -1624,18 +1628,22 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     // cleared but not re-linked, or if there is unsaved typed text.
     let unsavedCount = 0;
     let clearedCount = 0;
+    const clearedIds: Array<{ id: string; title: string }> = [];
+    const unsavedIds: Array<{ id: string; title: string }> = [];
     COMP_REQUIREMENTS.forEach(r => {
       if (activeStd !== 'All' && r.standard !== activeStd) return;
       if ((!!evidenceInputs[r.id]?.trim() && !evidenceConfirmed.has(r.id)) ||
           (!!corrActionInputs[r.id]?.trim() && !corrConfirmed.has(r.id))) {
         unsavedCount++;
+        unsavedIds.push({ id: r.id, title: r.requirement });
       }
       if (evidenceCleared.has(r.id) || corrCleared.has(r.id)) {
         clearedCount++;
+        clearedIds.push({ id: r.id, title: r.requirement });
       }
     });
     if (unsavedCount > 0 || clearedCount > 0) {
-      setShowUnsavedExportWarn({ unsaved: unsavedCount, cleared: clearedCount, action: 'print', onContinue: doPrint });
+      setShowUnsavedExportWarn({ unsaved: unsavedCount, cleared: clearedCount, clearedIds, unsavedIds, action: 'print', onContinue: doPrint });
       return;
     }
     doPrint();
@@ -1670,7 +1678,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       return new Set<string>();
     }
   });
-  const [showUnsavedExportWarn, setShowUnsavedExportWarn] = useState<{ unsaved: number; cleared: number; action: 'csv' | 'print'; onContinue: () => void } | false>(false);
+  const [showUnsavedExportWarn, setShowUnsavedExportWarn] = useState<{
+    unsaved: number;
+    cleared: number;
+    clearedIds: Array<{ id: string; title: string }>;
+    unsavedIds: Array<{ id: string; title: string }>;
+    action: 'csv' | 'print';
+    onContinue: () => void;
+  } | false>(false);
   const [evidenceConfirmed, setEvidenceConfirmedRaw] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY);
@@ -2828,12 +2843,12 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       {/* Unsaved Work / Cleared Evidence — Export Warning Dialog */}
       {showUnsavedExportWarn !== false && (
         <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4" onClick={() => setShowUnsavedExportWarn(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[500px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start gap-3 px-6 pt-6 pb-4">
               <div className="shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-base font-bold text-navy">
                   {showUnsavedExportWarn.cleared > 0 ? 'Export Blocked — Evidence Removed' : 'Unsaved Work Detected'}
                 </h2>
@@ -2851,17 +2866,92 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 </div>
               </div>
             </div>
-            <div className="px-6 pb-2">
+
+            {/* Requirement ID list — cleared */}
+            {showUnsavedExportWarn.clearedIds.length > 0 && (() => {
+              const shown = showUnsavedExportWarn.clearedIds.slice(0, 5);
+              const extra = showUnsavedExportWarn.clearedIds.length - shown.length;
+              return (
+                <div className="px-6 pb-2">
+                  <p className="text-[11px] font-semibold text-red-700 uppercase tracking-wide mb-1.5">Needs re-linking ({showUnsavedExportWarn.clearedIds.length})</p>
+                  <div className="space-y-1">
+                    {shown.map(({ id, title }) => (
+                      <button
+                        key={id}
+                        className="w-full flex items-start gap-2 text-left bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-3 py-2 transition-colors group"
+                        onClick={() => {
+                          const req = COMP_REQUIREMENTS.find(r => r.id === id);
+                          setShowUnsavedExportWarn(false);
+                          if (req) {
+                            setStdFilter(req.standard as CompStandard);
+                            setGapFilter('All');
+                            setSelectedReq(id);
+                          }
+                          setTimeout(() => {
+                            document.getElementById(`comp-req-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }, 150);
+                        }}
+                      >
+                        <span className="shrink-0 mt-0.5 font-mono text-[11px] font-bold text-red-700 bg-red-100 group-hover:bg-red-200 rounded px-1.5 py-0.5">{id}</span>
+                        <span className="text-[11px] text-slate leading-tight line-clamp-2">{title}</span>
+                      </button>
+                    ))}
+                    {extra > 0 && (
+                      <p className="text-[11px] text-slate/70 pl-1">+{extra} more — go back to see all flagged rows</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Requirement ID list — unsaved */}
+            {showUnsavedExportWarn.unsavedIds.length > 0 && (() => {
+              const shown = showUnsavedExportWarn.unsavedIds.slice(0, 5);
+              const extra = showUnsavedExportWarn.unsavedIds.length - shown.length;
+              return (
+                <div className="px-6 pb-2">
+                  <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide mb-1.5">Unsaved text ({showUnsavedExportWarn.unsavedIds.length})</p>
+                  <div className="space-y-1">
+                    {shown.map(({ id, title }) => (
+                      <button
+                        key={id}
+                        className="w-full flex items-start gap-2 text-left bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg px-3 py-2 transition-colors group"
+                        onClick={() => {
+                          const req = COMP_REQUIREMENTS.find(r => r.id === id);
+                          setShowUnsavedExportWarn(false);
+                          if (req) {
+                            setStdFilter(req.standard as CompStandard);
+                            setGapFilter('All');
+                            setSelectedReq(id);
+                          }
+                          setTimeout(() => {
+                            document.getElementById(`comp-req-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }, 150);
+                        }}
+                      >
+                        <span className="shrink-0 mt-0.5 font-mono text-[11px] font-bold text-amber-700 bg-amber-100 group-hover:bg-amber-200 rounded px-1.5 py-0.5">{id}</span>
+                        <span className="text-[11px] text-slate leading-tight line-clamp-2">{title}</span>
+                      </button>
+                    ))}
+                    {extra > 0 && (
+                      <p className="text-[11px] text-slate/70 pl-1">+{extra} more — go back to see all flagged rows</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="px-6 pb-3 pt-2">
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 font-medium space-y-1">
                 {showUnsavedExportWarn.cleared > 0 && (
-                  <p>To resolve: close this dialog, find the flagged requirement{showUnsavedExportWarn.cleared !== 1 ? 's' : ''}, and click <strong>"Link Evidence"</strong> or <strong>"Save Action Plan"</strong> to re-attach the documentation.</p>
+                  <p>To resolve: tap a requirement ID above to jump straight to that row, then click <strong>"Link Evidence"</strong> or <strong>"Save Action Plan"</strong> to re-attach the documentation.</p>
                 )}
                 {showUnsavedExportWarn.unsaved > 0 && (
-                  <p>To save typed text first: close this dialog, scroll to the flagged requirement{showUnsavedExportWarn.unsaved !== 1 ? 's' : ''}, and click <strong>"Link Evidence"</strong> or <strong>"Save Action Plan"</strong>.</p>
+                  <p>To save typed text: tap a requirement ID above to jump to that row, then click <strong>"Link Evidence"</strong> or <strong>"Save Action Plan"</strong>.</p>
                 )}
               </div>
             </div>
-            <div className="px-6 pb-6 pt-3 flex gap-3">
+            <div className="px-6 pb-6 pt-1 flex gap-3">
               <button
                 onClick={() => setShowUnsavedExportWarn(false)}
                 className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50 transition-colors"
