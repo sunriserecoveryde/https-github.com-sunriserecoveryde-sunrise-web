@@ -2003,7 +2003,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           const tableTop = metaY + metaCellH + 12;
           const colWidths = [90, 100, 60, contentW - 90 - 100 - 60 - 110, 110];
           const colHeaders = ['DATE / TIME', 'ACTION TYPE', 'REQ. ID', 'REQUIREMENT', 'OFFICER'];
-          const rowHeight = 22;
+          const rowHeightBase = 22;
           const headerH = 20;
 
           // Header row
@@ -2043,6 +2043,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             let rowOnPage = 0;
 
             filtered.forEach((entry) => {
+              // Pre-calculate name lines to determine dynamic row height
+              doc.setFontSize(9);
+              doc.setFont('helvetica', 'normal');
+              const nameLines = doc.splitTextToSize(entry.reqName, colWidths[3] - 12);
+              const nameLineH = 11; // ~11 pt per line at fontSize 9
+              const rowHeight = Math.max(rowHeightBase, 8 + nameLines.length * nameLineH);
+
               // Page break if needed
               if (rowY + rowHeight > footerY) {
                 doc.addPage();
@@ -2113,12 +2120,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               doc.text(entry.reqId, rx + 6, rowY + 13);
               rx += colWidths[2];
 
-              // Requirement name (may wrap)
+              // Requirement name — render all wrapped lines
               doc.setFontSize(9);
               doc.setFont('helvetica', 'normal');
               doc.setTextColor(17, 24, 39);
-              const nameLines = doc.splitTextToSize(entry.reqName, colWidths[3] - 12);
-              doc.text(nameLines[0], rx + 6, rowY + 13);
+              nameLines.forEach((line: string, idx: number) => {
+                doc.text(line, rx + 6, rowY + 10 + idx * nameLineH);
+              });
               rx += colWidths[3];
 
               // Officer
