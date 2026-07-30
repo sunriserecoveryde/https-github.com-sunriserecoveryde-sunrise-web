@@ -2461,6 +2461,17 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                   doc.text(h, hcx + 6, rowY + 13);
                   hcx += colWidths[i];
                 });
+                // Date range stamp — right-aligned in the repeated header bar so
+                // reviewers can identify the scope on every continuation page.
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(180, 200, 230);
+                doc.text(
+                  `Date range: ${dateRangeLabel}`,
+                  marginL + contentW - 6,
+                  rowY + 13,
+                  { align: 'right' },
+                );
                 rowY += headerH;
               }
 
@@ -2579,6 +2590,14 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               marginL, fY,
             );
             doc.text(`Page ${p} of ${totalPages}`, pageW - marginR, fY, { align: 'right' });
+            // Stamp the date range in the footer centre on every continuation page
+            // so a surveyor holding a single extracted page can confirm its scope.
+            if (p > 1) {
+              doc.setFontSize(7.5);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor(156, 163, 175);
+              doc.text(`Date range: ${dateRangeLabel}`, pageW / 2, fY, { align: 'center' });
+            }
           }
 
           // ── Save ─────────────────────────────────────────────────────────────
