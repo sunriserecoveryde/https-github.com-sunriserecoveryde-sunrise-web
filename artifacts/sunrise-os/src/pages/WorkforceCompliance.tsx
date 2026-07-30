@@ -1201,7 +1201,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Internal Policy': 'Internal',
 };
 
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId }: {
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, onDemoDataCleared }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1217,6 +1217,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   addAuditEntry: (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => void;
   clearAuditLog: () => void;
   requestedReqId?: string | null;
+  onDemoDataCleared?: () => void;
 }) {
   // #565 — persist filter selection across tab switches
   const [stdFilter, setStdFilterRaw] = useState<CompStandard>(() => {
@@ -2578,6 +2579,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     // Persist the reset timestamp so the next mount can tell
                     // whether the server's auditResetAt has already been applied.
                     try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_AT_KEY, resetTimestamp); } catch { /* unavailable */ }
+                    // Clear demo-data flag so the banner disappears after a reset
+                    onDemoDataCleared?.();
                     // Wipe the server-side audit log so a GET on reload returns
                     // empty state instead of the pre-reset snapshot (#643).
                     fetch('/api/compliance/audit-log?orgId=default', { method: 'DELETE' })
@@ -2614,6 +2617,8 @@ const COMPLIANCE_CORR_KEY = 'sunrise-os:compliance-corr-action-inputs';
 
 const COMPLIANCE_OWNER_KEY = 'sunrise-os:compliance-owner-inputs';
 const COMPLIANCE_EVIDENCE_CONFIRMED_KEY = 'sunrise-os:compliance-evidence-confirmed';
+
+const COMPLIANCE_DEMO_DATA_KEY = 'sunrise-os:compliance-demo-data';
 const COMPLIANCE_STD_FILTER_KEY = 'sunrise-os:compliance-std-filter';
 const COMPLIANCE_GAP_FILTER_KEY = 'sunrise-os:compliance-gap-filter';
 
@@ -2657,11 +2662,21 @@ const SEED_AUDIT_LOG: Array<{ id: string; timestamp: string; actionType: AuditAc
   { id: 'seed-27', timestamp: '2026-07-25T11:00:00.000Z', actionType: 'Marked Met',        reqId: 'CR-012', reqName: 'All clinical staff trained on 42 CFR Part 2 vs. HIPAA distinctions',                    officer: 'James S. Collins III' },
   { id: 'seed-28', timestamp: '2026-07-28T09:45:00.000Z', actionType: 'Marked Met',        reqId: 'CR-019', reqName: 'Annual performance reviews completed for all staff on anniversary dates',                officer: 'Renée M. Caldwell' },
 ];
+
+const SAMPLE_COMPLETED_IDS = ['CR-007', 'CR-012'];
 export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Props) {
   // #591 — if launched via deep-link with a specific req, jump straight to Compliance Standards tab
   const [tab, setTab] = useState<WFTab>(() => requestedReqId ? 'Compliance Standards' : 'Dashboard');
   // Requested filter from Dashboard ring click — applied once when Standards tab mounts
   const [requestedStdFilter, setRequestedStdFilter] = useState<Exclude<CompStandard, 'All'> | null>(null);
+
+  // ── Demo data state ─────────────────────────────────────────────────────────
+  const [isDemoData, setIsDemoData] = useState<boolean>(() => {
+    try { return localStorage.getItem(COMPLIANCE_DEMO_DATA_KEY) === '1'; } catch { return false; }
+  });
+  // Bumping this key remounts ComplianceStandardsTab so it re-reads localStorage
+  // (needed to pick up evidenceConfirmed / corrConfirmed written during seeding).
+  const [compStandardsKey, setCompStandardsKey] = useState(0);
 
   // ── Compliance audit state lifted here so resets are atomic and the
   //    Dashboard KPI always reads the same source of truth as the Standards tab.
@@ -2876,6 +2891,30 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
     try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
   };
 
+  // ── Load Sample Audit ───────────────────────────────────────────────────────
+  const loadSampleAudit = () => {
+    const ids = new Set<string>(SAMPLE_COMPLETED_IDS);
+    setCompletedIds(ids);
+    setEvidenceInputsRaw(SAMPLE_EVIDENCE_INPUTS);
+    setCorrActionInputsRaw(SAMPLE_CORR_ACTION_INPUTS);
+    setOwnerInputsRaw(SAMPLE_OWNER_INPUTS);
+    // Persist to localStorage so everything survives a reload
+    try { localStorage.setItem(COMPLIANCE_STORAGE_KEY, JSON.stringify([...ids])); } catch { /* unavailable */ }
+    try { localStorage.setItem(COMPLIANCE_EVIDENCE_KEY, JSON.stringify(SAMPLE_EVIDENCE_INPUTS)); } catch { /* unavailable */ }
+    try { localStorage.setItem(COMPLIANCE_CORR_KEY, JSON.stringify(SAMPLE_CORR_ACTION_INPUTS)); } catch { /* unavailable */ }
+    try { localStorage.setItem(COMPLIANCE_OWNER_KEY, JSON.stringify(SAMPLE_OWNER_INPUTS)); } catch { /* unavailable */ }
+    // Write evidenceConfirmed / corrConfirmed directly to localStorage; the
+    // ComplianceStandardsTab remount (key bump below) will pick them up via
+    // its useState initializer.
+    try { localStorage.setItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY, JSON.stringify(SAMPLE_EVIDENCE_CONFIRMED)); } catch { /* unavailable */ }
+    try { localStorage.setItem(COMPLIANCE_CORR_CONFIRMED_KEY, JSON.stringify(SAMPLE_CORR_CONFIRMED)); } catch { /* unavailable */ }
+    // Mark demo data active
+    try { localStorage.setItem(COMPLIANCE_DEMO_DATA_KEY, '1'); } catch { /* unavailable */ }
+    setIsDemoData(true);
+    // Remount ComplianceStandardsTab so it re-reads confirmed sets from localStorage
+    setCompStandardsKey(k => k + 1);
+  };
+
   const setOwnerInputs = (next: Record<string, string>) => {
     setOwnerInputsRaw(next);
     try { localStorage.setItem(COMPLIANCE_OWNER_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
@@ -2928,6 +2967,32 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         ))}
       </div>
 
+      {/* ── Load Sample Audit CTA — visible only on a completely blank session ── */}
+      {completedIds.size === 0 && !readOnly && (
+        <div className="flex items-center justify-between bg-gradient-to-r from-navy/5 to-orange/5 border border-orange/20 rounded-xl px-5 py-4">
+          <div>
+            <div className="text-sm font-bold text-navy">No audit data yet</div>
+            <div className="text-xs text-slate mt-0.5">Load a realistic sample audit to see the compliance tracker in action — 85 % score, open gaps across 3 frameworks, owner assignments, and evidence filed.</div>
+          </div>
+          <button
+            onClick={loadSampleAudit}
+            className="shrink-0 ml-6 btn-primary text-sm px-4 py-2 flex items-center gap-2"
+          >
+            <ClipboardList className="w-4 h-4" />
+            Load Sample Audit
+          </button>
+        </div>
+      )}
+
+      {/* ── Demo data banner — shown whenever sample data is active ── */}
+      {isDemoData && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-300 rounded-xl px-4 py-2.5 text-xs text-amber-900">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+          <span className="font-semibold">Demo data — not real audit records.</span>
+          <span className="text-amber-700">This session is pre-loaded with sample compliance data for demonstration purposes only. Use "Reset Audit Cycle" in the Compliance Standards tab to start a clean audit.</span>
+        </div>
+      )}
+
       <div className="flex gap-1 border-b border-border">
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)}
@@ -2949,7 +3014,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} />}
       </div>
     </div>
   );
@@ -3158,3 +3223,27 @@ function pruneAuditLog(entries: AuditLogEntry[]): AuditLogEntry[] {
 }
 
 const AUDIT_LOG_MAX_AGE_MS  = 90 * 24 * 60 * 60 * 1000; // 90 days in ms
+
+const SAMPLE_OWNER_INPUTS: Record<string, string> = {
+  'CR-004': 'Renée M. Caldwell',
+  'CR-007': 'Renée M. Caldwell',
+  'CR-012': 'James S. Collins III',
+  'CR-017': 'Linda Vance',
+  'CR-018': 'James S. Collins III',
+  'CR-019': 'Renée M. Caldwell',
+};
+
+const SAMPLE_EVIDENCE_INPUTS: Record<string, string> = {
+  'CR-004': 'QAPI-charter-draft-Jul2026.pdf',
+  'CR-017': 'PA-process-SOP-v2.pdf',
+  'CR-018': 'doc-timeliness-audit-Q2-2026.pdf',
+};
+
+const SAMPLE_EVIDENCE_CONFIRMED = ['CR-004', 'CR-007', 'CR-012', 'CR-017', 'CR-018'];
+
+const SAMPLE_CORR_CONFIRMED     = ['CR-007', 'CR-012', 'CR-017', 'CR-019'];
+
+const SAMPLE_CORR_ACTION_INPUTS: Record<string, string> = {
+  'CR-017': 'Update UR coordinator workflow to require PA confirmation before Level of Care change; deadline Aug 1.',
+  'CR-019': 'Kevin Wright review rescheduled to Aug 5 with James Collins. Tracking dashboard deployed for supervisors.',
+};
