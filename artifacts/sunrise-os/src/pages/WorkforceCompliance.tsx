@@ -2725,6 +2725,28 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
     return () => clearTimeout(timer);
   }, [completedIds, evidenceInputs, corrActionInputs, ownerInputs]);
 
+  // Cross-tab / cross-device sync — if another tab resets the audit log by
+  // removing COMPLIANCE_AUDIT_LOG_KEY, mirror that change into this tab's
+  // in-memory state and ensure the seeded flag is set so a subsequent reload
+  // won't re-inject seed rows.
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === COMPLIANCE_AUDIT_LOG_KEY && e.newValue === null) {
+        // Another tab cleared the audit log — clear this tab's in-memory copy.
+        setAuditLogRaw([]);
+        // Make sure the seeded flag is present so we don't re-seed on next load.
+        try { localStorage.setItem(COMPLIANCE_AUDIT_SEEDED_KEY, '1'); } catch { /* unavailable */ }
+      }
+      if (e.key === COMPLIANCE_AUDIT_SEEDED_KEY && e.newValue === '1') {
+        // Another tab set the seeded flag (e.g. after writing fresh seeds on
+        // first visit). Nothing to do in-memory, but the flag is now present
+        // for the next cold-load in this tab, so no extra action is needed.
+      }
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   // Synchronous localStorage writers — called directly on every change so no
   // keystroke can be silently dropped when the user navigates away before
   // React's effect flush fires.
