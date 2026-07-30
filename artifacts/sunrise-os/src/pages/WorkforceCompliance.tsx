@@ -2956,6 +2956,11 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       if (Object.values(ev).some((v) => typeof v === 'string' && v.trim() !== '')) return true;
       const ca = JSON.parse(localStorage.getItem(COMPLIANCE_CORR_KEY) ?? '{}');
       if (Object.values(ca).some((v) => typeof v === 'string' && v.trim() !== '')) return true;
+      // If the audit log already has entries (e.g. a "Marked Met" write succeeded
+      // but the cycle-started flag was never flushed due to a quota error), treat
+      // the cycle as started so the "Load Sample Audit" CTA stays hidden.
+      const log = JSON.parse(localStorage.getItem(COMPLIANCE_AUDIT_LOG_KEY) ?? '[]');
+      if (Array.isArray(log) && log.length > 0) return true;
       return false;
     } catch { return false; }
   });
