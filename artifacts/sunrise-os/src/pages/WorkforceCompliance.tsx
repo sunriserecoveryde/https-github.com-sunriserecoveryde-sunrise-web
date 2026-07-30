@@ -2196,7 +2196,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
           // ── Save ─────────────────────────────────────────────────────────────
           const suffix = auditFilter === 'All' ? '' : `-${auditFilter.toLowerCase().replace(/\s+/g, '-')}`;
-          doc.save(`audit-trail${suffix}${dateRangeSuffix}.pdf`);
+          const exportDateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+          doc.save(`compliance-audit-${exportDateStr}${suffix}${dateRangeSuffix}.pdf`);
           } finally {
             setPdfGenerating(false);
           }
