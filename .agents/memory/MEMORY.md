@@ -9,3 +9,4 @@
 - [Quality sweep v2](quality-sweep-v2.md) — stale 2024 dates fixed (6 files), empty states enriched (10+ files), toast mismatches fixed, ProgressNotes co-sign wired, HelpSupport v1.3.0 added
 - [Quality sweep v3](quality-sweep-v3.md) — full Jul 22 date-coherence pass: week labels, today comparators, review dates, auth records, chart data, leave requests; v1.4.0 release notes added
 - [AI Note Engine + Wet Signatures](ai-note-engine.md) — template-based BIRP/DAP/SOAP/GIRP generator; SignatureModal/SignedBadge/WetSignatureCanvas; 5 pages wired; format union type must stay in sync
+- [ClinicalForms admissions screening rewrite](clinical-forms-rewrite.md) — tab layout, medication exclusion thresholds, BPS credential gate, JSX &amp; entity pitfall

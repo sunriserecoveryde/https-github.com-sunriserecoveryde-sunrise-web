@@ -2,12 +2,111 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { LockedButton } from '../components/common/LockedButton';
+import { useRole } from '../context/RoleContext';
 import {
   CheckCircle, AlertTriangle, ChevronDown, ChevronUp, X, Shield,
-  FileText, User, Phone, Save, ClipboardList
+  FileText, User, Phone, Save, ClipboardList, Lock, Plus, Trash2, AlertCircle,
 } from 'lucide-react';
 
 interface Props { navigate: (s: Screen, id?: string) => void; readOnly?: boolean; }
+
+// ─── Admissions Screening constants ──────────────────────────────────────────
+const SUBSTANCES = [
+  'Alcohol', 'Heroin', 'Fentanyl / Illicit Opioids', 'Prescription Opioids',
+  'Cocaine', 'Crack Cocaine', 'Methamphetamine / Amphetamines',
+  'Marijuana / THC', 'Benzodiazepines', 'Gabapentin / Pregabalin',
+  'MDMA / Ecstasy', 'Hallucinogens', 'Synthetic Cannabinoids (K2/Spice)',
+  'Inhalants', 'Other',
+];
+const ROUTES = ['Oral', 'Intranasal (snort)', 'IV injection', 'IM injection', 'Smoked / Inhaled', 'Sublingual', 'Rectal', 'Transdermal', 'Other'];
+const FREQ_OPTS = ['Daily', 'Multiple times daily', '4–6 days/week', '2–3 days/week', 'Weekly', 'A few times/month', 'Monthly or less'];
+const LOC_OPTS = [
+  'Outpatient (OP)', 'Intensive Outpatient (IOP)', 'Partial Hospitalization (PHP)',
+  'Residential — Low Intensity (3.1)', 'Residential — High Intensity (3.3)',
+  'Clinically Managed Medium Intensity (3.5)', 'Medically Monitored Inpatient (3.7)',
+  'Medically Managed Intensive Inpatient (4)', 'Opioid Treatment Program (OTP/Methadone)',
+  'MAT Clinic (Suboxone)', 'Detox', 'Other',
+];
+const CJ_TYPES = ['Probation', 'Parole', 'Drug Court', 'Pre-Trial Supervision', 'DUI/DWI Diversion', 'Drug Court (Juvenile)', 'Other'];
+const INSURERS = [
+  'Maryland Medicaid (MCO)', 'United Healthcare', 'Aetna', 'Cigna', 'BCBS Maryland',
+  'CareFirst', 'Anthem', 'Medicare', 'Tricare', 'Self-Pay / Uninsured', 'Other',
+];
+
+type ProgramType = 'Residential' | 'Outpatient';
+type ReferralSource = 'Treatment Program' | 'Home / Community' | 'Street / Unsheltered' | 'Incarceration / Corrections' | 'Emergency Department' | 'Detox' | '';
+
+interface DrugEntry  { substance: string; route: string; frequency: string; lastUse: string; }
+interface MedEntry   { name: string; dose: string; unit: string; frequency: string; prescriber: string; }
+interface PriorTx    { facility: string; loc: string; dates: string; reason: string; }
+
+const emptyDrug  = (): DrugEntry  => ({ substance: '', route: '', frequency: '', lastUse: '' });
+const emptyMed   = (): MedEntry   => ({ name: '', dose: '', unit: 'mg', frequency: '', prescriber: '' });
+const emptyPrior = (): PriorTx    => ({ facility: '', loc: '', dates: '', reason: '' });
+
+/** Parse a dose value from a string (returns NaN if not parseable) */
+function parseDose(s: string): number { return parseFloat(s.replace(/[^0-9.]/g, '')); }
+
+/** Evaluate exclusionary and review flags from current screening state */
+function calcExclusions(
+  programType: ProgramType,
+  medications: MedEntry[],
+  ambulatoryStatus: string,
+  psychosisHistory: string,
+  currentPsychosisManaged: boolean,
+  activeWarrant: boolean,
+  pendingCharges: boolean,
+  requiresMedicalDetox: boolean,
+  medicalInstability: boolean,
+): Array<{ key: string; label: string; fatal: boolean }> {
+  const flags: Array<{ key: string; label: string; fatal: boolean }> = [];
+
+  if (activeWarrant) {
+    flags.push({ key: 'warrant', label: 'Active warrant outstanding — safety and legal risk precludes admission without resolution', fatal: true });
+  }
+
+  medications.forEach((m, idx) => {
+    const nm = m.name.toLowerCase();
+    const dose = parseDose(m.dose);
+    if (!isNaN(dose)) {
+      if ((nm.includes('gabapentin') || nm.includes('neurontin')) && dose > 900) {
+        flags.push({ key: `gabapentin_${idx}`, label: `${m.name} ${dose}mg exceeds 900 mg/day policy maximum — physician review and order required before admission`, fatal: true });
+      }
+      if ((nm.includes('methadone') || nm.includes('dolophine')) && dose > 120) {
+        flags.push({ key: `methadone_${idx}`, label: `Methadone ${dose}mg exceeds 120 mg/day policy maximum — medical director approval required`, fatal: true });
+      }
+    }
+  });
+
+  if (ambulatoryStatus === 'non-ambulatory' && programType === 'Outpatient') {
+    flags.push({ key: 'ambulatory_op', label: 'Non-ambulatory status is exclusionary for outpatient level of care — consider residential placement', fatal: true });
+  }
+  if (ambulatoryStatus === 'non-ambulatory' && programType === 'Residential') {
+    flags.push({ key: 'ambulatory_res', label: 'Non-ambulatory status requires nursing assessment and facility ADA review before residential admission', fatal: false });
+  }
+
+  if (psychosisHistory === 'current' && !currentPsychosisManaged) {
+    flags.push({ key: 'psychosis_unmanaged', label: 'Active unmanaged psychosis — requires psychiatric stabilization prior to admission', fatal: true });
+  }
+  if (psychosisHistory === 'current' && currentPsychosisManaged) {
+    flags.push({ key: 'psychosis_managed', label: 'Current managed psychosis — confirm psychiatric continuity of care plan before admission', fatal: false });
+  }
+  if (psychosisHistory === 'past') {
+    flags.push({ key: 'psychosis_hx', label: 'History of psychosis documented — ensure psychiatric evaluation within 72 hours of admission', fatal: false });
+  }
+
+  if (requiresMedicalDetox) {
+    flags.push({ key: 'detox', label: 'Client requires medical detoxification prior to residential/outpatient admission', fatal: true });
+  }
+  if (medicalInstability) {
+    flags.push({ key: 'medical', label: 'Medical instability documented — requires medical clearance and physician sign-off before admission', fatal: true });
+  }
+  if (pendingCharges && !activeWarrant) {
+    flags.push({ key: 'charges', label: 'Pending criminal charges — verify court/attorney release conditions are compatible with treatment schedule', fatal: false });
+  }
+
+  return flags;
+}
 
 // ─── PHQ-9 ────────────────────────────────────────────────────────────────────
 const PHQ9_ITEMS = [
@@ -80,7 +179,6 @@ const MAST_ITEMS: MASTItem[] = [
   { q: 'Have you been arrested more than once for driving under the influence of alcohol?', yesScore: 2 },
   { q: 'Have you ever been arrested, even for a few hours, because of other behavior while drinking?', yesScore: 2 },
 ];
-// MAST scoring: 0–4 no problem, 5–6 suggestion of alcoholism, ≥7 probable alcoholism
 function mastRisk(s: number) {
   if (s >= 7) return { label: 'Probable Alcohol Dependence', color: 'text-red-700', bg: 'bg-red-100 border-red-300' };
   if (s >= 5) return { label: 'Suggests Alcohol Dependence', color: 'text-amber-700', bg: 'bg-amber-100 border-amber-300' };
@@ -111,26 +209,11 @@ function sogsRisk(s: number) {
 }
 
 // ─── SAFE-T ───────────────────────────────────────────────────────────────────
-// Risk factor indices — used by the auto-scoring algorithm
 const RF = {
-  IDEATION:       0,  // Current suicidal ideation
-  PLAN:           1,  // Suicidal plan
-  INTENT:         2,  // Suicidal intent
-  ACCESS:         3,  // Access to means
-  PRIOR_ATTEMPT:  4,  // Prior suicide attempt(s)
-  HOSPITALIZATION:5,  // Recent psychiatric hospitalization
-  HOPELESSNESS:   6,  // Current hopelessness
-  ANXIETY:        7,  // Severe anxiety / agitation
-  SUBSTANCE:      8,  // Substance use / intoxication
-  PSYCHOSIS:      9,  // Active psychosis
-  LOSS:          10,  // Recent major loss / stressor
-  FAMILY_HX:     11,  // Family history of suicide
-  ISOLATION:     12,  // Limited social support
-  DEMOGRAPHICS:  13,  // Male gender + older age
-  CHRONIC:       14,  // Chronic pain / terminal illness
+  IDEATION: 0, PLAN: 1, INTENT: 2, ACCESS: 3, PRIOR_ATTEMPT: 4,
+  HOSPITALIZATION: 5, HOPELESSNESS: 6, ANXIETY: 7, SUBSTANCE: 8,
+  PSYCHOSIS: 9, LOSS: 10, FAMILY_HX: 11, ISOLATION: 12, DEMOGRAPHICS: 13, CHRONIC: 14,
 } as const;
-
-// Weights: high-acuity items count more toward the net risk index
 const RF_WEIGHTS: Record<number, number> = {
   [RF.INTENT]: 3, [RF.PLAN]: 2, [RF.IDEATION]: 2,
   [RF.ACCESS]: 2, [RF.PRIOR_ATTEMPT]: 3, [RF.HOSPITALIZATION]: 2,
@@ -155,7 +238,6 @@ const SAFET_RISK_FACTORS: Array<{ label: string; critical?: boolean }> = [
   { label: 'Male gender + older age' },
   { label: 'Chronic pain / terminal illness' },
 ];
-
 const SAFET_PROTECTIVE: Array<{ label: string; weight: number }> = [
   { label: 'Strong reasons for living',                      weight: 2   },
   { label: 'Religious / spiritual beliefs against suicide',  weight: 1.5 },
@@ -166,57 +248,26 @@ const SAFET_PROTECTIVE: Array<{ label: string; weight: number }> = [
   { label: 'Engaged in treatment',                           weight: 1.5 },
   { label: 'Future orientation',                             weight: 1.5 },
 ];
-
 type SafetRisk = 'Low' | 'Moderate' | 'High';
-
-/** Auto-suggest risk level using the SAFE-T triage algorithm */
 function calcSafetRisk(rf: boolean[], pf: boolean[]): { level: SafetRisk; triggers: string[] } {
   const has = (i: number) => rf[i] === true;
   const triggers: string[] = [];
-
-  // ── High-risk clinical triggers ──────────────────────────────────────────
-  if (has(RF.IDEATION) && has(RF.PLAN) && has(RF.INTENT)) {
-    triggers.push('Suicidal ideation + plan + intent (critical triad)');
-  }
-  if (has(RF.PRIOR_ATTEMPT) && has(RF.IDEATION) && has(RF.PLAN)) {
-    triggers.push('Prior attempt + current ideation + plan');
-  }
-  if (has(RF.ACCESS) && has(RF.INTENT)) {
-    triggers.push('Access to means + suicidal intent');
-  }
-  if (has(RF.PSYCHOSIS) && has(RF.IDEATION)) {
-    triggers.push('Active psychosis with suicidal ideation');
-  }
-  if (has(RF.PRIOR_ATTEMPT) && has(RF.HOSPITALIZATION)) {
-    triggers.push('Prior attempt + recent hospitalization');
-  }
-
+  if (has(RF.IDEATION) && has(RF.PLAN) && has(RF.INTENT)) triggers.push('Suicidal ideation + plan + intent (critical triad)');
+  if (has(RF.PRIOR_ATTEMPT) && has(RF.IDEATION) && has(RF.PLAN)) triggers.push('Prior attempt + current ideation + plan');
+  if (has(RF.ACCESS) && has(RF.INTENT)) triggers.push('Access to means + suicidal intent');
+  if (has(RF.PSYCHOSIS) && has(RF.IDEATION)) triggers.push('Active psychosis with suicidal ideation');
+  if (has(RF.PRIOR_ATTEMPT) && has(RF.HOSPITALIZATION)) triggers.push('Prior attempt + recent hospitalization');
   if (triggers.length > 0) return { level: 'High', triggers };
-
-  // ── Moderate-risk triggers ───────────────────────────────────────────────
-  const riskScore  = rf.reduce((s, v, i) => s + (v ? rfWeight(i) : 0), 0);
-  const protScore  = pf.reduce((s, v, i) => s + (v ? SAFET_PROTECTIVE[i].weight : 0), 0);
-  const netScore   = riskScore - protScore;
-
-  if (has(RF.IDEATION) && has(RF.PLAN) && !has(RF.INTENT)) {
-    triggers.push('Suicidal ideation + plan (without intent)');
-  }
-  if (has(RF.PRIOR_ATTEMPT) && has(RF.IDEATION)) {
-    triggers.push('Prior attempt + current ideation');
-  }
-  if (netScore >= 5 && has(RF.IDEATION)) {
-    triggers.push(`Elevated net risk score (${netScore.toFixed(1)}) with active ideation`);
-  }
-  if (has(RF.HOPELESSNESS) && has(RF.IDEATION) && netScore >= 3) {
-    triggers.push('Hopelessness + ideation + elevated risk factors');
-  }
-
+  const riskScore = rf.reduce((s, v, i) => s + (v ? rfWeight(i) : 0), 0);
+  const protScore = pf.reduce((s, v, i) => s + (v ? SAFET_PROTECTIVE[i].weight : 0), 0);
+  const netScore  = riskScore - protScore;
+  if (has(RF.IDEATION) && has(RF.PLAN) && !has(RF.INTENT)) triggers.push('Suicidal ideation + plan (without intent)');
+  if (has(RF.PRIOR_ATTEMPT) && has(RF.IDEATION)) triggers.push('Prior attempt + current ideation');
+  if (netScore >= 5 && has(RF.IDEATION)) triggers.push(`Elevated net risk score (${netScore.toFixed(1)}) with active ideation`);
+  if (has(RF.HOPELESSNESS) && has(RF.IDEATION) && netScore >= 3) triggers.push('Hopelessness + ideation + elevated risk factors');
   if (triggers.length > 0) return { level: 'Moderate', triggers };
-
   return { level: 'Low', triggers: [] };
 }
-
-/** Compute net risk index for display: weighted risk minus weighted protective */
 function calcSafetNetIndex(rf: boolean[], pf: boolean[]): number {
   const r = rf.reduce((s, v, i) => s + (v ? rfWeight(i) : 0), 0);
   const p = pf.reduce((s, v, i) => s + (v ? SAFET_PROTECTIVE[i].weight : 0), 0);
@@ -246,56 +297,39 @@ const BAM_PROTECTIVE_ITEMS = [
   { q: 'How motivated are you to maintain abstinence or reduce use?', label: '0 = Not motivated · 10 = Highly motivated' },
 ];
 
+// ─── Credential check for Biopsychosocial ────────────────────────────────────
+// Must hold: LCADC, CAC-AD, CSC-AD, or ADT (Alcohol Drug Trainee)
+const BPS_CRED_LABELS = ['LCADC', 'CAC-AD', 'CSC-AD', 'ADT'];
+function hasBpsCred(roleDescription: string): boolean {
+  return BPS_CRED_LABELS.some(c => roleDescription.includes(c));
+}
+
 // ─── Signature Canvas ────────────────────────────────────────────────────────
 function SignatureCanvas({ label, onSigned }: { label: string; onSigned: (sig: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drawing, setDrawing] = useState(false);
   const [hasSig, setHasSig] = useState(false);
-
   const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
-    if ('touches' in e) {
-      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-    }
+    if ('touches' in e) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
     return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
   };
-
   const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext('2d')!;
-    const pos = getPos(e, canvas);
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
+    const canvas = canvasRef.current!; const ctx = canvas.getContext('2d')!;
+    ctx.beginPath(); ctx.moveTo(...Object.values(getPos(e, canvas)) as [number, number]);
     setDrawing(true);
   };
-
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!drawing) return;
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext('2d')!;
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#1e2d4a';
-    const pos = getPos(e, canvas);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-    setHasSig(true);
+    const canvas = canvasRef.current!; const ctx = canvas.getContext('2d')!;
+    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e2d4a';
+    const pos = getPos(e, canvas); ctx.lineTo(pos.x, pos.y); ctx.stroke(); setHasSig(true);
   };
-
-  const endDraw = () => {
-    if (!drawing) return;
-    setDrawing(false);
-    onSigned(canvasRef.current!.toDataURL());
-  };
-
+  const endDraw = () => { if (!drawing) return; setDrawing(false); onSigned(canvasRef.current!.toDataURL()); };
   const clearSig = () => {
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext('2d')!;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setHasSig(false);
-    onSigned('');
+    const canvas = canvasRef.current!; canvas.getContext('2d')!.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSig(false); onSigned('');
   };
-
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
@@ -303,26 +337,16 @@ function SignatureCanvas({ label, onSigned }: { label: string; onSigned: (sig: s
         {hasSig && <button onClick={clearSig} className="text-xs text-slate hover:text-red-600">Clear</button>}
       </div>
       <div className="border border-border rounded-lg overflow-hidden bg-gray-50">
-        <canvas
-          ref={canvasRef}
-          width={400}
-          height={80}
-          className="w-full touch-none cursor-crosshair"
-          onMouseDown={startDraw}
-          onMouseMove={draw}
-          onMouseUp={endDraw}
-          onMouseLeave={endDraw}
-          onTouchStart={startDraw}
-          onTouchMove={draw}
-          onTouchEnd={endDraw}
-        />
+        <canvas ref={canvasRef} width={400} height={80} className="w-full touch-none cursor-crosshair"
+          onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+          onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw} />
       </div>
       {hasSig && <div className="text-xs text-green-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Signature captured</div>}
     </div>
   );
 }
 
-// ─── Safety Contract Modal ───────────────────────────────────────────────────
+// ─── Safety Contract Modal ────────────────────────────────────────────────────
 function SafetyContractModal({ patientName, clinician, riskLevel, onClose, onSave }: {
   patientName: string; clinician: string; riskLevel: SafetRisk;
   onClose: () => void; onSave: () => void;
@@ -333,10 +357,8 @@ function SafetyContractModal({ patientName, clinician, riskLevel, onClose, onSav
   const [crisis1, setCrisis1] = useState('');
   const [crisis2, setCrisis2] = useState('');
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
   const toggleCommitment = (c: string) =>
     setCommitments(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
-
   return (
     <div className="fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-[680px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -348,7 +370,6 @@ function SafetyContractModal({ patientName, clinician, riskLevel, onClose, onSav
           </div>
           <button onClick={onClose} className="ml-auto text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
-
         <div className="p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div><span className="text-slate">Patient:</span> <strong className="text-navy">{patientName}</strong></div>
@@ -356,12 +377,9 @@ function SafetyContractModal({ patientName, clinician, riskLevel, onClose, onSav
             <div><span className="text-slate">Clinician:</span> <strong className="text-navy">{clinician}</strong></div>
             <div><span className="text-slate">SAFE-T Risk Level:</span> <strong className={riskLevel === 'High' ? 'text-red-600' : 'text-amber-600'}>{riskLevel}</strong></div>
           </div>
-
           <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
             <p className="font-semibold text-navy">Client Statement</p>
-            <p className="text-slate leading-relaxed">
-              I, <strong>{patientName}</strong>, agree that when I am having thoughts of harming myself, I will do the following before acting on those thoughts:
-            </p>
+            <p className="text-slate leading-relaxed">I, <strong>{patientName}</strong>, agree that when I am having thoughts of harming myself, I will do the following before acting on those thoughts:</p>
             <ul className="list-disc list-inside space-y-1 text-slate pl-2">
               <li>Tell a staff member or trusted person immediately</li>
               <li>Call a crisis line if I cannot reach anyone in the program</li>
@@ -369,14 +387,13 @@ function SafetyContractModal({ patientName, clinician, riskLevel, onClose, onSav
               <li>Not access any means of self-harm (medications, weapons, etc.)</li>
             </ul>
           </div>
-
           <div>
             <p className="text-xs font-semibold text-slate uppercase mb-2">Client Commitments (check all that apply)</p>
             {['I agree to remove access to lethal means (medications, firearms, etc.)',
               'I will talk to my counselor before making any decision to leave the program',
               'I will attend all scheduled treatment sessions',
               'I will notify staff immediately if my suicidal ideation increases',
-              'I agree to take medications as prescribed and not hoard them'
+              'I agree to take medications as prescribed and not hoard them',
             ].map(c => (
               <label key={c} className="flex items-start gap-2 py-1.5 cursor-pointer">
                 <input type="checkbox" checked={commitments.includes(c)} onChange={() => toggleCommitment(c)} className="mt-0.5 accent-navy" />
@@ -384,7 +401,6 @@ function SafetyContractModal({ patientName, clinician, riskLevel, onClose, onSav
               </label>
             ))}
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate uppercase mb-1">Crisis Contact 1 (name / number)</label>
@@ -395,7 +411,6 @@ function SafetyContractModal({ patientName, clinician, riskLevel, onClose, onSav
               <input value={crisis2} onChange={e => setCrisis2(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Maria Jones — 301-555-0147" />
             </div>
           </div>
-
           <div className="bg-navy/5 rounded-xl p-4 text-xs text-navy space-y-1">
             <p className="font-bold text-sm">24-Hour Crisis Resources</p>
             <p>• 988 Suicide &amp; Crisis Lifeline — Call or text <strong>988</strong></p>
@@ -403,20 +418,15 @@ function SafetyContractModal({ patientName, clinician, riskLevel, onClose, onSav
             <p>• Maryland Crisis Hotline — <strong>1-800-422-0009</strong></p>
             <p>• Emergency services — <strong>911</strong></p>
           </div>
-
           <div className="grid grid-cols-2 gap-6">
             <SignatureCanvas label="Client Signature" onSigned={setClientSig} />
             <SignatureCanvas label="Clinician Signature" onSigned={setClinicianSig} />
           </div>
         </div>
-
         <div className="px-6 pb-6 flex gap-3">
           <button onClick={onClose} className="flex-1 border border-border rounded-xl py-2.5 text-sm text-slate hover:bg-gray-50">Cancel</button>
-          <button
-            disabled={!clientSig || !clinicianSig}
-            onClick={() => { if (clientSig && clinicianSig) onSave(); }}
-            className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40"
-          >
+          <button disabled={!clientSig || !clinicianSig} onClick={() => { if (clientSig && clinicianSig) onSave(); }}
+            className="flex-1 bg-navy text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40">
             Save &amp; Complete Safety Contract
           </button>
         </div>
@@ -425,7 +435,7 @@ function SafetyContractModal({ patientName, clinician, riskLevel, onClose, onSav
   );
 }
 
-// ─── Instrument Wrapper ───────────────────────────────────────────────────────
+// ─── Shared UI helpers ────────────────────────────────────────────────────────
 function ScoreBadge({ label, score, maxScore, risk }: { label: string; score: number; maxScore: number; risk: { label: string; color: string; bg: string } }) {
   return (
     <div className={`rounded-xl border px-4 py-3 flex items-center gap-4 ${risk.bg}`}>
@@ -437,114 +447,188 @@ function ScoreBadge({ label, score, maxScore, risk }: { label: string; score: nu
     </div>
   );
 }
+function SectionHeading({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <div className="pb-2 border-b border-border mb-4">
+      <h3 className="text-sm font-bold text-navy uppercase tracking-wide">{title}</h3>
+      {sub && <p className="text-xs text-slate mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <label className="block text-xs font-semibold text-slate uppercase mb-1">{children}</label>;
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-type FormTab = 'PHQ-9' | 'DAST-10' | 'MAST' | 'SOGS' | 'SAFE-T' | 'BAM' | 'Summary';
+type FormTab = 'Screening' | 'PHQ-9' | 'DAST-10' | 'MAST' | 'SOGS' | 'SAFE-T' | 'BAM' | 'BPS' | 'Summary';
 
 const PATIENTS = MOCK_PATIENTS.filter(p => !p.id.startsWith('demo'));
 
 export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
+  const { role } = useRole();
+  const canDoBps = hasBpsCred(role.description);
+
   const [selectedPatient, setSelectedPatient] = useState(PATIENTS[0]?.id ?? '');
-  const [tab, setTab] = useState<FormTab>('PHQ-9');
+  const [tab, setTab] = useState<FormTab>('Screening');
   const [saved, setSaved] = useState<string | null>(null);
   const saveMsg = (m: string) => { setSaved(m); setTimeout(() => setSaved(null), 2500); };
 
-  // PHQ-9 state
+  // ── Admissions Screening state ──────────────────────────────────────────────
+  const [programType,             setProgramType]             = useState<ProgramType>('Residential');
+  const [referralSource,          setReferralSource]          = useState<ReferralSource>('');
+  const [referralFacility,        setReferralFacility]        = useState('');
+  const [priorPrograms,           setPriorPrograms]           = useState<PriorTx[]>([emptyPrior(), emptyPrior(), emptyPrior()]);
+  const [drugsOfChoice,           setDrugsOfChoice]           = useState<DrugEntry[]>([emptyDrug(), emptyDrug(), emptyDrug()]);
+  const [medications,             setMedications]             = useState<MedEntry[]>([emptyMed()]);
+  const [psychosisHistory,        setPsychosisHistory]        = useState<'none' | 'past' | 'current'>('none');
+  const [currentPsychosisManaged, setCurrentPsychosisManaged] = useState(false);
+  const [cjInvolved,              setCjInvolved]              = useState<boolean | null>(null);
+  const [cjType,                  setCjType]                  = useState('');
+  const [pendingCharges,          setPendingCharges]          = useState(false);
+  const [activeWarrant,           setActiveWarrant]           = useState(false);
+  const [ambulatoryStatus,        setAmbulatoryStatus]        = useState<'ambulatory' | 'assistive' | 'non-ambulatory'>('ambulatory');
+  const [primaryIns,              setPrimaryIns]              = useState({ carrier: '', memberId: '', groupId: '' });
+  const [secondaryIns,            setSecondaryIns]            = useState({ carrier: '', memberId: '', groupId: '' });
+  const [medicalConditions,       setMedicalConditions]       = useState('');
+  const [psychiatricHx,           setPsychiatricHx]           = useState('');
+  const [hospitalizations,        setHospitalizations]        = useState('');
+  const [requiresMedicalDetox,    setRequiresMedicalDetox]    = useState(false);
+  const [medicalInstability,      setMedicalInstability]      = useState(false);
+  const [vitals,                  setVitals]                  = useState({ bp: '', hr: '', temp: '', rr: '', spo2: '', weight: '' });
+  const [screeningNotes,          setScreeningNotes]          = useState('');
+  const [screeningOverride,       setScreeningOverride]       = useState('');
+  const [screeningClinicianSig,   setScreeningClinicianSig]   = useState('');
+  const [screeningDone,           setScreeningDone]           = useState(false);
+
+  // ── PHQ-9 state ─────────────────────────────────────────────────────────────
   const [phq9, setPhq9] = useState<(number | null)[]>(Array(9).fill(null));
   const [phq9FxImpair, setPhq9FxImpair] = useState('');
   const [phq9Done, setPhq9Done] = useState(false);
 
-  // DAST-10 state
+  // ── DAST-10 state ────────────────────────────────────────────────────────────
   const [dast, setDast] = useState<(boolean | null)[]>(Array(10).fill(null));
   const [dastDone, setDastDone] = useState(false);
 
-  // MAST state
+  // ── MAST state ───────────────────────────────────────────────────────────────
   const [mast, setMast] = useState<(boolean | null)[]>(Array(25).fill(null));
   const [mastDone, setMastDone] = useState(false);
 
-  // SOGS state
+  // ── SOGS state ───────────────────────────────────────────────────────────────
   const [sogs, setSogs] = useState<(number | null)[]>(Array(SOGS_ITEMS.length).fill(null));
   const [sogsMulti, setSogsMulti] = useState<boolean[][]>(Array(SOGS_ITEMS.length).fill(null).map(() => []));
   const [sogsDone, setSogsDone] = useState(false);
 
-  // SAFE-T state
-  const [safetRiskFactors, setSafetRiskFactors] = useState<boolean[]>(Array(SAFET_RISK_FACTORS.length).fill(false));
-  const [safetProtective, setSafetProtective] = useState<boolean[]>(Array(SAFET_PROTECTIVE.length).fill(false));
-  const [safetIdeation, setSafetIdeation] = useState('');
-  const [safetPlan, setSafetPlan] = useState('');
-  const [safetIntent, setSafetIntent] = useState('');
-  const [safetHistory, setSafetHistory] = useState('');
-  const [safetRisk, setSafetRisk] = useState<SafetRisk | null>(null);
-  const [safetActions, setSafetActions] = useState('');
-  const [safetDone, setSafetDone] = useState(false);
-  const [showContract, setShowContract] = useState(false);
-  const [contractDone, setContractDone] = useState(false);
+  // ── SAFE-T state ─────────────────────────────────────────────────────────────
+  const [safetRiskFactors,  setSafetRiskFactors]  = useState<boolean[]>(Array(SAFET_RISK_FACTORS.length).fill(false));
+  const [safetProtective,   setSafetProtective]   = useState<boolean[]>(Array(SAFET_PROTECTIVE.length).fill(false));
+  const [safetIdeation,     setSafetIdeation]     = useState('');
+  const [safetPlan,         setSafetPlan]         = useState('');
+  const [safetIntent,       setSafetIntent]       = useState('');
+  const [safetHistory,      setSafetHistory]      = useState('');
+  const [safetRisk,         setSafetRisk]         = useState<SafetRisk | null>(null);
+  const [safetActions,      setSafetActions]      = useState('');
+  const [safetDone,         setSafetDone]         = useState(false);
+  const [showContract,      setShowContract]      = useState(false);
+  const [contractDone,      setContractDone]      = useState(false);
 
-  // BAM state
-  const [bamRisk, setBamRisk] = useState<(number | null)[]>(Array(BAM_RISK_ITEMS.length).fill(null));
+  // ── BAM state ────────────────────────────────────────────────────────────────
+  const [bamRisk,       setBamRisk]       = useState<(number | null)[]>(Array(BAM_RISK_ITEMS.length).fill(null));
   const [bamProtective, setBamProtective] = useState<(number | null)[]>(Array(BAM_PROTECTIVE_ITEMS.length).fill(null));
-  const [bamDone, setBamDone] = useState(false);
+  const [bamDone,       setBamDone]       = useState(false);
 
-  // ── Computed scores ──
+  // ── BPS state ────────────────────────────────────────────────────────────────
+  const [bpsBio,            setBpsBio]            = useState({ medHx: '', familyMedHx: '', allergies: '', substanceHxDetail: '' });
+  const [bpsPsych,          setBpsPsych]          = useState({ mentalHealthHx: '', traumaHx: '', copingSkills: '', cognitiveNote: '', prevMhTx: '' });
+  const [bpsSocial,         setBpsSocial]         = useState({ housing: '', employment: '', socialSupport: '', family: '', legal: '', finances: '' });
+  const [bpsSpiritCultural, setBpsSpiritCultural] = useState({ spiritual: '', cultural: '', barriers: '' });
+  const [bpsFormulation,    setBpsFormulation]    = useState({ asamDims: '', diagnosis: '', clinicalImpression: '', txRec: '' });
+  const [bpsClinicianSig,   setBpsClinicianSig]   = useState('');
+  const [bpsDone,           setBpsDone]           = useState(false);
+
+  // ── Computed scores ──────────────────────────────────────────────────────────
   const phq9Score = phq9.reduce<number>((s, v) => s + (v ?? 0), 0);
-  const phq9Risk = getPhq9Risk(phq9Score);
+  const phq9Risk  = getPhq9Risk(phq9Score);
 
   const dastScore = dast.reduce<number>((s, v, i) => {
     if (v === null) return s;
-    const item = DAST10_ITEMS[i];
-    const answered = item.reverse ? !v : v;
-    return s + (answered ? 1 : 0);
+    return s + (DAST10_ITEMS[i].reverse ? (!v ? 1 : 0) : (v ? 1 : 0));
   }, 0);
-  const dastRisk = dast10Risk(dastScore);
+  const dastRisk  = dast10Risk(dastScore);
 
   const mastScore = mast.reduce<number>((s, v, i) => {
     if (v === null || i >= MAST_ITEMS.length) return s;
     const item = MAST_ITEMS[i];
-    const scored = item.reverse ? !v : v;
-    return s + (scored ? item.yesScore : 0);
+    return s + ((item.reverse ? !v : v) ? item.yesScore : 0);
   }, 0);
   const mastRiskVal = mastRisk(mastScore);
 
   const sogsScore = sogs.reduce<number>((s, v, i) => {
     const item = SOGS_ITEMS[i];
-    if (item.multi) {
-      return s + (sogsMulti[i] || []).filter(Boolean).length;
-    }
-    return s + (v !== null ? SOGS_ITEMS[i].scores[v] ?? 0 : 0);
+    if (item.multi) return s + (sogsMulti[i] || []).filter(Boolean).length;
+    return s + (v !== null ? item.scores[v] ?? 0 : 0);
   }, 0);
   const sogsRiskVal = sogsRisk(sogsScore);
 
-  const bamRiskScore = bamRisk.reduce<number>((s, v) => s + (v ?? 0), 0);
+  const bamRiskScore       = bamRisk.reduce<number>((s, v) => s + (v ?? 0), 0);
   const bamProtectiveScore = bamProtective.reduce<number>((s, v) => s + (v ?? 0), 0);
 
   const patient = PATIENTS.find(p => p.id === selectedPatient);
 
-  const tabs: FormTab[] = ['PHQ-9', 'DAST-10', 'MAST', 'SOGS', 'SAFE-T', 'BAM', 'Summary'];
-  const completedForms = [phq9Done, dastDone, mastDone, sogsDone, safetDone, bamDone];
-  const completedCount = completedForms.filter(Boolean).length;
+  // ── Exclusion flags ──────────────────────────────────────────────────────────
+  const exclusions = calcExclusions(
+    programType, medications, ambulatoryStatus, psychosisHistory,
+    currentPsychosisManaged, activeWarrant, pendingCharges,
+    requiresMedicalDetox, medicalInstability,
+  );
+  const fatalExclusions  = exclusions.filter(e => e.fatal);
+  const reviewFlags      = exclusions.filter(e => !e.fatal);
+  const hasExclusions    = fatalExclusions.length > 0;
 
-  // Auto-show contract when SAFE-T marked as high/moderate risk on save
+  const tabs: FormTab[] = ['Screening', 'PHQ-9', 'DAST-10', 'MAST', 'SOGS', 'SAFE-T', 'BAM', 'BPS', 'Summary'];
+  const completedForms  = [screeningDone, phq9Done, dastDone, mastDone, sogsDone, safetDone, bamDone, bpsDone];
+  const completedCount  = completedForms.filter(Boolean).length;
+
   useEffect(() => {
     if (safetDone && (safetRisk === 'High' || safetRisk === 'Moderate') && !contractDone) {
       setShowContract(true);
     }
   }, [safetDone, safetRisk, contractDone]);
 
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  const updateDrug = (idx: number, field: keyof DrugEntry, val: string) =>
+    setDrugsOfChoice(prev => prev.map((d, i) => i === idx ? { ...d, [field]: val } : d));
+
+  const updateMed = (idx: number, field: keyof MedEntry, val: string) =>
+    setMedications(prev => prev.map((m, i) => i === idx ? { ...m, [field]: val } : m));
+
+  const updatePrior = (idx: number, field: keyof PriorTx, val: string) =>
+    setPriorPrograms(prev => prev.map((p, i) => i === idx ? { ...p, [field]: val } : p));
+
+  const medFlag = (m: MedEntry) => {
+    const nm = m.name.toLowerCase();
+    const dose = parseDose(m.dose);
+    if (!isNaN(dose)) {
+      if ((nm.includes('gabapentin') || nm.includes('neurontin')) && dose > 900) return 'gabapentin';
+      if ((nm.includes('methadone') || nm.includes('dolophine')) && dose > 120) return 'methadone';
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-navy">Clinical Intake Assessment Forms</h1>
-          <p className="text-slate text-sm mt-0.5">PHQ-9 · DAST-10 · MAST · SOGS · SAFE-T · BAM — Complete at time of assessment</p>
+          <h1 className="text-2xl font-bold text-navy">Admissions Screening &amp; Clinical Assessments</h1>
+          <p className="text-slate text-sm mt-0.5">Intake Screening · PHQ-9 · DAST-10 · MAST · SOGS · SAFE-T · BAM · Biopsychosocial</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="text-xs text-slate">Forms completed</div>
-            <div className="text-lg font-bold text-navy">{completedCount} <span className="text-slate font-normal text-sm">/ 6</span></div>
+            <div className="text-xs text-slate">Sections complete</div>
+            <div className="text-lg font-bold text-navy">{completedCount} <span className="text-slate font-normal text-sm">/ 8</span></div>
           </div>
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ${completedCount === 6 ? 'bg-green-500' : 'bg-navy/20 text-navy'}`}>
-            {completedCount === 6 ? '✓' : `${completedCount}/6`}
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ${completedCount === 8 ? 'bg-green-500' : 'bg-navy/20 text-navy'}`}>
+            {completedCount === 8 ? '✓' : `${completedCount}/8`}
           </div>
         </div>
       </div>
@@ -568,17 +652,52 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
         )}
       </div>
 
-      {/* SAFE-T high-risk banner */}
+      {/* Fatal exclusion banner */}
+      {hasExclusions && (
+        <div className="bg-red-50 border-2 border-red-500 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-bold text-red-800 text-base">NOT RECOMMENDED FOR ADMISSION — Exclusionary Factor(s) Present</div>
+            <ul className="mt-2 space-y-1">
+              {fatalExclusions.map(e => (
+                <li key={e.key} className="text-sm text-red-700 flex items-start gap-1.5">
+                  <span className="shrink-0 mt-0.5">▸</span>{e.label}
+                </li>
+              ))}
+            </ul>
+            {screeningOverride && (
+              <div className="mt-3 bg-amber-50 border border-amber-300 rounded-lg p-2 text-xs text-amber-800">
+                <strong>Clinical Override Documented:</strong> {screeningOverride}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {!hasExclusions && reviewFlags.length > 0 && (
+        <div className="bg-amber-50 border border-amber-400 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-bold text-amber-800">CLINICAL REVIEW REQUIRED before admission</div>
+            <ul className="mt-1 space-y-1">
+              {reviewFlags.map(e => (
+                <li key={e.key} className="text-sm text-amber-700 flex items-start gap-1.5">
+                  <span className="shrink-0 mt-0.5">▸</span>{e.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* SAFE-T banners */}
       {safetDone && safetRisk === 'High' && !contractDone && (
         <div className="bg-red-50 border border-red-400 rounded-xl p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div className="flex-1">
             <div className="font-bold text-red-800">HIGH SUICIDE RISK — Safety Contract Required</div>
-            <div className="text-sm text-red-700 mt-0.5">SAFE-T assessment indicates HIGH risk. A Contract for Safety must be completed and signed before the assessment is finalized.</div>
+            <div className="text-sm text-red-700 mt-0.5">SAFE-T indicates HIGH risk. Contract for Safety must be completed and signed before finalizing.</div>
           </div>
-          <button onClick={() => setShowContract(true)} className="bg-red-600 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-red-700 shrink-0">
-            Open Contract
-          </button>
+          <button onClick={() => setShowContract(true)} className="bg-red-600 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-red-700 shrink-0">Open Contract</button>
         </div>
       )}
       {safetDone && safetRisk === 'Moderate' && !contractDone && (
@@ -586,17 +705,14 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
           <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="flex-1">
             <div className="font-bold text-amber-800">MODERATE SUICIDE RISK — Safety Contract Recommended</div>
-            <div className="text-sm text-amber-700 mt-0.5">Clinical judgment indicates a Contract for Safety should be completed.</div>
           </div>
-          <button onClick={() => setShowContract(true)} className="bg-amber-600 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-amber-700 shrink-0">
-            Complete Contract
-          </button>
+          <button onClick={() => setShowContract(true)} className="bg-amber-600 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-amber-700 shrink-0">Complete Contract</button>
         </div>
       )}
       {contractDone && (
         <div className="bg-green-50 border border-green-400 rounded-xl p-3 flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-          <span className="text-sm text-green-800 font-medium">Safety Contract completed and signed — filed with {patient ? `${patient.firstName} ${patient.lastName}` : 'patient'}'s chart.</span>
+          <span className="text-sm text-green-800 font-medium">Safety Contract completed and signed — filed with chart.</span>
           <button onClick={() => setShowContract(true)} className="ml-auto text-xs text-green-700 underline">View</button>
         </div>
       )}
@@ -609,13 +725,456 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
             <button key={t} onClick={() => setTab(t)}
               className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
               {isDone && <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />}
+              {t === 'Screening' && hasExclusions && !screeningDone && <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />}
               {t}
             </button>
           );
         })}
       </div>
 
-      {/* ── PHQ-9 ── */}
+      {/* ════════════════════════════════════════════════════════════════════
+          ADMISSIONS SCREENING TAB
+          ════════════════════════════════════════════════════════════════════ */}
+      {tab === 'Screening' && (
+        <div className="space-y-6">
+
+          {/* Program Type */}
+          <div className="card">
+            <SectionHeading title="Program Type" sub="Select the level of care being screened for — affects ambulatory exclusion criteria" />
+            <div className="flex gap-4">
+              {(['Residential', 'Outpatient'] as ProgramType[]).map(pt => (
+                <button key={pt} disabled={readOnly} onClick={() => setProgramType(pt)}
+                  className={`flex-1 rounded-xl border-2 py-3 text-sm font-semibold transition-colors ${programType === pt ? 'border-orange bg-orange/10 text-orange' : 'border-border text-slate hover:border-orange/40'}`}>
+                  {pt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Referral Source */}
+          <div className="card">
+            <SectionHeading title="Referral Source &amp; Prior Treatment History" />
+            <div className="mb-4">
+              <FieldLabel>Where is the client coming from?</FieldLabel>
+              <div className="flex flex-wrap gap-2">
+                {(['Treatment Program', 'Home / Community', 'Street / Unsheltered', 'Incarceration / Corrections', 'Emergency Department', 'Detox'] as ReferralSource[]).map(s => (
+                  <button key={s} disabled={readOnly} onClick={() => setReferralSource(s)}
+                    className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${referralSource === s ? 'border-orange bg-orange text-white font-semibold' : 'border-border text-slate hover:border-orange/50'}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {(referralSource === 'Treatment Program' || referralSource === 'Detox') && (
+              <div className="mb-4">
+                <FieldLabel>Referring facility name</FieldLabel>
+                <input value={referralFacility} onChange={e => setReferralFacility(e.target.value)} disabled={readOnly}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm max-w-sm"
+                  placeholder="e.g. Sheppard Pratt, Ashley Addiction Treatment..." />
+              </div>
+            )}
+
+            <FieldLabel>Last three treatment programs / levels of care (most recent first)</FieldLabel>
+            <div className="space-y-3">
+              {priorPrograms.map((p, i) => (
+                <div key={i} className="bg-gray-50 rounded-xl p-4 grid grid-cols-3 gap-3">
+                  <div className="col-span-3 text-xs font-bold text-navy uppercase mb-1">
+                    {i === 0 ? 'Most Recent' : i === 1 ? '2nd Most Recent' : '3rd Most Recent'}
+                  </div>
+                  <div>
+                    <FieldLabel>Facility Name</FieldLabel>
+                    <input value={p.facility} onChange={e => updatePrior(i, 'facility', e.target.value)} disabled={readOnly}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Facility name" />
+                  </div>
+                  <div>
+                    <FieldLabel>Level of Care</FieldLabel>
+                    <select value={p.loc} onChange={e => updatePrior(i, 'loc', e.target.value)} disabled={readOnly}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                      <option value="">Select LOC...</option>
+                      {LOC_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel>Approximate Dates</FieldLabel>
+                    <input value={p.dates} onChange={e => updatePrior(i, 'dates', e.target.value)} disabled={readOnly}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Jan–Mar 2024" />
+                  </div>
+                  <div className="col-span-3">
+                    <FieldLabel>Reason for Discharge / Transition</FieldLabel>
+                    <input value={p.reason} onChange={e => updatePrior(i, 'reason', e.target.value)} disabled={readOnly}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Completed, AMA, relapse, medical, other..." />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Substance Use */}
+          <div className="card">
+            <SectionHeading title="Substance Use — Drugs of Choice" sub="Complete primary (required), secondary and tertiary as applicable" />
+            {drugsOfChoice.map((d, i) => (
+              <div key={i} className={`mb-4 rounded-xl p-4 border ${i === 0 ? 'border-orange/30 bg-orange/5' : 'border-border bg-gray-50'}`}>
+                <div className="text-xs font-bold text-navy uppercase mb-3">
+                  {i === 0 ? 'Primary Drug of Choice' : i === 1 ? 'Secondary Drug of Choice' : 'Tertiary Drug of Choice'}
+                  {i > 0 && <span className="ml-2 text-slate font-normal normal-case">(optional)</span>}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <FieldLabel>Substance</FieldLabel>
+                    <select value={d.substance} onChange={e => updateDrug(i, 'substance', e.target.value)} disabled={readOnly}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                      <option value="">Select substance...</option>
+                      {SUBSTANCES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel>Route of Administration</FieldLabel>
+                    <select value={d.route} onChange={e => updateDrug(i, 'route', e.target.value)} disabled={readOnly}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                      <option value="">Select route...</option>
+                      {ROUTES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel>Frequency of Use</FieldLabel>
+                    <select value={d.frequency} onChange={e => updateDrug(i, 'frequency', e.target.value)} disabled={readOnly}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                      <option value="">Select frequency...</option>
+                      {FREQ_OPTS.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel>Date / Approximate Date of Last Use</FieldLabel>
+                    <input type="text" value={d.lastUse} onChange={e => updateDrug(i, 'lastUse', e.target.value)} disabled={readOnly}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 07/28/2026 or Yesterday" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Medications */}
+          <div className="card">
+            <SectionHeading title="Current Medications"
+              sub="Policy limits: Gabapentin ≤ 900 mg/day · Methadone ≤ 120 mg/day. Exceeding either triggers automatic non-admission flag." />
+            <div className="space-y-3">
+              {medications.map((m, i) => {
+                const flag = medFlag(m);
+                return (
+                  <div key={i} className={`rounded-xl p-4 border ${flag ? 'border-red-400 bg-red-50' : 'border-border bg-gray-50'}`}>
+                    {flag && (
+                      <div className="flex items-center gap-2 mb-2 text-red-700 text-xs font-bold">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        {flag === 'gabapentin' ? `Gabapentin ${m.dose}mg exceeds 900 mg/day policy maximum` : `Methadone ${m.dose}mg exceeds 120 mg/day policy maximum`}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-5 gap-2 items-end">
+                      <div className="col-span-2">
+                        <FieldLabel>Medication Name</FieldLabel>
+                        <input value={m.name} onChange={e => updateMed(i, 'name', e.target.value)} disabled={readOnly}
+                          className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Gabapentin, Suboxone..." />
+                      </div>
+                      <div>
+                        <FieldLabel>Dose</FieldLabel>
+                        <div className="flex gap-1">
+                          <input value={m.dose} onChange={e => updateMed(i, 'dose', e.target.value)} disabled={readOnly}
+                            className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="300" />
+                          <select value={m.unit} onChange={e => updateMed(i, 'unit', e.target.value)} disabled={readOnly}
+                            className="border border-border rounded-lg px-2 py-2 text-sm">
+                            {['mg', 'mcg', 'mL', 'units'].map(u => <option key={u}>{u}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <FieldLabel>Frequency</FieldLabel>
+                        <input value={m.frequency} onChange={e => updateMed(i, 'frequency', e.target.value)} disabled={readOnly}
+                          className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="TID, Daily..." />
+                      </div>
+                      <div className="flex items-end">
+                        {medications.length > 1 && !readOnly && (
+                          <button onClick={() => setMedications(prev => prev.filter((_, j) => j !== i))}
+                            className="p-2 text-slate hover:text-red-600 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="col-span-4">
+                        <FieldLabel>Prescribing Provider / Clinic</FieldLabel>
+                        <input value={m.prescriber} onChange={e => updateMed(i, 'prescriber', e.target.value)} disabled={readOnly}
+                          className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Dr. Smith / Johns Hopkins Psychiatry" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {!readOnly && (
+              <button onClick={() => setMedications(prev => [...prev, emptyMed()])}
+                className="mt-3 flex items-center gap-2 text-sm text-orange hover:text-orange/80 font-medium">
+                <Plus className="w-4 h-4" /> Add Medication
+              </button>
+            )}
+          </div>
+
+          {/* Mental Health & Medical */}
+          <div className="card space-y-5">
+            <SectionHeading title="Mental Health &amp; Medical History" />
+
+            <div>
+              <FieldLabel>History of Psychosis</FieldLabel>
+              <div className="flex gap-3 mt-1">
+                {([['none', 'None / No history'], ['past', 'Past history (resolved / managed)'], ['current', 'Current / Active']] as const).map(([v, label]) => (
+                  <button key={v} disabled={readOnly} onClick={() => setPsychosisHistory(v)}
+                    className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${psychosisHistory === v ? (v === 'current' ? 'border-red-500 bg-red-50 text-red-700' : v === 'past' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-green-500 bg-green-50 text-green-700') : 'border-border text-slate hover:border-navy/30'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {psychosisHistory === 'current' && (
+                <div className="mt-3 flex items-center gap-3 pl-2">
+                  <input type="checkbox" id="psychManaged" checked={currentPsychosisManaged}
+                    onChange={e => setCurrentPsychosisManaged(e.target.checked)} disabled={readOnly} className="accent-navy" />
+                  <label htmlFor="psychManaged" className="text-sm text-navy cursor-pointer">
+                    Currently managed with medication / ongoing psychiatric treatment
+                  </label>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <FieldLabel>Ambulatory Status</FieldLabel>
+              <div className="flex gap-3 mt-1">
+                {([['ambulatory', 'Fully Ambulatory'], ['assistive', 'Uses Assistive Device (cane, walker, wheelchair part-time)'], ['non-ambulatory', 'Non-Ambulatory / Full Wheelchair']] as const).map(([v, label]) => (
+                  <button key={v} disabled={readOnly} onClick={() => setAmbulatoryStatus(v)}
+                    className={`flex-1 rounded-lg border py-2 px-2 text-sm font-medium text-center transition-colors ${ambulatoryStatus === v ? 'border-orange bg-orange/10 text-orange' : 'border-border text-slate hover:border-orange/40'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {ambulatoryStatus === 'non-ambulatory' && (
+                <div className={`mt-2 text-xs font-semibold px-3 py-2 rounded-lg ${programType === 'Outpatient' ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-amber-100 text-amber-700 border border-amber-300'}`}>
+                  {programType === 'Outpatient'
+                    ? 'Non-ambulatory is an exclusionary factor for Outpatient level of care. Consider residential placement.'
+                    : 'Non-ambulatory for Residential: requires nursing assessment and ADA facility review — not automatically exclusionary.'}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <FieldLabel>Medical Conditions / Diagnoses</FieldLabel>
+                <textarea value={medicalConditions} onChange={e => setMedicalConditions(e.target.value)} disabled={readOnly}
+                  rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                  placeholder="List relevant medical conditions, chronic illness, disabilities..." />
+              </div>
+              <div>
+                <FieldLabel>Psychiatric History</FieldLabel>
+                <textarea value={psychiatricHx} onChange={e => setPsychiatricHx(e.target.value)} disabled={readOnly}
+                  rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                  placeholder="Diagnoses, prior psychiatric treatment, hospitalizations..." />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <FieldLabel>Psychiatric Hospitalizations (number / dates)</FieldLabel>
+                <input value={hospitalizations} onChange={e => setHospitalizations(e.target.value)} disabled={readOnly}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="e.g. 2× in 2023, most recent Mar 2024" />
+              </div>
+            </div>
+
+            <div className="flex gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={requiresMedicalDetox} onChange={e => setRequiresMedicalDetox(e.target.checked)} disabled={readOnly} className="accent-navy" />
+                <span className="text-sm text-navy">Client requires medical detoxification before admission</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={medicalInstability} onChange={e => setMedicalInstability(e.target.checked)} disabled={readOnly} className="accent-navy" />
+                <span className="text-sm text-navy">Medical instability requiring physician clearance</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Vitals */}
+          <div className="card">
+            <SectionHeading title="Intake Vitals" sub="Document at time of screening" />
+            <div className="grid grid-cols-3 gap-3">
+              {([
+                ['bp', 'Blood Pressure', 'e.g. 118/76'],
+                ['hr', 'Heart Rate (bpm)', 'e.g. 74'],
+                ['temp', 'Temperature (°F)', 'e.g. 98.6'],
+                ['rr', 'Respiratory Rate', 'e.g. 16'],
+                ['spo2', 'SpO₂ (%)', 'e.g. 98'],
+                ['weight', 'Weight (lbs)', 'e.g. 165'],
+              ] as const).map(([k, label, ph]) => (
+                <div key={k}>
+                  <FieldLabel>{label}</FieldLabel>
+                  <input value={vitals[k]} onChange={e => setVitals(prev => ({ ...prev, [k]: e.target.value }))} disabled={readOnly}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder={ph} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Criminal Justice */}
+          <div className="card">
+            <SectionHeading title="Criminal Justice Involvement" />
+            <div className="mb-4">
+              <FieldLabel>Is the client currently involved with the criminal justice system?</FieldLabel>
+              <div className="flex gap-3 mt-1">
+                {(['Yes', 'No'] as const).map(v => (
+                  <button key={v} disabled={readOnly} onClick={() => setCjInvolved(v === 'Yes')}
+                    className={`flex-1 rounded-lg border py-2 text-sm font-semibold transition-colors ${cjInvolved === (v === 'Yes') ? 'border-orange bg-orange text-white' : 'border-border text-slate hover:border-orange/50'}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {cjInvolved === true && (
+              <div className="space-y-4 pl-2 border-l-2 border-orange/30 ml-1">
+                <div>
+                  <FieldLabel>Type of Supervision</FieldLabel>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {CJ_TYPES.map(t => (
+                      <button key={t} disabled={readOnly} onClick={() => setCjType(t)}
+                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${cjType === t ? 'border-orange bg-orange text-white font-semibold' : 'border-border text-slate hover:border-orange/50'}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={pendingCharges} onChange={e => setPendingCharges(e.target.checked)} disabled={readOnly} className="accent-navy" />
+                    <span className="text-sm text-navy">Pending criminal charges</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={activeWarrant} onChange={e => setActiveWarrant(e.target.checked)} disabled={readOnly}
+                      className="accent-red-600" />
+                    <span className="text-sm font-semibold text-red-700">Active warrant outstanding</span>
+                  </label>
+                </div>
+                {activeWarrant && (
+                  <div className="bg-red-100 border border-red-400 rounded-lg p-3 text-sm font-bold text-red-800 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    EXCLUSIONARY — Active warrant is a non-admission criterion. Client must resolve warrant before admission.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Insurance */}
+          <div className="card">
+            <SectionHeading title="Insurance &amp; Benefits" />
+            <div className="mb-5">
+              <div className="text-xs font-bold text-navy uppercase mb-3">Primary Insurance</div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <FieldLabel>Carrier / Plan</FieldLabel>
+                  <select value={primaryIns.carrier} onChange={e => setPrimaryIns(prev => ({ ...prev, carrier: e.target.value }))} disabled={readOnly}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select carrier...</option>
+                    {INSURERS.map(i => <option key={i} value={i}>{i}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel>Member ID</FieldLabel>
+                  <input value={primaryIns.memberId} onChange={e => setPrimaryIns(prev => ({ ...prev, memberId: e.target.value }))} disabled={readOnly}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Member ID" />
+                </div>
+                <div>
+                  <FieldLabel>Group ID</FieldLabel>
+                  <input value={primaryIns.groupId} onChange={e => setPrimaryIns(prev => ({ ...prev, groupId: e.target.value }))} disabled={readOnly}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Group ID" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-bold text-navy uppercase mb-3">Secondary Insurance <span className="font-normal text-slate normal-case">(optional)</span></div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <FieldLabel>Carrier / Plan</FieldLabel>
+                  <select value={secondaryIns.carrier} onChange={e => setSecondaryIns(prev => ({ ...prev, carrier: e.target.value }))} disabled={readOnly}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select carrier...</option>
+                    {INSURERS.map(i => <option key={i} value={i}>{i}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel>Member ID</FieldLabel>
+                  <input value={secondaryIns.memberId} onChange={e => setSecondaryIns(prev => ({ ...prev, memberId: e.target.value }))} disabled={readOnly}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Member ID" />
+                </div>
+                <div>
+                  <FieldLabel>Group ID</FieldLabel>
+                  <input value={secondaryIns.groupId} onChange={e => setSecondaryIns(prev => ({ ...prev, groupId: e.target.value }))} disabled={readOnly}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Group ID" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Exclusionary Summary & Clinician Sign-off */}
+          <div className={`card border-2 ${hasExclusions ? 'border-red-400' : reviewFlags.length > 0 ? 'border-amber-400' : 'border-green-400'}`}>
+            <SectionHeading title="Screening Recommendation" />
+            {hasExclusions ? (
+              <div className="mb-4 text-sm font-bold text-red-700 bg-red-50 rounded-lg px-4 py-3">
+                ⛔ NOT RECOMMENDED FOR ADMISSION — {fatalExclusions.length} exclusionary factor{fatalExclusions.length > 1 ? 's' : ''} identified
+              </div>
+            ) : reviewFlags.length > 0 ? (
+              <div className="mb-4 text-sm font-bold text-amber-700 bg-amber-50 rounded-lg px-4 py-3">
+                ⚠ REQUIRES CLINICAL REVIEW — {reviewFlags.length} flag{reviewFlags.length > 1 ? 's' : ''} require follow-up before admission
+              </div>
+            ) : (
+              <div className="mb-4 text-sm font-bold text-green-700 bg-green-50 rounded-lg px-4 py-3">
+                ✓ ELIGIBLE FOR ADMISSION — No exclusionary factors identified
+              </div>
+            )}
+
+            {hasExclusions && (
+              <div className="mb-4">
+                <FieldLabel>Clinical Override Rationale (required if admitting despite exclusion)</FieldLabel>
+                <textarea value={screeningOverride} onChange={e => setScreeningOverride(e.target.value)} disabled={readOnly}
+                  rows={3} className="w-full border border-red-300 rounded-lg px-3 py-2 text-sm resize-none"
+                  placeholder="Document clinical justification for admission over identified exclusionary factors, medical director sign-off, and risk mitigation plan..." />
+              </div>
+            )}
+
+            <div>
+              <FieldLabel>Screening Clinician Notes</FieldLabel>
+              <textarea value={screeningNotes} onChange={e => setScreeningNotes(e.target.value)} disabled={readOnly}
+                rows={4} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                placeholder="Clinical impressions, collateral information, additional screening observations, LOC recommendation..." />
+            </div>
+
+            <div className="mt-5">
+              <FieldLabel>Clinician Signature</FieldLabel>
+              {!readOnly ? <SignatureCanvas label="Screening Clinician" onSigned={setScreeningClinicianSig} />
+                : <div className="text-xs text-slate italic">Signature locked in read-only mode</div>}
+            </div>
+
+            {!readOnly && (
+              <div className="mt-4">
+                <LockedButton
+                  locked={!screeningClinicianSig || (hasExclusions && !screeningOverride.trim())}
+                  onClick={() => { setScreeningDone(true); saveMsg('Admissions screening saved'); }}
+                  className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2">
+                  <Save className="w-4 h-4" />
+                  {screeningDone ? 'Screening Saved ✓' : hasExclusions ? 'Save with Override' : 'Save Screening'}
+                </LockedButton>
+                {hasExclusions && !screeningOverride.trim() && (
+                  <p className="text-xs text-red-600 mt-1">Override rationale required before saving with exclusionary factors.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════
+          PHQ-9
+          ════════════════════════════════════════════════════════════════════ */}
       {tab === 'PHQ-9' && (
         <div className="space-y-4">
           <div className="card">
@@ -627,11 +1186,9 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                   <div className="text-sm text-navy mb-3"><span className="font-bold text-orange mr-2">{i + 1}.</span>{item}</div>
                   <div className="grid grid-cols-4 gap-2">
                     {PHQ9_OPTS.map((opt, j) => (
-                      <button key={j} onClick={() => { if (!readOnly) { const n = [...phq9]; n[i] = j; setPhq9(n); } }}
-                        disabled={readOnly}
+                      <button key={j} onClick={() => { if (!readOnly) { const n = [...phq9]; n[i] = j; setPhq9(n); } }} disabled={readOnly}
                         className={`rounded-lg border text-xs py-2 px-1 text-center transition-colors ${phq9[i] === j ? 'border-orange bg-orange text-white font-semibold' : 'border-border hover:border-orange/50 text-slate'}`}>
-                        <div className="font-bold text-base">{j}</div>
-                        <div className="mt-0.5">{opt}</div>
+                        <div className="font-bold text-base">{j}</div><div className="mt-0.5">{opt}</div>
                       </button>
                     ))}
                   </div>
@@ -648,8 +1205,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
               <p className="text-xs text-slate mb-1">If you checked off any problems, how difficult have these problems made it for you to do your work, take care of things at home, or get along with other people?</p>
               <div className="flex gap-2 flex-wrap">
                 {['Not difficult at all', 'Somewhat difficult', 'Very difficult', 'Extremely difficult'].map(opt => (
-                  <button key={opt} onClick={() => { if (!readOnly) setPhq9FxImpair(opt); }}
-                    disabled={readOnly}
+                  <button key={opt} onClick={() => { if (!readOnly) setPhq9FxImpair(opt); }} disabled={readOnly}
                     className={`rounded-lg border text-xs px-3 py-1.5 transition-colors ${phq9FxImpair === opt ? 'border-orange bg-orange text-white font-semibold' : 'border-border text-slate hover:border-orange/50'}`}>
                     {opt}
                   </button>
@@ -657,15 +1213,11 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
               </div>
             </div>
           </div>
-
           {phq9.filter(v => v !== null).length === 9 && (
             <div className="space-y-3">
               <ScoreBadge label="PHQ-9" score={phq9Score} maxScore={27} risk={phq9Risk} />
-              <div className="text-xs text-slate">
-                <strong>Scoring:</strong> 0–4 Minimal · 5–9 Mild · 10–14 Moderate · 15–19 Moderately Severe · 20–27 Severe
-              </div>
-              <LockedButton locked={readOnly || phq9Done}
-                onClick={() => { setPhq9Done(true); saveMsg('PHQ-9 saved'); }}
+              <div className="text-xs text-slate"><strong>Scoring:</strong> 0–4 Minimal · 5–9 Mild · 10–14 Moderate · 15–19 Moderately Severe · 20–27 Severe</div>
+              <LockedButton locked={readOnly || phq9Done} onClick={() => { setPhq9Done(true); saveMsg('PHQ-9 saved'); }}
                 className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2">
                 <Save className="w-4 h-4" /> {phq9Done ? 'PHQ-9 Saved ✓' : 'Save PHQ-9'}
               </LockedButton>
@@ -674,7 +1226,9 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
         </div>
       )}
 
-      {/* ── DAST-10 ── */}
+      {/* ════════════════════════════════════════════════════════════════════
+          DAST-10
+          ════════════════════════════════════════════════════════════════════ */}
       {tab === 'DAST-10' && (
         <div className="space-y-4">
           <div className="card">
@@ -686,8 +1240,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                   <div className="text-sm text-navy mb-3"><span className="font-bold text-orange mr-2">{i + 1}.</span>{item.q}</div>
                   <div className="flex gap-3">
                     {['Yes', 'No'].map((opt, j) => (
-                      <button key={opt} onClick={() => { if (!readOnly) { const n = [...dast]; n[i] = j === 0; setDast(n); } }}
-                        disabled={readOnly}
+                      <button key={opt} onClick={() => { if (!readOnly) { const n = [...dast]; n[i] = j === 0; setDast(n); } }} disabled={readOnly}
                         className={`flex-1 rounded-lg border text-sm py-2 font-semibold transition-colors ${dast[i] === (j === 0) ? 'border-orange bg-orange text-white' : 'border-border text-slate hover:border-orange/50'}`}>
                         {opt}
                       </button>
@@ -700,9 +1253,8 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
           {dast.filter(v => v !== null).length === 10 && (
             <div className="space-y-3">
               <ScoreBadge label="DAST-10" score={dastScore} maxScore={10} risk={dastRisk} />
-              <div className="text-xs text-slate"><strong>Clinical action:</strong> {dastRisk.action}</div>
-              <LockedButton locked={readOnly || dastDone}
-                onClick={() => { setDastDone(true); saveMsg('DAST-10 saved'); }}
+              <div className="text-xs text-slate"><strong>Action:</strong> {dastRisk.action}</div>
+              <LockedButton locked={readOnly || dastDone} onClick={() => { setDastDone(true); saveMsg('DAST-10 saved'); }}
                 className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2">
                 <Save className="w-4 h-4" /> {dastDone ? 'DAST-10 Saved ✓' : 'Save DAST-10'}
               </LockedButton>
@@ -711,36 +1263,35 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
         </div>
       )}
 
-      {/* ── MAST ── */}
+      {/* ════════════════════════════════════════════════════════════════════
+          MAST
+          ════════════════════════════════════════════════════════════════════ */}
       {tab === 'MAST' && (
         <div className="space-y-4">
           <div className="card">
-            <h2 className="text-base font-bold text-navy mb-1">Michigan Alcoholism Screening Test (MAST)</h2>
-            <p className="text-xs text-slate mb-4">Please answer <strong>Yes</strong> or <strong>No</strong> for each question. Consider your entire life when answering.</p>
+            <h2 className="text-base font-bold text-navy mb-1">Michigan Alcohol Screening Test (MAST)</h2>
+            <p className="text-xs text-slate mb-4">Answer <strong>Yes</strong> or <strong>No</strong> to each question.</p>
             <div className="space-y-3">
               {MAST_ITEMS.map((item, i) => (
                 <div key={i} className={`rounded-xl border p-4 transition-colors ${mast[i] !== null ? 'border-orange/30 bg-orange/5' : 'border-border'}`}>
                   <div className="text-sm text-navy mb-3"><span className="font-bold text-orange mr-2">{i + 1}.</span>{item.q}</div>
                   <div className="flex gap-3">
                     {['Yes', 'No'].map((opt, j) => (
-                      <button key={opt} onClick={() => { if (!readOnly) { const n = [...mast]; n[i] = j === 0; setMast(n); } }}
-                        disabled={readOnly}
+                      <button key={opt} onClick={() => { if (!readOnly) { const n = [...mast]; n[i] = j === 0; setMast(n); } }} disabled={readOnly}
                         className={`flex-1 rounded-lg border text-sm py-2 font-semibold transition-colors ${mast[i] === (j === 0) ? 'border-orange bg-orange text-white' : 'border-border text-slate hover:border-orange/50'}`}>
                         {opt}
                       </button>
                     ))}
                   </div>
-                  {item.yesScore > 0 && <div className="mt-1 text-[10px] text-slate text-right">Weight: {item.yesScore}</div>}
                 </div>
               ))}
             </div>
           </div>
-          {mast.filter(v => v !== null).length === MAST_ITEMS.length && (
+          {mast.filter(v => v !== null).length === 25 && (
             <div className="space-y-3">
               <ScoreBadge label="MAST" score={mastScore} maxScore={53} risk={mastRiskVal} />
-              <div className="text-xs text-slate"><strong>Scoring:</strong> 0–4 No problem · 5–6 Suggests alcohol dependence · ≥7 Probable alcohol dependence</div>
-              <LockedButton locked={readOnly || mastDone}
-                onClick={() => { setMastDone(true); saveMsg('MAST saved'); }}
+              <div className="text-xs text-slate"><strong>Scoring:</strong> 0–4 No problem · 5–6 Suggests dependence · ≥7 Probable dependence</div>
+              <LockedButton locked={readOnly || mastDone} onClick={() => { setMastDone(true); saveMsg('MAST saved'); }}
                 className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2">
                 <Save className="w-4 h-4" /> {mastDone ? 'MAST Saved ✓' : 'Save MAST'}
               </LockedButton>
@@ -749,31 +1300,32 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
         </div>
       )}
 
-      {/* ── SOGS ── */}
+      {/* ════════════════════════════════════════════════════════════════════
+          SOGS
+          ════════════════════════════════════════════════════════════════════ */}
       {tab === 'SOGS' && (
         <div className="space-y-4">
           <div className="card">
             <h2 className="text-base font-bold text-navy mb-1">South Oaks Gambling Screen (SOGS)</h2>
-            <p className="text-xs text-slate mb-4">These questions deal with your gambling habits. Answer as honestly as possible.</p>
-            <div className="space-y-4">
+            <p className="text-xs text-slate mb-4">Screens for problem gambling behaviors.</p>
+            <div className="space-y-3">
               {SOGS_ITEMS.map((item, i) => (
-                <div key={i} className={`rounded-xl border p-4 ${sogs[i] !== null || (item.multi && sogsMulti[i]?.some(Boolean)) ? 'border-orange/30 bg-orange/5' : 'border-border'}`}>
+                <div key={i} className={`rounded-xl border p-4 transition-colors ${(item.multi ? sogsMulti[i]?.some(Boolean) : sogs[i] !== null) ? 'border-orange/30 bg-orange/5' : 'border-border'}`}>
                   <div className="text-sm text-navy mb-3"><span className="font-bold text-orange mr-2">{i + 1}.</span>{item.q}</div>
                   {item.multi ? (
                     <div className="space-y-1">
                       {item.opts.map((opt, j) => (
                         <label key={j} className="flex items-center gap-2 cursor-pointer">
-                          <input type="checkbox"
-                            checked={sogsMulti[i]?.[j] ?? false}
+                          <input type="checkbox" checked={!!sogsMulti[i]?.[j]}
                             onChange={() => {
                               if (readOnly) return;
-                              const nArr = [...sogsMulti];
-                              const row = [...(nArr[i] ?? [])];
-                              row[j] = !row[j];
-                              nArr[i] = row;
-                              setSogsMulti(nArr);
+                              const n = sogsMulti.map((r, ri) => ri === i ? r.map((v, vi) => vi === j ? !v : v) : r);
+                              // ensure array length
+                              while (n[i].length <= j) n[i].push(false);
+                              n[i][j] = !sogsMulti[i]?.[j];
+                              setSogsMulti(n);
                             }}
-                            className="accent-orange" />
+                            disabled={readOnly} className="accent-orange" />
                           <span className="text-sm text-navy">{opt}</span>
                         </label>
                       ))}
@@ -781,9 +1333,8 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {item.opts.map((opt, j) => (
-                        <button key={j} onClick={() => { if (!readOnly) { const n = [...sogs]; n[i] = j; setSogs(n); } }}
-                          disabled={readOnly}
-                          className={`rounded-lg border text-xs px-3 py-2 transition-colors ${sogs[i] === j ? 'border-orange bg-orange text-white font-semibold' : 'border-border text-slate hover:border-orange/50'}`}>
+                        <button key={j} onClick={() => { if (!readOnly) { const n = [...sogs]; n[i] = j; setSogs(n); } }} disabled={readOnly}
+                          className={`rounded-lg border text-sm px-3 py-1.5 transition-colors ${sogs[i] === j ? 'border-orange bg-orange text-white font-semibold' : 'border-border text-slate hover:border-orange/50'}`}>
                           {opt}
                         </button>
                       ))}
@@ -795,9 +1346,7 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
           </div>
           <div className="space-y-3">
             <ScoreBadge label="SOGS" score={sogsScore} maxScore={23} risk={sogsRiskVal} />
-            <div className="text-xs text-slate"><strong>Scoring:</strong> 0 No problem · 1 Non-problem gambler · 2–4 Some problem · ≥5 Probable pathological gambler</div>
-            <LockedButton locked={readOnly || sogsDone}
-              onClick={() => { setSogsDone(true); saveMsg('SOGS saved'); }}
+            <LockedButton locked={readOnly || sogsDone} onClick={() => { setSogsDone(true); saveMsg('SOGS saved'); }}
               className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2">
               <Save className="w-4 h-4" /> {sogsDone ? 'SOGS Saved ✓' : 'Save SOGS'}
             </LockedButton>
@@ -805,296 +1354,194 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
         </div>
       )}
 
-      {/* ── SAFE-T ── */}
-      {tab === 'SAFE-T' && (() => {
-        const riskCount      = safetRiskFactors.filter(Boolean).length;
-        const protCount      = safetProtective.filter(Boolean).length;
-        const netIndex       = calcSafetNetIndex(safetRiskFactors, safetProtective);
-        const suggestion     = calcSafetRisk(safetRiskFactors, safetProtective);
-        const suggestedLevel = suggestion.level;
-        const isOverride     = safetRisk !== null && safetRisk !== suggestedLevel;
-
-        const netColor = netIndex >= 8 ? 'text-red-700 bg-red-50 border-red-300'
-                       : netIndex >= 4 ? 'text-amber-700 bg-amber-50 border-amber-300'
-                       : netIndex >= 0 ? 'text-yellow-700 bg-yellow-50 border-yellow-300'
-                       : 'text-green-700 bg-green-50 border-green-300';
-
-        return (
+      {/* ════════════════════════════════════════════════════════════════════
+          SAFE-T  (unchanged from prior implementation)
+          ════════════════════════════════════════════════════════════════════ */}
+      {tab === 'SAFE-T' && (
         <div className="space-y-4">
+          {/* Auto-score strip */}
+          {(safetRiskFactors.some(Boolean) || safetProtective.some(Boolean)) && (() => {
+            const autoResult  = calcSafetRisk(safetRiskFactors, safetProtective);
+            const netIndex    = calcSafetNetIndex(safetRiskFactors, safetProtective);
+            const rfCount     = safetRiskFactors.filter(Boolean).length;
+            const pfCount     = safetProtective.filter(Boolean).length;
+            const riskCol     = autoResult.level === 'High' ? 'text-red-700 bg-red-50 border-red-300' : autoResult.level === 'Moderate' ? 'text-amber-700 bg-amber-50 border-amber-300' : 'text-green-700 bg-green-50 border-green-300';
+            return (
+              <div className="grid grid-cols-4 gap-3">
+                {[
+                  { label: 'Risk Factors', value: rfCount, sub: 'present', col: rfCount > 0 ? 'text-red-700' : 'text-green-700' },
+                  { label: 'Protective', value: pfCount, sub: 'present', col: pfCount > 0 ? 'text-green-700' : 'text-slate' },
+                  { label: 'Net Index', value: netIndex, sub: 'risk − protective', col: netIndex > 0 ? 'text-red-700' : netIndex < 0 ? 'text-green-700' : 'text-slate' },
+                  { label: 'Algorithm', value: autoResult.level, sub: 'suggested level', col: riskCol },
+                ].map(item => (
+                  <div key={item.label} className={`rounded-xl border px-4 py-3 ${typeof item.col === 'string' && item.col.includes('bg-') ? item.col : 'border-border'}`}>
+                    <div className="text-xs text-slate uppercase font-semibold">{item.label}</div>
+                    <div className={`text-xl font-bold mt-0.5 ${typeof item.col === 'string' && !item.col.includes('bg-') ? item.col : ''}`}>{item.value}</div>
+                    <div className="text-xs text-slate">{item.sub}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
           <div className="card">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-navy">SAFE-T: Suicide Assessment Five-Step Evaluation &amp; Triage</h2>
-              {safetRisk && (
-                <span className={`text-xs font-bold px-3 py-1 rounded-full ${safetRisk === 'High' ? 'bg-red-100 text-red-700' : safetRisk === 'Moderate' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                  {safetRisk} Risk{isOverride ? ' (Override)' : ''}
-                </span>
+            <h2 className="text-base font-bold text-navy mb-1">SAFE-T — Suicide Assessment Five-Step Evaluation and Triage</h2>
+            <p className="text-xs text-slate mb-4">Complete all five steps. Critical factors are highlighted in red.</p>
+
+            {/* Step 1: Risk Factors */}
+            <div className="mb-6">
+              <div className="text-xs font-bold text-navy uppercase mb-3 border-b border-border pb-1">Step 1 — Risk Factors</div>
+              <div className="grid grid-cols-2 gap-2">
+                {SAFET_RISK_FACTORS.map((rf, i) => (
+                  <label key={i} className={`flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer transition-colors ${safetRiskFactors[i] ? (rf.critical ? 'border-red-400 bg-red-50' : 'border-orange/30 bg-orange/5') : 'border-border hover:border-navy/20'}`}>
+                    <input type="checkbox" checked={safetRiskFactors[i]} disabled={readOnly}
+                      onChange={() => { const n = [...safetRiskFactors]; n[i] = !n[i]; setSafetRiskFactors(n); }}
+                      className={rf.critical ? 'accent-red-600' : 'accent-navy'} />
+                    <span className={`text-sm ${rf.critical ? 'font-semibold text-red-800' : 'text-navy'}`}>
+                      {rf.critical && <span className="text-red-600 mr-1">⚑</span>}{rf.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Step 2: Protective Factors */}
+            <div className="mb-6">
+              <div className="text-xs font-bold text-navy uppercase mb-3 border-b border-border pb-1">Step 2 — Protective Factors</div>
+              <div className="grid grid-cols-2 gap-2">
+                {SAFET_PROTECTIVE.map((pf, i) => (
+                  <label key={i} className={`flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer transition-colors ${safetProtective[i] ? 'border-green-400 bg-green-50' : 'border-border hover:border-navy/20'}`}>
+                    <input type="checkbox" checked={safetProtective[i]} disabled={readOnly}
+                      onChange={() => { const n = [...safetProtective]; n[i] = !n[i]; setSafetProtective(n); }}
+                      className="accent-green-600" />
+                    <span className="text-sm text-navy">{pf.label} <span className="text-xs text-slate">(wt: {pf.weight})</span></span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Steps 3–4 */}
+            {[
+              { step: 3, label: 'Suicidal Ideation — describe nature, frequency, intensity, duration', val: safetIdeation, set: setSafetIdeation, ph: 'Describe current suicidal ideation in detail...' },
+              { step: 3, label: 'Suicidal Plan — specificity, lethality, availability of means', val: safetPlan, set: setSafetPlan, ph: 'Describe any plan, access to means...' },
+              { step: 3, label: 'Suicidal Intent — extent of expectation to act on thoughts', val: safetIntent, set: setSafetIntent, ph: 'Describe level of intent...' },
+              { step: 3, label: 'History — prior attempts, self-harm, family history', val: safetHistory, set: setSafetHistory, ph: 'Document prior attempts, circumstances, medical severity...' },
+            ].map(({ step, label, val, set, ph }, i) => (
+              <div key={i} className="mb-4">
+                <div className="text-xs font-bold text-navy uppercase mb-1">Step {step} — {label}</div>
+                <textarea value={val} onChange={e => set(e.target.value)} disabled={readOnly} rows={3}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none" placeholder={ph} />
+              </div>
+            ))}
+
+            {/* Step 4: Risk Level */}
+            <div className="mb-6">
+              <div className="text-xs font-bold text-navy uppercase mb-3 border-b border-border pb-1">Step 4 — Risk Level &amp; Intervention</div>
+              {safetRiskFactors.some(Boolean) && (() => {
+                const auto = calcSafetRisk(safetRiskFactors, safetProtective);
+                return (
+                  <div className={`mb-3 rounded-lg p-3 text-sm font-semibold border ${auto.level === 'High' ? 'bg-red-50 border-red-300 text-red-800' : auto.level === 'Moderate' ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-green-50 border-green-300 text-green-800'}`}>
+                    Algorithm suggestion: <strong>{auto.level}</strong>
+                    {auto.triggers.length > 0 && <ul className="mt-1 text-xs font-normal space-y-0.5">{auto.triggers.map(t => <li key={t}>• {t}</li>)}</ul>}
+                  </div>
+                );
+              })()}
+              <div className="flex gap-3">
+                {(['Low', 'Moderate', 'High'] as SafetRisk[]).map(level => (
+                  <button key={level} disabled={readOnly} onClick={() => setSafetRisk(level)}
+                    className={`flex-1 rounded-lg border-2 py-2.5 text-sm font-bold transition-colors ${safetRisk === level ? (level === 'High' ? 'border-red-600 bg-red-600 text-white' : level === 'Moderate' ? 'border-amber-500 bg-amber-500 text-white' : 'border-green-600 bg-green-600 text-white') : 'border-border text-slate hover:border-navy/30'}`}>
+                    {level}
+                  </button>
+                ))}
+              </div>
+              {safetRisk && safetRiskFactors.some(Boolean) && safetRisk !== calcSafetRisk(safetRiskFactors, safetProtective).level && (
+                <div className="mt-2 text-xs text-violet-700 bg-violet-50 border border-violet-300 rounded-lg px-3 py-2">
+                  Manual override selected — document rationale in intervention notes below.
+                </div>
               )}
             </div>
 
-            {/* ── Scoring strip ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-4 gap-2 mb-4 p-3 bg-slate-50 rounded-xl border border-border">
-              <div className="text-center">
-                <div className={`text-xl font-bold ${riskCount >= 8 ? 'text-red-600' : riskCount >= 4 ? 'text-amber-600' : 'text-slate'}`}>{riskCount}<span className="text-sm font-normal text-slate">/{SAFET_RISK_FACTORS.length}</span></div>
-                <div className="text-[10px] text-slate uppercase tracking-wide mt-0.5">Risk Factors</div>
-              </div>
-              <div className="text-center">
-                <div className={`text-xl font-bold ${protCount >= 5 ? 'text-green-600' : protCount >= 3 ? 'text-amber-600' : 'text-red-500'}`}>{protCount}<span className="text-sm font-normal text-slate">/{SAFET_PROTECTIVE.length}</span></div>
-                <div className="text-[10px] text-slate uppercase tracking-wide mt-0.5">Protective</div>
-              </div>
-              <div className="text-center">
-                <div className={`text-xl font-bold ${netIndex >= 6 ? 'text-red-600' : netIndex >= 2 ? 'text-amber-600' : netIndex >= 0 ? 'text-yellow-600' : 'text-green-600'}`}>{netIndex > 0 ? '+' : ''}{netIndex}</div>
-                <div className="text-[10px] text-slate uppercase tracking-wide mt-0.5">Net Risk Index</div>
-              </div>
-              <div className="text-center">
-                <div className={`text-sm font-bold px-2 py-1 rounded-lg border inline-block ${netColor}`}>{suggestedLevel}</div>
-                <div className="text-[10px] text-slate uppercase tracking-wide mt-1">Algorithm</div>
-              </div>
+            {/* Step 5 */}
+            <div>
+              <div className="text-xs font-bold text-navy uppercase mb-1">Step 5 — Documentation of Intervention &amp; Plan</div>
+              <textarea value={safetActions} onChange={e => setSafetActions(e.target.value)} disabled={readOnly} rows={4}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                placeholder="Document clinical interventions, disposition, referrals, follow-up plan, and rationale for risk level..." />
             </div>
+          </div>
 
-            {/* Clinical triggers */}
-            {suggestion.triggers.length > 0 && (
-              <div className={`mb-4 rounded-xl border px-4 py-3 space-y-1 ${suggestedLevel === 'High' ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'}`}>
-                <div className={`text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 ${suggestedLevel === 'High' ? 'text-red-700' : 'text-amber-700'}`}>
-                  <AlertTriangle className="w-3.5 h-3.5" /> {suggestedLevel === 'High' ? 'High-Risk Clinical Triggers Detected' : 'Moderate-Risk Triggers Detected'}
-                </div>
-                {suggestion.triggers.map((t, i) => (
-                  <div key={i} className={`text-xs flex items-center gap-1.5 ${suggestedLevel === 'High' ? 'text-red-800' : 'text-amber-800'}`}>
-                    <span className="font-bold">•</span> {t}
-                  </div>
-                ))}
-              </div>
-            )}
-
+          {safetRisk && (
             <div className="space-y-3">
-              {/* Step 1: Risk Factors */}
-              <div className="flex items-center justify-between border-b border-border pb-1">
-                <div className="text-xs font-bold text-slate uppercase tracking-wide">Step 1 — Identify Risk Factors</div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${riskCount >= 8 ? 'bg-red-100 text-red-700 border-red-300' : riskCount >= 4 ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-100 text-slate border-slate-200'}`}>
-                  {riskCount} / {SAFET_RISK_FACTORS.length} present
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {SAFET_RISK_FACTORS.map((f, i) => {
-                  const checked = safetRiskFactors[i];
-                  return (
-                    <label key={i} className={`flex items-center gap-2 cursor-pointer p-2 rounded-lg border transition-colors ${
-                      checked && f.critical ? 'bg-red-50 border-red-300' :
-                      checked             ? 'bg-amber-50 border-amber-300' :
-                      f.critical          ? 'border-red-100 hover:bg-red-50/50' :
-                      'border-transparent hover:bg-gray-50 hover:border-border'
-                    }`}>
-                      <input type="checkbox" checked={checked}
-                        onChange={() => { const n = [...safetRiskFactors]; n[i] = !n[i]; setSafetRiskFactors(n); }}
-                        disabled={readOnly} className="accent-red-600 shrink-0" />
-                      <span className={`text-xs leading-tight ${f.critical ? 'font-semibold text-red-800' : 'text-navy'}`}>
-                        {f.label}
-                        {f.critical && <span className="ml-1 text-[9px] text-red-400 font-bold uppercase">key</span>}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-
-              {/* Step 2: Protective Factors */}
-              <div className="flex items-center justify-between border-b border-border pb-1 pt-2">
-                <div className="text-xs font-bold text-slate uppercase tracking-wide">Step 2 — Identify Protective Factors</div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${protCount >= 5 ? 'bg-green-100 text-green-700 border-green-300' : protCount >= 3 ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-red-100 text-red-700 border-red-300'}`}>
-                  {protCount} / {SAFET_PROTECTIVE.length} present
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {SAFET_PROTECTIVE.map((f, i) => {
-                  const checked = safetProtective[i];
-                  return (
-                    <label key={i} className={`flex items-center gap-2 cursor-pointer p-2 rounded-lg border transition-colors ${checked ? 'bg-green-50 border-green-300' : 'border-transparent hover:bg-gray-50 hover:border-border'}`}>
-                      <input type="checkbox" checked={checked}
-                        onChange={() => { const n = [...safetProtective]; n[i] = !n[i]; setSafetProtective(n); }}
-                        disabled={readOnly} className="accent-green-600 shrink-0" />
-                      <span className="text-xs text-navy">{f.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-
-              {/* Step 3: Suicidal Inquiry */}
-              <div className="text-xs font-bold text-slate uppercase tracking-wide border-b border-border pb-1 pt-2">Step 3 — Conduct Suicide Inquiry</div>
-              <div className="grid grid-cols-2 gap-4">
-                {([
-                  ['Current Ideation (nature, frequency, duration, intensity)', safetIdeation, setSafetIdeation],
-                  ['Suicidal Plan (method, access to means, time, place)', safetPlan, setSafetPlan],
-                  ['Suicidal Intent (subjective expectation to act)', safetIntent, setSafetIntent],
-                  ['History of Suicidal Behavior (prior attempts, lethality)', safetHistory, setSafetHistory],
-                ] as const).map(([lbl, val, setter]) => (
-                  <div key={lbl}>
-                    <label className="block text-xs font-semibold text-slate mb-1">{lbl}</label>
-                    <textarea
-                      value={val}
-                      onChange={e => setter(e.target.value)}
-                      disabled={readOnly}
-                      className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[70px] resize-none ${val.trim() ? 'border-navy/30 bg-navy/5' : 'border-border'}`}
-                      placeholder="Clinician narrative..."
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* Step 4: Determine Risk Level */}
-              <div className="text-xs font-bold text-slate uppercase tracking-wide border-b border-border pb-1 pt-2">Step 4 — Determine Risk Level &amp; Intervention</div>
-
-              {/* Algorithm suggestion banner */}
-              <div className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
-                suggestedLevel === 'High' ? 'bg-red-50 border-red-300' :
-                suggestedLevel === 'Moderate' ? 'bg-amber-50 border-amber-300' :
-                'bg-green-50 border-green-300'
-              }`}>
-                <div className="flex-1">
-                  <div className={`text-xs font-bold uppercase tracking-wide mb-0.5 ${
-                    suggestedLevel === 'High' ? 'text-red-700' :
-                    suggestedLevel === 'Moderate' ? 'text-amber-700' : 'text-green-700'
-                  }`}>Algorithm Suggested: {suggestedLevel} Risk</div>
-                  <div className="text-[11px] text-slate leading-snug">
-                    {suggestedLevel === 'High'
-                      ? 'One or more high-acuity triggers detected. Immediate safety intervention is indicated. Consider hospitalization evaluation.'
-                      : suggestedLevel === 'Moderate'
-                      ? 'Moderate risk indicators present. Increase monitoring, develop safety plan, consider level-of-care adjustment.'
-                      : 'No high-acuity triggers identified. Standard outpatient safety planning and follow-up monitoring indicated.'}
-                  </div>
+              <div className={`rounded-xl border px-4 py-3 ${safetRisk === 'High' ? 'bg-red-100 border-red-300' : safetRisk === 'Moderate' ? 'bg-amber-100 border-amber-300' : 'bg-green-100 border-green-300'}`}>
+                <div className={`text-lg font-bold ${safetRisk === 'High' ? 'text-red-700' : safetRisk === 'Moderate' ? 'text-amber-700' : 'text-green-700'}`}>
+                  SAFE-T Risk Level: {safetRisk}
                 </div>
-                <span className={`shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg border ${
-                  suggestedLevel === 'High'     ? 'bg-red-100 text-red-700 border-red-300' :
-                  suggestedLevel === 'Moderate' ? 'bg-amber-100 text-amber-700 border-amber-300' :
-                  'bg-green-100 text-green-700 border-green-300'
-                }`}>{suggestedLevel}</span>
               </div>
-
-              <div className="text-[10px] font-semibold text-slate uppercase tracking-wide">Clinician Determination (select to confirm or override)</div>
-              <div className="grid grid-cols-3 gap-3">
-                {([
-                  { level: 'Low'      as SafetRisk, desc: 'Ideation without plan/intent. No prior attempts. Strong protective factors. Standard outpatient safety planning.',           border: 'border-green-400', bg: 'bg-green-50', activeBg: 'bg-green-100', activeBorder: 'border-green-600', textColor: 'text-green-700' },
-                  { level: 'Moderate' as SafetRisk, desc: 'Ideation with plan but no intent, or prior attempts without current plan. Safety planning + increased monitoring.',         border: 'border-amber-400', bg: 'bg-amber-50', activeBg: 'bg-amber-100', activeBorder: 'border-amber-600', textColor: 'text-amber-700' },
-                  { level: 'High'     as SafetRisk, desc: 'Ideation with plan AND intent, means access, or prior attempt with current plan. Immediate safety intervention required.',  border: 'border-red-400',   bg: 'bg-red-50',   activeBg: 'bg-red-100',   activeBorder: 'border-red-600',   textColor: 'text-red-700'   },
-                ] as const).map(({ level, desc, border, bg, activeBg, activeBorder, textColor }) => {
-                  const selected = safetRisk === level;
-                  const isSuggested = suggestedLevel === level;
-                  return (
-                    <button key={level} onClick={() => { if (!readOnly) setSafetRisk(level); }} disabled={readOnly}
-                      className={`rounded-xl border-2 p-3 text-left transition-all hover:shadow ${selected ? `${activeBorder} ${activeBg} shadow-sm` : `${border} ${bg}`}`}>
-                      <div className={`font-bold text-sm mb-1 flex items-center gap-1.5 ${textColor}`}>
-                        {level} Risk
-                        {isSuggested && <span className="text-[9px] font-bold bg-white/80 border px-1 py-0.5 rounded uppercase tracking-wide border-current">Suggested</span>}
-                        {selected && !isSuggested && <span className="text-[9px] font-bold bg-white/80 border px-1 py-0.5 rounded uppercase tracking-wide border-current">Override</span>}
-                      </div>
-                      <div className="text-xs text-slate leading-relaxed">{desc}</div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {isOverride && (
-                <div className="flex items-start gap-2 rounded-lg bg-violet-50 border border-violet-200 px-3 py-2.5 text-xs text-violet-800">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-violet-500" />
-                  <span><strong>Clinical override:</strong> Your determination ({safetRisk}) differs from the algorithm suggestion ({suggestedLevel}). Please document your clinical rationale in Step 5.</span>
-                </div>
-              )}
-
-              {/* Step 5: Documentation */}
-              <div className="text-xs font-bold text-slate uppercase tracking-wide border-b border-border pb-1 pt-2">Step 5 — Document Assessment &amp; Interventions</div>
-              <div>
-                <label className="block text-xs font-semibold text-slate mb-1">Clinical Actions &amp; Plan{isOverride ? ' — include rationale for override' : ''}</label>
-                <textarea value={safetActions} onChange={e => setSafetActions(e.target.value)} disabled={readOnly}
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[80px] resize-none"
-                  placeholder="Document interventions: safety contract, means restriction counseling, hospitalization referral, frequency of monitoring, notification of treatment team, family contact plan..." />
-              </div>
+              <LockedButton locked={readOnly || safetDone || !safetActions.trim()} onClick={() => { setSafetDone(true); saveMsg('SAFE-T saved'); }}
+                className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2">
+                <Save className="w-4 h-4" /> {safetDone ? 'SAFE-T Saved ✓' : 'Save SAFE-T'}
+              </LockedButton>
             </div>
-          </div>
-
-          <div className="flex gap-3 items-center">
-            <LockedButton locked={readOnly || !safetRisk || safetDone}
-              onClick={() => {
-                setSafetDone(true);
-                saveMsg('SAFE-T saved');
-                if (safetRisk === 'High' || safetRisk === 'Moderate') setShowContract(true);
-              }}
-              className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2">
-              <Save className="w-4 h-4" /> {safetDone ? 'SAFE-T Saved ✓' : 'Save SAFE-T Assessment'}
-            </LockedButton>
-            {safetRisk && (safetRisk === 'High' || safetRisk === 'Moderate') && (
-              <button onClick={() => setShowContract(true)}
-                className="flex items-center gap-2 border border-red-400 text-red-700 rounded-xl px-4 py-2.5 text-sm font-semibold hover:bg-red-50">
-                <Shield className="w-4 h-4" /> {contractDone ? 'View Safety Contract' : 'Complete Safety Contract'}
-              </button>
-            )}
-          </div>
+          )}
         </div>
-        );
-      })()}
+      )}
 
-      {/* ── BAM ── */}
+      {/* ════════════════════════════════════════════════════════════════════
+          BAM
+          ════════════════════════════════════════════════════════════════════ */}
       {tab === 'BAM' && (
         <div className="space-y-4">
           <div className="card">
             <h2 className="text-base font-bold text-navy mb-1">Brief Addiction Monitor (BAM)</h2>
-            <p className="text-xs text-slate mb-4">Rate each item from <strong>0 to 10</strong> for the past 30 days.</p>
-
-            <div className="text-xs font-bold text-red-700 uppercase tracking-wide mb-3 border-b border-border pb-1">Risk Items (Higher = More Risk)</div>
-            <div className="space-y-4">
-              {BAM_RISK_ITEMS.map((item, i) => (
-                <div key={i} className="space-y-1.5">
-                  <div className="text-sm text-navy"><span className="font-bold text-orange mr-2">{i + 1}.</span>{item.q}</div>
-                  <div className="text-xs text-slate">{item.label}</div>
-                  <div className="flex gap-1">
-                    {Array.from({ length: 11 }, (_, j) => (
-                      <button key={j} onClick={() => { if (!readOnly) { const n = [...bamRisk]; n[i] = j; setBamRisk(n); } }}
-                        disabled={readOnly}
-                        className={`flex-1 rounded text-xs py-1.5 font-semibold transition-colors ${bamRisk[i] === j
-                          ? j >= 8 ? 'bg-red-500 text-white' : j >= 5 ? 'bg-amber-500 text-white' : 'bg-orange text-white'
-                          : 'border border-border text-slate hover:border-orange/50'}`}>
-                        {j}
-                      </button>
-                    ))}
+            <p className="text-xs text-slate mb-4">Rate each item from <strong>0</strong> (lowest) to <strong>10</strong> (highest). First section is Risk; second is Protective.</p>
+            <div className="mb-5">
+              <div className="text-xs font-bold text-navy uppercase mb-3 border-b border-border pb-1">Risk Factors (past 30 days)</div>
+              <div className="space-y-4">
+                {BAM_RISK_ITEMS.map((item, i) => (
+                  <div key={i} className="space-y-1">
+                    <div className="text-sm text-navy"><span className="font-bold text-orange mr-2">{i + 1}.</span>{item.q}</div>
+                    <div className="text-xs text-slate mb-1">{item.label}</div>
+                    <div className="flex gap-1">
+                      {Array.from({ length: 11 }, (_, j) => (
+                        <button key={j} onClick={() => { if (!readOnly) { const n = [...bamRisk]; n[i] = j; setBamRisk(n); } }} disabled={readOnly}
+                          className={`flex-1 rounded border text-xs py-1.5 transition-colors ${bamRisk[i] === j ? 'border-orange bg-orange text-white font-bold' : 'border-border text-slate hover:border-orange/50'}`}>
+                          {j}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-
-            <div className="text-xs font-bold text-green-700 uppercase tracking-wide mt-5 mb-3 border-b border-border pb-1">Protective Items (Higher = More Protective)</div>
-            <div className="space-y-4">
-              {BAM_PROTECTIVE_ITEMS.map((item, i) => (
-                <div key={i} className="space-y-1.5">
-                  <div className="text-sm text-navy"><span className="font-bold text-orange mr-2">{i + 1}.</span>{item.q}</div>
-                  <div className="text-xs text-slate">{item.label}</div>
-                  <div className="flex gap-1">
-                    {Array.from({ length: 11 }, (_, j) => (
-                      <button key={j} onClick={() => { if (!readOnly) { const n = [...bamProtective]; n[i] = j; setBamProtective(n); } }}
-                        disabled={readOnly}
-                        className={`flex-1 rounded text-xs py-1.5 font-semibold transition-colors ${bamProtective[i] === j
-                          ? j >= 7 ? 'bg-green-500 text-white' : j >= 4 ? 'bg-teal-500 text-white' : 'bg-orange text-white'
-                          : 'border border-border text-slate hover:border-orange/50'}`}>
-                        {j}
-                      </button>
-                    ))}
+            <div>
+              <div className="text-xs font-bold text-navy uppercase mb-3 border-b border-border pb-1">Protective Factors</div>
+              <div className="space-y-4">
+                {BAM_PROTECTIVE_ITEMS.map((item, i) => (
+                  <div key={i} className="space-y-1">
+                    <div className="text-sm text-navy"><span className="font-bold text-green-600 mr-2">{i + 1}.</span>{item.q}</div>
+                    <div className="text-xs text-slate mb-1">{item.label}</div>
+                    <div className="flex gap-1">
+                      {Array.from({ length: 11 }, (_, j) => (
+                        <button key={j} onClick={() => { if (!readOnly) { const n = [...bamProtective]; n[i] = j; setBamProtective(n); } }} disabled={readOnly}
+                          className={`flex-1 rounded border text-xs py-1.5 transition-colors ${bamProtective[i] === j ? 'border-green-500 bg-green-500 text-white font-bold' : 'border-border text-slate hover:border-green-500/50'}`}>
+                          {j}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-
-          {bamRisk.every(v => v !== null) && bamProtective.every(v => v !== null) && (
+          {bamRisk.filter(v => v !== null).length === BAM_RISK_ITEMS.length && (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="card">
-                  <div className="text-xs font-semibold text-slate uppercase">Risk Score Total</div>
-                  <div className={`text-2xl font-bold mt-1 ${bamRiskScore >= 50 ? 'text-red-600' : bamRiskScore >= 30 ? 'text-amber-600' : 'text-green-600'}`}>{bamRiskScore} <span className="text-sm font-normal text-slate">/ 70</span></div>
-                  <div className="text-xs text-slate">{bamRiskScore >= 50 ? 'High risk burden' : bamRiskScore >= 30 ? 'Moderate risk' : 'Low risk burden'}</div>
-                </div>
-                <div className="card">
-                  <div className="text-xs font-semibold text-slate uppercase">Protective Score Total</div>
-                  <div className={`text-2xl font-bold mt-1 ${bamProtectiveScore >= 70 ? 'text-green-600' : bamProtectiveScore >= 40 ? 'text-amber-600' : 'text-red-600'}`}>{bamProtectiveScore} <span className="text-sm font-normal text-slate">/ 100</span></div>
-                  <div className="text-xs text-slate">{bamProtectiveScore >= 70 ? 'Strong protective factors' : bamProtectiveScore >= 40 ? 'Moderate protective factors' : 'Low protective factors'}</div>
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                <ScoreBadge label="BAM Risk" score={bamRiskScore} maxScore={70}
+                  risk={{ label: bamRiskScore >= 50 ? 'High burden' : bamRiskScore >= 30 ? 'Moderate' : 'Low burden', color: bamRiskScore >= 50 ? 'text-red-700' : bamRiskScore >= 30 ? 'text-amber-700' : 'text-green-700', bg: bamRiskScore >= 50 ? 'bg-red-100 border-red-300' : bamRiskScore >= 30 ? 'bg-amber-100 border-amber-300' : 'bg-green-100 border-green-300' }} />
+                <ScoreBadge label="BAM Protective" score={bamProtectiveScore} maxScore={100}
+                  risk={{ label: bamProtectiveScore >= 70 ? 'Strong protective' : bamProtectiveScore >= 40 ? 'Moderate protective' : 'Low protective', color: bamProtectiveScore >= 70 ? 'text-green-700' : bamProtectiveScore >= 40 ? 'text-amber-700' : 'text-red-700', bg: bamProtectiveScore >= 70 ? 'bg-green-100 border-green-300' : bamProtectiveScore >= 40 ? 'bg-amber-100 border-amber-300' : 'bg-red-100 border-red-300' }} />
               </div>
-              <LockedButton locked={readOnly || bamDone}
-                onClick={() => { setBamDone(true); saveMsg('BAM saved'); }}
+              <LockedButton locked={readOnly || bamDone} onClick={() => { setBamDone(true); saveMsg('BAM saved'); }}
                 className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2">
                 <Save className="w-4 h-4" /> {bamDone ? 'BAM Saved ✓' : 'Save BAM'}
               </LockedButton>
@@ -1103,11 +1550,234 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
         </div>
       )}
 
-      {/* ── Summary ── */}
+      {/* ════════════════════════════════════════════════════════════════════
+          BIOPSYCHOSOCIAL ASSESSMENT
+          ════════════════════════════════════════════════════════════════════ */}
+      {tab === 'BPS' && (
+        <div className="space-y-5">
+          {/* Credential gate */}
+          {!canDoBps ? (
+            <div className="card border-2 border-amber-400 bg-amber-50">
+              <div className="flex items-start gap-4">
+                <Lock className="w-8 h-8 text-amber-600 shrink-0 mt-1" />
+                <div>
+                  <h2 className="text-base font-bold text-amber-900">Credential Required — Biopsychosocial Assessment</h2>
+                  <p className="text-sm text-amber-800 mt-1 leading-relaxed">
+                    This assessment must be completed by a substance abuse counselor holding one of the following Maryland-recognized credentials:
+                  </p>
+                  <ul className="mt-2 space-y-1 text-sm text-amber-900 font-semibold">
+                    <li>• <strong>ADT</strong> — Alcohol and Drug Trainee (under direct supervision of a BAS-designated supervisor)</li>
+                    <li>• <strong>CSC-AD</strong> — Certified Substance Counselor — Alcohol and Drug</li>
+                    <li>• <strong>CAC-AD</strong> — Certified Associate Counselor — Alcohol and Drug (Maryland BHA/ADAA)</li>
+                    <li>• <strong>LCADC</strong> — Licensed Clinical Alcohol and Drug Counselor (MBPCT)</li>
+                  </ul>
+                  <p className="text-xs text-amber-700 mt-3">
+                    Per COMAR 10.47.01 and Maryland BHA Provider Manual. Your current role ({role.shortLabel}) does not include a qualifying credential. Contact your Clinical Supervisor to complete this section.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="bg-blue-50 border border-blue-300 rounded-xl p-3 text-xs text-blue-800">
+                <strong>Credentialed clinician:</strong> Completing as {role.shortLabel}. Per COMAR 10.47.01, this assessment must be signed by a clinician holding LCADC, CAC-AD, CSC-AD, or ADT credential. ADT trainees must have this co-signed by a Board Approved Supervisor (BAS).
+              </div>
+
+              {/* Biological */}
+              <div className="card">
+                <SectionHeading title="I — Biological Domain" sub="Medical history, family history, substance use history" />
+                <div className="space-y-4">
+                  <div>
+                    <FieldLabel>Medical History (primary diagnoses, chronic conditions, disabilities)</FieldLabel>
+                    <textarea value={bpsBio.medHx} onChange={e => setBpsBio(p => ({ ...p, medHx: e.target.value }))} disabled={readOnly}
+                      rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="HTN, diabetes, HCV, HIV status, seizure disorder, chronic pain, cardiac issues..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Family Medical &amp; Psychiatric History</FieldLabel>
+                    <textarea value={bpsBio.familyMedHx} onChange={e => setBpsBio(p => ({ ...p, familyMedHx: e.target.value }))} disabled={readOnly}
+                      rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Family history of SUD, mental illness, suicide, chronic disease..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Allergies / Adverse Drug Reactions</FieldLabel>
+                    <input value={bpsBio.allergies} onChange={e => setBpsBio(p => ({ ...p, allergies: e.target.value }))} disabled={readOnly}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="NKDA, or list specific allergies and reactions" />
+                  </div>
+                  <div>
+                    <FieldLabel>Detailed Substance Use History (age of first use, progression, periods of abstinence)</FieldLabel>
+                    <textarea value={bpsBio.substanceHxDetail} onChange={e => setBpsBio(p => ({ ...p, substanceHxDetail: e.target.value }))} disabled={readOnly}
+                      rows={4} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="First use age, progression of use, longest sobriety, relapse triggers, withdrawal history, overdose history..." />
+                  </div>
+                </div>
+              </div>
+
+              {/* Psychological */}
+              <div className="card">
+                <SectionHeading title="II — Psychological Domain" sub="Mental health, trauma, cognitive, and behavioral history" />
+                <div className="space-y-4">
+                  <div>
+                    <FieldLabel>Mental Health History &amp; Current Diagnoses</FieldLabel>
+                    <textarea value={bpsPsych.mentalHealthHx} onChange={e => setBpsPsych(p => ({ ...p, mentalHealthHx: e.target.value }))} disabled={readOnly}
+                      rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Psychiatric diagnoses, hospitalizations, current medication management, MH providers..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Trauma History (ACEs, PTSD, abuse, domestic violence, grief/loss)</FieldLabel>
+                    <textarea value={bpsPsych.traumaHx} onChange={e => setBpsPsych(p => ({ ...p, traumaHx: e.target.value }))} disabled={readOnly}
+                      rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Document trauma history as reported; note trauma-informed care considerations..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Coping Skills &amp; Strengths</FieldLabel>
+                    <textarea value={bpsPsych.copingSkills} onChange={e => setBpsPsych(p => ({ ...p, copingSkills: e.target.value }))} disabled={readOnly}
+                      rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Identified coping strategies, resilience factors, motivational strengths..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Cognitive Functioning &amp; Developmental Considerations</FieldLabel>
+                    <textarea value={bpsPsych.cognitiveNote} onChange={e => setBpsPsych(p => ({ ...p, cognitiveNote: e.target.value }))} disabled={readOnly}
+                      rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Cognitive screen results, learning disabilities, TBI history, memory concerns..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Previous Mental Health / SUD Treatment</FieldLabel>
+                    <textarea value={bpsPsych.prevMhTx} onChange={e => setBpsPsych(p => ({ ...p, prevMhTx: e.target.value }))} disabled={readOnly}
+                      rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Prior therapy, medication management, outcomes, barriers to engagement..." />
+                  </div>
+                </div>
+              </div>
+
+              {/* Social */}
+              <div className="card">
+                <SectionHeading title="III — Social Domain" sub="Housing, employment, family, legal, financial" />
+                <div className="grid grid-cols-2 gap-4">
+                  {([
+                    ['housing',       'Housing Status & Stability',       'Stable, unstable, homeless, sober living, family home, shelter...'],
+                    ['employment',    'Employment / Education Status',     'Employed, unemployed, disability, student, vocational goals...'],
+                    ['socialSupport', 'Social Support Network',           'Family relationships, peer support, 12-step sponsor, community connections...'],
+                    ['family',        'Family Dynamics & Relationships',  'Primary relationships, family of origin, children, caregiving responsibilities...'],
+                    ['legal',         'Legal History & Current Status',   'Prior arrests, convictions, incarceration, current legal obligations...'],
+                    ['finances',      'Financial Status & Resources',     'Income source, financial stability, debt, benefits, insurance coverage...'],
+                  ] as const).map(([key, label, ph]) => (
+                    <div key={key} className={key === 'housing' || key === 'socialSupport' ? 'col-span-2' : ''}>
+                      <FieldLabel>{label}</FieldLabel>
+                      <textarea value={(bpsSocial as any)[key]} onChange={e => setBpsSocial(p => ({ ...p, [key]: e.target.value }))} disabled={readOnly}
+                        rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none" placeholder={ph} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Spiritual / Cultural */}
+              <div className="card">
+                <SectionHeading title="IV — Spiritual &amp; Cultural Domain" />
+                <div className="space-y-4">
+                  <div>
+                    <FieldLabel>Spiritual / Religious Beliefs &amp; Role in Recovery</FieldLabel>
+                    <textarea value={bpsSpiritCultural.spiritual} onChange={e => setBpsSpiritCultural(p => ({ ...p, spiritual: e.target.value }))} disabled={readOnly}
+                      rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Faith tradition, spiritual practices, role of spirituality in recovery motivation..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Cultural Identity &amp; Considerations</FieldLabel>
+                    <textarea value={bpsSpiritCultural.cultural} onChange={e => setBpsSpiritCultural(p => ({ ...p, cultural: e.target.value }))} disabled={readOnly}
+                      rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Cultural background, language preference, cultural factors affecting treatment engagement..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Barriers to Treatment Engagement</FieldLabel>
+                    <textarea value={bpsSpiritCultural.barriers} onChange={e => setBpsSpiritCultural(p => ({ ...p, barriers: e.target.value }))} disabled={readOnly}
+                      rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Transportation, childcare, work schedule, stigma, past negative treatment experiences..." />
+                  </div>
+                </div>
+              </div>
+
+              {/* Clinical Formulation */}
+              <div className="card">
+                <SectionHeading title="V — Clinical Formulation &amp; Treatment Recommendations"
+                  sub="Required. Synthesize all domains into a clinical picture and LOC recommendation." />
+                <div className="space-y-4">
+                  <div>
+                    <FieldLabel>ASAM Dimension Summary (D1–D6)</FieldLabel>
+                    <textarea value={bpsFormulation.asamDims} onChange={e => setBpsFormulation(p => ({ ...p, asamDims: e.target.value }))} disabled={readOnly}
+                      rows={4} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="D1: Acute Intoxication/Withdrawal | D2: Biomedical | D3: Emotional/Behavioral/Cognitive | D4: Readiness to Change | D5: Relapse/Continued Use Potential | D6: Recovery Environment" />
+                  </div>
+                  <div>
+                    <FieldLabel>DSM-5 / ICD-10 Diagnostic Impression</FieldLabel>
+                    <textarea value={bpsFormulation.diagnosis} onChange={e => setBpsFormulation(p => ({ ...p, diagnosis: e.target.value }))} disabled={readOnly}
+                      rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="e.g. F11.20 Opioid Use Disorder, Severe; F32.1 Major Depressive Disorder, Moderate..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Clinical Impression / Biopsychosocial Formulation</FieldLabel>
+                    <textarea value={bpsFormulation.clinicalImpression} onChange={e => setBpsFormulation(p => ({ ...p, clinicalImpression: e.target.value }))} disabled={readOnly}
+                      rows={4} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Synthesize the biological, psychological, and social factors contributing to the client's presenting problems and recovery needs..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Treatment Recommendations &amp; Level of Care Justification</FieldLabel>
+                    <textarea value={bpsFormulation.txRec} onChange={e => setBpsFormulation(p => ({ ...p, txRec: e.target.value }))} disabled={readOnly}
+                      rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
+                      placeholder="Recommended LOC, rationale, specific treatment modalities, MAT considerations, psychiatric referrals..." />
+                  </div>
+                </div>
+
+                <div className="mt-6 border-t border-border pt-5">
+                  <div className="text-xs font-semibold text-slate uppercase mb-2">Clinician Signature — {role.shortLabel}</div>
+                  <div className="text-xs text-slate mb-3">
+                    By signing, I certify that I hold a qualifying credential (LCADC, CAC-AD, CSC-AD, or ADT under BAS supervision) and that this biopsychosocial assessment accurately reflects my clinical findings.
+                  </div>
+                  {!readOnly ? <SignatureCanvas label={`${role.shortLabel} Signature`} onSigned={setBpsClinicianSig} />
+                    : <div className="text-xs text-slate italic">Signature locked in read-only mode</div>}
+                </div>
+
+                <div className="mt-4">
+                  <LockedButton locked={readOnly || bpsDone || !bpsClinicianSig || !bpsFormulation.clinicalImpression.trim() || !bpsFormulation.txRec.trim()}
+                    onClick={() => { setBpsDone(true); saveMsg('Biopsychosocial assessment saved'); }}
+                    className="btn-primary text-sm px-5 py-2.5 flex items-center gap-2">
+                    <Save className="w-4 h-4" /> {bpsDone ? 'BPS Assessment Saved ✓' : 'Save Biopsychosocial Assessment'}
+                  </LockedButton>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════
+          SUMMARY
+          ════════════════════════════════════════════════════════════════════ */}
       {tab === 'Summary' && (
         <div className="space-y-4">
           <div className="card">
-            <h2 className="text-base font-bold text-navy mb-4">Assessment Summary — {patient ? `${patient.firstName} ${patient.lastName}` : 'Patient'}</h2>
+            <h2 className="text-base font-bold text-navy mb-4">Screening &amp; Assessment Summary — {patient ? `${patient.firstName} ${patient.lastName}` : 'Patient'}</h2>
+
+            {/* Admissions Screening block */}
+            <div className={`rounded-xl border p-4 mb-4 ${hasExclusions ? 'border-red-400 bg-red-50' : reviewFlags.length > 0 ? 'border-amber-300 bg-amber-50' : 'border-green-400 bg-green-50'}`}>
+              <div className="flex items-center gap-3 mb-2">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${screeningDone ? 'bg-green-500' : 'bg-gray-200'}`}>
+                  {screeningDone && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+                </div>
+                <div className="font-semibold text-navy text-sm">Admissions Screening</div>
+                <div className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full ${hasExclusions ? 'bg-red-200 text-red-800' : reviewFlags.length > 0 ? 'bg-amber-200 text-amber-800' : 'bg-green-200 text-green-800'}`}>
+                  {hasExclusions ? `${fatalExclusions.length} Exclusion${fatalExclusions.length > 1 ? 's' : ''}` : reviewFlags.length > 0 ? `${reviewFlags.length} Review Flag${reviewFlags.length > 1 ? 's' : ''}` : 'Eligible'}
+                </div>
+              </div>
+              <div className="text-xs text-slate pl-8 space-y-0.5">
+                <div>Program: <strong className="text-navy">{programType}</strong> · Referral: <strong className="text-navy">{referralSource || 'Not specified'}</strong></div>
+                <div>Primary DOC: <strong className="text-navy">{drugsOfChoice[0].substance || 'Not specified'}</strong></div>
+                <div>Ambulatory: <strong className="text-navy capitalize">{ambulatoryStatus}</strong> · Psychosis hx: <strong className="text-navy capitalize">{psychosisHistory}</strong></div>
+                {fatalExclusions.map(e => <div key={e.key} className="text-red-700 font-medium">⛔ {e.label}</div>)}
+                {reviewFlags.map(e => <div key={e.key} className="text-amber-700">⚠ {e.label}</div>)}
+              </div>
+            </div>
+
+            {/* Scored instruments */}
             <div className="space-y-3">
               {[
                 { name: 'PHQ-9', done: phq9Done, score: phq9Score, max: 27, risk: phq9Risk.label, color: phq9Risk.color },
@@ -1116,12 +1786,13 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                 { name: 'SOGS', done: sogsDone, score: sogsScore, max: 23, risk: sogsRiskVal.label, color: sogsRiskVal.color },
                 { name: 'SAFE-T', done: safetDone, score: null, max: null, risk: safetRisk ?? 'Not completed', color: safetRisk === 'High' ? 'text-red-700' : safetRisk === 'Moderate' ? 'text-amber-700' : safetRisk === 'Low' ? 'text-green-700' : 'text-slate' },
                 { name: 'BAM (Risk)', done: bamDone, score: bamRiskScore, max: 70, risk: bamRiskScore >= 50 ? 'High burden' : bamRiskScore >= 30 ? 'Moderate' : 'Low burden', color: bamRiskScore >= 50 ? 'text-red-700' : bamRiskScore >= 30 ? 'text-amber-700' : 'text-green-700' },
+                { name: 'Biopsychosocial', done: bpsDone, score: null, max: null, risk: bpsDone ? 'Complete' : canDoBps ? 'Pending signature' : 'Credential required', color: bpsDone ? 'text-green-700' : canDoBps ? 'text-amber-700' : 'text-slate' },
               ].map(item => (
                 <div key={item.name} className="flex items-center gap-4 py-3 border-b border-border last:border-0">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${item.done ? 'bg-green-500' : 'bg-gray-200'}`}>
                     {item.done && <CheckCircle className="w-3.5 h-3.5 text-white" />}
                   </div>
-                  <div className="font-semibold text-navy text-sm w-24">{item.name}</div>
+                  <div className="font-semibold text-navy text-sm w-28">{item.name}</div>
                   {item.score !== null ? <div className="text-sm text-slate">{item.score} / {item.max}</div> : <div className="text-sm text-slate">—</div>}
                   <div className={`text-sm font-semibold ${item.color}`}>{item.risk}</div>
                   {item.name === 'SAFE-T' && (safetRisk === 'High' || safetRisk === 'Moderate') && (
@@ -1134,8 +1805,9 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
             </div>
           </div>
           <div className="text-xs text-slate">
-            Completed {completedCount} of 6 forms · {completedCount < 6 && 'Complete all forms before finalizing assessment.'}
-            {completedCount === 6 && <span className="text-green-700 font-semibold"> All assessments complete — ready for clinical review.</span>}
+            Completed {completedCount} of 8 sections ·{' '}
+            {completedCount < 8 && 'Complete all sections before finalizing assessment.'}
+            {completedCount === 8 && <span className="text-green-700 font-semibold">All sections complete — ready for clinical review and treatment planning.</span>}
           </div>
         </div>
       )}
