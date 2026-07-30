@@ -18,7 +18,7 @@ import type { Screen } from '../App';
 const SCREEN_LABELS: Partial<Record<Screen, string>> = {
   Dashboard: 'Dashboard', CommandCenter: 'Command Center',
   CensusBedBoard: 'Census & Bed Board', PatientList: 'Patient List',
-  Admissions: 'Admissions / Intake', Discharges: 'Discharges',
+  Admissions: 'Admissions / Intake', ClinicalForms: 'Clinical Intake Forms', Discharges: 'Discharges',
   MATManagement: 'MAT Management', FamilyEngagement: 'Family Engagement',
   PhysicianOrders: 'Physician Orders', PeerSupport: 'Peer Support Program',
   TelehealthConsults: 'Telehealth Consults', ChartReview: 'Chart Review',
@@ -46,12 +46,13 @@ const SCREEN_LABELS: Partial<Record<Screen, string>> = {
 
 const SCREEN_SECTIONS: { title: string; screens: Screen[] }[] = [
   { title: 'Overview', screens: ['Dashboard', 'CommandCenter'] },
-  { title: 'Clinical', screens: ['CensusBedBoard', 'PatientList', 'Admissions', 'Discharges', 'MATManagement', 'FamilyEngagement', 'PhysicianOrders', 'PeerSupport', 'TelehealthConsults'] },
+  { title: 'Admissions & Intake', screens: ['Admissions', 'ClinicalForms', 'WaitlistManager', 'ReferralTracker'] },
+  { title: 'Clinical', screens: ['CensusBedBoard', 'PatientList', 'Discharges', 'MATManagement', 'FamilyEngagement', 'PhysicianOrders', 'PeerSupport', 'TelehealthConsults'] },
   { title: 'Documentation', screens: ['ChartReview', 'ProgressNotes', 'TreatmentPlans', 'ASAMAssessments', 'BiopsychosocialAssessment', 'DischargeSummary', 'MedicalRecords', 'GroupNotes', 'CosignQueue', 'MyCaseload'] },
   { title: 'Scheduling', screens: ['AppointmentCalendar', 'GroupSchedule', 'GroupTherapyCurriculum', 'StaffScheduling'] },
   { title: 'Risk & Outcomes', screens: ['RiskDashboard', 'RecoveryEngagementScore', 'OutcomeTracking', 'PopulationAnalytics', 'UADrugTesting', 'IncidentReporting', 'CrisisAssessment'] },
   { title: 'Nursing', screens: ['NursingMAR', 'ShiftHandoff'] },
-  { title: 'Operations', screens: ['ReferralTracker', 'WaitlistManager', 'BusinessDevelopment', 'BedManagement', 'InsuranceAuthorization', 'AftercarePlanning', 'AlumniProgram'] },
+  { title: 'Operations', screens: ['BusinessDevelopment', 'BedManagement', 'InsuranceAuthorization', 'AftercarePlanning', 'AlumniProgram'] },
   { title: 'Billing & Compliance', screens: ['RevenueCycle', 'FinancialCounseling', 'AuditCompliance', 'QualityImprovement', 'Training', 'FormularyManagement'] },
   { title: 'Supervision', screens: ['ClinicalSupervision', 'CertificationTracker'] },
   { title: 'Communications', screens: ['SecureMessaging'] },

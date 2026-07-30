@@ -46,7 +46,6 @@ const ALL_SECTIONS: SidebarSection[] = [
     items: [
       { id: 'CensusBedBoard', label: 'Census & Bed Board', icon: Bed },
       { id: 'PatientList', label: 'Patient List', icon: Users, badge: 18 },
-      { id: 'Admissions', label: 'Admissions / Intake', icon: UserPlus },
       { id: 'ClinicalForms', label: 'Clinical Intake Forms', icon: ClipboardCheck },
       { id: 'Discharges', label: 'Discharges', icon: LogOut },
       { id: 'MATManagement', label: 'MAT Management', icon: Pill },
@@ -102,10 +101,16 @@ const ALL_SECTIONS: SidebarSection[] = [
     ]
   },
   {
+    title: 'ADMISSIONS & INTAKE',
+    items: [
+      { id: 'Admissions', label: 'Admissions / Intake', icon: UserPlus },
+      { id: 'WaitlistManager', label: 'Waitlist Manager', icon: ListOrdered },
+      { id: 'ReferralTracker', label: 'Referral Tracker', icon: Network },
+    ]
+  },
+  {
     title: 'OPERATIONS',
     items: [
-      { id: 'ReferralTracker', label: 'Referral Tracker', icon: Network },
-      { id: 'WaitlistManager', label: 'Waitlist Manager', icon: ListOrdered },
       { id: 'BusinessDevelopment', label: 'Business Development', icon: Briefcase },
       { id: 'BedManagement', label: 'Bed Management', icon: Bed },
       { id: 'InsuranceAuthorization', label: 'Insurance Auth / UR', icon: CreditCard },

@@ -32,7 +32,10 @@ function perms(full: string[], read: string[]): Record<string, Permission> {
 
 // ─── convenience screen-group arrays ────────────────────────────────────────
 const SECURITY         = ['StaffAdmin'];
-const CLINICAL_DIRECT  = ['PatientList','PatientDetail','CensusBedBoard','Admissions','Discharges','BedManagement'];
+const CLINICAL_DIRECT  = ['PatientList','PatientDetail','CensusBedBoard','Discharges','BedManagement'];
+// Admissions / Intake is an administrative workflow — owned by intake coordinators,
+// but clinical roles still need full access so they can perform the required sign-off.
+const INTAKE           = ['Admissions','WaitlistManager','ReferralTracker'];
 const CLINICAL_DOCS    = ['ChartReview','ProgressNotes','TreatmentPlans','ASAMAssessments','BiopsychosocialAssessment','DischargeSummary','GroupNotes','MedicalRecords','ClinicalForms'];
 const CLINICAL_QUEUE   = ['CosignQueue','MyCaseload'];
 const CLINICAL_RX      = ['PhysicianOrders','MATManagement','FormularyManagement','NursingMAR'];
@@ -56,9 +59,9 @@ export const ROLES: RoleDefinition[] = [
     color: 'bg-amber-500/20', textColor: 'text-amber-300', borderColor: 'border-amber-500/40', dotColor: 'bg-amber-400',
     category: 'Clinical',
     permissions: perms(
-      [...OVERVIEW, ...CLINICAL_DIRECT, ...CLINICAL_DOCS, ...CLINICAL_QUEUE,
+      [...OVERVIEW, ...CLINICAL_DIRECT, ...INTAKE, ...CLINICAL_DOCS, ...CLINICAL_QUEUE,
        ...SCHEDULING_BASE, ...RISK, ...CARE_COORD, ...SUPERVISION, ...COMMS, ...DEMO],
-      ['WaitlistManager','ReferralTracker',...COMPLIANCE,'PhysicianOrders','MATManagement','FormularyManagement','CommandCenter'],
+      [...COMPLIANCE,'PhysicianOrders','MATManagement','FormularyManagement','CommandCenter'],
     ),
   },
 
@@ -74,8 +77,9 @@ export const ROLES: RoleDefinition[] = [
       ['Dashboard','HelpSupport','PatientList','PatientDetail','ChartReview','ProgressNotes',
        'TreatmentPlans','ASAMAssessments','BiopsychosocialAssessment','DischargeSummary','GroupNotes',
        'MyCaseload','AppointmentCalendar','GroupSchedule','GroupTherapyCurriculum','CrisisAssessment',
-       'FamilyEngagement','AftercarePlanning','TelehealthConsults','SecureMessaging','PeerSupport',...DEMO],
-      ['CensusBedBoard','Admissions','Discharges','Settings','RiskDashboard','RecoveryEngagementScore',
+       'FamilyEngagement','AftercarePlanning','TelehealthConsults','SecureMessaging','PeerSupport',
+       'Admissions','ClinicalForms',...DEMO],
+      ['CensusBedBoard','Discharges','Settings','RiskDashboard','RecoveryEngagementScore',
        'OutcomeTracking','UADrugTesting','IncidentReporting','MATManagement','MedicalRecords',
        'FormularyManagement','BedManagement','CosignQueue','Training'],
     ),
@@ -93,8 +97,9 @@ export const ROLES: RoleDefinition[] = [
       ['Dashboard','HelpSupport','PatientList','PatientDetail','ChartReview','ProgressNotes',
        'TreatmentPlans','BiopsychosocialAssessment','DischargeSummary','GroupNotes',
        'MyCaseload','AppointmentCalendar','GroupSchedule','GroupTherapyCurriculum','CrisisAssessment',
-       'FamilyEngagement','AftercarePlanning','TelehealthConsults','SecureMessaging',...DEMO],
-      ['CensusBedBoard','Admissions','Discharges','Settings','RiskDashboard','RecoveryEngagementScore',
+       'FamilyEngagement','AftercarePlanning','TelehealthConsults','SecureMessaging',
+       'Admissions','ClinicalForms',...DEMO],
+      ['CensusBedBoard','Discharges','Settings','RiskDashboard','RecoveryEngagementScore',
        'OutcomeTracking','UADrugTesting','IncidentReporting','ASAMAssessments','MedicalRecords',
        'MATManagement','FormularyManagement','Training'],
     ),
@@ -163,7 +168,7 @@ export const ROLES: RoleDefinition[] = [
     category: 'Operations',
     permissions: perms(
       ['Dashboard','CommandCenter','CensusBedBoard','BedManagement','StaffScheduling','WaitlistManager',
-       'InsuranceAuthorization','AuditCompliance','QualityImprovement','Training','IncidentReporting',
+       'Admissions','InsuranceAuthorization','AuditCompliance','QualityImprovement','Training','IncidentReporting',
        'OutcomeTracking','RecoveryEngagementScore','PopulationAnalytics','CertificationTracker',
        'AlumniProgram','AftercarePlanning','SecureMessaging','AppointmentCalendar','GroupSchedule',
        'ReferralTracker','HelpSupport','Settings',...DEMO],
