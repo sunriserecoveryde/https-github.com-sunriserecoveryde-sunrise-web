@@ -2331,10 +2331,13 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               // Req ID — vertically centre the single-line ID within the row.
               // Adding ~3 pt to the midpoint compensates for cap-height so the
               // glyph appears optically centred rather than sitting above centre.
+              // splitTextToSize + maxWidth guard prevent a long ID from bleeding
+              // into the Requirement column to its right.
               doc.setFontSize(8.5);
               doc.setFont('helvetica', 'normal');
               doc.setTextColor(107, 114, 128);
-              doc.text(entry.reqId, rx + 6, rowY + rowHeight / 2 + 3);
+              const reqIdLines = doc.splitTextToSize(entry.reqId, colWidths[2] - 12);
+              doc.text(reqIdLines[0], rx + 6, rowY + rowHeight / 2 + 3, { maxWidth: colWidths[2] - 12 });
               rx += colWidths[2];
 
               // Requirement name — render all wrapped lines
