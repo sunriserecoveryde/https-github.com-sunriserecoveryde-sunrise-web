@@ -1493,6 +1493,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     });
 
     if (unsavedCount > 0 || clearedCount > 0) {
+      setWarnStdFilter('All');
       setShowUnsavedExportWarn({ unsaved: unsavedCount, cleared: clearedCount, clearedIds, unsavedIds, action: 'csv', onContinue: doExportGapListCsv });
       return;
     }
@@ -1666,6 +1667,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       }
     });
     if (unsavedCount > 0 || clearedCount > 0) {
+      setWarnStdFilter('All');
       setShowUnsavedExportWarn({ unsaved: unsavedCount, cleared: clearedCount, clearedIds, unsavedIds, action: 'print', onContinue: doPrint });
       return;
     }
@@ -1709,6 +1711,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     action: 'csv' | 'print';
     onContinue: () => void;
   } | false>(false);
+  const [warnStdFilter, setWarnStdFilter] = useState<CompStandard>('All');
   const [evidenceConfirmed, setEvidenceConfirmedRaw] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem(COMPLIANCE_EVIDENCE_CONFIRMED_KEY);
@@ -2890,13 +2893,47 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               </div>
             </div>
 
+            {/* Standard filter pills */}
+            {(() => {
+              const allAffected = [...showUnsavedExportWarn.clearedIds, ...showUnsavedExportWarn.unsavedIds];
+              const presentStds = Array.from(new Set(
+                allAffected.map(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard).filter(Boolean)
+              )) as Array<Exclude<CompStandard, 'All'>>;
+              if (presentStds.length < 2) return null;
+              const pills: CompStandard[] = ['All', ...presentStds];
+              return (
+                <div className="px-6 pb-3">
+                  <p className="text-[10px] font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Filter by standard</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {pills.map(std => (
+                      <button
+                        key={std}
+                        onClick={() => setWarnStdFilter(std)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
+                          warnStdFilter === std
+                            ? 'bg-navy text-white border-navy'
+                            : 'bg-gray-50 text-slate border-border hover:bg-gray-100'
+                        }`}
+                      >
+                        {std === 'All' ? 'All' : STD_SHORT[std as Exclude<CompStandard, 'All'>]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Requirement ID list — cleared */}
             {showUnsavedExportWarn.clearedIds.length > 0 && (() => {
-              const shown = showUnsavedExportWarn.clearedIds.slice(0, 5);
-              const extra = showUnsavedExportWarn.clearedIds.length - shown.length;
+              const filtered = warnStdFilter === 'All'
+                ? showUnsavedExportWarn.clearedIds
+                : showUnsavedExportWarn.clearedIds.filter(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard === warnStdFilter);
+              if (filtered.length === 0) return null;
+              const shown = filtered.slice(0, 5);
+              const extra = filtered.length - shown.length;
               return (
                 <div className="px-6 pb-2">
-                  <p className="text-[11px] font-semibold text-red-700 uppercase tracking-wide mb-1.5">Needs re-linking ({showUnsavedExportWarn.clearedIds.length})</p>
+                  <p className="text-[11px] font-semibold text-red-700 uppercase tracking-wide mb-1.5">Needs re-linking ({filtered.length})</p>
                   <div className="space-y-1">
                     {shown.map(({ id, title }) => (
                       <button
@@ -2929,11 +2966,15 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
             {/* Requirement ID list — unsaved */}
             {showUnsavedExportWarn.unsavedIds.length > 0 && (() => {
-              const shown = showUnsavedExportWarn.unsavedIds.slice(0, 5);
-              const extra = showUnsavedExportWarn.unsavedIds.length - shown.length;
+              const filtered = warnStdFilter === 'All'
+                ? showUnsavedExportWarn.unsavedIds
+                : showUnsavedExportWarn.unsavedIds.filter(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard === warnStdFilter);
+              if (filtered.length === 0) return null;
+              const shown = filtered.slice(0, 5);
+              const extra = filtered.length - shown.length;
               return (
                 <div className="px-6 pb-2">
-                  <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide mb-1.5">Unsaved text ({showUnsavedExportWarn.unsavedIds.length})</p>
+                  <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide mb-1.5">Unsaved text ({filtered.length})</p>
                   <div className="space-y-1">
                     {shown.map(({ id, title }) => (
                       <button
