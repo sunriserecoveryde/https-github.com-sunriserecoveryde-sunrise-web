@@ -8,6 +8,8 @@ import {
   Sparkles, X, ChevronRight, Zap, ShieldCheck, UserCheck, Lock,
 } from 'lucide-react';
 import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
+import { AiDraftAssist } from '../components/ui/AiDraftAssist';
+import { generateGoalNarrative } from '../lib/aiNoteEngine';
 import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { LockedButton } from '../components/common/LockedButton';
 import { getRolesWithEditAccess } from '../data/mockRoles';
@@ -638,11 +640,35 @@ function AsamGoalBuilder({
               <input value={problem} onChange={e => setProblem(e.target.value)} className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange" />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Long-Term Goal (3–6 month outcome)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-slate uppercase tracking-wider">Long-Term Goal (3–6 month outcome)</label>
+                <AiDraftAssist
+                  fieldName="long-term goal"
+                  onGenerate={() => generateGoalNarrative('longTerm', {
+                    patientName:  `${patient.firstName} ${patient.lastName}`,
+                    primaryDrug:  patient.primaryDiagnosis?.match(/Alcohol/i) ? 'alcohol' : patient.primaryDiagnosis?.match(/Opioid/i) ? 'opioids' : patient.primaryDiagnosis?.match(/Meth/i) ? 'methamphetamine' : 'substance',
+                    asamDim:      selectedDim,
+                    problem:      problem || undefined,
+                  })}
+                  onAccept={t => setLongTerm(t)}
+                />
+              </div>
               <textarea value={longTerm} onChange={e => setLongTerm(e.target.value)} rows={2} className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-orange" />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Short-Term Objective (this week)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-slate uppercase tracking-wider">Short-Term Objective (this week)</label>
+                <AiDraftAssist
+                  fieldName="short-term objective"
+                  onGenerate={() => generateGoalNarrative('shortTerm', {
+                    patientName:  `${patient.firstName} ${patient.lastName}`,
+                    primaryDrug:  patient.primaryDiagnosis?.match(/Alcohol/i) ? 'alcohol' : patient.primaryDiagnosis?.match(/Opioid/i) ? 'opioids' : patient.primaryDiagnosis?.match(/Meth/i) ? 'methamphetamine' : 'substance',
+                    asamDim:      selectedDim,
+                    problem:      problem || undefined,
+                  })}
+                  onAccept={t => setShortTerm(t)}
+                />
+              </div>
               <textarea value={shortTerm} onChange={e => setShortTerm(e.target.value)} rows={2} className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-orange" />
             </div>
             <div>

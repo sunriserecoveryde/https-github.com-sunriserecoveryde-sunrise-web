@@ -4,6 +4,8 @@ import { MOCK_PATIENTS } from '../data/mockPatients';
 import { LockedButton } from '../components/common/LockedButton';
 import { getPatientMedications } from '../data/mockMedications';
 import { CheckCircle, Printer, Save, Download, PenTool } from 'lucide-react';
+import { AiDraftAssist } from '../components/ui/AiDraftAssist';
+import { generateDischargeDraft } from '../lib/aiNoteEngine';
 import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
 import { useDocumentForm } from '../hooks/useDocumentForm';
 import { DocumentFormBar } from '../components/ui/DocumentFormBar';
@@ -255,13 +257,30 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
           {/* Clinical narrative */}
           <div className="card space-y-4">
             <h3 className="font-semibold text-navy">Clinical Narrative</h3>
-            {[
-              { label: 'Admission Presentation & Reason for Treatment', field: 'Admission Presentation' },
-              { label: 'Treatment Services Received', field: 'Treatment Received' },
-              { label: 'Clinical Progress & Response to Treatment', field: 'Clinical Progress' },
-            ].map(f => (
+            {([
+              { label: 'Admission Presentation & Reason for Treatment', field: 'Admission Presentation', aiField: 'admissionPresentation' as const },
+              { label: 'Treatment Services Received',                   field: 'Treatment Received',    aiField: null },
+              { label: 'Clinical Progress & Response to Treatment',     field: 'Clinical Progress',     aiField: 'clinicalProgress' as const },
+            ] as const).map(f => (
               <div key={f.field}>
-                <label className="block text-xs font-semibold text-slate uppercase mb-1">{f.label} <span className="text-red-400">*</span></label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate uppercase">{f.label} <span className="text-red-400">*</span></label>
+                  {f.aiField && (
+                    <AiDraftAssist
+                      fieldName={f.label.toLowerCase()}
+                      disabled={docForm.isLocked}
+                      onGenerate={() => generateDischargeDraft(f.aiField!, {
+                        patientName:      `${p.firstName} ${p.lastName}`,
+                        primaryDrug:      p.primaryDiagnosis?.match(/Alcohol/i) ? 'alcohol' : p.primaryDiagnosis?.match(/Opioid/i) ? 'opioids' : p.primaryDiagnosis?.match(/Meth/i) ? 'methamphetamine' : 'substance',
+                        primaryDiagnosis: p.primaryDiagnosis,
+                        los:              p.los,
+                        program:          p.program,
+                        goals:            DISCHARGE_DATA.goalsAddressed,
+                      })}
+                      onAccept={text => { setDraftFields(prev => ({ ...prev, [f.field]: text })); docForm.markDirty(); }}
+                    />
+                  )}
+                </div>
                 <textarea
                   className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                   style={{ minHeight: '100px' }}
@@ -312,7 +331,19 @@ export function DischargeSummary({ navigate, readOnly }: Props) {
 
           {/* Follow-up plan */}
           <div className="card space-y-3">
-            <h3 className="font-semibold text-navy">Aftercare & Follow-up Plan <span className="text-red-400 text-sm">*</span></h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-navy">Aftercare & Follow-up Plan <span className="text-red-400 text-sm">*</span></h3>
+              <AiDraftAssist
+                fieldName="aftercare plan"
+                disabled={docForm.isLocked}
+                onGenerate={() => generateDischargeDraft('followUpPlan', {
+                  patientName: `${p.firstName} ${p.lastName}`,
+                  los: p.los,
+                  program: p.program,
+                })}
+                onAccept={text => { setDraftFields(prev => ({ ...prev, 'Follow-Up Plan': text })); docForm.markDirty(); }}
+              />
+            </div>
             <textarea
               className="w-full border border-border rounded-lg px-3 py-2 text-sm min-h-[100px] resize-none"
               value={draftFields['Follow-Up Plan'] ?? ''}

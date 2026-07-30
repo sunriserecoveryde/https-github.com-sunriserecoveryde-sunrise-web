@@ -7,6 +7,12 @@ import {
   CheckCircle, AlertTriangle, ChevronDown, ChevronUp, X, Shield,
   FileText, User, Phone, Save, ClipboardList, Lock, Plus, Trash2, AlertCircle,
 } from 'lucide-react';
+import { AiDraftAssist } from '../components/ui/AiDraftAssist';
+import {
+  generateScreeningNarrative,
+  generateBPSDraft,
+  type BPSContext,
+} from '../lib/aiNoteEngine';
 
 interface Props { navigate: (s: Screen, id?: string) => void; readOnly?: boolean; }
 
@@ -455,7 +461,15 @@ function SectionHeading({ title, sub }: { title: string; sub?: string }) {
     </div>
   );
 }
-function FieldLabel({ children }: { children: React.ReactNode }) {
+function FieldLabel({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+  if (action) {
+    return (
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-xs font-semibold text-slate uppercase">{children}</label>
+        {action}
+      </div>
+    );
+  }
   return <label className="block text-xs font-semibold text-slate uppercase mb-1">{children}</label>;
 }
 
@@ -573,6 +587,20 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
   const bamProtectiveScore = bamProtective.reduce<number>((s, v) => s + (v ?? 0), 0);
 
   const patient = PATIENTS.find(p => p.id === selectedPatient);
+
+  // ── AI context for BPS generators ────────────────────────────────────────────
+  const bpsCtx: BPSContext = {
+    patientName:      patient ? `${patient.firstName} ${patient.lastName}` : undefined,
+    age:              patient?.age,
+    primaryDiagnosis: patient?.primaryDiagnosis,
+    primaryDrug:      drugsOfChoice[0]?.substance || undefined,
+    psychosisHistory,
+    cjInvolved,
+    medicalConditions: medicalConditions || undefined,
+    psychiatricHx:    psychiatricHx || undefined,
+    phq9Score:        phq9Done ? phq9Score : null,
+    safetRisk:        safetDone ? safetRisk : null,
+  };
 
   // ── Exclusion flags ──────────────────────────────────────────────────────────
   const exclusions = calcExclusions(
@@ -1142,7 +1170,31 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
             )}
 
             <div>
-              <FieldLabel>Screening Clinician Notes</FieldLabel>
+              <FieldLabel action={
+                <AiDraftAssist
+                  fieldName="screening impressions"
+                  disabled={readOnly || screeningDone}
+                  onGenerate={() => generateScreeningNarrative({
+                    patientName:             patient ? `${patient.firstName} ${patient.lastName}` : undefined,
+                    programType,
+                    referralSource:          referralSource || undefined,
+                    primaryDrug:             drugsOfChoice[0]?.substance || undefined,
+                    secondaryDrug:           drugsOfChoice[1]?.substance || undefined,
+                    psychosisHistory,
+                    currentPsychosisManaged,
+                    ambulatoryStatus,
+                    cjInvolved,
+                    cjType:                  cjType || undefined,
+                    medicalConditions:       medicalConditions || undefined,
+                    psychiatricHx:           psychiatricHx || undefined,
+                    requiresMedicalDetox,
+                    exclusionLabels:         fatalExclusions.map(e => e.label),
+                    reviewLabels:            reviewFlags.map(e => e.label),
+                    vitals,
+                  })}
+                  onAccept={text => setScreeningNotes(prev => prev ? `${prev}\n\n${text}` : text)}
+                />
+              }>Screening Clinician Notes</FieldLabel>
               <textarea value={screeningNotes} onChange={e => setScreeningNotes(e.target.value)} disabled={readOnly}
                 rows={4} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                 placeholder="Clinical impressions, collateral information, additional screening observations, LOC recommendation..." />
@@ -1588,13 +1640,17 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                 <SectionHeading title="I — Biological Domain" sub="Medical history, family history, substance use history" />
                 <div className="space-y-4">
                   <div>
-                    <FieldLabel>Medical History (primary diagnoses, chronic conditions, disabilities)</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="medical history" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('bio-medHx', bpsCtx)} onAccept={t => setBpsBio(p => ({ ...p, medHx: t }))} />}>
+                      Medical History (primary diagnoses, chronic conditions, disabilities)
+                    </FieldLabel>
                     <textarea value={bpsBio.medHx} onChange={e => setBpsBio(p => ({ ...p, medHx: e.target.value }))} disabled={readOnly}
                       rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="HTN, diabetes, HCV, HIV status, seizure disorder, chronic pain, cardiac issues..." />
                   </div>
                   <div>
-                    <FieldLabel>Family Medical &amp; Psychiatric History</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="family history" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('bio-familyMedHx', bpsCtx)} onAccept={t => setBpsBio(p => ({ ...p, familyMedHx: t }))} />}>
+                      Family Medical &amp; Psychiatric History
+                    </FieldLabel>
                     <textarea value={bpsBio.familyMedHx} onChange={e => setBpsBio(p => ({ ...p, familyMedHx: e.target.value }))} disabled={readOnly}
                       rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="Family history of SUD, mental illness, suicide, chronic disease..." />
@@ -1605,7 +1661,9 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                       className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="NKDA, or list specific allergies and reactions" />
                   </div>
                   <div>
-                    <FieldLabel>Detailed Substance Use History (age of first use, progression, periods of abstinence)</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="substance use history" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('bio-substanceHx', bpsCtx)} onAccept={t => setBpsBio(p => ({ ...p, substanceHxDetail: t }))} />}>
+                      Detailed Substance Use History (age of first use, progression, periods of abstinence)
+                    </FieldLabel>
                     <textarea value={bpsBio.substanceHxDetail} onChange={e => setBpsBio(p => ({ ...p, substanceHxDetail: e.target.value }))} disabled={readOnly}
                       rows={4} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="First use age, progression of use, longest sobriety, relapse triggers, withdrawal history, overdose history..." />
@@ -1618,19 +1676,25 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                 <SectionHeading title="II — Psychological Domain" sub="Mental health, trauma, cognitive, and behavioral history" />
                 <div className="space-y-4">
                   <div>
-                    <FieldLabel>Mental Health History &amp; Current Diagnoses</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="mental health history" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('psych-mentalHealth', bpsCtx)} onAccept={t => setBpsPsych(p => ({ ...p, mentalHealthHx: t }))} />}>
+                      Mental Health History &amp; Current Diagnoses
+                    </FieldLabel>
                     <textarea value={bpsPsych.mentalHealthHx} onChange={e => setBpsPsych(p => ({ ...p, mentalHealthHx: e.target.value }))} disabled={readOnly}
                       rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="Psychiatric diagnoses, hospitalizations, current medication management, MH providers..." />
                   </div>
                   <div>
-                    <FieldLabel>Trauma History (ACEs, PTSD, abuse, domestic violence, grief/loss)</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="trauma history" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('psych-trauma', bpsCtx)} onAccept={t => setBpsPsych(p => ({ ...p, traumaHx: t }))} />}>
+                      Trauma History (ACEs, PTSD, abuse, domestic violence, grief/loss)
+                    </FieldLabel>
                     <textarea value={bpsPsych.traumaHx} onChange={e => setBpsPsych(p => ({ ...p, traumaHx: e.target.value }))} disabled={readOnly}
                       rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="Document trauma history as reported; note trauma-informed care considerations..." />
                   </div>
                   <div>
-                    <FieldLabel>Coping Skills &amp; Strengths</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="coping skills" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('psych-coping', bpsCtx)} onAccept={t => setBpsPsych(p => ({ ...p, copingSkills: t }))} />}>
+                      Coping Skills &amp; Strengths
+                    </FieldLabel>
                     <textarea value={bpsPsych.copingSkills} onChange={e => setBpsPsych(p => ({ ...p, copingSkills: e.target.value }))} disabled={readOnly}
                       rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="Identified coping strategies, resilience factors, motivational strengths..." />
@@ -1642,7 +1706,9 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                       placeholder="Cognitive screen results, learning disabilities, TBI history, memory concerns..." />
                   </div>
                   <div>
-                    <FieldLabel>Previous Mental Health / SUD Treatment</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="prior treatment history" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('psych-prevTx', bpsCtx)} onAccept={t => setBpsPsych(p => ({ ...p, prevMhTx: t }))} />}>
+                      Previous Mental Health / SUD Treatment
+                    </FieldLabel>
                     <textarea value={bpsPsych.prevMhTx} onChange={e => setBpsPsych(p => ({ ...p, prevMhTx: e.target.value }))} disabled={readOnly}
                       rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="Prior therapy, medication management, outcomes, barriers to engagement..." />
@@ -1655,15 +1721,22 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                 <SectionHeading title="III — Social Domain" sub="Housing, employment, family, legal, financial" />
                 <div className="grid grid-cols-2 gap-4">
                   {([
-                    ['housing',       'Housing Status & Stability',       'Stable, unstable, homeless, sober living, family home, shelter...'],
-                    ['employment',    'Employment / Education Status',     'Employed, unemployed, disability, student, vocational goals...'],
-                    ['socialSupport', 'Social Support Network',           'Family relationships, peer support, 12-step sponsor, community connections...'],
-                    ['family',        'Family Dynamics & Relationships',  'Primary relationships, family of origin, children, caregiving responsibilities...'],
-                    ['legal',         'Legal History & Current Status',   'Prior arrests, convictions, incarceration, current legal obligations...'],
-                    ['finances',      'Financial Status & Resources',     'Income source, financial stability, debt, benefits, insurance coverage...'],
-                  ] as const).map(([key, label, ph]) => (
+                    ['housing',       'Housing Status & Stability',      'social-housing' as const, 'Stable, unstable, homeless, sober living, family home, shelter...'],
+                    ['employment',    'Employment / Education Status',    null,                       'Employed, unemployed, disability, student, vocational goals...'],
+                    ['socialSupport', 'Social Support Network',          'social-support' as const,  'Family relationships, peer support, 12-step sponsor, community connections...'],
+                    ['family',        'Family Dynamics & Relationships', null,                       'Primary relationships, family of origin, children, caregiving responsibilities...'],
+                    ['legal',         'Legal History & Current Status',  null,                       'Prior arrests, convictions, incarceration, current legal obligations...'],
+                    ['finances',      'Financial Status & Resources',    null,                       'Income source, financial stability, debt, benefits, insurance coverage...'],
+                  ] as const).map(([key, label, aiDomain, ph]) => (
                     <div key={key} className={key === 'housing' || key === 'socialSupport' ? 'col-span-2' : ''}>
-                      <FieldLabel>{label}</FieldLabel>
+                      <FieldLabel action={aiDomain ? (
+                        <AiDraftAssist
+                          fieldName={label.toLowerCase()}
+                          disabled={readOnly || bpsDone}
+                          onGenerate={() => generateBPSDraft(aiDomain, bpsCtx)}
+                          onAccept={t => setBpsSocial(p => ({ ...p, [key]: t }))}
+                        />
+                      ) : undefined}>{label}</FieldLabel>
                       <textarea value={(bpsSocial as any)[key]} onChange={e => setBpsSocial(p => ({ ...p, [key]: e.target.value }))} disabled={readOnly}
                         rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none" placeholder={ph} />
                     </div>
@@ -1676,7 +1749,9 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                 <SectionHeading title="IV — Spiritual &amp; Cultural Domain" />
                 <div className="space-y-4">
                   <div>
-                    <FieldLabel>Spiritual / Religious Beliefs &amp; Role in Recovery</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="spiritual & cultural" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('spiritual', bpsCtx)} onAccept={t => setBpsSpiritCultural(p => ({ ...p, spiritual: t }))} />}>
+                      Spiritual / Religious Beliefs &amp; Role in Recovery
+                    </FieldLabel>
                     <textarea value={bpsSpiritCultural.spiritual} onChange={e => setBpsSpiritCultural(p => ({ ...p, spiritual: e.target.value }))} disabled={readOnly}
                       rows={2} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="Faith tradition, spiritual practices, role of spirituality in recovery motivation..." />
@@ -1702,7 +1777,9 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                   sub="Required. Synthesize all domains into a clinical picture and LOC recommendation." />
                 <div className="space-y-4">
                   <div>
-                    <FieldLabel>ASAM Dimension Summary (D1–D6)</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="ASAM dimensions" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('formulation-asam', bpsCtx)} onAccept={t => setBpsFormulation(p => ({ ...p, asamDims: t }))} />}>
+                      ASAM Dimension Summary (D1–D6)
+                    </FieldLabel>
                     <textarea value={bpsFormulation.asamDims} onChange={e => setBpsFormulation(p => ({ ...p, asamDims: e.target.value }))} disabled={readOnly}
                       rows={4} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="D1: Acute Intoxication/Withdrawal | D2: Biomedical | D3: Emotional/Behavioral/Cognitive | D4: Readiness to Change | D5: Relapse/Continued Use Potential | D6: Recovery Environment" />
@@ -1714,13 +1791,17 @@ export function ClinicalForms({ navigate: _navigate, readOnly }: Props) {
                       placeholder="e.g. F11.20 Opioid Use Disorder, Severe; F32.1 Major Depressive Disorder, Moderate..." />
                   </div>
                   <div>
-                    <FieldLabel>Clinical Impression / Biopsychosocial Formulation</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="clinical impression" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('formulation-impression', bpsCtx)} onAccept={t => setBpsFormulation(p => ({ ...p, clinicalImpression: t }))} />}>
+                      Clinical Impression / Biopsychosocial Formulation
+                    </FieldLabel>
                     <textarea value={bpsFormulation.clinicalImpression} onChange={e => setBpsFormulation(p => ({ ...p, clinicalImpression: e.target.value }))} disabled={readOnly}
                       rows={4} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="Synthesize the biological, psychological, and social factors contributing to the client's presenting problems and recovery needs..." />
                   </div>
                   <div>
-                    <FieldLabel>Treatment Recommendations &amp; Level of Care Justification</FieldLabel>
+                    <FieldLabel action={<AiDraftAssist fieldName="treatment recommendations" disabled={readOnly || bpsDone} onGenerate={() => generateBPSDraft('formulation-txRec', bpsCtx)} onAccept={t => setBpsFormulation(p => ({ ...p, txRec: t }))} />}>
+                      Treatment Recommendations &amp; Level of Care Justification
+                    </FieldLabel>
                     <textarea value={bpsFormulation.txRec} onChange={e => setBpsFormulation(p => ({ ...p, txRec: e.target.value }))} disabled={readOnly}
                       rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none"
                       placeholder="Recommended LOC, rationale, specific treatment modalities, MAT considerations, psychiatric referrals..." />

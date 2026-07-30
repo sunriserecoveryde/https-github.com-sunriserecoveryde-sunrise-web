@@ -27,6 +27,17 @@ Previous tabs were purely scored instruments (PHQ-9 through SAFE-T + BAM). Scree
 - ADT not present in any current mockRoles.ts entry — add "ADT" to a role description to unlock
 - Requires clinician signature + formulation text to save
 
+## AI draft assist pattern (Jul 2026)
+All note-heavy pages now use `AiDraftAssist` (`components/ui/AiDraftAssist.tsx`):
+- Renders an "AI Draft" pill button next to field labels via `FieldLabel`'s `action` prop
+- 450 ms simulated generation delay → editable violet review card → Accept/Discard
+- Accept pushes the (possibly edited) draft into the parent textarea; never silent
+- Generator functions in `aiNoteEngine.ts`: `generateScreeningNarrative`, `generateBPSDraft`, `generateDischargeDraft`, `generateGoalNarrative`
+- `FieldLabel` in ClinicalForms.tsx now accepts optional `action` prop for inline buttons
+- Wired pages: ClinicalForms (Screening notes + 11 BPS fields), DischargeSummary (Admission Presentation, Clinical Progress, Follow-Up Plan), TreatmentPlans (Long-Term Goal + Short-Term Objective in AsamGoalBuilder)
+
+**Why:** Human-in-the-loop design requirement — AI draft is always editable before accept; no silent fills.
+
 ## JSX HTML-entity pitfall
 When using `&` in JSX string literals passed as `children`, write `&` directly — JSX escapes it.
 Do NOT use `&amp;` in a JSX prop array and then render via `dangerouslySetInnerHTML` on a custom component; custom components don't accept that prop and TypeScript will reject it.
