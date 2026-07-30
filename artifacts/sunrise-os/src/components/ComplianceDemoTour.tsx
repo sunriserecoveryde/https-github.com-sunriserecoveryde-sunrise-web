@@ -47,11 +47,12 @@ interface Props {
   onNext: () => void;
   onPrev: () => void;
   onEnd: () => void;
+  onGoTo: (index: number) => void;
 }
 
 const PAD = 10;
 
-export function ComplianceDemoTour({ steps, step, onNext, onPrev, onEnd }: Props) {
+export function ComplianceDemoTour({ steps, step, onNext, onPrev, onEnd, onGoTo }: Props) {
   const current = steps[step];
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [cardPos, setCardPos] = useState<{ top: number; left: number }>({ top: 200, left: 200 });
@@ -171,15 +172,20 @@ export function ComplianceDemoTour({ steps, step, onNext, onPrev, onEnd }: Props
           </button>
         </div>
 
-        {/* Progress bar */}
-        <div className="flex gap-1 mb-3">
-          {steps.map((_, i) => (
-            <div
+        {/* Progress dots — click to jump to any step */}
+        <div className="flex items-center gap-2 mb-3">
+          {steps.map((s, i) => (
+            <button
               key={i}
-              className="h-1 rounded-full transition-all duration-300"
+              onClick={() => onGoTo(i)}
+              title={s.title}
+              aria-label={`Go to step ${i + 1}: ${s.title}`}
+              className="rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange/60 hover:scale-125"
               style={{
-                flex: i === step ? 2 : 1,
+                width:  i === step ? 20 : 8,
+                height: 8,
                 background: i <= step ? '#f97316' : '#e5e7eb',
+                flexShrink: 0,
               }}
             />
           ))}

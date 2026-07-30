@@ -3143,6 +3143,12 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
     setIsTourActive(false);
     setTourStep(0);
   };
+  const handleTourGoTo = (index: number) => {
+    if (index >= 0 && index < TOUR_STEPS.length) {
+      setTourStep(index);
+      setTab(TOUR_STEPS[index].tab as WFTab);
+    }
+  };
 
   const tabs: WFTab[] = ['Dashboard', 'Employee Profiles', 'Exclusion & Screening', 'Onboarding', 'Performance Reviews', 'Offboarding', 'Compliance Standards'];
 
@@ -3249,6 +3255,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
           onNext={handleTourNext}
           onPrev={handleTourPrev}
           onEnd={handleTourEnd}
+          onGoTo={handleTourGoTo}
         />
       )}
     </div>
