@@ -24,6 +24,24 @@ export function ComplianceDemoTour({ steps, step, onNext, onPrev, onEnd }: Props
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [cardPos, setCardPos] = useState<{ top: number; left: number }>({ top: 200, left: 200 });
 
+  // Keyboard navigation: → / Space = next, ← = prev, Esc = end
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        if (step < steps.length - 1) onNext(); else onEnd();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (step > 0) onPrev();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onEnd();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [step, steps.length, onNext, onPrev, onEnd]);
+
   useEffect(() => {
     setRect(null); // clear stale highlight while switching
 
