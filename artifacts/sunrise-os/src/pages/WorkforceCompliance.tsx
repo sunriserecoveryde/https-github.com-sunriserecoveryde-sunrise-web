@@ -1493,7 +1493,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     });
 
     if (unsavedCount > 0 || clearedCount > 0) {
-      setWarnStdFilter('All');
+      setWarnStdFilter(stdFilter);
       setShowUnsavedExportWarn({ unsaved: unsavedCount, cleared: clearedCount, clearedIds, unsavedIds, action: 'csv', onContinue: doExportGapListCsv });
       return;
     }
@@ -1667,7 +1667,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
       }
     });
     if (unsavedCount > 0 || clearedCount > 0) {
-      setWarnStdFilter('All');
+      setWarnStdFilter(stdFilter);
       setShowUnsavedExportWarn({ unsaved: unsavedCount, cleared: clearedCount, clearedIds, unsavedIds, action: 'print', onContinue: doPrint });
       return;
     }
