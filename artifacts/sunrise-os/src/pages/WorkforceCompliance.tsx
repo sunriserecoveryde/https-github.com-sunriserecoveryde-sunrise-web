@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { jsPDF } from 'jspdf';
 import { Screen } from '../App';
 import {
   Users, ShieldCheck, AlertTriangle, CheckCircle, Clock, XCircle,
@@ -1199,6 +1200,7 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Medicaid': 'Medicaid',
   'Internal Policy': 'Internal',
 };
+
 function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, requestedReqId }: {
   readOnly?: boolean;
   completedIds: Set<string>;
@@ -1779,7 +1781,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           setEvidenceSavedId(req.id);
                           setTimeout(() => setEvidenceSavedId(null), 2000);
                           setEvidenceConfirmed(prev => new Set([...prev, req.id]));
-                          addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer', detail: evidenceInputs[req.id]?.trim() });
+                          addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer' });
                         }}
                         className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${evidenceSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                         {evidenceSavedId === req.id ? '✓ Saved' : 'Link Evidence'}
@@ -1862,7 +1864,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         setCorrSavedId(req.id);
                         setTimeout(() => setCorrSavedId(null), 2000);
                         setCorrConfirmed(prev => new Set([...prev, req.id]));
-                        addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer', detail: corrActionInputs[req.id]?.trim() });
+                        addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: 'Compliance Officer' });
                       }}
                       className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${corrSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                       {corrSavedId === req.id ? '✓ Saved' : 'Save Action Plan'}
@@ -1926,115 +1928,207 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             month: 'long', day: 'numeric', year: 'numeric',
             hour: 'numeric', minute: '2-digit', hour12: true,
           });
-          const actionColors: Record<AuditActionType, string> = {
-            'Marked Met':        '#15803d',
-            'Evidence Linked':   '#1d4ed8',
-            'Action Plan Saved': '#b45309',
-          };
-          const actionBg: Record<AuditActionType, string> = {
-            'Marked Met':        '#dcfce7',
-            'Evidence Linked':   '#dbeafe',
-            'Action Plan Saved': '#fef3c7',
-          };
-          const rows = filtered.map(entry => {
-            const dt = new Date(entry.timestamp);
-            const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-            const bg = actionBg[entry.actionType];
-            const color = actionColors[entry.actionType];
-            const detailLabel = entry.actionType === 'Evidence Linked' ? 'Evidence document:' : entry.actionType === 'Action Plan Saved' ? 'Action plan:' : '';
-            const detailRow = (entry.detail && detailLabel)
-              ? `<tr>
-                  <td colspan="5" style="padding:4px 10px 10px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;color:#374151">
-                    <span style="font-weight:700;color:#6b7280;">${detailLabel}</span>
-                    <span style="margin-left:4px;font-style:italic;">${entry.detail.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
-                  </td>
-                </tr>`
-              : '';
-            return `
-              <tr>
-                <td style="padding:8px 10px;${entry.detail && detailLabel ? '' : 'border-bottom:1px solid #e5e7eb;'}font-size:12px;color:#374151;white-space:nowrap">${dateStr}<br/><span style="color:#6b7280;font-size:10px">${timeStr}</span></td>
-                <td style="padding:8px 10px;${entry.detail && detailLabel ? '' : 'border-bottom:1px solid #e5e7eb;'}">
-                  <span style="background:${bg};color:${color};font-size:10px;font-weight:700;padding:2px 8px;border-radius:9999px">${entry.actionType}</span>
-                </td>
-                <td style="padding:8px 10px;${entry.detail && detailLabel ? '' : 'border-bottom:1px solid #e5e7eb;'}font-size:11px;color:#6b7280;white-space:nowrap">${entry.reqId}</td>
-                <td style="padding:8px 10px;${entry.detail && detailLabel ? '' : 'border-bottom:1px solid #e5e7eb;'}font-size:12px;color:#111827">${entry.reqName}</td>
-                <td style="padding:8px 10px;${entry.detail && detailLabel ? '' : 'border-bottom:1px solid #e5e7eb;'}font-size:12px;color:#374151">${entry.officer}</td>
-              </tr>${detailRow}`;
-          }).join('');
 
-          const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-            <title>Audit Trail — Sunrise Recovery Center</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 32px; color: #111827; }
-              @media print { .no-print { display: none !important; } body { padding: 16px; } }
-              .header { border-bottom: 2px solid #1e3a5f; padding-bottom: 16px; margin-bottom: 24px; }
-              .logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-              .logo-mark { width: 36px; height: 36px; background: #f97316; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 18px; flex-shrink: 0; }
-              .facility { font-size: 18px; font-weight: 800; color: #1e3a5f; }
-              .subtitle { font-size: 13px; color: #6b7280; margin-top: 2px; }
-              .meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px; }
-              .meta-cell { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; }
-              .meta-label { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
-              .meta-value { font-size: 13px; font-weight: 700; color: #1e3a5f; margin-top: 2px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-              thead th { background: #1e3a5f; color: #fff; text-align: left; padding: 9px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-              tbody tr:hover { background: #f9fafb; }
-              .empty { text-align: center; padding: 40px; color: #6b7280; font-size: 13px; }
-              .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; }
-              .print-btn { margin-bottom: 18px; padding: 10px 22px; background: #1e3a5f; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
-              .print-btn:hover { background: #f97316; }
-            </style>
-          </head><body>
-            <button class="print-btn no-print" onclick="window.print()">🖨 Print / Save as PDF</button>
-            <div class="header">
-              <div class="logo-row">
-                <div class="logo-mark">S</div>
-                <div>
-                  <div class="facility">Sunrise Recovery Center</div>
-                  <div class="subtitle">SunriseOS Compliance Module — Audit Trail Export</div>
-                </div>
-              </div>
-              <div class="meta-grid">
-                <div class="meta-cell">
-                  <div class="meta-label">Generated</div>
-                  <div class="meta-value">${generatedDate}</div>
-                </div>
-                <div class="meta-cell">
-                  <div class="meta-label">Filter Applied</div>
-                  <div class="meta-value">${filterLabel}</div>
-                </div>
-                <div class="meta-cell">
-                  <div class="meta-label">Total Entries</div>
-                  <div class="meta-value">${filtered.length}</div>
-                </div>
-              </div>
-            </div>
-            ${filtered.length === 0
-              ? '<div class="empty">No audit entries match the selected filter.</div>'
-              : `<table>
-                <thead>
-                  <tr>
-                    <th style="width:130px">Date / Time</th>
-                    <th style="width:130px">Action Type</th>
-                    <th style="width:80px">Req. ID</th>
-                    <th>Requirement</th>
-                    <th style="width:140px">Officer</th>
-                  </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-              </table>`
-            }
-            <div class="footer">
-              <strong>Disclaimer:</strong> This report is auto-generated from the SunriseOS compliance module for internal quality improvement purposes. It does not constitute a formal audit opinion. All findings should be verified against source documentation before any regulatory submission. &nbsp;·&nbsp; Sunrise Recovery Center, Rockville, MD
-            </div>
-          </body></html>`;
+          const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
+          const pageW = doc.internal.pageSize.getWidth();
+          const pageH = doc.internal.pageSize.getHeight();
+          const marginL = 36;
+          const marginR = 36;
+          const contentW = pageW - marginL - marginR;
 
-          const win = window.open('', '_blank');
-          if (!win) { alert('Pop-up blocked — please allow pop-ups for this page to print.'); return; }
-          win.document.write(html);
-          win.document.close();
-          win.focus();
+          // ── Header bar ──────────────────────────────────────────────────────
+          // Logo mark (orange square with "S")
+          doc.setFillColor(249, 115, 22);
+          doc.roundedRect(marginL, 28, 28, 28, 4, 4, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(16);
+          doc.setFont('helvetica', 'bold');
+          doc.text('S', marginL + 14, 28 + 18, { align: 'center' });
+
+          // Facility name & subtitle
+          doc.setTextColor(30, 58, 95);
+          doc.setFontSize(15);
+          doc.text('Sunrise Recovery Center', marginL + 36, 40);
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(107, 114, 128);
+          doc.text('SunriseOS Compliance Module — Audit Trail Export', marginL + 36, 52);
+
+          // Divider
+          doc.setDrawColor(30, 58, 95);
+          doc.setLineWidth(1.5);
+          doc.line(marginL, 65, pageW - marginR, 65);
+
+          // ── Meta cells ──────────────────────────────────────────────────────
+          const cellW = contentW / 3 - 6;
+          const metaY = 72;
+          const metaCellH = 36;
+          const metaLabels = ['GENERATED', 'FILTER APPLIED', 'TOTAL ENTRIES'];
+          const metaValues = [generatedDate, filterLabel, String(filtered.length)];
+          [0, 1, 2].forEach(i => {
+            const x = marginL + i * (cellW + 9);
+            doc.setFillColor(249, 250, 251);
+            doc.setDrawColor(229, 231, 235);
+            doc.setLineWidth(0.5);
+            doc.roundedRect(x, metaY, cellW, metaCellH, 4, 4, 'FD');
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(107, 114, 128);
+            doc.text(metaLabels[i], x + 8, metaY + 11);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(30, 58, 95);
+            doc.text(metaValues[i], x + 8, metaY + 26, { maxWidth: cellW - 16 });
+          });
+
+          // ── Table ────────────────────────────────────────────────────────────
+          const tableTop = metaY + metaCellH + 12;
+          const colWidths = [90, 100, 60, contentW - 90 - 100 - 60 - 110, 110];
+          const colHeaders = ['DATE / TIME', 'ACTION TYPE', 'REQ. ID', 'REQUIREMENT', 'OFFICER'];
+          const rowHeight = 22;
+          const headerH = 20;
+
+          // Header row
+          doc.setFillColor(30, 58, 95);
+          doc.rect(marginL, tableTop, contentW, headerH, 'F');
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(255, 255, 255);
+          let cx = marginL;
+          colHeaders.forEach((h, i) => {
+            doc.text(h, cx + 6, tableTop + 13);
+            cx += colWidths[i];
+          });
+
+          if (filtered.length === 0) {
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(107, 114, 128);
+            doc.text('No audit entries match the selected filter.', pageW / 2, tableTop + headerH + 30, { align: 'center' });
+          } else {
+            const actionBgRGB: Record<AuditActionType, [number, number, number]> = {
+              'Marked Met':        [220, 252, 231],
+              'Evidence Linked':   [219, 234, 254],
+              'Action Plan Saved': [254, 243, 199],
+            };
+            const actionTextRGB: Record<AuditActionType, [number, number, number]> = {
+              'Marked Met':        [21, 128, 61],
+              'Evidence Linked':   [29, 78, 216],
+              'Action Plan Saved': [180, 83, 9],
+            };
+
+            let rowY = tableTop + headerH;
+            let page = 1;
+            const footerY = pageH - 30;
+
+            filtered.forEach((entry, idx) => {
+              // Page break if needed
+              if (rowY + rowHeight > footerY) {
+                doc.addPage();
+                page++;
+                rowY = 36;
+                // Repeat header on new page
+                doc.setFillColor(30, 58, 95);
+                doc.rect(marginL, rowY, contentW, headerH, 'F');
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(255, 255, 255);
+                let hcx = marginL;
+                colHeaders.forEach((h, i) => {
+                  doc.text(h, hcx + 6, rowY + 13);
+                  hcx += colWidths[i];
+                });
+                rowY += headerH;
+              }
+
+              // Row background (alternating)
+              if (idx % 2 === 1) {
+                doc.setFillColor(249, 250, 251);
+                doc.rect(marginL, rowY, contentW, rowHeight, 'F');
+              }
+
+              // Row border
+              doc.setDrawColor(229, 231, 235);
+              doc.setLineWidth(0.4);
+              doc.line(marginL, rowY + rowHeight, marginL + contentW, rowY + rowHeight);
+
+              const dt = new Date(entry.timestamp);
+              const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+              let rx = marginL;
+
+              // Date / Time
+              doc.setFontSize(9);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor(55, 65, 81);
+              doc.text(dateStr, rx + 6, rowY + 10);
+              doc.setFontSize(7.5);
+              doc.setTextColor(107, 114, 128);
+              doc.text(timeStr, rx + 6, rowY + 18);
+              rx += colWidths[0];
+
+              // Action type badge
+              const [br, bg, bb] = actionBgRGB[entry.actionType];
+              const [tr2, tg, tb] = actionTextRGB[entry.actionType];
+              const badgeW = colWidths[1] - 12;
+              const badgeH = 13;
+              const badgeX = rx + 6;
+              const badgeY = rowY + 4;
+              doc.setFillColor(br, bg, bb);
+              doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 3, 3, 'F');
+              doc.setFontSize(7.5);
+              doc.setFont('helvetica', 'bold');
+              doc.setTextColor(tr2, tg, tb);
+              doc.text(entry.actionType, badgeX + badgeW / 2, badgeY + 8.5, { align: 'center' });
+              rx += colWidths[1];
+
+              // Req ID
+              doc.setFontSize(8.5);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor(107, 114, 128);
+              doc.text(entry.reqId, rx + 6, rowY + 13);
+              rx += colWidths[2];
+
+              // Requirement name (may wrap)
+              doc.setFontSize(9);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor(17, 24, 39);
+              const nameLines = doc.splitTextToSize(entry.reqName, colWidths[3] - 12);
+              doc.text(nameLines[0], rx + 6, rowY + 13);
+              rx += colWidths[3];
+
+              // Officer
+              doc.setFontSize(9);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor(55, 65, 81);
+              doc.text(entry.officer, rx + 6, rowY + 13, { maxWidth: colWidths[4] - 12 });
+
+              rowY += rowHeight;
+            });
+          }
+
+          // ── Footer ───────────────────────────────────────────────────────────
+          const totalPages = (doc.internal as unknown as { getNumberOfPages: () => number }).getNumberOfPages();
+          for (let p = 1; p <= totalPages; p++) {
+            doc.setPage(p);
+            const fY = pageH - 18;
+            doc.setDrawColor(229, 231, 235);
+            doc.setLineWidth(0.5);
+            doc.line(marginL, fY - 4, pageW - marginR, fY - 4);
+            doc.setFontSize(7.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(156, 163, 175);
+            doc.text(
+              'Auto-generated by SunriseOS Compliance Module — for internal QI purposes only · Sunrise Recovery Center, Rockville, MD',
+              marginL, fY,
+            );
+            doc.text(`Page ${p} of ${totalPages}`, pageW - marginR, fY, { align: 'right' });
+          }
+
+          // ── Save ─────────────────────────────────────────────────────────────
+          const suffix = auditFilter === 'All' ? '' : `-${auditFilter.toLowerCase().replace(/\s+/g, '-')}`;
+          doc.save(`audit-trail${suffix}.pdf`);
         };
 
         const filterChips: Array<{ label: string; value: AuditActionType | 'All'; activeClass: string }> = [
@@ -2344,6 +2438,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
     </div>
   );
 }
+
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
