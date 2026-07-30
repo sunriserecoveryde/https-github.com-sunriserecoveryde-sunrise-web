@@ -3068,24 +3068,44 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               // a single pill adds no filtering value and looks confusing.
               // Keep the threshold at 2; do not lower it to 1.
               if (presentStds.length < 2) return null;
+              // Re-derive per-standard counts each render so that a standard whose
+              // items have all been resolved mid-session gets its pill hidden.
+              const stdCounts = Object.fromEntries(
+                presentStds.map(std => [
+                  std,
+                  allAffected.filter(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard === std).length,
+                ])
+              );
+              // Effective filter: if the selected pill's live count is 0, silently
+              // treat it as 'All' so the list never shows "0 items".
+              const liveEffectiveFilter: CompStandard =
+                warnStdFilter !== 'All' && (stdCounts[warnStdFilter as Exclude<CompStandard, 'All'>] ?? 0) === 0
+                  ? 'All'
+                  : warnStdFilter;
               const pills: CompStandard[] = ['All', ...presentStds];
               return (
                 <div className="px-6 pb-3">
                   <p className="text-[10px] font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Filter by standard</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {pills.map(std => (
-                      <button
-                        key={std}
-                        onClick={() => setWarnStdFilter(std)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
-                          warnStdFilter === std
-                            ? 'bg-navy text-white border-navy'
-                            : 'bg-gray-50 text-slate border-border hover:bg-gray-100'
-                        }`}
-                      >
-                        {std === 'All' ? 'All' : (STD_SHORT[std as Exclude<CompStandard, 'All'>] || std)}
-                      </button>
-                    ))}
+                    {pills.map(std => {
+                      // Hide non-'All' pills whose item count has dropped to zero.
+                      if (std !== 'All' && (stdCounts[std as Exclude<CompStandard, 'All'>] ?? 0) === 0) return null;
+                      // Highlight 'All' when the effective filter fell back to it.
+                      const isActive = std === liveEffectiveFilter;
+                      return (
+                        <button
+                          key={std}
+                          onClick={() => setWarnStdFilter(std)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
+                            isActive
+                              ? 'bg-navy text-white border-navy'
+                              : 'bg-gray-50 text-slate border-border hover:bg-gray-100'
+                          }`}
+                        >
+                          {std === 'All' ? 'All' : (STD_SHORT[std as Exclude<CompStandard, 'All'>] || std)}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -3093,9 +3113,18 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
             {/* Requirement ID list — cleared */}
             {showUnsavedExportWarn.clearedIds.length > 0 && (() => {
-              const filtered = warnStdFilter === 'All'
+              // Re-derive the effective filter each render: if the active standard
+              // pill has zero matching items across both lists, silently fall back
+              // to 'All' so this section never shows an empty list.
+              const allAffectedLive = [...showUnsavedExportWarn.clearedIds, ...showUnsavedExportWarn.unsavedIds];
+              const effectiveWarnFilter: CompStandard =
+                warnStdFilter !== 'All' &&
+                allAffectedLive.filter(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard === warnStdFilter).length === 0
+                  ? 'All'
+                  : warnStdFilter;
+              const filtered = effectiveWarnFilter === 'All'
                 ? showUnsavedExportWarn.clearedIds
-                : showUnsavedExportWarn.clearedIds.filter(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard === warnStdFilter);
+                : showUnsavedExportWarn.clearedIds.filter(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard === effectiveWarnFilter);
               if (filtered.length === 0) return null;
               const shown = filtered.slice(0, 5);
               const extra = filtered.length - shown.length;
@@ -3111,7 +3140,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           const req = COMP_REQUIREMENTS.find(r => r.id === id);
                           closeWarnModal();
                           if (req) {
-                            setStdFilter(warnStdFilter !== 'All' ? warnStdFilter : req.standard as CompStandard);
+                            setStdFilter(effectiveWarnFilter !== 'All' ? effectiveWarnFilter : req.standard as CompStandard);
                             setGapFilter('All');
                             setSelectedReq(id);
                           }
@@ -3134,9 +3163,18 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
             {/* Requirement ID list — unsaved */}
             {showUnsavedExportWarn.unsavedIds.length > 0 && (() => {
-              const filtered = warnStdFilter === 'All'
+              // Re-derive the effective filter each render: if the active standard
+              // pill has zero matching items across both lists, silently fall back
+              // to 'All' so this section never shows an empty list.
+              const allAffectedLive = [...showUnsavedExportWarn.clearedIds, ...showUnsavedExportWarn.unsavedIds];
+              const effectiveWarnFilter: CompStandard =
+                warnStdFilter !== 'All' &&
+                allAffectedLive.filter(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard === warnStdFilter).length === 0
+                  ? 'All'
+                  : warnStdFilter;
+              const filtered = effectiveWarnFilter === 'All'
                 ? showUnsavedExportWarn.unsavedIds
-                : showUnsavedExportWarn.unsavedIds.filter(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard === warnStdFilter);
+                : showUnsavedExportWarn.unsavedIds.filter(({ id }) => COMP_REQUIREMENTS.find(r => r.id === id)?.standard === effectiveWarnFilter);
               if (filtered.length === 0) return null;
               const shown = filtered.slice(0, 5);
               const extra = filtered.length - shown.length;
@@ -3152,7 +3190,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           const req = COMP_REQUIREMENTS.find(r => r.id === id);
                           closeWarnModal();
                           if (req) {
-                            setStdFilter(warnStdFilter !== 'All' ? warnStdFilter : req.standard as CompStandard);
+                            setStdFilter(effectiveWarnFilter !== 'All' ? effectiveWarnFilter : req.standard as CompStandard);
                             setGapFilter('All');
                             setSelectedReq(id);
                           }
