@@ -13,7 +13,7 @@ const ALL_SCREENS: { screen: Screen; label: string; section: string }[] = [
   { screen: 'PatientList',             label: 'Patient List',                section: 'Clinical' },
   { screen: 'PatientDetail',           label: 'Patient Detail',              section: 'Clinical' },
   { screen: 'Admissions',             label: 'Admissions / Intake',         section: 'Scheduling, Intake & Admissions' },
-  { screen: 'ClinicalForms',          label: 'Admissions Screening',        section: 'Scheduling, Intake & Admissions' },
+  { screen: 'ClinicalForms',          label: 'Admissions Screening',        section: 'Documentation' },
   { screen: 'Discharges',             label: 'Discharges',                  section: 'Clinical' },
   { screen: 'BedManagement',          label: 'Bed Management',              section: 'Clinical' },
   { screen: 'ChartReview',            label: 'Chart Review',                section: 'Documentation' },
