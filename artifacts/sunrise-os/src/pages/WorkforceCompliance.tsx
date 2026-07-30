@@ -2073,10 +2073,17 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
             let rowOnPage = 0;
 
             filtered.forEach((entry) => {
-              // Pre-calculate name lines to determine dynamic row height
+              // Pre-calculate name lines to determine dynamic row height.
+              // Cap at 4 lines so a very long name can never push a row past
+              // the footer (max rowHeight = 8 + 4×11 = 52 pt, well within the
+              // ~220 pt body height available on a fresh page).
               doc.setFontSize(9);
               doc.setFont('helvetica', 'normal');
-              const nameLines = doc.splitTextToSize(entry.reqName, colWidths[3] - 12);
+              const MAX_NAME_LINES = 4;
+              const rawNameLines: string[] = doc.splitTextToSize(entry.reqName, colWidths[3] - 12);
+              const nameLines: string[] = rawNameLines.length > MAX_NAME_LINES
+                ? [...rawNameLines.slice(0, MAX_NAME_LINES - 1), rawNameLines[MAX_NAME_LINES - 1].replace(/\.{0,3}$/, '…')]
+                : rawNameLines;
               const nameLineH = 11; // ~11 pt per line at fontSize 9
               const rowHeight = Math.max(rowHeightBase, 8 + nameLines.length * nameLineH);
 
