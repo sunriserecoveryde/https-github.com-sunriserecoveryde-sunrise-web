@@ -395,12 +395,91 @@ const SUB_MODULES = [
 const COMP_STANDARDS: Array<Exclude<CompStandard, 'All'>> = [
   'CARF', 'HIPAA', '42 CFR Part 2', 'State (MD OHCQ)', 'Medicaid', 'Internal Policy',
 ];
-function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evidenceInputs, corrActionInputs }: {
+
+function ComplianceSparkline({ history }: { history: ScoreHistoryEntry[] }) {
+  const [tooltip, setTooltip] = useState<{ idx: number } | null>(null);
+  const points = history.slice(-8);
+  if (points.length < 2) return null;
+
+  const W = 200, H = 36, PAD_X = 6, PAD_Y = 5;
+  const scores = points.map(p => p.score);
+  const minS = Math.max(0,   Math.min(...scores) - 4);
+  const maxS = Math.min(100, Math.max(...scores) + 4);
+  const rangeS = maxS - minS || 1;
+
+  const toX = (i: number) => PAD_X + (i / (points.length - 1)) * (W - PAD_X * 2);
+  const toY = (s: number)  => (H - PAD_Y) - ((s - minS) / rangeS) * (H - PAD_Y * 2);
+
+  const polyPts = points.map((p, i) => `${toX(i).toFixed(1)},${toY(p.score).toFixed(1)}`).join(' ');
+
+  const hoverEntry = tooltip !== null ? points[tooltip.idx] : null;
+  const hoverX = tooltip !== null ? toX(tooltip.idx) : 0;
+  const hoverY = tooltip !== null ? toY(points[tooltip.idx].score) : 0;
+
+  return (
+    <div className="relative mt-1.5 mb-2" onMouseLeave={() => setTooltip(null)}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 36, overflow: 'visible' }}>
+        {/* filled area under line */}
+        <defs>
+          <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <polygon
+          points={`${toX(0).toFixed(1)},${H} ${polyPts} ${toX(points.length - 1).toFixed(1)},${H}`}
+          fill="url(#spark-fill)"
+        />
+        <polyline
+          points={polyPts}
+          fill="none" stroke="#22c55e" strokeWidth="1.5"
+          strokeLinecap="round" strokeLinejoin="round"
+        />
+        {points.map((p, i) => (
+          <circle
+            key={i}
+            cx={toX(i)} cy={toY(p.score)}
+            r={i === points.length - 1 ? 3.5 : 2.5}
+            fill={i === points.length - 1 ? '#22c55e' : '#fff'}
+            stroke="#22c55e" strokeWidth="1.5"
+            style={{ cursor: 'default' }}
+            onMouseEnter={() => setTooltip({ idx: i })}
+          />
+        ))}
+      </svg>
+      {hoverEntry && (
+        <div
+          className="absolute z-20 px-2 py-1 bg-navy text-white text-[10px] font-semibold rounded shadow-lg pointer-events-none whitespace-nowrap"
+          style={{
+            left: `${(hoverX / W) * 100}%`,
+            bottom: `calc(${((H - hoverY) / H) * 100}% + 6px)`,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          {new Date(hoverEntry.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })} — {hoverEntry.score}%
+        </div>
+      )}
+      <div className="flex justify-between text-[9px] text-slate/60 mt-0.5 px-0.5">
+        <span>{new Date(points[0].timestamp).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}</span>
+        <span className="text-green-600 font-semibold">
+          {points[points.length - 1].score > points[0].score
+            ? `▲ +${points[points.length - 1].score - points[0].score} pts`
+            : points[points.length - 1].score < points[0].score
+              ? `▼ ${points[points.length - 1].score - points[0].score} pts`
+              : '—'}
+        </span>
+        <span>{new Date(points[points.length - 1].timestamp).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}</span>
+      </div>
+    </div>
+  );
+}
+function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evidenceInputs, corrActionInputs, scoreHistory }: {
   navigate: (s: Screen) => void;
   onOpenComplianceStandards: (filter?: Exclude<CompStandard, 'All'>) => void;
   completedIds: Set<string>;
   evidenceInputs: Record<string, string>;
   corrActionInputs: Record<string, string>;
+  scoreHistory: ScoreHistoryEntry[];
 }) {
   const activeCount = EMPLOYEES.filter(e => e.status === 'Active').length;
   const onboardingCount = EMPLOYEES.filter(e => e.status === 'Onboarding').length;
@@ -511,7 +590,10 @@ function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evide
                     <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-0.5 ${dotColor[kpi.dot]}`} />
                   </div>
                   <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
-                  <div className="text-xs text-slate mt-0.5 mb-2">{kpi.sub}</div>
+                  <div className="text-xs text-slate mt-0.5 mb-1">{kpi.sub}</div>
+                  {isRingsCard && scoreHistory.length >= 2 && (
+                    <ComplianceSparkline history={scoreHistory} />
+                  )}
                   {isRingsCard ? (
                     <div className="border-t border-border pt-2">
                       <div className="grid grid-cols-6 gap-1" onClick={e => e.stopPropagation()}>
@@ -1201,7 +1283,8 @@ const STD_SHORT: Record<Exclude<CompStandard, 'All'>, string> = {
   'Internal Policy': 'Internal',
 };
 
-function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, onDemoDataCleared }: {
+// hint: Structural and logic conflict. Both design and behavior differ.
+function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evidenceInputs, setEvidenceInputs, corrActionInputs, setCorrActionInputs, ownerInputs, setOwnerInputs, requestedStdFilter, onRequestedFilterApplied, auditLog, addAuditEntry, clearAuditLog, requestedReqId, appendScoreHistory, onDemoDataCleared }: {
   readOnly?: boolean;
   completedIds: Set<string>;
   setCompletedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -1217,6 +1300,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   addAuditEntry: (entry: Omit<AuditLogEntry, 'id' | 'timestamp'>) => void;
   clearAuditLog: () => void;
   requestedReqId?: string | null;
+  appendScoreHistory: (ids: Set<string>, evidence: Record<string, string>, corrAction: Record<string, string>) => void;
   onDemoDataCleared?: () => void;
 }) {
   // #565 — persist filter selection across tab switches
@@ -1796,6 +1880,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                           // detail: snapshot of input value at click time — a new string primitive,
                           // not a reference; editing the field afterward cannot mutate this entry.
                           addAuditEntry({ actionType: 'Evidence Linked', reqId: req.id, reqName: req.requirement, officer: currentStaff ? `${currentStaff.firstName} ${currentStaff.lastName}` : 'Compliance Officer', detail: evidenceInputs[req.id]?.trim() });
+                          appendScoreHistory(completedIds, evidenceInputs, corrActionInputs);
                         }}
                         className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${evidenceSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                         {evidenceSavedId === req.id ? '✓ Saved' : 'Link Evidence'}
@@ -1881,21 +1966,29 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                         // detail: snapshot of input value at click time — a new string primitive,
                         // not a reference; editing the field afterward cannot mutate this entry.
                         addAuditEntry({ actionType: 'Action Plan Saved', reqId: req.id, reqName: req.requirement, officer: currentStaff ? `${currentStaff.firstName} ${currentStaff.lastName}` : 'Compliance Officer', detail: corrActionInputs[req.id]?.trim() });
+                        appendScoreHistory(completedIds, evidenceInputs, corrActionInputs);
                       }}
                       className={`border text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${corrSavedId === req.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border text-slate hover:bg-white'}`}>
                       {corrSavedId === req.id ? '✓ Saved' : 'Save Action Plan'}
                     </LockedButton>
                     {!isCompleted && (
                       <LockedButton locked={readOnly} onClick={() => {
-                        setCompletedIds(prev => new Set([...prev, req.id]));
+                        const newIds = new Set([...completedIds, req.id]);
+                        setCompletedIds(newIds);
                         saveCompAction(`${req.id} marked as Met`);
                         addAuditEntry({ actionType: 'Marked Met', reqId: req.id, reqName: req.requirement, officer: currentStaff ? `${currentStaff.firstName} ${currentStaff.lastName}` : 'Compliance Officer' });
+                        appendScoreHistory(newIds, evidenceInputs, corrActionInputs);
                       }} className="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-700">
                         Mark as Met ✓
                       </LockedButton>
                     )}
                     {isCompleted && (
-                      <button onClick={() => setCompletedIds(prev => { const n = new Set(prev); n.delete(req.id); return n; })}
+                      <button onClick={() => {
+                        const newIds = new Set(completedIds);
+                        newIds.delete(req.id);
+                        setCompletedIds(newIds);
+                        appendScoreHistory(newIds, evidenceInputs, corrActionInputs);
+                      }}
                         className="text-xs text-slate border border-border px-3 py-1.5 rounded-lg hover:bg-white">
                         Undo
                       </button>
@@ -2583,8 +2676,6 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     // Persist the reset timestamp so the next mount can tell
                     // whether the server's auditResetAt has already been applied.
                     try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_AT_KEY, resetTimestamp); } catch { /* unavailable */ }
-                    // Clear demo-data flag so the banner disappears after a reset
-                    onDemoDataCleared?.();
                     // Wipe the server-side audit log so a GET on reload returns
                     // empty state instead of the pre-reset snapshot (#643).
                     fetch('/api/compliance/audit-log?orgId=default', { method: 'DELETE' })
@@ -2596,6 +2687,9 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     setAuditDateTo('');
                     setShowResetConfirm(false);
                     setResetPhrase('');
+                    // Record the post-reset score (empty state → base Met items only)
+                    appendScoreHistory(new Set(), {}, {});
+                    onDemoDataCleared?.();
                   }}
                   className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
@@ -2636,6 +2730,8 @@ const COMPLIANCE_AUDIT_SEEDED_KEY = 'sunrise-os:compliance-audit-seeded';
 const AUDIT_LOG_MAX_ENTRIES = 500;
 
 const COMPLIANCE_AUDIT_RESET_AT_KEY = 'sunrise-os:compliance-audit-reset-at';
+
+const COMPLIANCE_SCORE_HISTORY_KEY = 'sunrise-os:compliance-score-history';
 const SEED_AUDIT_LOG: Array<{ id: string; timestamp: string; actionType: AuditActionType; reqId: string; reqName: string; officer: string; detail?: string }> = [
   { id: 'seed-01', timestamp: '2026-07-01T08:14:00.000Z', actionType: 'Marked Met',        reqId: 'CR-001', reqName: 'Written access to services policy with eligibility criteria and referral processes',        officer: 'Renée M. Caldwell' },
   { id: 'seed-02', timestamp: '2026-07-01T09:02:00.000Z', actionType: 'Evidence Linked',   reqId: 'CR-002', reqName: 'Individual service plan present for all clients within 30 days of admission',              officer: 'James S. Collins III', detail: 'ISP-template-v4.pdf' },
@@ -2668,6 +2764,7 @@ const SEED_AUDIT_LOG: Array<{ id: string; timestamp: string; actionType: AuditAc
 ];
 
 const SAMPLE_COMPLETED_IDS = ['CR-007', 'CR-012'];
+// hint: Structural and logic conflict. Both design and behavior differ.
 export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Props) {
   // #591 — if launched via deep-link with a specific req, jump straight to Compliance Standards tab
   const [tab, setTab] = useState<WFTab>(() => requestedReqId ? 'Compliance Standards' : 'Dashboard');
@@ -2738,6 +2835,61 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       return SEED_AUDIT_LOG;
     }
   });
+  // ── Score history — rolling window used by the Dashboard sparkline ──────────
+  const [scoreHistory, setScoreHistory] = useState<ScoreHistoryEntry[]>(() => {
+    try {
+      const storedRaw = localStorage.getItem(COMPLIANCE_SCORE_HISTORY_KEY);
+      let history: ScoreHistoryEntry[] = storedRaw ? (JSON.parse(storedRaw) as ScoreHistoryEntry[]) : [];
+
+      // On a truly fresh session, seed a realistic improvement trajectory.
+      if (history.length === 0) {
+        history = SEED_SCORE_HISTORY;
+        try { localStorage.setItem(COMPLIANCE_SCORE_HISTORY_KEY, JSON.stringify(history)); } catch { /* unavailable */ }
+      }
+
+      // Reconcile: compute the current score from the same localStorage keys
+      // used to initialise completedIds / evidenceInputs / corrActionInputs above.
+      // If the last history point differs from the live score, append a corrective
+      // entry so the sparkline endpoint always matches the KPI number.
+      try {
+        const ids = new Set<string>(JSON.parse(localStorage.getItem(COMPLIANCE_STORAGE_KEY) ?? '[]'));
+        const ev: Record<string, string>  = JSON.parse(localStorage.getItem(COMPLIANCE_EVIDENCE_KEY) ?? '{}');
+        const ca: Record<string, string>  = JSON.parse(localStorage.getItem(COMPLIANCE_CORR_KEY)     ?? '{}');
+        const met = COMP_REQUIREMENTS.filter(r => reqIsEffectivelyMet(r, ids, ev, ca)).length;
+        const currentScore = Math.round((met / COMP_REQUIREMENTS.length) * 100);
+        const lastEntry = history[history.length - 1];
+        if (!lastEntry || lastEntry.score !== currentScore) {
+          const reconciled = [...history, { timestamp: new Date().toISOString(), score: currentScore }]
+            .slice(-SCORE_HISTORY_MAX_ENTRIES);
+          try { localStorage.setItem(COMPLIANCE_SCORE_HISTORY_KEY, JSON.stringify(reconciled)); } catch { /* unavailable */ }
+          return reconciled;
+        }
+      } catch { /* reconciliation is best-effort — fall through to stored history */ }
+
+      return history;
+    } catch {
+      return SEED_SCORE_HISTORY;
+    }
+  });
+
+  const appendScoreHistory = (
+    ids: Set<string>,
+    evidence: Record<string, string>,
+    corrAction: Record<string, string>,
+  ) => {
+    const met = COMP_REQUIREMENTS.filter(r => reqIsEffectivelyMet(r, ids, evidence, corrAction)).length;
+    const score = Math.round((met / COMP_REQUIREMENTS.length) * 100);
+    const entry: ScoreHistoryEntry = { timestamp: new Date().toISOString(), score };
+    setScoreHistory(prev => {
+      // Skip if score is unchanged — avoids duplicate points on repeat saves.
+      const last = prev[prev.length - 1];
+      if (last && last.score === score) return prev;
+      const next = [...prev, entry].slice(-SCORE_HISTORY_MAX_ENTRIES);
+      try { localStorage.setItem(COMPLIANCE_SCORE_HISTORY_KEY, JSON.stringify(next)); } catch { /* unavailable */ }
+      return next;
+    });
+  };
+
   // Callers must pass `detail` as a plain string value (a snapshot of the
   // input at click time), never as a reference to a state variable that can
   // change later.  Because JS strings are primitives, spreading `entry` into
@@ -3012,17 +3164,18 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
       </div>
 
       <div>
-        {tab === 'Dashboard'             && <DashboardTab navigate={navigate} onOpenComplianceStandards={(filter) => { if (filter) setRequestedStdFilter(filter); setTab('Compliance Standards'); }} completedIds={completedIds} evidenceInputs={evidenceInputs} corrActionInputs={corrActionInputs} />}
+        {tab === 'Dashboard'             && <DashboardTab navigate={navigate} onOpenComplianceStandards={(filter) => { if (filter) setRequestedStdFilter(filter); setTab('Compliance Standards'); }} completedIds={completedIds} evidenceInputs={evidenceInputs} corrActionInputs={corrActionInputs} scoreHistory={scoreHistory} />}
         {tab === 'Employee Profiles'     && <EmployeeProfilesTab />}
         {tab === 'Exclusion & Screening' && <ExclusionTab readOnly={readOnly} />}
         {tab === 'Onboarding'            && <OnboardingTab readOnly={readOnly} />}
         {tab === 'Performance Reviews'   && <PerformanceTab readOnly={readOnly} />}
         {tab === 'Offboarding'           && <OffboardingTab readOnly={readOnly} />}
-        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} />}
+        {tab === 'Compliance Standards'  && <ComplianceStandardsTab key={compStandardsKey} readOnly={readOnly} completedIds={completedIds} setCompletedIds={setCompletedIds} evidenceInputs={evidenceInputs} setEvidenceInputs={setEvidenceInputs} corrActionInputs={corrActionInputs} setCorrActionInputs={setCorrActionInputs} ownerInputs={ownerInputs} setOwnerInputs={setOwnerInputs} requestedStdFilter={requestedStdFilter} onRequestedFilterApplied={() => setRequestedStdFilter(null)} auditLog={auditLog} addAuditEntry={addAuditEntry} clearAuditLog={() => setAuditLogRaw([])} requestedReqId={requestedReqId} onDemoDataCleared={() => { setIsDemoData(false); try { localStorage.removeItem(COMPLIANCE_DEMO_DATA_KEY); } catch { /* unavailable */ } }} appendScoreHistory={appendScoreHistory} />}
       </div>
     </div>
   );
 }
+
 
 function StandardRing({
   std, completedIds, evidenceInputs, corrActionInputs, isActive, onClick,
@@ -3228,6 +3381,8 @@ function pruneAuditLog(entries: AuditLogEntry[]): AuditLogEntry[] {
 
 const AUDIT_LOG_MAX_AGE_MS  = 90 * 24 * 60 * 60 * 1000; // 90 days in ms
 
+interface ScoreHistoryEntry { timestamp: string; score: number }
+
 const SAMPLE_OWNER_INPUTS: Record<string, string> = {
   'CR-004': 'Renée M. Caldwell',
   'CR-007': 'Renée M. Caldwell',
@@ -3251,3 +3406,16 @@ const SAMPLE_CORR_ACTION_INPUTS: Record<string, string> = {
   'CR-017': 'Update UR coordinator workflow to require PA confirmation before Level of Care change; deadline Aug 1.',
   'CR-019': 'Kevin Wright review rescheduled to Aug 5 with James Collins. Tracking dashboard deployed for supervisors.',
 };
+
+const SEED_SCORE_HISTORY: ScoreHistoryEntry[] = [
+  { timestamp: '2026-04-01T09:00:00.000Z', score: 62 },
+  { timestamp: '2026-04-22T09:00:00.000Z', score: 65 },
+  { timestamp: '2026-05-06T09:00:00.000Z', score: 70 },
+  { timestamp: '2026-05-20T09:00:00.000Z', score: 74 },
+  { timestamp: '2026-06-03T09:00:00.000Z', score: 79 },
+  { timestamp: '2026-06-17T09:00:00.000Z', score: 84 },
+  { timestamp: '2026-07-08T09:00:00.000Z', score: 88 },
+  { timestamp: '2026-07-22T09:00:00.000Z', score: 90 },
+];
+
+const SCORE_HISTORY_MAX_ENTRIES = 30;
