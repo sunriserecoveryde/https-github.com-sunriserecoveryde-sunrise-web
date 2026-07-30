@@ -226,6 +226,13 @@ export function ComplianceDemoTour({ steps, step, onNext, onPrev, onEnd }: Props
             )}
           </div>
         </div>
+
+        {/* Keyboard hint row */}
+        <div className="mt-3 pt-2.5 border-t border-gray-100 flex justify-center">
+          <span className="text-[10px] text-gray-400 tracking-wide select-none">
+            ← Prev &nbsp;·&nbsp; → Next &nbsp;·&nbsp; Esc End
+          </span>
+        </div>
       </div>
     </>
   );
