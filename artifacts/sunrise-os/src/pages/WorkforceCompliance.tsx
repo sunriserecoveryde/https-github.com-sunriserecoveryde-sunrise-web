@@ -579,7 +579,7 @@ function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evide
           <span className="text-xs text-slate">As of July 27, 2026 · Rockville, MD</span>
         </div>
         <p className="text-sm text-slate mb-5">Know who is qualified, properly trained, appropriately supervised, correctly scheduled, and authorized to serve clients — before a compliance problem occurs.</p>
-        <div className="grid grid-cols-3 gap-4">
+        <div id="wc-tour-dashboard" className="grid grid-cols-3 gap-4">
           {kpis.map((kpi, i) => {
             const isRingsCard = kpi.detail === '__RINGS__';
             if (kpi.onClick) {
@@ -645,7 +645,7 @@ function DashboardTab({ navigate, onOpenComplianceStandards, completedIds, evide
         </div>
       </div>
 
-      <div>
+      <div id="wc-tour-submodules">
         <h3 className="text-sm font-bold text-navy mb-3">Workforce Sub-Modules</h3>
         <div className="grid grid-cols-4 gap-4">
           {SUB_MODULES.map(m => {
@@ -2779,6 +2779,7 @@ const SEED_AUDIT_LOG: Array<{ id: string; timestamp: string; actionType: AuditAc
 ];
 
 const SAMPLE_COMPLETED_IDS = ['CR-007', 'CR-012'];
+
 // hint: Structural and logic conflict. Both design and behavior differ.
 export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Props) {
   // #591 — if launched via deep-link with a specific req, jump straight to Compliance Standards tab
@@ -3105,6 +3106,20 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
   const [isTourActive, setIsTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
 
+  // #671 — auto-start tour when ?tour=1 is present in the URL on mount.
+  // Remove the param immediately so a hard-reload doesn't re-trigger it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tour') === '1') {
+      params.delete('tour');
+      const newSearch = params.toString();
+      const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+      window.history.replaceState(null, '', newUrl);
+      handleTourStart();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleTourStart = () => {
     setTourStep(0);
     setTab(TOUR_STEPS[0].tab as WFTab);
@@ -3161,7 +3176,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div id="wc-tour-kpis" className="grid grid-cols-4 gap-4">
         {[
           { label: 'Active Staff', value: EMPLOYEES.filter(e => e.status === 'Active').length, sub: `${EMPLOYEES.length} total headcount`, color: 'text-navy' },
           { label: 'Credential Alerts', value: EMPLOYEES.reduce((n, e) => n + e.credentialAlerts, 0), sub: 'Expiring within 120 days', color: 'text-amber-600' },
@@ -3178,7 +3193,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
 
       {/* ── Load Sample Audit CTA — visible only on a completely blank session ── */}
       {completedIds.size === 0 && !readOnly && (
-        <div className="flex items-center justify-between bg-gradient-to-r from-navy/5 to-orange/5 border border-orange/20 rounded-xl px-5 py-4">
+        <div id="wc-tour-load-sample" className="flex items-center justify-between bg-gradient-to-r from-navy/5 to-orange/5 border border-orange/20 rounded-xl px-5 py-4">
           <div>
             <div className="text-sm font-bold text-navy">No audit data yet</div>
             <div className="text-xs text-slate mt-0.5">Load a realistic sample audit to see the compliance tracker in action — 85 % score, open gaps across 3 frameworks, owner assignments, and evidence filed.</div>
@@ -3202,7 +3217,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         </div>
       )}
 
-      <div className="flex gap-1 border-b border-border">
+      <div id="wc-tour-tab-bar" className="flex gap-1 border-b border-border">
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${tab === t ? 'border-orange text-orange' : 'border-transparent text-slate hover:text-navy'}`}>
@@ -3216,7 +3231,7 @@ export function WorkforceCompliance({ navigate, readOnly, requestedReqId }: Prop
         ))}
       </div>
 
-      <div>
+      <div id="wc-tour-standards-header">
         {tab === 'Dashboard'             && <DashboardTab navigate={navigate} onOpenComplianceStandards={(filter) => { if (filter) setRequestedStdFilter(filter); setTab('Compliance Standards'); }} completedIds={completedIds} evidenceInputs={evidenceInputs} corrActionInputs={corrActionInputs} scoreHistory={scoreHistory} />}
         {tab === 'Employee Profiles'     && <EmployeeProfilesTab />}
         {tab === 'Exclusion & Screening' && <ExclusionTab readOnly={readOnly} />}
