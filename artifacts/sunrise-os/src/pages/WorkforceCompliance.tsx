@@ -1264,6 +1264,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [resetPhrase, setResetPhrase] = useState('');
   const [showAuditTrail, setShowAuditTrail] = useState(false);
   const [auditFilter, setAuditFilter] = useState<AuditActionType | 'All'>('All');
+  const [auditDateFrom, setAuditDateFrom] = useState('');
+  const [auditDateTo, setAuditDateTo] = useState('');
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [csvExporting, setCsvExporting] = useState(false);
   const [csvExportError, setCsvExportError] = useState(false);
@@ -1909,7 +1911,25 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           'Action Plan Saved': 'bg-amber-100 text-amber-700',
         };
         const sorted = [...auditLog].reverse();
-        const filtered = auditFilter === 'All' ? sorted : sorted.filter(e => e.actionType === auditFilter);
+        const dateFrom = auditDateFrom ? new Date(auditDateFrom + 'T00:00:00') : null;
+        const dateTo   = auditDateTo   ? new Date(auditDateTo   + 'T23:59:59.999') : null;
+        const filtered = (auditFilter === 'All' ? sorted : sorted.filter(e => e.actionType === auditFilter))
+          .filter(e => {
+            const ts = new Date(e.timestamp);
+            if (dateFrom && ts < dateFrom) return false;
+            if (dateTo   && ts > dateTo)   return false;
+            return true;
+          });
+        const dateRangeSuffix = (auditDateFrom || auditDateTo)
+          ? `-${auditDateFrom || 'start'}-to-${auditDateTo || 'end'}`
+          : '';
+        const dateRangeLabel = (auditDateFrom && auditDateTo)
+          ? `${auditDateFrom} – ${auditDateTo}`
+          : auditDateFrom
+            ? `From ${auditDateFrom}`
+            : auditDateTo
+              ? `To ${auditDateTo}`
+              : 'All Dates';
 
         const handleExportCSV = () => {
           if (csvExporting) return;
@@ -1932,7 +1952,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
               const a = document.createElement('a');
               a.href = url;
               const suffix = auditFilter === 'All' ? '' : `-${auditFilter.toLowerCase().replace(/\s+/g, '-')}`;
-              a.download = `audit-trail${suffix}.csv`;
+              a.download = `audit-trail${suffix}${dateRangeSuffix}.csv`;
               a.click();
               URL.revokeObjectURL(url);
             } catch {
@@ -1951,6 +1971,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           setTimeout(() => {
           try {
           const filterLabel = auditFilter === 'All' ? 'All Actions' : auditFilter;
+          const pdfDateRangeLabel = dateRangeLabel;
           const generatedDate = new Date().toLocaleString('en-US', {
             month: 'long', day: 'numeric', year: 'numeric',
             hour: 'numeric', minute: '2-digit', hour12: true,
@@ -1987,12 +2008,12 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           doc.line(marginL, 65, pageW - marginR, 65);
 
           // ── Meta cells ──────────────────────────────────────────────────────
-          const cellW = contentW / 3 - 6;
+          const cellW = contentW / 4 - 7;
           const metaY = 72;
           const metaCellH = 36;
-          const metaLabels = ['GENERATED', 'FILTER APPLIED', 'TOTAL ENTRIES'];
-          const metaValues = [generatedDate, filterLabel, String(filtered.length)];
-          [0, 1, 2].forEach(i => {
+          const metaLabels = ['GENERATED', 'FILTER APPLIED', 'DATE RANGE', 'TOTAL ENTRIES'];
+          const metaValues = [generatedDate, filterLabel, pdfDateRangeLabel, String(filtered.length)];
+          [0, 1, 2, 3].forEach(i => {
             const x = marginL + i * (cellW + 9);
             doc.setFillColor(249, 250, 251);
             doc.setDrawColor(229, 231, 235);
@@ -2168,7 +2189,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
 
           // ── Save ─────────────────────────────────────────────────────────────
           const suffix = auditFilter === 'All' ? '' : `-${auditFilter.toLowerCase().replace(/\s+/g, '-')}`;
-          doc.save(`audit-trail${suffix}.pdf`);
+          doc.save(`audit-trail${suffix}${dateRangeSuffix}.pdf`);
           } finally {
             setPdfGenerating(false);
           }
@@ -2193,8 +2214,10 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                 <span className="text-sm font-semibold text-navy">Audit Trail</span>
                 {auditLog.length > 0 ? (
                   <span className="text-[10px] bg-navy text-white rounded-full px-2 py-0.5 font-semibold">
-                    {auditFilter === 'All' ? auditLog.length : filtered.length}
-                    {auditFilter !== 'All' && <span className="opacity-70"> / {auditLog.length}</span>}
+                    {filtered.length}
+                    {(auditFilter !== 'All' || auditDateFrom || auditDateTo) && (
+                      <span className="opacity-70"> / {auditLog.length}</span>
+                    )}
                   </span>
                 ) : (
                   <span className="text-[11px] text-slate italic">Start marking requirements to build the trail</span>
@@ -2272,13 +2295,42 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                       )}
                     </button>
                   ))}
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <span className="text-[11px] text-slate font-medium shrink-0">Date range:</span>
+                    <input
+                      type="date"
+                      value={auditDateFrom}
+                      onChange={e => setAuditDateFrom(e.target.value)}
+                      max={auditDateTo || undefined}
+                      className="text-[11px] text-navy border border-border rounded-lg px-2 py-0.5 bg-white focus:outline-none focus:border-orange focus:ring-1 focus:ring-orange/30"
+                    />
+                    <span className="text-[11px] text-slate">–</span>
+                    <input
+                      type="date"
+                      value={auditDateTo}
+                      onChange={e => setAuditDateTo(e.target.value)}
+                      min={auditDateFrom || undefined}
+                      className="text-[11px] text-navy border border-border rounded-lg px-2 py-0.5 bg-white focus:outline-none focus:border-orange focus:ring-1 focus:ring-orange/30"
+                    />
+                    {(auditDateFrom || auditDateTo) && (
+                      <button
+                        onClick={() => { setAuditDateFrom(''); setAuditDateTo(''); }}
+                        className="text-[11px] text-slate hover:text-navy ml-0.5"
+                        title="Clear date range"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>}
                 <div className="divide-y divide-border max-h-80 overflow-y-auto">
                   {filtered.length === 0 ? (
                     <div className="px-4 py-6 text-center text-sm text-slate">
                       {sorted.length === 0
                         ? 'No audit events yet. Mark a requirement as Met, link evidence, or save a corrective action to begin the log.'
-                        : `No "${auditFilter}" entries in the audit trail.`}
+                        : (auditDateFrom || auditDateTo)
+                          ? `No entries match the selected filters${auditFilter !== 'All' ? ` and action type "${auditFilter}"` : ''} in this date range.`
+                          : `No "${auditFilter}" entries in the audit trail.`}
                     </div>
                   ) : filtered.map(entry => {
                     const dt = new Date(entry.timestamp);
@@ -2509,6 +2561,8 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                     try { localStorage.setItem(COMPLIANCE_AUDIT_RESET_LOG_KEY, JSON.stringify(entry)); } catch { /* unavailable */ }
                     setLastResetEntry(entry);
                     setAuditFilter('All');
+                    setAuditDateFrom('');
+                    setAuditDateTo('');
                     setShowResetConfirm(false);
                     setResetPhrase('');
                   }}
