@@ -1263,6 +1263,7 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
   const [resetPhrase, setResetPhrase] = useState('');
   const [showAuditTrail, setShowAuditTrail] = useState(false);
   const [auditFilter, setAuditFilter] = useState<AuditActionType | 'All'>('All');
+  const [pdfGenerating, setPdfGenerating] = useState(false);
 
   // #597 — audit reset log
   const { currentStaff } = useAuth();
@@ -1923,6 +1924,11 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
         };
 
         const handleExportPDF = () => {
+          if (pdfGenerating) return;
+          setPdfGenerating(true);
+          // Yield to the browser so the loading state renders before jsPDF blocks the thread
+          setTimeout(() => {
+          try {
           const filterLabel = auditFilter === 'All' ? 'All Actions' : auditFilter;
           const generatedDate = new Date().toLocaleString('en-US', {
             month: 'long', day: 'numeric', year: 'numeric',
@@ -2129,6 +2135,10 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
           // ── Save ─────────────────────────────────────────────────────────────
           const suffix = auditFilter === 'All' ? '' : `-${auditFilter.toLowerCase().replace(/\s+/g, '-')}`;
           doc.save(`audit-trail${suffix}.pdf`);
+          } finally {
+            setPdfGenerating(false);
+          }
+          }, 0);
         };
 
         const filterChips: Array<{ label: string; value: AuditActionType | 'All'; activeClass: string }> = [
@@ -2159,10 +2169,23 @@ function ComplianceStandardsTab({ readOnly, completedIds, setCompletedIds, evide
                   <>
                     <button
                       onClick={handleExportPDF}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors"
+                      disabled={pdfGenerating}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-navy bg-white border border-border rounded-lg px-2.5 py-1 hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <Printer className="w-3.5 h-3.5" />
-                      Export as PDF
+                      {pdfGenerating ? (
+                        <>
+                          <svg className="w-3.5 h-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Generating…
+                        </>
+                      ) : (
+                        <>
+                          <Printer className="w-3.5 h-3.5" />
+                          Export as PDF
+                        </>
+                      )}
                     </button>
                     <button
                       onClick={handleExportCSV}
