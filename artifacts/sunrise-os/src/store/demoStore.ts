@@ -8,7 +8,7 @@
 import { useSyncExternalStore, useCallback } from 'react';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
-export const STORE_KEY   = 'sunrise_demo_state_v1';
+export const STORE_KEY   = 'sunrise_demo_state_v2';   // bumped: added notificationSnoozedIds
 export const SESSION_KEY = 'sunrise_demo_session_v1';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -111,6 +111,7 @@ export interface IntakePatient {
 
 export interface DemoState {
   notificationReadIds: string[];
+  notificationSnoozedIds: string[];  // removed from active list; preserved in audit
   auditLog: AuditEntry[];
   lastResetAt: string | null;
   // Clinical documentation
@@ -126,6 +127,7 @@ export interface DemoState {
 
 const INITIAL_STATE: DemoState = {
   notificationReadIds: [],
+  notificationSnoozedIds: [],
   auditLog: [],
   lastResetAt: null,
   pendingDocs: [],
@@ -230,6 +232,19 @@ export function useDemoStore() {
       const set = new Set([...s.notificationReadIds, ...ids]);
       return { ...s, notificationReadIds: [...set] };
     });
+  }, []);
+
+  const snoozeNotification = useCallback((id: string) => {
+    _setState(s => ({
+      ...s,
+      notificationSnoozedIds: s.notificationSnoozedIds.includes(id)
+        ? s.notificationSnoozedIds
+        : [...s.notificationSnoozedIds, id],
+      // Also mark as read so it doesn't count toward badge if un-snoozed later
+      notificationReadIds: s.notificationReadIds.includes(id)
+        ? s.notificationReadIds
+        : [...s.notificationReadIds, id],
+    }));
   }, []);
 
   const addAuditEntry = useCallback(
@@ -428,6 +443,7 @@ export function useDemoStore() {
     state,
     markRead,
     markAllRead,
+    snoozeNotification,
     addAuditEntry,
     reset,
     // Doc lifecycle

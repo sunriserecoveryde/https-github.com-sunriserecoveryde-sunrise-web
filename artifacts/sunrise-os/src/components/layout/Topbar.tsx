@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import sunriseLogo from '@assets/0_SunriseOS_Logo_transparent.png';
 import { Bell, Search, Settings, MessageSquare, ChevronDown, Flag, LogOut, UserCircle, RotateCcw, ArrowLeftCircle } from 'lucide-react';
 import { Screen } from '../../App';
-import { NotificationPanel, ALL_NOTIFICATION_IDS } from './NotificationPanel';
+import { NotificationPanel, CRITICAL_NOTIFICATION_IDS } from './NotificationPanel';
 import { CommandPalette } from './CommandPalette';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
@@ -26,9 +26,9 @@ export function Topbar({ navigate, currentScreen }: Props) {
   const { role, setRoleId } = useRole();
   const { currentStaff, logout } = useAuth();
   const { state: demoState } = useDemoStore();
-  // Actual unread = all known notification IDs minus those already read
-  const unreadCount = ALL_NOTIFICATION_IDS.filter(
-    id => !demoState.notificationReadIds.includes(id),
+  // Badge = critical-clinical notifications not yet read (excludes snoozed)
+  const unreadCount = CRITICAL_NOTIFICATION_IDS.filter(
+    id => !demoState.notificationReadIds.includes(id) && !demoState.notificationSnoozedIds.includes(id),
   ).length;
 
   // Ctrl+K global shortcut

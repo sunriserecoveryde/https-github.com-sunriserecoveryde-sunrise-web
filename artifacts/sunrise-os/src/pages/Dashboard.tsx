@@ -432,62 +432,142 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
       {/* ── CLINICAL VIEW ──────────────────────────────────────────────────── */}
       {isClinical && !isBHT && (
         <>
+          {/* ── LEVEL 1: IMMEDIATE ACTION ─────────────────────────────────────
+              All urgent alerts consolidated at the top. Users should be able
+              to identify the 3 most critical actions within 5 seconds.      */}
+          {(() => {
+            const liveVisible = liveAlerts.filter(a => !dismissedIds.has(a.id));
+            const amaReviewed = reviewedAlerts.has('ama-alert');
+            const cosignReviewed = reviewedAlerts.has('cosign-alert');
+            const hasAnyAction = liveVisible.length > 0 || !amaReviewed || (canAccessScreen('CosignQueue') && !cosignReviewed);
+            if (!hasAnyAction) return null;
+            return (
+              <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2.5 bg-red-50 border-b border-red-100">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-red-700">Immediate Action Required</span>
+                    <span className="text-[11px] text-red-500 font-medium">
+                      {liveVisible.length + (!amaReviewed ? 1 : 0) + (canAccessScreen('CosignQueue') && !cosignReviewed ? 1 : 0)} item{liveVisible.length + (!amaReviewed ? 1 : 0) + (canAccessScreen('CosignQueue') && !cosignReviewed ? 1 : 0) !== 1 ? 's' : ''} needing attention
+                    </span>
+                  </div>
+                </div>
+                <div className="divide-y divide-border">
+                  {/* Live CIWA/COWS nurse alerts */}
+                  {liveVisible.map(alert => (
+                    <div key={alert.id} className="flex items-center gap-3 px-4 py-3">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white text-[10px] font-bold shrink-0" aria-hidden="true">!</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">LIVE · Nurse Alert</span>
+                          <span className="text-xs font-medium text-red-700">{alert.severity}</span>
+                        </div>
+                        <div className="text-sm font-medium text-navy mt-0.5">
+                          {alert.patientName} (Bed {alert.patientBed}) — {alert.scoreType} score: {alert.score}
+                        </div>
+                        <div className="text-xs text-slate">Logged by {alert.nurseInitials} · {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button onClick={() => navigate('WithdrawalMonitor')} className="text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-colors">Review Alert</button>
+                        <button onClick={() => setDismissedIds(prev => new Set([...prev, alert.id]))} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" aria-label="Dismiss alert"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </div>
+                  ))}
+                  {/* AMA Risk alert */}
+                  {!amaReviewed && (
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <AlertTriangle className="w-5 h-5 text-high shrink-0" aria-hidden="true" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-orange-700 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded">AMA Risk</span>
+                          <span className="text-xs text-slate">Responsible: Clinical Team · Due: Today</span>
+                        </div>
+                        <div className="text-sm font-medium text-navy mt-0.5">2 clients flagged HIGH for early departure</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button onClick={() => navigate('RiskDashboard')} className="text-xs font-semibold text-navy border border-navy/30 hover:bg-navy/5 px-3 py-1.5 rounded-lg transition-colors">View Risk Dashboard</button>
+                        <button onClick={() => markReviewed('ama-alert', 'AMA Risk Alert: 2 clients flagged HIGH for early departure')} className="text-xs text-slate hover:text-navy border border-border hover:border-navy/30 px-3 py-1.5 rounded-lg transition-colors">Mark Reviewed</button>
+                      </div>
+                    </div>
+                  )}
+                  {/* Co-sign queue alert */}
+                  {canAccessScreen('CosignQueue') && !cosignReviewed && (
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <Clock className="w-5 h-5 text-moderate shrink-0" aria-hidden="true" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">Documentation</span>
+                          <span className="text-xs text-slate">Responsible: Clinical Supervisors · Due: Today</span>
+                        </div>
+                        <div className="text-sm font-medium text-navy mt-0.5">4 co-sign requests pending from primary counselors</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button onClick={() => navigate('CosignQueue')} className="text-xs font-semibold text-navy border border-navy/30 hover:bg-navy/5 px-3 py-1.5 rounded-lg transition-colors">Review Co-signs</button>
+                        <button onClick={() => markReviewed('cosign-alert', '4 co-sign requests pending')} className="text-xs text-slate hover:text-navy border border-border hover:border-navy/30 px-3 py-1.5 rounded-lg transition-colors">Mark Reviewed</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ── LEVEL 2: FILTERS + TODAY'S PRIORITIES ─────────────────────── */}
           <FilterBar />
 
-          {/* Live nurse alerts */}
-          {liveAlerts.filter(a => !dismissedIds.has(a.id)).length > 0 && (
-            <div className="space-y-1.5">
-              {liveAlerts.filter(a => !dismissedIds.has(a.id)).map(alert => (
-                <div key={alert.id} className="bg-red-50 border border-red-400 px-4 py-3 rounded-lg flex items-center gap-3 shadow-sm">
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold shrink-0">!</span>
-                  <span className="text-sm font-medium text-red-900 flex-1">
-                    <strong>LIVE · Nurse Alert:</strong>{' '}
-                    {alert.patientName} (Bed {alert.patientBed}) — {alert.scoreType} {alert.score} · <em>{alert.severity}</em> · logged by {alert.nurseInitials}
-                  </span>
-                  <span className="text-xs text-red-400 shrink-0 mr-2">
-                    {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <button onClick={() => setDismissedIds(prev => new Set([...prev, alert.id]))} className="text-red-400 hover:text-red-600 shrink-0" aria-label="Dismiss">✕</button>
+          {/* Today's Priorities — actionable items with owner, deadline, direct link */}
+          {canSeeCC && (
+            <button onClick={() => navigate('CommandCenter')}
+              className="w-full flex items-center justify-between px-5 py-3 bg-navy/5 border border-navy/15 hover:bg-navy/10 rounded-lg transition-colors group">
+              <div className="flex items-center gap-3">
+                <Zap className="w-4 h-4 text-sunrise-orange" />
+                <div className="text-left">
+                  <div className="font-semibold text-navy text-sm">Command Center</div>
+                  <div className="text-xs text-slate">{ccOpenAlerts.total} open alerts · {ccOpenAlerts.critical} critical requiring immediate action</div>
                 </div>
-              ))}
-            </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {ccOpenAlerts.critical > 0 && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{ccOpenAlerts.critical} Critical</span>
+                )}
+                <ChevronRight className="w-4 h-4 text-slate group-hover:text-navy transition-colors" />
+              </div>
+            </button>
           )}
 
-          {/* Static alerts with Mark Reviewed */}
-          <div className="space-y-2">
-            {[
-              { id: 'ama-alert', level: 'high', icon: AlertTriangle, iconColor: 'text-high', bg: 'bg-high-bg border-high/20', text: 'AMA Risk Alert: 2 clients flagged HIGH for early departure', screen: 'RiskDashboard' as Screen },
-            ].map(al => (
-              <div key={al.id} className={`${al.bg} border px-4 py-3 rounded-lg flex items-center gap-3 shadow-sm ${reviewedAlerts.has(al.id) ? 'opacity-50' : ''}`}>
-                <al.icon className={`w-5 h-5 ${al.iconColor} shrink-0`} />
-                <span className="text-sm font-medium text-navy flex-1"><strong>{al.text}</strong></span>
-                {reviewedAlerts.has(al.id) ? (
-                  <span className="flex items-center gap-1 text-xs text-green-600 font-semibold"><CheckCircle className="w-3.5 h-3.5" /> Reviewed</span>
-                ) : (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => navigate(al.screen)} className="text-xs text-sunrise-blue font-medium hover:underline">View →</button>
-                    <button onClick={() => markReviewed(al.id, al.text)} className="text-xs bg-white border border-border text-slate hover:text-navy hover:border-navy font-medium px-2 py-1 rounded transition-colors">Mark Reviewed</button>
-                  </div>
-                )}
-              </div>
-            ))}
-            {canAccessScreen('CosignQueue') && (
-              <div className={`bg-moderate-bg border border-moderate/20 px-4 py-3 rounded-lg flex items-center gap-3 shadow-sm ${reviewedAlerts.has('cosign-alert') ? 'opacity-50' : ''}`}>
-                <Clock className="w-5 h-5 text-moderate shrink-0" />
-                <span className="text-sm font-medium text-navy flex-1">4 co-sign requests pending from primary counselors</span>
-                {reviewedAlerts.has('cosign-alert') ? (
-                  <span className="flex items-center gap-1 text-xs text-green-600 font-semibold"><CheckCircle className="w-3.5 h-3.5" /> Reviewed</span>
-                ) : (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => navigate('CosignQueue')} className="text-xs text-sunrise-blue font-medium hover:underline">Review →</button>
-                    <button onClick={() => markReviewed('cosign-alert', '4 co-sign requests pending')} className="text-xs bg-white border border-border text-slate hover:text-navy hover:border-navy font-medium px-2 py-1 rounded transition-colors">Mark Reviewed</button>
-                  </div>
-                )}
-              </div>
-            )}
+          <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate">Today&apos;s Priorities</span>
+              <span className="text-xs text-slate">Common tasks for {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+            </div>
+            <div className="divide-y divide-border">
+              {[
+                canAccessScreen('Admissions') && { label: 'New Admission', desc: 'Intake team · Open today', icon: UserPlus, screen: 'Admissions' as Screen, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+                canAccessScreen('ProgressNotes') && { label: 'Write Progress Notes', desc: '5 notes pending · Due end of shift', icon: FileText, screen: 'ProgressNotes' as Screen, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+                canAccessScreen('UADrugTesting') && { label: 'Review UA Results', desc: 'Lab · Available now', icon: Droplets, screen: 'UADrugTesting' as Screen, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
+                canAccessScreen('IncidentReporting') && { label: 'Open Incidents (2)', desc: 'Safety team · Due: 24 hrs', icon: AlertTriangle, screen: 'IncidentReporting' as Screen, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
+                canAccessScreen('ChartReview') && { label: 'Chart Deficiencies', desc: '3 charts overdue · Clinicians assigned', icon: FileText, screen: 'ChartReview' as Screen, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
+              ].filter(Boolean).map((item) => {
+                if (!item) return null;
+                const Icon = item.icon;
+                return (
+                  <button key={item.label} onClick={() => navigate(item.screen)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left group">
+                    <span className={`w-7 h-7 rounded-lg border flex items-center justify-center flex-none ${item.bg} ${item.border}`}>
+                      <Icon className={`w-3.5 h-3.5 ${item.color}`} />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-navy">{item.label}</div>
+                      <div className="text-xs text-slate">{item.desc}</div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate/40 group-hover:text-navy transition-colors flex-none" />
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Metrics Row */}
+          {/* ── LEVEL 3: KPI CARDS ────────────────────────────────────────── */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div data-tour-id="kpi-census">
               <MetricCard title="Census" value="18/22" subtitle="81.8% Occupancy" color="orange"
@@ -514,26 +594,7 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
           {/* Period comparison */}
           <ComparisonRow comparisons={CLINICAL_COMPARISONS} />
 
-          {/* Command Center summary for authorized users */}
-          {canSeeCC && (
-            <button onClick={() => navigate('CommandCenter')}
-              className="w-full flex items-center justify-between px-5 py-3.5 bg-navy/5 border border-navy/15 hover:bg-navy/10 rounded-lg transition-colors group">
-              <div className="flex items-center gap-3">
-                <Zap className="w-5 h-5 text-sunrise-orange" />
-                <div className="text-left">
-                  <div className="font-semibold text-navy text-sm">Command Center</div>
-                  <div className="text-xs text-slate">{ccOpenAlerts.total} open alerts · {ccOpenAlerts.critical} critical requiring immediate action</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {ccOpenAlerts.critical > 0 && (
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{ccOpenAlerts.critical} Critical</span>
-                )}
-                <ChevronRight className="w-4 h-4 text-slate group-hover:text-navy transition-colors" />
-              </div>
-            </button>
-          )}
-
+          {/* ── LEVEL 4: ANALYTICS + AI BRIEF ───────────────────────────────── */}
           {/* Main 2-Col */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-6">
@@ -644,30 +705,6 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white border border-border rounded-lg px-4 py-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-navy">Quick Actions</span>
-              <span className="text-xs text-slate">Common tasks for today</span>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {[
-                { label: 'New Admission', icon: UserPlus, screen: 'Admissions' as Screen, color: 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' },
-                { label: 'New Progress Note', icon: FileText, screen: 'ProgressNotes' as Screen, color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' },
-                { label: 'Co-sign Queue (4)', icon: FileText, screen: 'CosignQueue' as Screen, color: 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' },
-                { label: 'UA Results', icon: Droplets, screen: 'UADrugTesting' as Screen, color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' },
-                { label: 'Open Incidents (2)', icon: AlertTriangle, screen: 'IncidentReporting' as Screen, color: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' },
-                { label: 'Chart Review', icon: Clock, screen: 'ChartReview' as Screen, color: 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' },
-              ].filter(a => canAccessScreen(a.screen)).map(({ label, icon: Icon, screen, color }) => (
-                <button key={label} onClick={() => navigate(screen)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${color}`}>
-                  <Icon className="w-3.5 h-3.5" />
-                  {label}
-                </button>
-              ))}
             </div>
           </div>
 
