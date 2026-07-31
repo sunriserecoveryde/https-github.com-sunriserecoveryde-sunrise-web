@@ -1,167 +1,278 @@
 /**
- * Sunrise OS Product Review — PDF Generator (pdfkit, no browser needed)
+ * Sunrise OS Product Review — PDF Generator v2 (pdfkit, PNG sources)
  */
 const PDFDocument = require('pdfkit');
 const fs   = require('fs');
 const path = require('path');
 
-const OUT_DIR = path.join(process.cwd(), 'Product Review');
+const OUT_DIR  = path.join(process.cwd(), 'Product Review');
 const PDF_PATH = path.join(OUT_DIR, 'Sunrise OS — Product Review.pdf');
 
-// ── Screen metadata ────────────────────────────────────────────────────────────
+// ── Screen catalogue ───────────────────────────────────────────────────────────
 const SCREENS = [
-  { file: '01-Login — Login.jpg',                            num: '01', label: 'Login',                              desc: 'The Sunrise OS login screen where staff select their profile. Features a demo credentials flow (email + password) for evaluators and a search bar to quickly locate any staff account.' },
-  { file: '02-Dashboard — Dashboard.jpg',                    num: '02', label: 'Dashboard',                          desc: 'The clinical home screen. Displays today\'s census, acuity alerts, pending co-sign requests, upcoming appointments, and key performance metrics for the current facility and shift.' },
-  { file: '03-CommandCenter — Command Center.jpg',           num: '03', label: 'Command Center',                     desc: 'Executive operational hub providing a real-time Kanban of open alerts by priority (Critical → Routine), shift overview, quality metrics, capacity forecast, and critical-event log across all facilities.' },
-  { file: '04-CensusBedBoard — Bed Board Census.jpg',        num: '04', label: 'Census & Bed Board',                 desc: 'Interactive bed board showing every room and bed across all programs. Color-coded by occupancy status, acuity, and CIWA/COWS protocol. Supports rapid patient placement and transfer workflows.' },
-  { file: '05-PatientList — Patient Search.jpg',             num: '05', label: 'Patient Search',                     desc: 'Searchable, filterable patient roster with 115 active patients. Sortable by acuity, length of stay, program, clinician, craving score, and risk flags. One click jumps to any full chart.' },
-  { file: '06-PatientDetail — Patient Profile.jpg',          num: '06', label: 'Patient Profile',                    desc: 'Comprehensive patient chart: demographics, insurance, diagnoses, allergies, medications, vitals, care team, ASAM dimensions summary, recent clinical notes, and linked documents — all in one view.' },
-  { file: '07-ASAMAssessments — ASAM Assessments.jpg',       num: '07', label: 'ASAM Assessments',                   desc: 'Structured ASAM criteria assessment tool covering all 6 dimensions with colour-coded severity scores. Shows overdue reviews, high-risk flags, and generates placement recommendations for audit documentation.' },
-  { file: '08-TreatmentPlans — Treatment Plans.jpg',         num: '08', label: 'Treatment Plans',                    desc: 'Problem-based treatment planning with goals, objectives, interventions, and target dates. AI-assisted goal builder, ASAM goal library, co-signature workflow, version history, and compliance checklist.' },
-  { file: '09-ProgressNotes — Progress Notes.jpg',           num: '09', label: 'Progress Notes',                     desc: 'Individual session documentation queue — 305 total notes across all clinicians. Supports BIRP, DAP, SOAP, and GIRP formats with AI-assisted note drafting, template library, and wet-signature capture.' },
-  { file: '10-GroupNotes — Group Notes.jpg',                 num: '10', label: 'Group Notes',                        desc: 'Group therapy session documentation. Write one facilitation note, then generate individualised participation notes for each attending patient in one workflow — with attendance tracking and curriculum mapping.' },
-  { file: '11-NursingMAR — Medication Administration.jpg',   num: '11', label: 'Medication Administration Record',   desc: 'Electronic MAR for nursing staff. Tracks scheduled, PRN, and stat medications with administration timestamps, refusal capture, two-nurse witness documentation for controlled substances, and inventory alerts.' },
-  { file: '12-UADrugTesting — Drug Screens.jpg',             num: '12', label: 'UA / Drug Screens',                  desc: 'Urinalysis and drug screen management across 83 monitored patients. Tracks specimen collection, panel results, chain of custody, confirmatory testing, and pushes results directly to each patient\'s chart.' },
-  { file: '13-AppointmentCalendar — Appointment Calendar.jpg', num: '13', label: 'Appointment Calendar',             desc: 'Multi-view clinical calendar (week shown) for scheduling individual sessions, medical appointments, and group therapy. Colour-coded by appointment type with conflict detection and a No-Show Tracker.' },
-  { file: '14-Admissions — Admissions.jpg',                  num: '14', label: 'Admissions / Intake',                desc: 'End-to-end admissions pipeline: referral intake, insurance verification, ASAM pre-screen, bed assignment, and LOC criteria — all in one Kanban view. Shows real-time pipeline status for each referral.' },
-  { file: '15-RevenueCycle — Billing Revenue Cycle.jpg',     num: '15', label: 'Billing & Revenue Cycle',            desc: 'Billing dashboard with YTD revenue analytics, payer mix breakdown, claims status, denial management, accounts receivable aging, and an alert for 5 authorisations expiring imminently.' },
-  { file: '16-InsuranceAuth — Insurance Authorization Claims.jpg', num: '16', label: 'Insurance Authorization / UR', desc: 'Prior authorisation tracking and concurrent review management. Monitors expiry dates across 11 active authorisations, shows 8 expiring within 7 days, and tracks the full appeal pipeline by payer.' },
-  { file: '17-PopulationAnalytics — Population Analytics.jpg', num: '17', label: 'Population Analytics',            desc: 'Census trends, clinical outcomes, and programme performance metrics. 30-day census by programme, occupancy by level of care, avg. length-of-stay, recovery scores, craving index, and MAT utilisation.' },
-  { file: '18-AIAssistant — AI Clinical Assistant.jpg',      num: '18', label: 'Sunrise AI — Clinical Copilot',      desc: 'Sunrise AI hub: AI-assisted progress note drafting (SOAP/BIRP/DAP/GIRP), risk stratification summaries, treatment plan goal generation, clinical Q&A, and a review queue — all under Human-in-the-Loop policy.' },
-  { file: '19-StaffAdmin — Staff Management.jpg',            num: '19', label: 'Staff Management',                   desc: 'Staff directory and administration panel for 26 active employees. Manage profiles, NPI/DEA/license numbers, credential expiry alerts, facility assignments, roles, and system-access permissions.' },
-  { file: '20-Settings — Organization Settings.jpg',         num: '20', label: 'Organization & Facility Settings',   desc: 'Organisation-level configuration: facility details (name, NPI, EIN, address), clinical defaults, users & roles, notification preferences, system toggles, and third-party integration connectors.' },
-  { file: '21-WorkforceCompliance — Compliance Accreditation.jpg', num: '21', label: 'Workforce Compliance & Development', desc: 'Credentialing, background screening, onboarding, performance reviews, and offboarding — all in one dashboard. Shows 70% audit score, 3 credential alerts expiring, and 84% org-wide training compliance.' },
-  { file: '22-RoleExplorer — Roles and Permissions.jpg',     num: '22', label: 'Roles & Permissions',                desc: 'Visual role-permission matrix mapping 17 roles × 55 screens. Compare access levels side-by-side, drill into each role\'s full vs. read-only vs. no-access breakdown, and inspect the Access Summary tab.' },
-  { file: '23-MeasurementBasedCare — Measurement-Based Care.jpg', num: '23', label: 'Measurement-Based Care',        desc: 'Outcome measure tracking for PHQ-9 (depression), GAD-7 (anxiety), and PCL-5 (PTSD). Flags patients at clinical thresholds, shows score trends over time, and schedules weekly re-administration.' },
-  { file: '24-WithdrawalMonitor — Withdrawal Monitor.jpg',   num: '24', label: 'Withdrawal Monitor (CIWA / COWS)',   desc: 'Structured CIWA-Ar and COWS withdrawal assessment tool for nursing. Tracks 7 active protocols, graphs severity trends, surfaces escalation alerts, and triggers PRN medication thresholds at the bedside.' },
-  { file: '25-MobileView — Mobile Responsive View.jpg',      num: '25', label: 'Mobile / Responsive View',           desc: 'Sunrise OS fully responsive at 390 × 844 (iPhone 15 viewport). Clinical staff access the dashboard, patient list, and documentation on any phone or tablet — no separate app required.' },
+  // ── Onboarding ──
+  { file: '01-Login.png',                num: '01', label: 'Login',
+    desc: 'Staff select their profile from the directory or expand the demo-credentials form to sign in with email and password. Session is protected and authorized-users-only, with secure-access indicators in the footer.' },
+
+  // ── Overview ──
+  { file: '02-Dashboard.png',            num: '02', label: 'Dashboard',
+    desc: 'The clinical home screen for the CMO role. Shows active census (18/22, 81.8% occupancy), AMA risk alerts, pending co-sign requests, avg. LOS, discharges this week, program utilisation breakdown, and an AI Clinical Brief summarising today\'s critical action items.' },
+
+  { file: '03-Command-Center.png',       num: '03', label: 'Command Center',
+    desc: 'Executive alert hub surfacing open items across all priority tiers — Critical, High, Medium, Routine. Offers a shift overview, aggregate quality metrics, capacity forecast, and a timestamped critical-event log across all facilities.' },
+
+  // ── Admissions / Intake ──
+  { file: '04-Admissions.png',           num: '04', label: 'Admissions & Intake',
+    desc: 'End-to-end referral pipeline: intake form, insurance verification, ASAM pre-screen, bed assignment, and LOC determination — all in a single Kanban. Shows real-time status for every referral from first call through admit.' },
+
+  // ── Patient Management ──
+  { file: '05-Patient-List.png',         num: '05', label: 'Patient Search',
+    desc: 'Searchable, sortable roster across all 115+ active patients. Filterable by acuity, LOS, program, clinician, risk flags, and craving score. One click jumps to the full chart.' },
+
+  { file: '06-Patient-Profile.png',      num: '06', label: 'Patient Profile',
+    desc: 'Comprehensive chart: demographics, insurance, diagnoses, allergies, active medications, vitals, care team, ASAM dimension summary, recent notes, and all linked documents in a single scrollable view.' },
+
+  // ── Clinical Documentation ──
+  { file: '07a-ASAM-Assessments.png',    num: '07a', label: 'ASAM Assessments',
+    desc: 'Structured ASAM criteria assessment across all 6 dimensions with colour-coded severity scores. Flags overdue reviews and high-risk dimensions, and generates placement recommendations for payer audits.' },
+
+  { file: '07b-Biopsychosocial-Intake.png', num: '07b', label: 'Biopsychosocial Intake',
+    desc: 'Full BPS intake assessment capturing presenting problem, mental health history, trauma, family system, social support, spiritual factors, and preliminary treatment goals — required at admission for licensure.' },
+
+  { file: '08-Treatment-Plans.png',      num: '08', label: 'Treatment Plans',
+    desc: 'Problem-based planning with goals, objectives, interventions, and target dates. AI-assisted goal builder, ASAM goal library, co-signature workflow, version history, and a compliance checklist aligned to CARF/JCAHO standards.' },
+
+  { file: '09-Progress-Notes.png',       num: '09', label: 'Progress Notes',
+    desc: 'Individual session documentation queue — 305 notes across all clinicians. Supports BIRP, DAP, SOAP, and GIRP formats with AI-assisted drafting, wet-signature capture, and a pending co-sign workflow.' },
+
+  { file: '10-Group-Notes.png',          num: '10', label: 'Group Notes',
+    desc: 'Write one group facilitation note, then generate individualised participation notes for every attending patient in a single workflow — with attendance tracking, group type, and curriculum mapping.' },
+
+  // ── Nursing & Medical ──
+  { file: '11a-Nursing-MAR.png',         num: '11a', label: 'Medication Administration Record',
+    desc: 'Electronic MAR for nursing. Tracks scheduled, PRN, and stat medications with administration timestamps, refusal capture, two-nurse witness documentation for controlled substances, and inventory alerts.' },
+
+  { file: '11b-Formulary-Management.png', num: '11b', label: 'Formulary Management',
+    desc: 'Facility formulary editor: add or retire medications, set dosage defaults, manage substitution rules, and control which medications appear on prescriber order sets.' },
+
+  { file: '12-Drug-Screens.png',         num: '12', label: 'UA / Drug Screens',
+    desc: 'Urinalysis and drug screen management across 83 monitored patients. Tracks specimen collection, panel results, chain of custody, confirmatory testing, and pushes results directly to each patient\'s chart.' },
+
+  // ── Scheduling ──
+  { file: '13a-Appointment-Calendar.png', num: '13a', label: 'Appointment Calendar',
+    desc: 'Multi-view clinical calendar for individual sessions, medical appointments, and group therapy. Colour-coded by type with conflict detection and a no-show tracker.' },
+
+  { file: '13b-Group-Schedule.png',      num: '13b', label: 'Group Schedule',
+    desc: 'Weekly group therapy schedule across all programmes. Drag-and-drop session creation, facilitator assignment, room booking, and real-time attendance counts per group.' },
+
+  // ── Census & Beds ──
+  { file: '14a-Census-Bed-Board.png',    num: '14a', label: 'Census & Bed Board',
+    desc: 'Interactive bed board showing every room across all programmes. Colour-coded by occupancy, acuity, and CIWA/COWS protocol. Supports rapid patient placement, room transfer, and hold-bed workflows.' },
+
+  { file: '14b-Bed-Management.png',      num: '14b', label: 'Bed Management',
+    desc: 'Configuration view for the physical bed inventory — add or retire beds, set maintenance holds, adjust capacity by programme, and view occupancy forecasts for the next 7 days.' },
+
+  // ── Billing & Revenue ──
+  { file: '15a-Revenue-Cycle.png',       num: '15a', label: 'Revenue Cycle',
+    desc: 'Billing dashboard with YTD revenue analytics, payer mix breakdown, claims status, denial management, accounts receivable aging, and alerts for authorisations expiring imminently.' },
+
+  { file: '15b-Financial-Counseling.png', num: '15b', label: 'Financial Counseling',
+    desc: 'Patient financial services: self-pay agreements, sliding scale calculations, payment plan setup, out-of-pocket estimates, and documentation of financial counselling sessions for compliance.' },
+
+  { file: '16-Insurance-Auth.png',       num: '16', label: 'Insurance Authorization / UR',
+    desc: 'Prior authorisation tracking and concurrent review management. Monitors expiry across active authorisations, flags those expiring within 7 days, and tracks the full appeal pipeline by payer.' },
+
+  // ── Analytics ──
+  { file: '17a-Clinical-Intelligence.png', num: '17a', label: 'Clinical Intelligence',
+    desc: 'AI-powered clinical analytics: predictive risk scores, early-warning flags, population health trends, and insight cards surfacing patterns across the active caseload for clinical leadership review.' },
+
+  { file: '17b-Outcome-Tracking.png',    num: '17b', label: 'Outcome Tracking',
+    desc: 'Longitudinal outcomes dashboard measuring treatment effectiveness: discharge disposition, 30/60/90-day follow-up rates, sobriety milestones, re-admission rates, and programme comparison.' },
+
+  { file: '17c-Population-Analytics.png', num: '17c', label: 'Population Analytics',
+    desc: 'Census trends, programme performance, avg. LOS, recovery scores, craving index, and MAT utilisation across the entire active and historical patient population.' },
+
+  // ── AI ──
+  { file: '18a-AI-Assistant.png',        num: '18a', label: 'Sunrise AI — Clinical Copilot',
+    desc: 'AI-assisted progress note drafting (SOAP/BIRP/DAP/GIRP), risk summaries, treatment plan goal generation, clinical Q&A, and a review queue — all under a mandatory Human-in-the-Loop policy requiring clinician approval before any AI output is saved.' },
+
+  { file: '18b-DAP-Note-Workflow.png',   num: '18b', label: 'DAP Note Workflow',
+    desc: 'Step-by-step AI note drafting in DAP format: patient context auto-loaded, clinician reviews and edits the generated Data/Assessment/Plan sections, then approves and applies a wet signature — logged for audit.' },
+
+  // ── Staff & HR ──
+  { file: '19a-Staff-Administration.png', num: '19a', label: 'Staff Administration',
+    desc: 'Staff directory and access management for 26 active employees. Manage profiles, NPI/DEA/license numbers, credential expiry alerts, facility assignments, roles, and system-access permissions.' },
+
+  { file: '19b-Staff-Scheduling.png',    num: '19b', label: 'Staff Scheduling',
+    desc: 'Shift scheduling and staffing-ratio management. View weekly schedules by role, flag under-staffed shifts, manage time-off requests, and ensure COMAR-compliant supervision coverage across all programmes.' },
+
+  { file: '19c-Workforce-Compliance.png', num: '19c', label: 'Workforce Compliance & Development',
+    desc: 'Credentialing, background screening, onboarding, performance reviews, and offboarding in one dashboard. Shows audit score, active credential alerts, overdue performance reviews, and org-wide training compliance.' },
+
+  // ── Settings ──
+  { file: '20-Settings-Organization.png', num: '20', label: 'Organization Settings',
+    desc: 'Organisation-level configuration: legal name, NPI, EIN, primary address, billing address, clinical defaults, notification preferences, and third-party integration connectors.' },
+
+  { file: '21-Settings-Facility.png',    num: '21', label: 'Facility Settings',
+    desc: 'Per-facility configuration including licence numbers, CARF/JCAHO accreditation status, programme types, staffing ratios, operating hours, and bed-capacity parameters.' },
+
+  // ── Roles & Compliance ──
+  { file: '22-Role-Explorer.png',        num: '22', label: 'Roles & Permissions',
+    desc: 'Visual role-permission matrix mapping 17 roles × 55 screens. Compare full, read-only, and no-access levels side-by-side across every clinical, administrative, and leadership role in the system.' },
+
+  // ── Mobile ──
+  { file: '23-Mobile-View.png',          num: '23', label: 'Mobile / Responsive View',
+    desc: 'Sunrise OS fully responsive at mobile viewport. Clinical staff access the dashboard, patient list, and documentation from any phone or tablet — no separate app required.' },
+
+  // ── Notifications ──
+  { file: '24-Notifications.png',        num: '24', label: 'Notifications & Alerts',
+    desc: 'Unified notification centre surfacing clinical alerts, co-sign requests, authorisation expirations, credential warnings, and system messages — with read/unread tracking and priority badges.' },
+
+  // ── Measurement & Clinical Tools ──
+  { file: '25a-Measurement-Based-Care.png', num: '25a', label: 'Measurement-Based Care',
+    desc: 'Outcome measure tracking for PHQ-9 (depression), GAD-7 (anxiety), and PCL-5 (PTSD). Flags patients at clinical thresholds, shows score trends, and schedules weekly re-administration per evidence-based protocol.' },
+
+  { file: '25b-Recovery-Engagement-Score.png', num: '25b', label: 'Recovery Engagement Score',
+    desc: 'Proprietary Recovery Engagement Score (RES) combining attendance, participation, goal progress, peer support, and aftercare planning into a single longitudinal metric per patient and programme.' },
+
+  { file: '25c-Withdrawal-Monitor.png',  num: '25c', label: 'Withdrawal Monitor (CIWA / COWS)',
+    desc: 'Structured CIWA-Ar and COWS withdrawal assessment tool for nursing. Tracks active protocols, graphs severity trends, surfaces escalation alerts, and triggers PRN medication thresholds at the bedside.' },
 ];
 
 // ── PDF layout constants ───────────────────────────────────────────────────────
-const W = 841.89;   // A4 landscape width  (pt)
-const H = 595.28;   // A4 landscape height (pt)
-const MARGIN = 36;
+const W = 841.89;   // A4 landscape
+const H = 595.28;
+const MARGIN = 32;
 
 const ORANGE  = '#F97316';
 const NAVY    = '#0B1524';
 const SLATE   = '#94A3B8';
 const WHITE   = '#F8FAFC';
 const DARK_BG = '#0F1E33';
+const MID_BG  = '#111F35';
 
-function drawBackground(doc, color = NAVY) {
-  doc.rect(0, 0, W, H).fill(color);
+function drawBackground(doc, color) {
+  doc.rect(0, 0, W, H).fill(color || NAVY);
+}
+function drawTopBar(doc) {
+  doc.rect(0, 0, W, 5).fill(ORANGE);
+}
+function drawFooter(doc) {
+  doc.fontSize(7.5).fillColor('#334155').font('Helvetica')
+    .text('SunriseOS  ·  Confidential Product Evaluation  ·  Fictitious Data Only  ·  Not for Clinical Use',
+          MARGIN, H - 16, { width: W - MARGIN * 2, align: 'center' });
 }
 
-function drawFooter(doc, text = 'SunriseOS · Confidential Product Evaluation · Fictitious Data Only · Not for Clinical Use') {
-  doc.fontSize(8).fillColor('#334155').font('Helvetica').text(text, MARGIN, H - 20, { width: W - MARGIN * 2, align: 'center' });
-}
-
-// ── Build PDF ──────────────────────────────────────────────────────────────────
+// ── Build document ─────────────────────────────────────────────────────────────
 const doc = new PDFDocument({ size: 'A4', layout: 'landscape', autoFirstPage: false, margin: 0 });
 const stream = fs.createWriteStream(PDF_PATH);
 doc.pipe(stream);
 
-// ── COVER PAGE ─────────────────────────────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ COVER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 doc.addPage();
 drawBackground(doc);
+drawTopBar(doc);
 
-// Orange gradient bar at top
-doc.rect(0, 0, W, 6).fill(ORANGE);
+const cY = H * 0.27;
+doc.fontSize(54).font('Helvetica-Bold').fillColor(ORANGE).text('SunriseOS', 0, cY, { align: 'center' });
+doc.fontSize(15).font('Helvetica').fillColor(SLATE)
+  .text('Behavioral Health EHR & Operating System', 0, cY + 64, { align: 'center' });
 
-// Logo / wordmark
-const logoY = H * 0.28;
-doc.fontSize(52).font('Helvetica-Bold').fillColor(ORANGE).text('SunriseOS', 0, logoY, { align: 'center' });
-doc.fontSize(16).font('Helvetica').fillColor(SLATE).text('Behavioral Health EHR & Operating System', 0, logoY + 62, { align: 'center' });
+const divX = W / 2 - 28;
+doc.rect(divX, cY + 96, 56, 3).fill(ORANGE);
 
-// Divider
-const divX = W / 2 - 32;
-doc.rect(divX, logoY + 96, 64, 3).fill(ORANGE);
+doc.fontSize(28).font('Helvetica-Bold').fillColor(WHITE)
+  .text('Screen-by-Screen Product Review', 0, cY + 112, { align: 'center' });
+doc.fontSize(12.5).font('Helvetica').fillColor(SLATE)
+  .text(`A visual walkthrough of all ${SCREENS.length} major modules — clinical documentation,\nbilling, AI-assisted charting, compliance, and analytics.`,
+        0, cY + 152, { align: 'center', lineGap: 4 });
 
-// Title
-doc.fontSize(28).font('Helvetica-Bold').fillColor(WHITE).text('Screen-by-Screen Product Review', 0, logoY + 116, { align: 'center' });
+const bW = 230, bH = 26, bX = (W - bW) / 2, bY = cY + 210;
+doc.roundedRect(bX, bY, bW, bH, 13).stroke(ORANGE);
+doc.fontSize(10.5).font('Helvetica').fillColor(ORANGE)
+  .text('PRODUCT EVALUATION PACKAGE', bX, bY + 7, { width: bW, align: 'center' });
 
-// Subtitle
-doc.fontSize(13).font('Helvetica').fillColor(SLATE)
-  .text('A complete visual walkthrough of all 25 major modules —\nfrom clinical documentation and billing to AI-assisted charting and compliance.', 0, logoY + 158, { align: 'center', lineGap: 4 });
-
-// Badge
-const badgeText = 'PRODUCT EVALUATION PACKAGE';
-const badgeW = 220, badgeH = 26, badgeX = (W - badgeW) / 2, badgeY = logoY + 218;
-doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 13).stroke(ORANGE);
-doc.fontSize(11).font('Helvetica').fillColor(ORANGE).text(badgeText, badgeX, badgeY + 7, { width: badgeW, align: 'center' });
-
-// Meta line
-doc.fontSize(11).fillColor('#475569').text('Sunrise Recovery Center · Rockville, MD (HQ) · Confidential Demo', 0, H - 56, { align: 'center' });
-
+doc.fontSize(10).fillColor('#475569')
+  .text('Sunrise Recovery Center  ·  Rockville, MD  ·  Confidential Demo', 0, H - 52, { align: 'center' });
 drawFooter(doc);
 
-// ── TABLE OF CONTENTS ──────────────────────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ TOC ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 doc.addPage();
 drawBackground(doc);
-doc.rect(0, 0, W, 6).fill(ORANGE);
+drawTopBar(doc);
 
-doc.fontSize(22).font('Helvetica-Bold').fillColor(WHITE).text('Table of Contents', MARGIN, 32);
-doc.rect(MARGIN, 60, 60, 2).fill(ORANGE);
+doc.fontSize(20).font('Helvetica-Bold').fillColor(WHITE).text('Table of Contents', MARGIN, 28);
+doc.rect(MARGIN, 54, 56, 2).fill(ORANGE);
 
-const colW = (W - MARGIN * 2 - 20) / 2;
-const rowH = 19;
-const startY = 76;
+// 3 columns
+const cols = 3;
+const colW = (W - MARGIN * 2 - 20) / cols;
+const rowH = 18;
+const tocY = 66;
+const half = Math.ceil(SCREENS.length / cols);
 
 SCREENS.forEach((s, i) => {
-  const col  = i < 13 ? 0 : 1;
-  const row  = col === 0 ? i : i - 13;
-  const x    = MARGIN + col * (colW + 20);
-  const y    = startY + row * rowH;
+  const col = Math.floor(i / half);
+  const row = i - col * half;
+  const x   = MARGIN + col * (colW + 10);
+  const y   = tocY + row * rowH;
 
-  doc.fontSize(9).font('Helvetica-Bold').fillColor(ORANGE).text(s.num, x, y, { width: 22 });
-  doc.fontSize(9).font('Helvetica').fillColor('#CBD5E1').text(s.label, x + 26, y, { width: colW - 26 });
-  doc.rect(x, y + rowH - 2, colW, 0.5).fill('#1E3A5F');
+  doc.fontSize(8.5).font('Helvetica-Bold').fillColor(ORANGE).text(s.num, x, y, { width: 26 });
+  doc.fontSize(8.5).font('Helvetica').fillColor('#CBD5E1').text(s.label, x + 28, y, { width: colW - 28, ellipsis: true });
+  doc.rect(x, y + rowH - 2, colW, 0.4).fill('#1E3A5F');
 });
 
 drawFooter(doc);
 
-// ── SCREEN PAGES ───────────────────────────────────────────────────────────────
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ SCREEN PAGES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let missing = 0;
 for (const s of SCREENS) {
   const imgPath = path.join(OUT_DIR, s.file);
   if (!fs.existsSync(imgPath)) {
     console.warn('  ⚠ missing:', s.file);
+    missing++;
     continue;
   }
 
   doc.addPage();
   drawBackground(doc);
-  doc.rect(0, 0, W, 6).fill(ORANGE);
+  drawTopBar(doc);
 
   // Header bar
-  doc.rect(0, 6, W, 44).fill(DARK_BG);
+  doc.rect(0, 5, W, 38).fill(DARK_BG);
 
-  // Number badge
-  doc.roundedRect(MARGIN, 14, 28, 28, 4).fill(ORANGE);
-  doc.fontSize(11).font('Helvetica-Bold').fillColor(NAVY).text(s.num, MARGIN, 20, { width: 28, align: 'center' });
+  // Number pill
+  doc.roundedRect(MARGIN, 11, 30, 24, 4).fill(ORANGE);
+  doc.fontSize(10).font('Helvetica-Bold').fillColor(NAVY)
+    .text(s.num, MARGIN, 17, { width: 30, align: 'center' });
 
-  // Screen title
-  doc.fontSize(16).font('Helvetica-Bold').fillColor(WHITE).text(s.label, MARGIN + 36, 19, { width: W - MARGIN * 2 - 36 });
+  // Screen label
+  doc.fontSize(15).font('Helvetica-Bold').fillColor(WHITE)
+    .text(s.label, MARGIN + 38, 16, { width: W - MARGIN * 2 - 38 });
 
-  // Screenshot image — fill available area
-  const imgY   = 58;
-  const imgH   = H - imgY - 62;  // leave room for description + footer
-  const imgW   = W - MARGIN * 2;
+  // Screenshot area
+  const imgY = 50;
+  const descH = 46;
+  const imgH  = H - imgY - descH - 14;
+  const imgW  = W - MARGIN * 2;
 
-  // Draw a dark background box first
-  doc.rect(MARGIN, imgY, imgW, imgH).fill(DARK_BG);
+  doc.rect(MARGIN, imgY, imgW, imgH).fill(MID_BG);
 
   try {
-    // Fit image inside the box, maintaining aspect ratio
-    doc.image(imgPath, MARGIN, imgY, { width: imgW, height: imgH, fit: [imgW, imgH], align: 'center', valign: 'center' });
+    doc.image(imgPath, MARGIN, imgY, {
+      width: imgW, height: imgH,
+      fit: [imgW, imgH],
+      align: 'center', valign: 'center',
+    });
   } catch (e) {
     console.warn('  ⚠ image error:', s.file, e.message);
   }
 
-  // Description bar
-  const descY = imgY + imgH + 4;
-  doc.rect(MARGIN, descY, 3, 40).fill(ORANGE);
-  doc.fontSize(9).font('Helvetica').fillColor(SLATE)
-    .text(s.desc, MARGIN + 10, descY + 2, { width: imgW - 10, lineGap: 2 });
+  // Description strip
+  const descY = imgY + imgH + 5;
+  doc.rect(MARGIN, descY, 3, descH - 8).fill(ORANGE);
+  doc.fontSize(8.5).font('Helvetica').fillColor(SLATE)
+    .text(s.desc, MARGIN + 10, descY + 2, { width: imgW - 12, lineGap: 2.5, height: descH - 8, ellipsis: true });
 
   drawFooter(doc);
 }
@@ -169,7 +280,7 @@ for (const s of SCREENS) {
 doc.end();
 
 stream.on('finish', () => {
-  const size = (fs.statSync(PDF_PATH).size / 1024 / 1024).toFixed(1);
-  console.log(`✅  PDF saved: ${PDF_PATH}  (${size} MB)`);
+  const mb = (fs.statSync(PDF_PATH).size / 1024 / 1024).toFixed(1);
+  console.log(`✅  PDF → ${PDF_PATH}  (${mb} MB)  |  ${SCREENS.length - missing}/${SCREENS.length} screens`);
 });
 stream.on('error', e => { console.error('PDF error:', e); process.exit(1); });
