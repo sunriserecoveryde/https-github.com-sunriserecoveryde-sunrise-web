@@ -178,11 +178,14 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
 
   const [openKeys, setOpenKeys] = useState<Set<string>>(loadOpenKeys);
   const [compact, setCompact] = useState<boolean>(() => {
-    const v = loadCompact();
-    // Sync CSS variable immediately on mount
-    document.documentElement.style.setProperty('--nav-width', v ? '56px' : '240px');
-    return v;
+    const raw = typeof window !== 'undefined' ? sessionStorage.getItem(SESSION_COMPACT_KEY) : null;
+    return raw === 'true';
   });
+
+  // Keep --nav-width CSS variable in sync with compact state (including on mount)
+  useEffect(() => {
+    document.documentElement.style.setProperty('--nav-width', compact ? '56px' : '240px');
+  }, [compact]);
 
   // Auto-expand the group containing the active page
   useEffect(() => {
@@ -213,7 +216,6 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
     setCompact(prev => {
       const next = !prev;
       saveCompact(next);
-      document.documentElement.style.setProperty('--nav-width', next ? '56px' : '240px');
       return next;
     });
   }, []);
