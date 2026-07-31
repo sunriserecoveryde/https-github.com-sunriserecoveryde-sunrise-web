@@ -1,0 +1,291 @@
+Next, improve the **sidebar navigation with Recent Patients, Pinned Patients, and Favorites**.
+
+Copy and paste this into Replit:
+
+Complete one refinement task on the existing Task Group 1 branch:
+
+**Task: Add Recent Patients, Pinned Patients, and Favorite Modules to the Sunrise OS sidebar**
+
+Do not begin any other improvement task during this run.
+
+Use the existing collapsible sidebar, role permissions, compact mode, navigation system, session persistence, and active-page behavior already implemented.
+
+Do not rebuild the sidebar.
+
+## Goal
+
+Allow staff to reach frequently used patients and modules quickly without searching through the full navigation structure.
+
+Add three optional navigation areas:
+
+1. Recent Patients
+2. Pinned Patients
+3. Favorite Modules
+
+These areas must respect all existing permissions and privacy rules.
+
+---
+
+## 1. Add Recent Patients
+
+Create a collapsible sidebar section labeled:
+
+**Recent Patients**
+
+Requirements:
+
+* Show up to the five most recently opened patient records.
+* Update the list only when the user deliberately opens a patient record.
+* Do not add a patient merely because the patient appeared in:
+
+  * Search results
+  * A dashboard alert
+  * A report
+  * A notification list
+  * Census data
+* Selecting a recent patient must open the existing Patient Detail screen for that patient.
+* Most recently opened patient appears first.
+* Opening the same patient again moves that patient to the top.
+* Do not show duplicate patients.
+* If the user loses permission to access a patient or facility, remove that patient from the visible list.
+* Do not expose patients outside the user’s assigned facility, organization, or permission scope.
+* Show an empty state such as:
+
+  * “No recently opened patients”
+* Include a clear action to remove an individual patient from the recent list.
+* Include “Clear Recent Patients” only if it can be implemented safely.
+
+Privacy requirements:
+
+* Do not store diagnoses, medications, insurance information, notes, or other clinical details in sidebar preference storage.
+* Store only the minimum information needed:
+
+  * Patient ID
+  * Display name
+  * Optional room or facility label
+  * Last-opened timestamp
+* Do not write this preference to the clinical audit log unless existing policy already requires it.
+* Do not change the production database schema.
+
+If browser storage is used, clearly document that the recent-patient list is local to the browser and user session.
+
+---
+
+## 2. Add Pinned Patients
+
+Create a collapsible sidebar section labeled:
+
+**Pinned Patients**
+
+Requirements:
+
+* Allow an authorized user to pin a patient from:
+
+  * Patient Detail
+  * Patient Search results
+  * Recent Patients
+* Show up to five pinned patients directly in the sidebar.
+* If more than five patients are pinned, show:
+
+  * “View All Pinned Patients”
+* Selecting a pinned patient opens the existing Patient Detail screen.
+* Allow users to unpin patients from:
+
+  * The sidebar
+  * Patient Detail
+* Do not show duplicate entries between Recent Patients and Pinned Patients in a confusing way.
+* If a patient is both recent and pinned:
+
+  * Keep the patient in Pinned Patients.
+  * Either omit the duplicate from Recent Patients or clearly indicate the pinned state.
+* Pinned patients remain in place until the user unpins them.
+* Do not automatically remove a pinned patient because the patient was discharged.
+* Clearly label discharged patients when applicable.
+* Remove a pinned patient from view if the user no longer has permission to access that record.
+
+Privacy requirements:
+
+* Store only the minimum patient-identifying fields required for navigation.
+* Do not store clinical content in localStorage or sessionStorage.
+* Do not bypass existing patient access rules.
+
+---
+
+## 3. Add Favorite Modules
+
+Allow users to mark authorized navigation destinations as favorites.
+
+Requirements:
+
+* Add a star or pin action to permitted sidebar modules.
+* Create a collapsible section labeled:
+
+**Favorites**
+
+* Show up to six favorite modules directly.
+* Favorite modules may include examples such as:
+
+  * Dashboard
+  * Census & Bed Board
+  * Patient Search
+  * Progress Notes
+  * Treatment Plans
+  * ASAM Assessments
+  * Calendar
+  * Revenue Cycle
+  * Claims
+  * Staff Administration
+* Do not allow users to favorite a destination they cannot access.
+* If permission is removed, hide the favorite automatically.
+* Unfavoriting a module must remove it immediately.
+* Do not duplicate Favorites inside the normal grouped navigation in a confusing way.
+* The original module must remain available in its assigned navigation group.
+* Favorites are shortcuts, not replacements.
+
+---
+
+## 4. Sidebar placement
+
+Use this order:
+
+1. Overview
+2. Favorites
+3. Recent Patients
+4. Pinned Patients
+5. Patient Care
+6. Documentation
+7. Operations
+8. Financial
+9. Intelligence
+10. Administration
+
+Rules:
+
+* Favorites, Recent Patients, and Pinned Patients should render only when useful.
+* Do not permanently consume excessive sidebar space.
+* Keep these sections collapsible.
+* Preserve the active-page auto-expansion behavior.
+* Preserve the existing compact sidebar mode.
+* In compact mode:
+
+  * Use tooltips
+  * Do not display patient names in a narrow unreadable layout
+  * Provide access through an appropriate icon menu or flyout
+* Do not allow patient shortcut sections to cause the full sidebar to require excessive scrolling again.
+
+---
+
+## 5. Preference storage
+
+Do not change the production database schema during this task.
+
+Use the safest existing frontend preference mechanism.
+
+Preferred behavior:
+
+* Scope preferences to the current signed-in user.
+* Do not allow one demo user’s favorites, recent patients, or pinned patients to appear for another user.
+* Include the user ID or stable account ID in the preference-storage key.
+* Preserve preferences across page refreshes.
+* Document whether preferences are:
+
+  * Per browser
+  * Per device
+  * Per user
+  * Session-only
+
+Do not store these preferences under a single shared global key without user scoping.
+
+---
+
+## 6. Accessibility
+
+Requirements:
+
+* Favorite, pin, unpin, remove-recent, and clear actions must have specific accessible labels.
+* Examples:
+
+  * “Pin Marcus Webb”
+  * “Unpin Marcus Webb”
+  * “Add Progress Notes to Favorites”
+  * “Remove Progress Notes from Favorites”
+  * “Remove Marcus Webb from Recent Patients”
+* Keyboard users must be able to:
+
+  * Open and collapse each section
+  * Select a patient
+  * Pin and unpin
+  * Favorite and unfavorite
+  * Open any overflow menu
+* Visible keyboard focus states are required.
+* Do not rely on star color alone to communicate favorite status.
+* Announce successful pin and favorite actions to screen readers.
+
+---
+
+## 7. Do not change
+
+Do not change:
+
+* Production database schema
+* Patient permissions
+* Facility access rules
+* Clinical audit behavior
+* Authentication
+* Existing navigation destinations
+* Existing sidebar group mapping
+* Existing compact-mode behavior
+* Existing patient detail routing
+* Seeded demo data
+* Patient clinical content
+* Existing role definitions
+
+Do not create duplicate patient-detail pages.
+
+---
+
+## Acceptance criteria
+
+* Recent Patients shows the five most recently deliberately opened patient records.
+* Opening an existing recent patient moves it to the top without duplication.
+* Pinned Patients persists until unpinned.
+* Favorite Modules displays only authorized destinations.
+* Preferences are isolated by signed-in user.
+* No patient clinical data is stored in browser preference storage.
+* Unauthorized patients and modules never appear.
+* Compact mode remains usable.
+* The sidebar does not return to an excessively long, permanently expanded state.
+* Every shortcut opens the correct existing destination.
+* Keyboard navigation works.
+* TypeScript check passes.
+* Production build passes.
+* Existing tests pass, if configured.
+
+---
+
+## Required deliverables
+
+1. List of files changed.
+2. Explanation of the user-scoped preference-storage design.
+3. Exact data fields stored for:
+
+   * Recent Patients
+   * Pinned Patients
+   * Favorite Modules
+4. Screenshot showing Recent Patients.
+5. Screenshot showing Pinned Patients.
+6. Screenshot showing Favorite Modules.
+7. Screenshot showing a discharged pinned patient.
+8. Screenshot showing compact-mode access.
+9. Screenshot showing two different users with isolated preferences.
+10. Keyboard and accessibility test results.
+11. TypeScript result.
+12. Production build result.
+13. Test and lint status, or confirmation that no scripts are configured.
+14. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge it into main.
+
+Stop after completing this single task and wait for review.
