@@ -26,10 +26,18 @@ export function Topbar({ navigate, currentScreen }: Props) {
   const { role, setRoleId } = useRole();
   const { currentStaff, logout } = useAuth();
   const { state: demoState } = useDemoStore();
-  // Badge = critical-clinical notifications not yet read (excludes snoozed)
-  const unreadCount = CRITICAL_NOTIFICATION_IDS.filter(
-    id => !demoState.notificationReadIds.includes(id) && !demoState.notificationSnoozedIds.includes(id),
-  ).length;
+  // Badge = critical-clinical notifications not yet read.
+  // Excludes: snoozed (active expiry), resolved, and read.
+  const unreadCount = (() => {
+    const now = Date.now();
+    return CRITICAL_NOTIFICATION_IDS.filter(id => {
+      if (demoState.notificationReadIds.includes(id))     return false;
+      if (demoState.notificationResolvedIds.includes(id)) return false;
+      const snoozedUntil = demoState.notificationSnoozeExpiry[id] ?? 0;
+      if (snoozedUntil > now) return false;
+      return true;
+    }).length;
+  })();
 
   // Ctrl+K global shortcut
   useEffect(() => {
