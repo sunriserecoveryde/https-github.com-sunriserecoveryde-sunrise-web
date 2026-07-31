@@ -77,4 +77,10 @@ title = "The Sunrise Foundation — Corona (White Background PNG)"
 id = "Rkt7XUx9JH-K_Dr8xJDc-"
 uri = "file://Product%20Review/Sunrise%20OS%20%E2%80%94%20Product%20Review.pdf"
 type = "pdf"
-title = "Sunrise OS — Product Review (37-screen PDF)"
+title = "Sunrise OS — Product Review (25-screen PDF)"
+
+[[outputs]]
+id = "v6ZXH1j_zOfHbXp1f6dBJ"
+uri = "file://ProductReview.zip"
+type = "unspecified"
+title = "ProductReview.zip — 37 screenshots + PDF"
