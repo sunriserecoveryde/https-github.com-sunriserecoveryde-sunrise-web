@@ -1,0 +1,495 @@
+Perform an initial UI, workflow, and usability correction pass on Sunrise OS.
+
+This task must improve the existing application without rebuilding it, changing the overall brand, or removing working functionality.
+
+IMPORTANT SAFETY REQUIREMENTS
+
+1. Create a new Git branch named:
+
+   improvement/initial-ui-workflow-corrections
+
+2. Before changing code:
+   - Run the current application.
+   - Record the current build status.
+   - Identify the files and components associated with each requested change.
+   - Create a rollback checkpoint.
+
+3. Do not modify:
+   - Database schema
+   - Authentication logic
+   - Clinical calculations
+   - Risk scoring logic
+   - Billing calculations
+   - Permission rules
+   - Existing seeded demo data
+   - API contracts
+   - Production environment variables
+
+4. Do not redesign the entire application.
+
+5. Do not replace working components merely for visual preference.
+
+6. Make changes incrementally and test after each section.
+
+7. Preserve Sunrise OS branding, including the navy, orange, white, and existing typography system.
+
+PRIMARY GOAL
+
+Improve clarity, visual hierarchy, navigation efficiency, mobile usability, notification handling, and contextual AI access based on the current Product Review screenshots.
+
+==================================================
+PHASE 1 — FIX THE DESKTOP NAVIGATION
+==================================================
+
+The current left navigation contains too many permanently visible menu items and creates excessive scrolling.
+
+Implement collapsible navigation groups.
+
+Required groups:
+
+OVERVIEW
+- Dashboard
+- Command Center
+
+PATIENT CARE
+- Census & Bed Board
+- Patient List
+- Admissions
+- Discharges
+- MAT Management
+- Family Engagement
+- Physician Orders
+- Peer Support
+- Telehealth
+
+DOCUMENTATION
+- Chart Review
+- Progress Notes
+- Treatment Plans
+- ASAM Assessments
+- Admissions Screening
+- Biopsychosocial Intake
+- Discharge Summary
+- Medical Records / ROI
+
+OPERATIONS
+- Calendar
+- Group Schedule
+- Staff Scheduling
+- Tasks
+- Notifications
+
+FINANCIAL
+- Revenue Cycle
+- Claims
+- Insurance Authorizations
+- Financial Counseling
+
+INTELLIGENCE
+- Clinical Intelligence
+- Population Analytics
+- Outcomes
+- Measurement-Based Care
+- Recovery Engagement
+- Sunrise AI
+
+ADMINISTRATION
+- Staff Administration
+- Workforce Compliance
+- Roles and Permissions
+- Organization Settings
+- Facility Settings
+- Integrations
+
+Requirements:
+
+- Keep Overview expanded by default.
+- Keep the group containing the active page expanded.
+- Collapse other groups by default.
+- Preserve all permission-based visibility rules.
+- Add a compact sidebar option.
+- Remember the user’s expanded/collapsed state during the session.
+- Do not hide an active page inside a collapsed section.
+- Ensure every item has a consistent icon size and alignment.
+- Add tooltips when the sidebar is collapsed.
+
+Acceptance criteria:
+
+- No desktop user should need to scroll through the entire navigation to reach a major module.
+- All current destinations remain accessible.
+- Existing role permissions continue to determine which items are shown.
+- Keyboard users can expand and collapse every section.
+- Active-page highlighting remains visible.
+
+==================================================
+PHASE 2 — CORRECT THE DASHBOARD INFORMATION HIERARCHY
+==================================================
+
+The dashboard currently has strong information but too many competing elements.
+
+Reorganize it into four clear levels:
+
+LEVEL 1 — IMMEDIATE ACTION
+Place the most urgent information at the top:
+- Critical clinical alerts
+- Withdrawal alerts
+- AMA-risk alerts
+- Expiring authorizations
+- Overdue signatures
+- Medication or safety concerns
+
+Use one consolidated “Immediate Action” area instead of multiple competing alert strips.
+
+Each alert must show:
+- Severity
+- Patient or operational subject
+- Reason
+- Responsible role or staff member
+- Due time
+- Primary action button
+- Mark reviewed or dismiss option, where permitted
+
+LEVEL 2 — TODAY’S PRIORITIES
+Create a concise action summary showing:
+- Items needing action today
+- Assigned owner
+- Deadline
+- Link to the exact record or workflow
+
+LEVEL 3 — KEY PERFORMANCE INDICATORS
+Keep the primary KPI cards:
+- Census
+- Occupancy
+- AMA risk
+- Pending co-signatures
+- Average length of stay
+- Discharges
+
+Improve them by:
+- Using consistent card heights
+- Using consistent trend formatting
+- Adding tooltip definitions
+- Making the entire card clickable when a detailed view exists
+- Using color only to communicate meaningful status
+
+LEVEL 4 — ANALYTICS AND CLINICAL BRIEF
+Place charts, utilization data, forecasts, and the AI Clinical Brief below the action-oriented sections.
+
+Do not place decorative analytics above urgent work.
+
+Additional dashboard corrections:
+
+- Reduce unnecessary vertical padding.
+- Increase separation between action items and analytics.
+- Ensure no text overlaps at 1440×900.
+- Add loading states, empty states, and error states for each dashboard section.
+- Keep filters visible without allowing them to dominate the page.
+- Make the dashboard usable at 1280×720, 1440×900, and 1920×1080.
+
+Acceptance criteria:
+
+- A clinical or executive user can identify the three most important actions within five seconds.
+- Critical alerts are visually distinct but not duplicated.
+- Every alert links to a real destination.
+- No card or text overlaps at supported desktop resolutions.
+- Dashboard sections remain useful when there are zero alerts or no available data.
+
+==================================================
+PHASE 3 — FIX NOTIFICATION OVERLOAD
+==================================================
+
+The top navigation currently displays “99+” notifications, which reduces credibility and makes prioritization difficult.
+
+Replace the single undifferentiated notification count with categorized notification handling.
+
+Categories:
+
+- Critical Clinical
+- Documentation
+- Medication
+- Authorization
+- Billing
+- Compliance
+- Scheduling
+- System
+
+Requirements:
+
+- Show the count of unread actionable notifications, not every historical notification.
+- The header badge should prioritize critical unread items.
+- Do not show “99+” unless more than 99 unread actionable notifications genuinely exist.
+- Add filter tabs inside the notification panel.
+- Add:
+  - Mark as read
+  - Mark all in category as read
+  - Snooze
+  - Assign
+  - Open related record
+- Preserve immutable audit history separately from the user-facing unread count.
+- Prevent duplicate notifications for the same unresolved issue.
+- Show time created and responsible party.
+- Provide an empty state when there are no unread alerts.
+
+Acceptance criteria:
+
+- Notification count matches the notification list.
+- Resolving an underlying issue clears or updates the related notification.
+- Duplicate alerts are not generated repeatedly.
+- Critical clinical notices cannot be dismissed without required acknowledgment.
+- Audit records remain intact.
+
+==================================================
+PHASE 4 — ADD CONTEXTUAL AI ENTRY POINTS
+==================================================
+
+Keep the existing Sunrise AI module, including:
+- Draft Note
+- Risk Summary
+- Treatment Plan
+- Clinical Q&A
+- Review Queue
+
+Add contextual AI actions inside the appropriate workflows.
+
+Add these initial actions only:
+
+PATIENT PROFILE
+- Summarize Patient
+- Identify Current Risks
+
+PROGRESS NOTES
+- Draft Note
+- Improve Clarity
+- Check Medical Necessity
+- Check Internal Consistency
+
+TREATMENT PLANS
+- Suggest SMART Objectives
+- Suggest Interventions
+- Check Goal-Problem Alignment
+- Identify Missing Updates
+
+ASAM ASSESSMENTS
+- Review Dimension Consistency
+- Draft Level-of-Care Rationale
+- Identify Missing Supporting Evidence
+
+DISCHARGE SUMMARY
+- Draft Discharge Summary
+- Identify Unresolved Risks
+- Draft Continuing-Care Recommendations
+
+INSURANCE AUTHORIZATION
+- Draft Continued-Stay Rationale
+- Check Documentation Support
+- Identify Missing Clinical Evidence
+
+Requirements:
+
+- AI actions must open in a side panel or modal without navigating away from the current workflow.
+- Do not automatically write AI content into the legal health record.
+- Require explicit clinician review and approval.
+- Show the source data used to generate the output.
+- Clearly label AI-generated content.
+- Record:
+  - User
+  - Timestamp
+  - Prompt type
+  - Source record
+  - Approval or rejection
+  - Final edited version
+- Prevent AI from creating facts not present in the record.
+- Add “Not enough documented information” as a valid result.
+- Maintain the current human-in-the-loop policy.
+- Do not allow the AI to independently diagnose, order medication, assign level of care, or finalize clinical decisions.
+
+Acceptance criteria:
+
+- Every AI output requires human approval.
+- No AI output is saved automatically.
+- The clinician can compare the generated draft with the source information.
+- AI activity is audit logged.
+- AI features respect role permissions.
+- AI buttons are hidden when the user lacks access.
+
+==================================================
+PHASE 5 — IMPROVE MOBILE CENSUS BOARD
+==================================================
+
+The mobile Census Board is useful but the top action row is crowded and some controls compete for space.
+
+Correct the mobile layout.
+
+Requirements:
+
+- Move secondary actions into a “More” menu.
+- Keep only the two most important primary actions visible.
+- Do not horizontally clip buttons or labels.
+- Preserve a minimum 44×44 pixel touch target.
+- Add safe-area padding for phones with display notches.
+- Ensure the bottom navigation does not cover card content.
+- Add bottom padding equal to the navigation height plus the device safe area.
+- Keep withdrawal alerts visible without permanently consuming excessive screen space.
+- Allow the withdrawal alert to expand and collapse.
+- Make patient cards easier to scan:
+  - Patient name
+  - Room or bed
+  - Risk level
+  - Primary condition
+  - Key clinical alert
+  - Current score or trend
+- Limit secondary badges shown on the card.
+- Move additional badges into an expandable details area.
+- Make “Tap for vitals history” a clear button or row rather than small text.
+- Prevent red, orange, green, and blue status colors from being the only way status is communicated.
+- Add icons or text labels for accessibility.
+
+Test at:
+
+- 320×568
+- 360×800
+- 390×844
+- 412×915
+- Tablet portrait
+- Tablet landscape
+
+Acceptance criteria:
+
+- No clipped primary action buttons.
+- No patient content hidden behind bottom navigation.
+- All touch targets meet minimum size requirements.
+- The layout remains readable with browser font size increased to 200%.
+- Critical status remains understandable without relying exclusively on color.
+
+==================================================
+PHASE 6 — STANDARDIZE PAGE HEADERS AND ACTIONS
+==================================================
+
+Create one reusable page-header component and apply it consistently.
+
+The component should support:
+
+- Page title
+- Short description
+- Facility selector, when relevant
+- Level-of-care selector, when relevant
+- Date range, when relevant
+- Primary action
+- Secondary actions
+- Help or information tooltip
+- Last updated timestamp
+- Data refresh action
+
+Rules:
+
+- Only one primary action per screen.
+- Use consistent placement for Create, Add, Admit, Generate, Export, and Save.
+- Move lower-priority actions into an overflow menu.
+- Do not put unrelated actions beside one another.
+- Use consistent button labels across the platform.
+- Replace vague labels such as “View” with specific labels such as:
+  - Open Patient
+  - Review Alert
+  - View Authorization
+  - Review Note
+  - Open Claim
+
+Acceptance criteria:
+
+- Major pages use the same header structure.
+- Primary actions appear in the same area.
+- Button wording clearly communicates the result.
+- Existing workflows continue to function.
+
+==================================================
+PHASE 7 — ACCESSIBILITY AND VISUAL CONSISTENCY
+==================================================
+
+Perform an accessibility correction pass without changing the brand.
+
+Requirements:
+
+- Meet WCAG 2.2 AA contrast requirements for text and controls.
+- Add visible keyboard focus states.
+- Ensure all icon-only buttons have accessible labels.
+- Ensure all form fields have persistent labels.
+- Do not rely on placeholder text as the field label.
+- Add accessible names to charts and graphs.
+- Add table headers and appropriate semantic markup.
+- Ensure status is not communicated through color alone.
+- Standardize:
+  - Border radius
+  - Card padding
+  - Input heights
+  - Button heights
+  - Badge styles
+  - Modal widths
+  - Empty states
+  - Error states
+  - Skeleton loading states
+- Respect reduced-motion preferences.
+- Verify logical keyboard tab order.
+- Add skip-navigation support for desktop.
+
+Acceptance criteria:
+
+- Automated accessibility scan shows no critical violations on the selected pages.
+- Every interactive element can be reached by keyboard.
+- Focus remains trapped properly inside modals.
+- Screen readers receive useful labels for icon buttons and status indicators.
+
+==================================================
+PHASE 8 — TESTING
+==================================================
+
+Add or update tests for:
+
+- Sidebar expansion and collapse
+- Permission-controlled navigation
+- Dashboard alert links
+- Notification count accuracy
+- Notification filtering
+- AI review and approval requirement
+- AI output not auto-saving
+- Mobile safe-area spacing
+- Responsive action menus
+- Keyboard navigation
+- Page-header rendering
+- Empty and error states
+
+Run:
+
+- Type checking
+- Linting
+- Unit tests
+- Integration tests
+- Production build
+- Existing end-to-end tests
+
+Do not mark the task complete while tests are failing.
+
+==================================================
+DELIVERABLES
+==================================================
+
+When complete, provide:
+
+1. A list of every file changed.
+2. A short explanation of each change.
+3. Before-and-after screenshots for:
+   - Dashboard
+   - Expanded desktop navigation
+   - Collapsed desktop navigation
+   - Notification panel
+   - Progress note contextual AI
+   - Treatment plan contextual AI
+   - Mobile Census Board
+4. Test results.
+5. Build results.
+6. Accessibility results.
+7. Known limitations.
+8. Any items that require my approval before further implementation.
+
+Do not merge the branch automatically.
+
+Stop after completing these phases and wait for review.
