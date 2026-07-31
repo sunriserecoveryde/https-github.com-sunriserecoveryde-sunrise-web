@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { MetricCard } from '../components/ui/MetricCard';
+import { KpiCard } from '../components/ui/KpiCard';
 import { OccupancyRing } from '../components/ui/OccupancyRing';
 import {
   AlertTriangle, AlertCircle, Clock, ChevronRight, UserPlus, FileText, Droplets,
@@ -962,32 +963,118 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
             );
           })()}
 
-          {/* ── LEVEL 3: KPI CARDS ────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div data-tour-id="kpi-census">
-              <MetricCard title="Census" value="18/22" subtitle="81.8% Occupancy" color="orange"
-                onClick={() => setDrillDown({ title: 'Active Census', subtitle: `${filterLoc !== 'All' ? filterLoc + ' · ' : ''}${filterLOC !== 'All' ? filterLOC + ' · ' : ''}${filterDate}`, badge: { label: '18 patients', color: 'bg-orange-100 text-orange-700' }, rows: DRILL_CENSUS_ROWS, columns: COLS_CENSUS, navigateLabel: 'Open Bed Board', onNavigate: () => { setDrillDown(null); navigate('CensusBedBoard'); } })} />
+          {/* ── LEVEL 3: KPI CARDS ────────────────────────────────────────────
+              Each card shows: label, tooltip, value, trend (icon+text),
+              comparison period, operational interpretation, specific action.
+              Historical comparison source: CLINICAL_COMPARISONS — 7-day
+              period-over-period deltas stored at module level (demo data).
+              Auth card has no clinical 7-day comparison → shows unavailable.
+          ────────────────────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+
+            {/* Census ─ always visible for clinical roles */}
+            <div data-tour-id="kpi-census" className="h-full">
+              <KpiCard
+                label="Census"
+                tooltipText="Number of active patients currently admitted across the selected facility and level of care. Shown as current census over bed capacity. Compared against the previous 7 days."
+                value="18/22"
+                color="orange"
+                trend={{
+                  direction: 'up',
+                  text: 'Up 2 patients from previous 7 days',
+                  period: 'Previous 7 days',
+                  interpretation: 'within-range',
+                }}
+                action={{ label: 'Open Census', onClick: () => setDrillDown({ title: 'Active Census', subtitle: `${filterLoc !== 'All' ? filterLoc + ' · ' : ''}${filterLOC !== 'All' ? filterLOC + ' · ' : ''}${filterDate}`, badge: { label: '18 patients', color: 'bg-orange-100 text-orange-700' }, rows: DRILL_CENSUS_ROWS, columns: COLS_CENSUS, navigateLabel: 'Open Bed Board', onNavigate: () => { setDrillDown(null); navigate('CensusBedBoard'); } }) }}
+              />
             </div>
-            {canAccessScreen('RiskDashboard') && (
-              <div data-tour-id="ama-alerts">
-                <MetricCard title="AMA Risk" value="2" subtitle="High Risk Clients" color="red"
-                  onClick={() => setDrillDown({ title: 'High AMA Risk Clients', subtitle: 'Clients with elevated early-departure risk', badge: { label: '2 high risk', color: 'bg-red-100 text-red-700' }, rows: DRILL_AMA_ROWS, columns: COLS_AMA, navigateLabel: 'Risk Dashboard', onNavigate: () => { setDrillDown(null); navigate('RiskDashboard'); } })} />
-              </div>
-            )}
-            {canAccessScreen('CosignQueue') && (
-              <MetricCard title="Pending Co-signs" value="4" subtitle="Action Required" color="amber"
-                onClick={() => setDrillDown({ title: 'Pending Co-sign Requests', subtitle: 'Notes awaiting supervisor co-signature', badge: { label: '4 pending', color: 'bg-amber-100 text-amber-700' }, rows: DRILL_COSIGNS_ROWS, columns: COLS_COSIGNS, navigateLabel: 'Co-sign Queue', onNavigate: () => { setDrillDown(null); navigate('CosignQueue'); } })} />
-            )}
-            <MetricCard title="Avg LOS" value="18.4" subtitle="Days" trend={{ value: '1.2', direction: 'down' }} color="blue"
-              onClick={() => setDrillDown({ title: 'Length of Stay — All Active Patients', subtitle: 'Current LOS by patient', rows: DRILL_LOS_ROWS, columns: COLS_LOS, navigateLabel: 'Outcome Tracking', onNavigate: () => { setDrillDown(null); navigate('OutcomeTracking'); } })} />
+
+            {/* AMA Risk ─ card always visible; action gated on RiskDashboard */}
+            <div data-tour-id="ama-alerts" className="h-full">
+              <KpiCard
+                label="AMA Risk"
+                tooltipText="Clients currently flagged as high risk for leaving against medical advice. Monitored by the clinical team and updated each shift. Compared against the previous 7 days."
+                value="2"
+                color="red"
+                trend={{
+                  direction: 'down',
+                  text: 'Down 1 client from previous 7 days',
+                  period: 'Previous 7 days',
+                  interpretation: 'favorable',
+                }}
+                action={canAccessScreen('RiskDashboard') ? {
+                  label: 'Review AMA Risk',
+                  onClick: () => setDrillDown({ title: 'High AMA Risk Clients', subtitle: 'Clients with elevated early-departure risk', badge: { label: '2 high risk', color: 'bg-red-100 text-red-700' }, rows: DRILL_AMA_ROWS, columns: COLS_AMA, navigateLabel: 'Risk Dashboard', onNavigate: () => { setDrillDown(null); navigate('RiskDashboard'); } }),
+                } : undefined}
+              />
+            </div>
+
+            {/* Pending Co-Signs ─ card always visible; action gated on CosignQueue */}
+            <KpiCard
+              label="Pending Co-Signs"
+              tooltipText="Clinical documents awaiting a required supervisory or medical co-signature. Delays may affect compliance and timely billing. Compared against the previous 7 days."
+              value="4"
+              color="amber"
+              trend={{
+                direction: 'up',
+                text: 'Up 1 from previous 7 days',
+                period: 'Previous 7 days',
+                interpretation: 'needs-attention',
+              }}
+              action={canAccessScreen('CosignQueue') ? {
+                label: 'Open Co-Sign Queue',
+                onClick: () => setDrillDown({ title: 'Pending Co-sign Requests', subtitle: 'Notes awaiting supervisor co-signature', badge: { label: '4 pending', color: 'bg-amber-100 text-amber-700' }, rows: DRILL_COSIGNS_ROWS, columns: COLS_COSIGNS, navigateLabel: 'Co-sign Queue', onNavigate: () => { setDrillDown(null); navigate('CosignQueue'); } }),
+              } : undefined}
+            />
+
+            {/* Avg LOS ─ −0.3 days is within normal day-to-day variation;
+                rendered as flat / no meaningful change per clinical convention */}
+            <KpiCard
+              label="Avg LOS"
+              tooltipText="Average length of stay for all currently admitted patients, in days. A change of less than 1 day is within normal day-to-day variation and is shown as no meaningful change. Compared against the previous 7 days."
+              value="18.4"
+              valueUnit="days"
+              color="blue"
+              trend={{
+                direction: 'flat',
+                text: 'No meaningful change from previous period',
+                period: 'Previous 7 days (−0.3 days)',
+                interpretation: 'within-range',
+              }}
+              action={{ label: 'View LOS Details', onClick: () => setDrillDown({ title: 'Length of Stay — All Active Patients', subtitle: 'Current LOS by patient', rows: DRILL_LOS_ROWS, columns: COLS_LOS, navigateLabel: 'Outcome Tracking', onNavigate: () => { setDrillDown(null); navigate('OutcomeTracking'); } }) }}
+            />
+
+            {/* Discharges ─ action gated on Discharges screen access */}
             {canAccessScreen('Discharges') && (
-              <MetricCard title="Discharges" value="3" subtitle="This Week" color="green"
-                onClick={() => setDrillDown({ title: 'Discharges This Week', subtitle: `${filterDate}`, rows: DRILL_DISCHARGES_ROWS, columns: COLS_DISCHARGES, navigateLabel: 'Discharges', onNavigate: () => { setDrillDown(null); navigate('Discharges'); } })} />
+              <KpiCard
+                label="Discharges"
+                tooltipText="Number of patients discharged this week across all levels of care. Successful-discharge benchmarks are not defined in the current data, so the interpretation is neutral. Compared against the previous 7 days."
+                value="3"
+                color="green"
+                trend={{
+                  direction: 'up',
+                  text: 'Up 1 from previous 7 days',
+                  period: 'Previous 7 days',
+                  interpretation: 'neutral',
+                }}
+                action={{ label: 'Open Discharge Activity', onClick: () => setDrillDown({ title: 'Discharges This Week', subtitle: `${filterDate}`, rows: DRILL_DISCHARGES_ROWS, columns: COLS_DISCHARGES, navigateLabel: 'Discharges', onNavigate: () => { setDrillDown(null); navigate('Discharges'); } }) }}
+              />
+            )}
+
+            {/* Authorizations Requiring Attention ─ gated; no 7-day clinical
+                comparison available → shows "Comparison unavailable" state */}
+            {canAccessScreen('InsuranceAuthorization') && (
+              <KpiCard
+                label="Auth Risk"
+                tooltipText="Active authorizations expiring within the next 7 days that require a renewal, concurrent review, or peer-to-peer call. No prior-period comparison is available for this metric in the clinical view."
+                value="3"
+                color="purple"
+                /* trend intentionally omitted → card shows "Comparison unavailable" */
+                action={{ label: 'Review Authorizations', onClick: () => setDrillDown({ title: 'Authorization Risk — 3 Patients', subtitle: 'Active authorizations expiring within 7 days', badge: { label: 'Action needed', color: 'bg-purple-100 text-purple-700' }, rows: DRILL_AUTH_RISK_ROWS, columns: COLS_AUTH_RISK, navigateLabel: 'Insurance Authorization', onNavigate: () => { setDrillDown(null); navigate('InsuranceAuthorization'); } }) }}
+              />
             )}
           </div>
-
-          {/* Period comparison */}
-          <ComparisonRow comparisons={CLINICAL_COMPARISONS} />
+          {/* ComparisonRow removed — comparison context is now inside each KpiCard */}
 
           {/* ── LEVEL 4: ANALYTICS + AI BRIEF ───────────────────────────────── */}
           {/* Main 2-Col */}
