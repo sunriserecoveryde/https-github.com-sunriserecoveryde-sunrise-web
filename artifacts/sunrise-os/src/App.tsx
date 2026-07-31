@@ -311,6 +311,7 @@ function AppInner() {
         <Sidebar
           currentScreen={activeScreen}
           navigate={navigateTo}
+          currentPatientId={selectedPatientId}
         />
 
         <main className="flex-1 ml-[var(--nav-width)] p-6 pb-20">
