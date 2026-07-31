@@ -14,8 +14,10 @@ import { getRolesWithEditAccess } from '../data/mockRoles';
 import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
 import { NoteFormat } from '../lib/aiNoteEngine';
 import { NoteIntelligencePanel } from '../components/ui/NoteIntelligencePanel';
+import { ProgressNoteAIAssist, type AIAuditEvent } from '../components/ui/ProgressNoteAIAssist';
 import { useDocumentForm } from '../hooks/useDocumentForm';
 import { DocumentFormBar } from '../components/ui/DocumentFormBar';
+import { useRole } from '../context/RoleContext';
 
 // ─── Extended mock notes ─────────────────────────────────────────────────────
 
@@ -253,7 +255,10 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
   const [patient, setPatient] = useState('p_demo');
   const [values, setValues] = useState<Record<string, string>>({});
   const [showRecorder, setShowRecorder] = useState(false);
+  const [aiAuditLog, setAiAuditLog] = useState<AIAuditEvent[]>([]);
   const { currentStaff } = useAuth();
+  const { canAccessScreen } = useRole();
+  const canUseAIAssist = canAccessScreen('AIAssistant');
   const authorLabel = currentStaff
     ? `${currentStaff.firstName} ${currentStaff.lastName}${(currentStaff.credentials ?? []).length ? ', ' + (currentStaff.credentials ?? []).join(', ') : ''}`
     : 'Staff Member';
@@ -302,6 +307,28 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
     setValues({});
   }
 
+  // ── AI Assist handlers ──────────────────────────────────────────────────────
+  function handleAIInsertDraft(newValues: Record<string, string>) {
+    setValues(prev => ({ ...prev, ...newValues }));
+    docForm.markDirty();
+  }
+
+  function handleAIAcceptRevision(revisedText: string) {
+    // The clarity engine combines all fields with \n\n. Split proportionally
+    // back to the current fields so each section gets its revised content.
+    const parts = revisedText.split(/\n\n+/);
+    const newValues: Record<string, string> = { ...values };
+    fields.forEach((f, i) => {
+      if (parts[i] !== undefined) newValues[f] = parts[i];
+    });
+    setValues(newValues);
+    docForm.markDirty();
+  }
+
+  function handleAIAuditEvent(event: AIAuditEvent) {
+    setAiAuditLog(prev => [...prev, event]);
+  }
+
   return (
     <div className="bg-white border border-border rounded-xl shadow-sm p-5 mb-6">
       <div className="flex items-center justify-between mb-4">
@@ -315,6 +342,22 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
           >
             <Mic className="w-3.5 h-3.5" /> Record Session
           </button>
+          {/* AI Assist — only for authorized clinical roles; separate from Save/Sign/Submit */}
+          {canUseAIAssist && (
+            <ProgressNoteAIAssist
+              format={format}
+              patientId={patient}
+              noteType={type}
+              fields={fields}
+              values={values}
+              authorName={authorLabel}
+              noteRef={docId}
+              isLocked={docForm.isLocked}
+              onInsertDraft={handleAIInsertDraft}
+              onAcceptRevision={handleAIAcceptRevision}
+              onAuditEvent={handleAIAuditEvent}
+            />
+          )}
           <button onClick={onClose} className="text-slate hover:text-navy text-sm">Cancel</button>
         </div>
       </div>
