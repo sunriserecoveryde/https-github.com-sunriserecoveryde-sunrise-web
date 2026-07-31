@@ -6,8 +6,10 @@ import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 import { Screen } from '../App';
-import { Search, Plus, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle, TrendingUp, Users, Lock, CalendarDays } from 'lucide-react';
+import { Search, Plus, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle, TrendingUp, Users, Lock, CalendarDays, Pin, PinOff } from 'lucide-react';
 import { useRole } from '../context/RoleContext';
+import { useAuth } from '../context/AuthContext';
+import { useSidebarPrefs } from '../hooks/useSidebarPrefs';
 
 // Latest COWS/CIWA scores per patient (from most recent vitals entry)
 const WITHDRAWAL_SCORES: Record<string, { cows?: number; ciwa?: number }> = {};
@@ -92,6 +94,36 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
   const canViewDetail  = canAccessScreen('PatientDetail');
   const listPermission = getPermissionForScreen('PatientList');
   const canAdmit       = listPermission === 'full';
+
+  // ── Pin / Unpin — shared with Sidebar and PatientDetail via useSidebarPrefs ─
+  const { currentStaff } = useAuth();
+  const { pinPatient, unpinPatient, isPinned } = useSidebarPrefs(currentStaff?.id ?? null);
+
+  function handlePinToggle(
+    e: React.MouseEvent | React.KeyboardEvent,
+    p: { id: string; firstName: string; lastName: string; program: string }
+  ) {
+    // Never let the pin action propagate to the row-level navigation click handler.
+    e.stopPropagation();
+    const name = `${p.firstName} ${p.lastName}`;
+    try {
+      if (isPinned(p.id)) {
+        unpinPatient(p.id);
+        savePlAction(`${name} unpinned`);
+      } else {
+        pinPatient({
+          id:          p.id,
+          displayName: name,
+          program:     p.program,
+          pinnedAt:    Date.now(),
+          discharged:  undefined,
+        });
+        savePlAction(`${name} pinned`);
+      }
+    } catch {
+      savePlAction("Unable to save pinned patient on this device.");
+    }
+  }
 
   function handleSort(field: SortField) {
     setSort(prev => prev.field === field ? { field, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'asc' });
@@ -445,18 +477,45 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
                       {p.counselor.split(',')[0]}
                     </td>
                     <td className="p-4">
-                      {canViewDetail ? (
-                        <button
-                          onClick={() => navigate('PatientDetail', p.id)}
-                          className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-3 py-1.5 rounded"
-                        >
-                          View Chart
-                        </button>
-                      ) : (
-                        <span className="text-xs text-slate flex items-center gap-1">
-                          <Lock className="w-3 h-3" /> No access
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {canViewDetail ? (
+                          <>
+                            <button
+                              onClick={() => navigate('PatientDetail', p.id)}
+                              className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-3 py-1.5 rounded"
+                            >
+                              View Chart
+                            </button>
+                            {/* ── Pin / Unpin — spec §2 ──────────────────────── */}
+                            <button
+                              onClick={(e) => handlePinToggle(e, p)}
+                              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handlePinToggle(e, p)}
+                              aria-pressed={isPinned(p.id)}
+                              aria-label={isPinned(p.id)
+                                ? `Unpin ${p.firstName} ${p.lastName}`
+                                : `Pin ${p.firstName} ${p.lastName}`}
+                              title={isPinned(p.id) ? "Unpin patient" : "Pin patient"}
+                              className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunrise-blue ${
+                                isPinned(p.id)
+                                  ? "bg-sunrise-amber/10 border-sunrise-amber/40 text-sunrise-amber hover:bg-sunrise-amber/20"
+                                  : "bg-slate-50 border-border text-slate hover:text-navy hover:border-slate-400"
+                              }`}
+                            >
+                              {isPinned(p.id)
+                                ? <><PinOff className="w-3 h-3" aria-hidden="true" /><span>Pinned</span></>
+                                : <><Pin  className="w-3 h-3" aria-hidden="true" /><span>Pin</span></>
+                              }
+                              <span className="sr-only">
+                                {isPinned(p.id) ? "(pinned — click to unpin)" : "(not pinned)"}
+                              </span>
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate flex items-center gap-1">
+                            <Lock className="w-3 h-3" /> No access
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

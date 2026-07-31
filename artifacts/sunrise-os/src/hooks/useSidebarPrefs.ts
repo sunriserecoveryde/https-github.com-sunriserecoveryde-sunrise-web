@@ -229,6 +229,35 @@ export function useSidebarPrefs(staffId: string | null) {
     [update]
   );
 
+  /**
+   * Update the stored display name, program, and discharged flag for an
+   * already-pinned patient when a newer authoritative record is available
+   * (e.g. when PatientDetail mounts).  Spec §5.
+   * No-ops if the patient is not currently pinned or if nothing changed.
+   */
+  const refreshPinnedPatient = useCallback(
+    (patient: Pick<PinnedPatient, "id" | "displayName" | "program" | "discharged">) =>
+      update(prev => {
+        const idx = prev.pinnedPatients.findIndex(p => p.id === patient.id);
+        if (idx === -1) return prev; // not pinned — nothing to do
+        const existing = prev.pinnedPatients[idx];
+        if (
+          existing.displayName === patient.displayName &&
+          existing.program     === patient.program &&
+          existing.discharged  === patient.discharged
+        ) return prev; // nothing changed — avoid a spurious write
+        const updated = [...prev.pinnedPatients];
+        updated[idx] = {
+          ...existing,
+          displayName: patient.displayName,
+          program:     patient.program,
+          discharged:  patient.discharged,
+        };
+        return { ...prev, pinnedPatients: updated };
+      }),
+    [update]
+  );
+
   // ── Favorite modules ──────────────────────────────────────────────────────
   const addFavorite = useCallback(
     (moduleId: Screen) =>
@@ -251,6 +280,12 @@ export function useSidebarPrefs(staffId: string | null) {
     [update]
   );
 
+  /** True if the given patient ID is currently in the pinned list. */
+  const isPinned = useCallback(
+    (patientId: string) => prefs.pinnedPatients.some(p => p.id === patientId),
+    [prefs.pinnedPatients]
+  );
+
   return {
     prefs,
     // Recent
@@ -260,6 +295,8 @@ export function useSidebarPrefs(staffId: string | null) {
     // Pinned
     pinPatient,
     unpinPatient,
+    refreshPinnedPatient,
+    isPinned,
     // Favorites
     addFavorite,
     removeFavorite,

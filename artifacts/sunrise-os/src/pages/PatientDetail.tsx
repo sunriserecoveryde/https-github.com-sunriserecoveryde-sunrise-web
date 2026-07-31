@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MOCK_PATIENTS, Flag } from '../data/mockPatients';
 import { getPatientMedications, getMARStatus } from '../data/mockMedications';
 import { getPatientVitals } from '../data/mockVitals';
@@ -13,13 +13,58 @@ import { CustomButtons } from '../components/ui/CustomButtons';
 import {
   ArrowLeft, Activity, FileText, Pill, Users, HeartPulse,
   FlaskConical, BookOpen, FolderOpen, CheckCircle2, XCircle,
-  AlertCircle, Clock, Upload, Download, ClipboardList, Plus, Eye
+  AlertCircle, Clock, Upload, Download, ClipboardList, Plus, Eye, Pin, PinOff
 } from 'lucide-react';
 import { Screen } from '../App';
 import { LockedButton } from '../components/common/LockedButton';
+import { useAuth } from '../context/AuthContext';
+import { useSidebarPrefs } from '../hooks/useSidebarPrefs';
 
 export function PatientDetail({ patientId, navigate, readOnly }: { patientId: string | null; navigate: (s: Screen, id?: string) => void; readOnly?: boolean }) {
   const patient = MOCK_PATIENTS.find(p => p.id === patientId) || MOCK_PATIENTS[0];
+
+  // ── Pin / Unpin ────────────────────────────────────────────────────────────
+  const { currentStaff } = useAuth();
+  const staffId = currentStaff?.id ?? null;
+  const { pinPatient, unpinPatient, isPinned, refreshPinnedPatient } = useSidebarPrefs(staffId);
+  const patientIsPinned = isPinned(patient.id);
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  // Refresh the stored pin entry when this chart opens so the sidebar always
+  // shows the current display name and program (spec §5).
+  useEffect(() => {
+    if (!staffId) return;
+    refreshPinnedPatient({
+      id:          patient.id,
+      displayName: `${patient.firstName} ${patient.lastName}`,
+      program:     patient.program,
+      discharged:  undefined, // no discharged field in the mock model; spec preserves existing flag
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient.id, staffId]);
+
+  function handlePinToggle() {
+    setPinError(null);
+    try {
+      const name = `${patient.firstName} ${patient.lastName}`;
+      if (patientIsPinned) {
+        unpinPatient(patient.id);
+        saveChartAction(`${name} unpinned`);
+      } else {
+        pinPatient({
+          id:          patient.id,
+          displayName: name,
+          program:     patient.program,
+          pinnedAt:    Date.now(),
+          discharged:  undefined,
+        });
+        saveChartAction(`${name} pinned`);
+      }
+    } catch {
+      setPinError("Unable to save pinned patient on this device.");
+    }
+  }
+
   const [activeTab, setActiveTab] = useState('Overview');
   const [isComposingNote, setIsComposingNote] = useState(false);
   const [noteFormat, setNoteFormat] = useState('BIRP');
@@ -201,6 +246,28 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 >
                   <Plus className="w-3 h-3" /> Edit Flags
                 </button>
+                {/* ── Pin / Unpin — spec §1: near patient name + primary actions ── */}
+                <button
+                  onClick={handlePinToggle}
+                  aria-pressed={patientIsPinned}
+                  aria-label={patientIsPinned
+                    ? `Unpin ${patient.firstName} ${patient.lastName}`
+                    : `Pin ${patient.firstName} ${patient.lastName}`}
+                  className={`flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                    patientIsPinned
+                      ? "bg-sunrise-amber/20 border-sunrise-amber/60 text-sunrise-amber hover:bg-sunrise-amber/30"
+                      : "bg-white/10 border-white/40 text-white hover:bg-white/20"
+                  }`}
+                >
+                  {patientIsPinned
+                    ? <><PinOff className="w-3 h-3" aria-hidden="true" /><span>Unpin Patient</span></>
+                    : <><Pin  className="w-3 h-3" aria-hidden="true" /><span>Pin Patient</span></>
+                  }
+                  <span className="sr-only">{patientIsPinned ? "(currently pinned)" : "(not pinned)"}</span>
+                </button>
+                {pinError && (
+                  <span role="alert" className="text-xs text-rose-300">{pinError}</span>
+                )}
               </div>
             </div>
           </div>
