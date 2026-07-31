@@ -1,0 +1,142 @@
+It looks like Replit repeated the **KPI task results** rather than completing the Notification Panel task.
+
+Do **not** move on yet. Copy and paste this:
+
+The response you just provided repeats the completed KPI card task.
+
+Do not make any additional KPI changes.
+
+Now complete this single task only:
+
+**Improve the Notification Panel action labels, duplicate handling, and resolution behavior.**
+
+Use the existing notification categories, unread logic, snooze behavior, acknowledgment modal, and permission rules.
+
+Required changes:
+
+1. Replace vague action labels such as “Open,” “View,” or “Review” with specific workflow labels, including where applicable:
+
+   * Open Patient Chart
+   * Review Withdrawal Alert
+   * Review AMA Risk
+   * Open Co-Sign Queue
+   * Review Medication Issue
+   * Open Authorization
+   * Open Claim
+   * Review Compliance Item
+   * Open Calendar
+   * Open Settings
+
+2. Add distinct notification states:
+
+   * Unread
+   * Read
+   * Acknowledged
+   * Snoozed
+   * Resolved
+
+3. Critical Clinical notifications:
+
+   * Must be acknowledged before resolution.
+   * Acknowledgment must not automatically equal resolution.
+   * Must retain audit history.
+
+4. Prevent duplicate active notifications for the same unresolved issue.
+
+Create a stable deduplication key using available fields such as:
+
+* Category
+* Patient or subject ID
+* Alert type
+* Related record ID
+* Destination
+* Issue code
+
+Do not merge distinct alerts for different records or different patients.
+
+5. Add resolution behavior:
+
+   * Resolved notifications must leave the active unread count.
+   * Snoozed notifications must leave the active unread count.
+   * Read notifications may remain visible until resolved.
+   * Do not delete audit history.
+   * Do not change the production database schema.
+
+6. Improve snooze options:
+
+   * 1 hour
+   * 4 hours
+   * Tomorrow
+
+Critical Clinical notifications may only be snoozed after acknowledgment.
+
+7. Ensure these counts remain accurate:
+
+   * Topbar badge
+   * Total unread
+   * Per-category unread
+   * Active list
+   * Snoozed count, if displayed
+
+Counts must exclude:
+
+* Resolved notifications
+* Currently snoozed notifications
+* Deduplicated notifications
+
+8. Keep notification rows compact. Each row should show:
+
+   * Category
+   * Severity, when applicable
+   * Patient or subject
+   * Clear title
+   * One-sentence reason
+   * Age or created time
+   * Responsible staff member or role, where known
+   * Specific primary action
+   * Secondary actions in an overflow menu
+
+9. Preserve:
+
+   * Existing permission rules
+   * Existing routes
+   * Existing notification categories
+   * Existing critical-alert acknowledgment policy
+   * Existing audit data
+   * Existing seeded demo data
+
+Do not rebuild the notification system.
+
+Acceptance criteria:
+
+* No duplicate active notification appears for the same unresolved issue.
+* Every primary action has a specific label.
+* Every action opens a functioning existing destination.
+* Read, acknowledged, snoozed, and resolved remain distinct.
+* Critical notifications cannot be resolved without acknowledgment.
+* Snoozed and resolved items do not count as active unread.
+* Category counts match the visible active list.
+* Keyboard navigation and focus behavior work.
+* TypeScript check passes.
+* Production build passes.
+
+Required deliverables:
+
+1. Files changed.
+2. Notification category-to-action-label table.
+3. Deduplication key explanation.
+4. Screenshot of the full Notification Panel.
+5. Screenshot of Critical Clinical acknowledgment.
+6. Screenshot of snooze options.
+7. Screenshot of a resolved notification.
+8. Screenshot showing accurate category counts.
+9. TypeScript result.
+10. Production build result.
+11. Test and lint status.
+12. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge into main.
+
+Stop after completing this notification task and wait for review.
