@@ -38,13 +38,14 @@ const CLINICAL_DIRECT  = ['PatientList','PatientDetail','CensusBedBoard','Discha
 const INTAKE           = ['Admissions','WaitlistManager','ReferralTracker'];
 const CLINICAL_DOCS    = ['ChartReview','ProgressNotes','TreatmentPlans','ASAMAssessments','BiopsychosocialAssessment','DischargeSummary','GroupNotes','MedicalRecords','ClinicalForms'];
 const CLINICAL_QUEUE   = ['CosignQueue','MyCaseload'];
-const CLINICAL_RX      = ['PhysicianOrders','MATManagement','FormularyManagement','NursingMAR'];
+const CLINICAL_RX      = ['PhysicianOrders','MATManagement','FormularyManagement','NursingMAR','WithdrawalMonitor'];
 const SCHEDULING_BASE  = ['AppointmentCalendar','GroupSchedule','GroupTherapyCurriculum'];
-const RISK             = ['RiskDashboard','RecoveryEngagementScore','OutcomeTracking','UADrugTesting','IncidentReporting','CrisisAssessment','PopulationAnalytics'];
+const RISK             = ['RiskDashboard','RecoveryEngagementScore','OutcomeTracking','UADrugTesting','IncidentReporting','CrisisAssessment','PopulationAnalytics','MeasurementBasedCare'];
 const CARE_COORD       = ['FamilyEngagement','AftercarePlanning','PeerSupport','TelehealthConsults','AlumniProgram'];
 const SUPERVISION      = ['ClinicalSupervision','CertificationTracker'];
 const OVERVIEW         = ['Dashboard','Settings','HelpSupport'];
-const COMPLIANCE       = ['AuditCompliance','QualityImprovement','Training','ChartAuditTool'];
+const COMPLIANCE       = ['AuditCompliance','QualityImprovement','Training','ChartAuditTool','WorkforceCompliance'];
+const AI_TOOLS         = ['AIAssistant','DAPNoteWorkflow'];
 const FINANCIAL        = ['RevenueCycle','FinancialCounseling'];
 const COMMS            = ['SecureMessaging'];
 const DEMO             = ['RoleExplorer']; // always visible to all roles
@@ -60,8 +61,8 @@ export const ROLES: RoleDefinition[] = [
     category: 'Clinical',
     permissions: perms(
       [...OVERVIEW, ...CLINICAL_DIRECT, ...INTAKE, ...CLINICAL_DOCS, ...CLINICAL_QUEUE,
-       ...SCHEDULING_BASE, ...RISK, ...CARE_COORD, ...SUPERVISION, ...COMMS, ...DEMO],
-      [...COMPLIANCE,'PhysicianOrders','MATManagement','FormularyManagement','CommandCenter'],
+       ...SCHEDULING_BASE, ...RISK, ...CARE_COORD, ...SUPERVISION, ...COMMS, ...AI_TOOLS, ...DEMO],
+      [...COMPLIANCE,'PhysicianOrders','MATManagement','FormularyManagement','NursingMAR','WithdrawalMonitor','CommandCenter'],
     ),
   },
 
@@ -78,7 +79,7 @@ export const ROLES: RoleDefinition[] = [
        'TreatmentPlans','ASAMAssessments','BiopsychosocialAssessment','DischargeSummary','GroupNotes',
        'MyCaseload','AppointmentCalendar','GroupSchedule','GroupTherapyCurriculum','CrisisAssessment',
        'FamilyEngagement','AftercarePlanning','TelehealthConsults','SecureMessaging','PeerSupport',
-       'Admissions','ClinicalForms',...DEMO],
+       'Admissions','ClinicalForms',...AI_TOOLS,...DEMO],
       ['CensusBedBoard','Discharges','Settings','RiskDashboard','RecoveryEngagementScore',
        'OutcomeTracking','UADrugTesting','IncidentReporting','MATManagement','MedicalRecords',
        'FormularyManagement','BedManagement','CosignQueue','Training'],
@@ -98,7 +99,7 @@ export const ROLES: RoleDefinition[] = [
        'TreatmentPlans','BiopsychosocialAssessment','DischargeSummary','GroupNotes',
        'MyCaseload','AppointmentCalendar','GroupSchedule','GroupTherapyCurriculum','CrisisAssessment',
        'FamilyEngagement','AftercarePlanning','TelehealthConsults','SecureMessaging',
-       'Admissions','ClinicalForms',...DEMO],
+       'Admissions','ClinicalForms',...AI_TOOLS,...DEMO],
       ['CensusBedBoard','Discharges','Settings','RiskDashboard','RecoveryEngagementScore',
        'OutcomeTracking','UADrugTesting','IncidentReporting','ASAMAssessments','MedicalRecords',
        'MATManagement','FormularyManagement','Training'],
@@ -117,9 +118,10 @@ export const ROLES: RoleDefinition[] = [
       ['Dashboard','CommandCenter','Settings','HelpSupport',
        ...CLINICAL_DIRECT,...CLINICAL_DOCS,...CLINICAL_QUEUE,...CLINICAL_RX,
        ...SCHEDULING_BASE,'StaffScheduling',...RISK,...CARE_COORD,...SUPERVISION,
-       ...COMMS,...COMPLIANCE,'WaitlistManager','ReferralTracker','InsuranceAuthorization',
-       'ShiftHandoff','PopulationAnalytics',...DEMO],
-      [...FINANCIAL,'BusinessDevelopment'],
+       ...COMMS,...COMPLIANCE,...AI_TOOLS,
+       'WaitlistManager','ReferralTracker','InsuranceAuthorization',
+       'ShiftHandoff','StaffAdmin',...DEMO],
+      [...FINANCIAL,'BusinessDevelopment','PopulationAnalytics'],
     ),
   },
 

@@ -22,10 +22,22 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Rehydrate from localStorage on first render
-  const [currentStaffId, setCurrentStaffId] = useState<string | null>(
-    () => getSessionStaffId(),
-  );
+  // Rehydrate from localStorage on first render.
+  // ?autologin=<staffId> — automated screenshot capture.
+  // ?logout=1            — force-clear session (shows login page).
+  const [currentStaffId, setCurrentStaffId] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('logout') === '1') {
+      setSessionStaffId(null);
+      return null;
+    }
+    const urlParam = params.get('autologin');
+    if (urlParam) {
+      setSessionStaffId(urlParam);
+      return urlParam;
+    }
+    return getSessionStaffId();
+  });
   const [showWarning, setShowWarning]     = useState(false);
   const [secondsLeft, setSecondsLeft]     = useState(120);
 

@@ -72,3 +72,9 @@ id = "qmfGg0HXpNMhcVzHZXXKf"
 uri = "file://artifacts/sunrise-grp/public/logos/sunrise-foundation-corona-white.png"
 type = "image"
 title = "The Sunrise Foundation — Corona (White Background PNG)"
+
+[[outputs]]
+id = "Rkt7XUx9JH-K_Dr8xJDc-"
+uri = "file://Product%20Review/Sunrise%20OS%20%E2%80%94%20Product%20Review.pdf"
+type = "pdf"
+title = "Sunrise OS — Product Review (25-screen PDF)"
