@@ -3,9 +3,9 @@ import { MOCK_PATIENTS } from '../data/mockPatients';
 import { MetricCard } from '../components/ui/MetricCard';
 import { OccupancyRing } from '../components/ui/OccupancyRing';
 import {
-  AlertTriangle, Clock, ChevronRight, UserPlus, FileText, Droplets, DollarSign,
-  TrendingUp, BarChart3, Users, CalendarDays, Download, StickyNote, CheckCircle,
-  ShieldAlert, Filter, X, Send, Zap,
+  AlertTriangle, AlertCircle, Clock, ChevronRight, UserPlus, FileText, Droplets,
+  DollarSign, TrendingUp, BarChart3, Users, CalendarDays, Download, StickyNote,
+  CheckCircle, ShieldAlert, Filter, X, Send, Zap, Info,
   Search, ClipboardList, BookOpen, LogOut, MoreHorizontal, Pin, PinOff,
 } from 'lucide-react';
 import { Screen } from '../App';
@@ -47,6 +47,74 @@ const ALL_QUICK_ACTIONS: QuickAction[] = [
   { id: 'InsuranceAuthorization', label: 'Review Authorization',   icon: ShieldAlert,   color: 'text-amber-700',  bg: 'bg-amber-50',  border: 'border-amber-200' },
   { id: 'Discharges',           label: 'Discharge Patient',        icon: LogOut,        color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200'},
 ];
+
+// ── Immediate Action severity ─────────────────────────────────────────────────
+type AlertSeverity = 'critical' | 'high' | 'moderate' | 'informational';
+
+const SEVERITY_ORDER: Record<AlertSeverity, number> = {
+  critical: 0,
+  high: 1,
+  moderate: 2,
+  informational: 3,
+};
+
+interface SeverityConfig {
+  label: string;
+  Icon: React.ElementType;
+  textColor: string;
+  bgColor: string;
+  borderColor: string;
+  ariaLabel: string;
+}
+const SEVERITY_CONFIG: Record<AlertSeverity, SeverityConfig> = {
+  critical: {
+    label: 'Critical',
+    Icon: AlertCircle,
+    textColor: 'text-red-700',
+    bgColor: 'bg-red-100',
+    borderColor: 'border-red-300',
+    ariaLabel: 'Severity: Critical',
+  },
+  high: {
+    label: 'High',
+    Icon: AlertTriangle,
+    textColor: 'text-orange-700',
+    bgColor: 'bg-orange-100',
+    borderColor: 'border-orange-300',
+    ariaLabel: 'Severity: High',
+  },
+  moderate: {
+    label: 'Moderate',
+    Icon: Clock,
+    textColor: 'text-amber-700',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-300',
+    ariaLabel: 'Severity: Moderate',
+  },
+  informational: {
+    label: 'Informational',
+    Icon: Info,
+    textColor: 'text-blue-700',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-300',
+    ariaLabel: 'Severity: Informational',
+  },
+};
+
+interface ImmediateItem {
+  key: string;
+  severity: AlertSeverity;
+  /** Lower = earlier/more urgent within the same severity group */
+  deadlinePriority: number;
+  typeBadge: string;
+  responsible: string;
+  deadline: string;
+  subject: string;
+  primaryAction: { label: string; onClick: () => void };
+  secondaryAction: { label: string; onClick: () => void };
+  /** Present only on dismissible live alerts */
+  dismissAction?: () => void;
+}
 
 // ── Chart data ────────────────────────────────────────────────────────────────
 const CENSUS_TREND = [
@@ -508,81 +576,216 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
       {isClinical && !isBHT && (
         <>
           {/* ── LEVEL 1: IMMEDIATE ACTION ─────────────────────────────────────
-              All urgent alerts consolidated at the top. Users should be able
-              to identify the 3 most critical actions within 5 seconds.      */}
+              All urgent alerts consolidated at the top, sorted by severity.
+              Every item carries a severity badge (icon + text + aria-label)
+              so the level is clear without relying on color alone.          */}
           {(() => {
             const liveVisible = liveAlerts.filter(a => !dismissedIds.has(a.id));
-            const amaReviewed = reviewedAlerts.has('ama-alert');
+            const amaReviewed   = reviewedAlerts.has('ama-alert');
             const cosignReviewed = reviewedAlerts.has('cosign-alert');
-            const hasAnyAction = liveVisible.length > 0 || !amaReviewed || (canAccessScreen('CosignQueue') && !cosignReviewed);
-            if (!hasAnyAction) return null;
+
+            // Build a typed, sortable list of items ─────────────────────────
+            //
+            // Severity mapping rationale:
+            //   • Live CIWA / COWS withdrawal alerts → Critical
+            //       Reason: severe withdrawal / medical instability (spec §Critical)
+            //   • AMA Risk (clients flagged HIGH)    → High
+            //       Reason: high AMA risk (spec §High)
+            //   • Co-sign queue (overdue)            → Moderate
+            //       Reason: overdue co-signatures (spec §Moderate)
+            const items: ImmediateItem[] = [];
+
+            // Critical — Live CIWA / COWS nurse alerts
+            liveVisible.forEach((alert, idx) => {
+              items.push({
+                key: alert.id,
+                severity: 'critical',
+                deadlinePriority: idx,         // earlier in the alert list = higher priority
+                typeBadge: 'Live · Nurse Alert',
+                responsible: `Logged by ${alert.nurseInitials}`,
+                deadline: new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                subject: `${alert.patientName} (Bed ${alert.patientBed}) — ${alert.scoreType} score: ${alert.score}`,
+                primaryAction: {
+                  label: 'Review Withdrawal Alert',
+                  onClick: () => navigate('WithdrawalMonitor'),
+                },
+                secondaryAction: {
+                  // Kept as a no-op here; actual dismiss is handled by dismissAction
+                  label: 'Dismiss',
+                  onClick: () => setDismissedIds(prev => new Set([...prev, alert.id])),
+                },
+                dismissAction: () => setDismissedIds(prev => new Set([...prev, alert.id])),
+              });
+            });
+
+            // High — AMA Risk
+            if (!amaReviewed) {
+              items.push({
+                key: 'ama-alert',
+                severity: 'high',
+                deadlinePriority: 0,
+                typeBadge: 'AMA Risk',
+                responsible: 'Clinical Team',
+                deadline: 'Due: Today',
+                subject: '2 clients flagged HIGH for early departure',
+                primaryAction: {
+                  label: 'Review AMA Risk',
+                  onClick: () => navigate('RiskDashboard'),
+                },
+                secondaryAction: {
+                  label: 'Mark Reviewed',
+                  onClick: () => markReviewed('ama-alert', 'AMA Risk Alert: 2 clients flagged HIGH for early departure'),
+                },
+              });
+            }
+
+            // Moderate — Co-sign queue
+            if (canAccessScreen('CosignQueue') && !cosignReviewed) {
+              items.push({
+                key: 'cosign-alert',
+                severity: 'moderate',
+                deadlinePriority: 0,
+                typeBadge: 'Documentation',
+                responsible: 'Clinical Supervisors',
+                deadline: 'Due: Today',
+                subject: '4 co-sign requests pending from primary counselors',
+                primaryAction: {
+                  label: 'Review Co-Signatures',
+                  onClick: () => navigate('CosignQueue'),
+                },
+                secondaryAction: {
+                  label: 'Mark Reviewed',
+                  onClick: () => markReviewed('cosign-alert', '4 co-sign requests pending'),
+                },
+              });
+            }
+
+            // Sort: severity order → deadline priority → key (stable tie-break)
+            items.sort((a, b) =>
+              SEVERITY_ORDER[a.severity] !== SEVERITY_ORDER[b.severity]
+                ? SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
+                : a.deadlinePriority - b.deadlinePriority
+            );
+
+            const hasCritical = items.some(i => i.severity === 'critical');
+            const totalCount  = items.length;
+
             return (
               <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2.5 bg-red-50 border-b border-red-100">
+                {/* Section header */}
+                <div className={`flex items-center justify-between px-4 py-2.5 border-b ${hasCritical || totalCount > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-red-700">Immediate Action Required</span>
-                    <span className="text-[11px] text-red-500 font-medium">
-                      {liveVisible.length + (!amaReviewed ? 1 : 0) + (canAccessScreen('CosignQueue') && !cosignReviewed ? 1 : 0)} item{liveVisible.length + (!amaReviewed ? 1 : 0) + (canAccessScreen('CosignQueue') && !cosignReviewed ? 1 : 0) !== 1 ? 's' : ''} needing attention
-                    </span>
+                    {totalCount > 0 ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-red-700">Immediate Action Required</span>
+                        <span className="text-[11px] text-red-500 font-medium">
+                          {totalCount} item{totalCount !== 1 ? 's' : ''} needing attention
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-3.5 h-3.5 text-green-600" aria-hidden="true" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-green-700">Immediate Actions</span>
+                      </>
+                    )}
                   </div>
                 </div>
-                <div className="divide-y divide-border">
-                  {/* Live CIWA/COWS nurse alerts */}
-                  {liveVisible.map(alert => (
-                    <div key={alert.id} className="flex items-center gap-3 px-4 py-3">
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white text-[10px] font-bold shrink-0" aria-hidden="true">!</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">LIVE · Nurse Alert</span>
-                          <span className="text-xs font-medium text-red-700">{alert.severity}</span>
+
+                {/* Empty state */}
+                {totalCount === 0 ? (
+                  <div className="px-6 py-7 flex flex-col items-center gap-2 text-center" role="status" aria-live="polite">
+                    <CheckCircle className="w-8 h-8 text-green-500" aria-hidden="true" />
+                    <p className="text-sm font-semibold text-navy">No urgent actions require attention.</p>
+                    <p className="text-xs text-slate">All immediate alerts are resolved. You may continue to routine priorities below.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border" role="list" aria-label="Immediate action items">
+                    {items.map(item => {
+                      const sc = SEVERITY_CONFIG[item.severity];
+                      const SevIcon = sc.Icon;
+                      const isCrit = item.severity === 'critical';
+                      return (
+                        <div
+                          key={item.key}
+                          role="listitem"
+                          className={`flex items-start gap-3 px-4 py-3 ${isCrit ? 'bg-red-50/50' : ''}`}
+                        >
+                          {/* Severity icon — reinforces the badge without being the sole indicator */}
+                          <span
+                            className={`mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-full border shrink-0 ${sc.bgColor} ${sc.borderColor}`}
+                            aria-hidden="true"
+                          >
+                            <SevIcon className={`w-3.5 h-3.5 ${sc.textColor}`} />
+                          </span>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* ① Severity pill: icon + text + aria — color is NOT the only signal */}
+                              <span
+                                className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${sc.textColor} ${sc.bgColor} ${sc.borderColor}`}
+                                aria-label={sc.ariaLabel}
+                              >
+                                <SevIcon className="w-2.5 h-2.5" aria-hidden="true" />
+                                {sc.label}
+                              </span>
+                              {/* ② Type badge */}
+                              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded">
+                                {item.typeBadge}
+                              </span>
+                              {/* ③ Responsible + deadline */}
+                              <span className="text-xs text-slate">
+                                {item.responsible} · {item.deadline}
+                              </span>
+                            </div>
+                            <div className="text-sm font-medium text-navy mt-0.5">{item.subject}</div>
+                          </div>
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={item.primaryAction.onClick}
+                              className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                                isCrit
+                                  ? 'text-white bg-red-500 hover:bg-red-600 focus-visible:outline-red-500'
+                                  : 'text-navy border border-navy/30 hover:bg-navy/5 focus-visible:outline-navy'
+                              }`}
+                            >
+                              {item.primaryAction.label}
+                            </button>
+                            {/* Show secondary action only when it differs from the dismiss X button */}
+                            {!item.dismissAction && (
+                              <button
+                                onClick={item.secondaryAction.onClick}
+                                className="text-xs text-slate hover:text-navy border border-border hover:border-navy/30 px-3 py-1.5 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+                              >
+                                {item.secondaryAction.label}
+                              </button>
+                            )}
+                            {item.dismissAction && (
+                              <>
+                                <button
+                                  onClick={item.secondaryAction.onClick}
+                                  className="text-xs text-slate hover:text-navy border border-border hover:border-navy/30 px-3 py-1.5 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy sr-only sm:not-sr-only"
+                                >
+                                  Dismiss
+                                </button>
+                                <button
+                                  onClick={item.dismissAction}
+                                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
+                                  aria-label="Dismiss alert"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-sm font-medium text-navy mt-0.5">
-                          {alert.patientName} (Bed {alert.patientBed}) — {alert.scoreType} score: {alert.score}
-                        </div>
-                        <div className="text-xs text-slate">Logged by {alert.nurseInitials} · {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={() => navigate('WithdrawalMonitor')} className="text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-colors">Review Alert</button>
-                        <button onClick={() => setDismissedIds(prev => new Set([...prev, alert.id]))} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" aria-label="Dismiss alert"><X className="w-3.5 h-3.5" /></button>
-                      </div>
-                    </div>
-                  ))}
-                  {/* AMA Risk alert */}
-                  {!amaReviewed && (
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      <AlertTriangle className="w-5 h-5 text-high shrink-0" aria-hidden="true" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-orange-700 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded">AMA Risk</span>
-                          <span className="text-xs text-slate">Responsible: Clinical Team · Due: Today</span>
-                        </div>
-                        <div className="text-sm font-medium text-navy mt-0.5">2 clients flagged HIGH for early departure</div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={() => navigate('RiskDashboard')} className="text-xs font-semibold text-navy border border-navy/30 hover:bg-navy/5 px-3 py-1.5 rounded-lg transition-colors">View Risk Dashboard</button>
-                        <button onClick={() => markReviewed('ama-alert', 'AMA Risk Alert: 2 clients flagged HIGH for early departure')} className="text-xs text-slate hover:text-navy border border-border hover:border-navy/30 px-3 py-1.5 rounded-lg transition-colors">Mark Reviewed</button>
-                      </div>
-                    </div>
-                  )}
-                  {/* Co-sign queue alert */}
-                  {canAccessScreen('CosignQueue') && !cosignReviewed && (
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      <Clock className="w-5 h-5 text-moderate shrink-0" aria-hidden="true" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">Documentation</span>
-                          <span className="text-xs text-slate">Responsible: Clinical Supervisors · Due: Today</span>
-                        </div>
-                        <div className="text-sm font-medium text-navy mt-0.5">4 co-sign requests pending from primary counselors</div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={() => navigate('CosignQueue')} className="text-xs font-semibold text-navy border border-navy/30 hover:bg-navy/5 px-3 py-1.5 rounded-lg transition-colors">Review Co-signs</button>
-                        <button onClick={() => markReviewed('cosign-alert', '4 co-sign requests pending')} className="text-xs text-slate hover:text-navy border border-border hover:border-navy/30 px-3 py-1.5 rounded-lg transition-colors">Mark Reviewed</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })()}
