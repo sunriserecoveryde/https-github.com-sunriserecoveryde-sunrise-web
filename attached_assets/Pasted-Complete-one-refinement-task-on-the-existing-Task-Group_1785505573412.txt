@@ -1,0 +1,186 @@
+Complete one refinement task on the existing Task Group 1 branch:
+
+**Task: Add severity levels and clearer action labels to the Dashboard Immediate Action section**
+
+Do not begin any other task during this run.
+
+Use the existing Immediate Action section. Do not rebuild the Dashboard.
+
+## Requirements
+
+### 1. Add four severity levels
+
+Every Immediate Action item must display one of these severity levels:
+
+* Critical
+* High
+* Moderate
+* Informational
+
+Use consistent visual treatment:
+
+* Critical: red
+* High: orange
+* Moderate: yellow or amber
+* Informational: blue
+
+Do not communicate severity through color alone.
+
+Each severity indicator must also include:
+
+* A visible text label
+* An accessible icon or status symbol
+* A screen-reader-accessible label
+
+### 2. Apply severity consistently
+
+Map the existing alert types using these default rules:
+
+Critical:
+
+* Severe withdrawal or medical instability
+* Medication safety concerns requiring immediate review
+* Suicide, self-harm, violence, or urgent safety alerts, if present
+* Any alert marked critical by existing clinical logic
+
+High:
+
+* High AMA risk
+* Authorization expiring within 24 hours
+* Serious documentation or physician-order issue
+* Significant clinical deterioration
+
+Moderate:
+
+* Authorization expiring within 72 hours
+* Overdue co-signatures
+* Missing documentation requiring timely action
+* Non-urgent compliance deficiencies
+
+Informational:
+
+* General reminders
+* Routine follow-up items
+* Non-urgent system or operational notices
+
+Do not change the underlying alert-generation logic or clinical thresholds.
+
+If an existing alert does not contain enough information to determine severity, use the safest reasonable classification and document the mapping.
+
+### 3. Sort by urgency
+
+Sort Immediate Action items in this order:
+
+1. Critical
+2. High
+3. Moderate
+4. Informational
+
+Within each severity group, sort by:
+
+1. Earliest deadline
+2. Oldest unresolved item
+3. Patient name or subject
+
+### 4. Replace vague button labels
+
+Do not use generic labels such as:
+
+* Open
+* View
+* Go
+* Review
+
+Use specific action labels based on the destination.
+
+Examples:
+
+* Open Patient Chart
+* Review Withdrawal Alert
+* Review Medication Issue
+* Review AMA Risk
+* Open Authorization
+* Review Co-Signature
+* Complete Documentation
+* Acknowledge Safety Alert
+* Assign Follow-Up
+
+Use the shortest specific label that clearly tells the user what will happen.
+
+### 5. Preserve current functionality
+
+Do not change:
+
+* Alert data sources
+* Polling frequency
+* Risk calculations
+* Clinical thresholds
+* Permission rules
+* Database schema
+* Seeded data
+* Existing routes
+* Existing acknowledgment rules
+
+Every action button must continue opening the correct existing record or workflow.
+
+### 6. Improve scanning without increasing clutter
+
+Each Immediate Action row should clearly show:
+
+* Severity
+* Patient or operational subject
+* Alert reason
+* Responsible staff member or role
+* Deadline or alert age
+* Specific action button
+
+Keep the section compact.
+
+Do not make every alert a large red card.
+
+Critical alerts may receive stronger visual emphasis, but Moderate and Informational alerts should not visually compete with Critical items.
+
+### 7. Empty state
+
+When there are no unresolved Immediate Action items, show a professional empty state such as:
+
+“No urgent actions require attention.”
+
+Include a brief supporting line confirming that the user can continue to routine priorities.
+
+Do not leave a blank section.
+
+## Acceptance criteria
+
+* Every Immediate Action item has a visible severity label.
+* Severity remains understandable without color.
+* Items are sorted by severity and urgency.
+* Generic button labels are replaced with specific actions.
+* Every action opens the correct existing destination.
+* Existing permissions remain unchanged.
+* No duplicate alert is created.
+* No alert is silently removed.
+* The layout works at 1280×720, 1440×900, and 1920×1080.
+* Keyboard navigation and visible focus states work.
+* TypeScript check passes.
+* Production build passes.
+* Existing tests pass, if configured.
+
+## Required deliverables
+
+1. List of files changed.
+2. Explanation of the severity-mapping rules used.
+3. Screenshot showing all four severity levels.
+4. Screenshot showing the Critical and High sorting order.
+5. Screenshot of the no-alert empty state.
+6. Screenshot showing the revised action labels.
+7. Type-check result.
+8. Production build result.
+9. Test and lint results, or confirmation that no scripts are configured.
+10. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge it into main.
+
+Stop after completing this single task and wait for review.
