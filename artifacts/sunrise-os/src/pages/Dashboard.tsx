@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { MetricCard } from '../components/ui/MetricCard';
 import { OccupancyRing } from '../components/ui/OccupancyRing';
@@ -6,6 +6,7 @@ import {
   AlertTriangle, Clock, ChevronRight, UserPlus, FileText, Droplets, DollarSign,
   TrendingUp, BarChart3, Users, CalendarDays, Download, StickyNote, CheckCircle,
   ShieldAlert, Filter, X, Send, Zap,
+  Search, ClipboardList, BookOpen, LogOut, MoreHorizontal, Pin, PinOff,
 } from 'lucide-react';
 import { Screen } from '../App';
 import { FlagBadge } from '../components/ui/FlagBadge';
@@ -21,6 +22,31 @@ import { DrillDownModal, DrillDownColumn } from '../components/common/DrillDownM
 const DEMO_BOOKING_URL =
   import.meta.env.VITE_DEMO_BOOKING_URL ||
   'mailto:demo@sunrisehealth.com?subject=Schedule%20a%20Live%20Demo';
+
+// ── Quick Actions ─────────────────────────────────────────────────────────────
+const QUICK_ACTIONS_PINS_KEY = 'dashboard_quick_actions_pins';
+const DEFAULT_PINS = ['Admissions', 'PatientList', 'ProgressNotes', 'UADrugTesting'];
+const MAX_PINS = 4;
+
+interface QuickAction {
+  id: Screen;
+  label: string;
+  icon: React.ElementType;
+  color: string;       // tailwind text color
+  bg: string;          // tailwind bg color
+  border: string;      // tailwind border color
+}
+
+const ALL_QUICK_ACTIONS: QuickAction[] = [
+  { id: 'Admissions',           label: 'Admit Patient',            icon: UserPlus,      color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200' },
+  { id: 'PatientList',          label: 'Search Patient',           icon: Search,        color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200'  },
+  { id: 'ProgressNotes',        label: 'Write Progress Note',      icon: FileText,      color: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200'},
+  { id: 'ASAMAssessments',      label: 'Complete ASAM Assessment', icon: ClipboardList, color: 'text-violet-700', bg: 'bg-violet-50', border: 'border-violet-200'},
+  { id: 'TreatmentPlans',       label: 'Update Treatment Plan',    icon: BookOpen,      color: 'text-cyan-700',   bg: 'bg-cyan-50',   border: 'border-cyan-200'  },
+  { id: 'UADrugTesting',        label: 'Record Drug Screen',       icon: Droplets,      color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200'},
+  { id: 'InsuranceAuthorization', label: 'Review Authorization',   icon: ShieldAlert,   color: 'text-amber-700',  bg: 'bg-amber-50',  border: 'border-amber-200' },
+  { id: 'Discharges',           label: 'Discharge Patient',        icon: LogOut,        color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200'},
+];
 
 // ── Chart data ────────────────────────────────────────────────────────────────
 const CENSUS_TREND = [
@@ -341,6 +367,55 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
     addAuditEntry({ staffName: role.label, action: 'Marked Alert Reviewed', entity: 'Dashboard Alert', detail: alertLabel });
   };
 
+  // ── Quick Actions pin state (localStorage, no schema changes) ───────────────
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(QUICK_ACTIONS_PINS_KEY) : null;
+      if (raw) {
+        const parsed = JSON.parse(raw) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.slice(0, MAX_PINS);
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_PINS;
+  });
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  const savePins = useCallback((ids: string[]) => {
+    setPinnedIds(ids);
+    try { localStorage.setItem(QUICK_ACTIONS_PINS_KEY, JSON.stringify(ids)); } catch { /* ignore */ }
+  }, []);
+
+  const pinAction = useCallback((id: string) => {
+    setPinnedIds(prev => {
+      if (prev.includes(id) || prev.length >= MAX_PINS) return prev;
+      const next = [...prev, id];
+      try { localStorage.setItem(QUICK_ACTIONS_PINS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  const unpinAction = useCallback((id: string) => {
+    savePins(pinnedIds.filter(p => p !== id));
+  }, [pinnedIds, savePins]);
+
+  // Close More Actions menu on outside click or Escape
+  useEffect(() => {
+    if (!showMoreMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowMoreMenu(false); };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [showMoreMenu]);
+
   // ── CC open alert counts ────────────────────────────────────────────────────
   const ccOpenAlerts = useMemo(() => {
     const open = ccAlerts.filter(a => a.status !== 'Resolved');
@@ -566,6 +641,123 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
               })}
             </div>
           </div>
+
+          {/* ── QUICK ACTIONS ─────────────────────────────────────────────────
+              Up to 4 pinned actions shown directly; overflow in More Actions.
+              Pins stored in localStorage — no schema changes required.       */}
+          {(() => {
+            // Only show actions the current user can access
+            const authorised = ALL_QUICK_ACTIONS.filter(a => canAccessScreen(a.id));
+            if (authorised.length === 0) return null;
+
+            // Split into pinned (primary) and overflow (More Actions menu)
+            const pinned   = authorised.filter(a => pinnedIds.includes(a.id)).slice(0, MAX_PINS);
+            const overflow = authorised.filter(a => !pinnedIds.includes(a.id));
+            // Pad with unpinned items when fewer than MAX_PINS are pinned
+            const primary  = pinned.length < MAX_PINS
+              ? [...pinned, ...overflow.slice(0, MAX_PINS - pinned.length)]
+              : pinned;
+            const more     = authorised.filter(a => !primary.includes(a));
+
+            return (
+              <div className="bg-white border border-border rounded-xl shadow-sm overflow-visible">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate">Quick Actions</span>
+                  <span className="text-[11px] text-slate/60">
+                    Click <Pin className="w-2.5 h-2.5 inline" aria-hidden="true" /> to pin up to {MAX_PINS} shortcuts
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 px-4 py-3 flex-wrap">
+                  {/* Primary buttons */}
+                  {primary.map(action => {
+                    const Icon = action.icon;
+                    const isPinned = pinnedIds.includes(action.id);
+                    return (
+                      <div key={action.id} className="relative group/qa flex-none">
+                        <button
+                          onClick={() => navigate(action.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunrise-orange ${action.bg} ${action.border} ${action.color} hover:brightness-95`}
+                          aria-label={action.label}
+                        >
+                          <Icon className="w-3.5 h-3.5 flex-none" aria-hidden="true" />
+                          {action.label}
+                        </button>
+                        {/* Pin toggle — visible on hover */}
+                        <button
+                          onClick={e => { e.stopPropagation(); isPinned ? unpinAction(action.id) : pinAction(action.id); }}
+                          className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-white border border-border shadow-sm flex items-center justify-center opacity-0 group-hover/qa:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sunrise-orange"
+                          aria-label={isPinned ? `Unpin ${action.label}` : `Pin ${action.label}`}
+                          title={isPinned ? 'Unpin shortcut' : 'Pin shortcut'}
+                        >
+                          {isPinned
+                            ? <PinOff className="w-2.5 h-2.5 text-slate" aria-hidden="true" />
+                            : <Pin    className="w-2.5 h-2.5 text-slate" aria-hidden="true" />}
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* More Actions dropdown */}
+                  {more.length > 0 && (
+                    <div ref={moreMenuRef} className="relative flex-none">
+                      <button
+                        onClick={() => setShowMoreMenu(v => !v)}
+                        aria-haspopup="true"
+                        aria-expanded={showMoreMenu}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-white text-slate hover:bg-slate-50 hover:text-navy text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunrise-orange"
+                      >
+                        <MoreHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
+                        More Actions
+                        <span className="text-[10px] bg-slate-100 text-slate px-1 rounded font-bold">{more.length}</span>
+                      </button>
+
+                      {showMoreMenu && (
+                        <div
+                          role="menu"
+                          className="absolute left-0 top-full mt-1.5 w-56 bg-white border border-border rounded-xl shadow-xl z-30 overflow-hidden"
+                        >
+                          <div className="px-3 py-2 border-b border-border">
+                            <span className="text-[11px] text-slate font-medium">
+                              Additional actions · Pin to add to quick bar
+                            </span>
+                          </div>
+                          {more.map(action => {
+                            const Icon = action.icon;
+                            const canPin = pinnedIds.length < MAX_PINS;
+                            return (
+                              <div key={action.id} className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 transition-colors group/more">
+                                <button
+                                  role="menuitem"
+                                  onClick={() => { navigate(action.id); setShowMoreMenu(false); }}
+                                  className="flex items-center gap-2 flex-1 text-xs font-medium text-navy focus-visible:outline-none focus-visible:underline"
+                                  aria-label={action.label}
+                                >
+                                  <span className={`w-6 h-6 rounded-lg border flex items-center justify-center flex-none ${action.bg} ${action.border}`}>
+                                    <Icon className={`w-3 h-3 ${action.color}`} aria-hidden="true" />
+                                  </span>
+                                  {action.label}
+                                </button>
+                                <button
+                                  onClick={e => { e.stopPropagation(); pinAction(action.id); }}
+                                  disabled={!canPin}
+                                  title={canPin ? 'Pin to quick bar' : `Remove a pin first (max ${MAX_PINS})`}
+                                  aria-label={`Pin ${action.label}`}
+                                  className="opacity-0 group-hover/more:opacity-100 transition-opacity focus-visible:opacity-100 p-1 rounded hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sunrise-orange"
+                                >
+                                  <Pin className="w-3 h-3 text-slate" aria-hidden="true" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── LEVEL 3: KPI CARDS ────────────────────────────────────────── */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
