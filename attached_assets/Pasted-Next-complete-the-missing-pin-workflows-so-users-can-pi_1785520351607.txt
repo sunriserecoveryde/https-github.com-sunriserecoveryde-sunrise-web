@@ -1,0 +1,254 @@
+Next, complete the **missing pin workflows** so users can pin patients directly from Patient Detail and Patient Search.
+
+Complete one refinement task on the existing Task Group 1 branch:
+
+**Task: Add Pin and Unpin actions to Patient Detail and Patient Search**
+
+Do not begin any other improvement task during this run.
+
+Use the existing `useSidebarPrefs` hook, user-scoped localStorage design, Pinned Patients sidebar section, patient access rules, and navigation behavior already implemented.
+
+Do not create a second pinning system.
+
+## Goal
+
+Allow authorized users to pin or unpin patients from the two primary places where staff work with patient records:
+
+1. Patient Detail
+2. Patient Search or Patient List results
+
+The same pinned-patient state must remain synchronized with the Sidebar.
+
+---
+
+## 1. Patient Detail pin action
+
+Add a patient pin control to the Patient Detail page header.
+
+Placement:
+
+* Near the patient name and primary header actions
+* Visible without opening an overflow menu on normal desktop widths
+* May move into an overflow menu on smaller screens
+
+Labels:
+
+When not pinned:
+
+**Pin Patient**
+
+When pinned:
+
+**Unpin Patient**
+
+Requirements:
+
+* Use a pin icon plus visible text on desktop.
+* Do not rely on icon color alone.
+* Use `aria-pressed` to communicate pin state.
+* Accessible labels must include the patient name:
+
+  * `Pin Marcus Webb`
+  * `Unpin Marcus Webb`
+* Clicking Pin Patient must immediately add the patient to the existing Pinned Patients sidebar section.
+* Clicking Unpin Patient must immediately remove the patient.
+* Do not require a page refresh.
+* Do not navigate away from Patient Detail.
+* Show brief confirmation feedback:
+
+  * `Marcus Webb pinned`
+  * `Marcus Webb unpinned`
+* Use the existing `aria-live` or toast mechanism where practical.
+* Do not create duplicate pinned entries.
+* If the patient is already pinned, render the correct state immediately when the page opens.
+* Preserve discharged status when available.
+* Do not expose the action if the user cannot access the patient record.
+
+---
+
+## 2. Patient Search or Patient List pin action
+
+Add Pin and Unpin controls to each accessible patient result.
+
+Requirements:
+
+* Use the same state and functions as Patient Detail and the Sidebar.
+* Do not create separate local state for each row.
+* Each row must show whether the patient is currently pinned.
+* Accessible labels must include the patient name.
+* Clicking the pin control must not accidentally open the patient record.
+* Prevent row-navigation event propagation when the pin button is selected.
+* Keyboard users must be able to focus and activate the pin button independently.
+* Do not display pin controls for patients outside the user’s access scope.
+* Do not expose unauthorized patients through stored preferences.
+
+Desktop behavior:
+
+* Show a small pin icon or compact `Pin` / `Pinned` control in the row action area.
+
+Mobile behavior:
+
+* Keep the action accessible without creating an overly crowded row.
+* It may appear in a patient-row overflow menu if needed.
+
+---
+
+## 3. Shared state and synchronization
+
+Requirements:
+
+* Patient Detail, Patient Search, Patient List, and Sidebar must all use the same user-scoped pinned-patient preference source.
+* Changes made in any one location must immediately update all mounted locations.
+* Continue using the existing custom preference synchronization event unless a cleaner existing shared approach is already available.
+* Do not create duplicate storage keys.
+* Do not change the production database schema.
+
+Stored pinned-patient fields must remain limited to:
+
+* Patient ID
+* Display name
+* Program or level-of-care label
+* Pinned timestamp
+* Discharged status, when available
+
+Do not store:
+
+* Diagnosis
+* Medications
+* Insurance information
+* Clinical notes
+* MRN
+* Social Security number
+* Date of birth
+* Other unnecessary clinical data
+
+---
+
+## 4. Pinned-patient limit behavior
+
+The current system stores unlimited pinned patients while showing five in the Sidebar.
+
+Preserve that behavior.
+
+Requirements:
+
+* Do not silently reject additional pinned patients.
+* If more than five are pinned:
+
+  * Keep all pinned patients in storage.
+  * Show the first five in the Sidebar.
+  * Preserve the existing `View All Pinned Patients` behavior or add it if not fully implemented.
+* Do not impose a new maximum during this task.
+
+---
+
+## 5. Patient name and status updates
+
+When a patient is opened or displayed in search:
+
+* Refresh the stored display name if the current patient record has a newer name.
+* Refresh the program or level-of-care label if it has changed.
+* Refresh discharged status if available.
+
+Do not remove a discharged patient automatically.
+
+If a pinned patient becomes inaccessible because of permissions or facility scope:
+
+* Hide the patient from the visible pinned list.
+* Do not expose their name through UI shortcuts.
+* Preserve or remove the underlying preference according to the safest existing access-control behavior.
+* Document the chosen behavior.
+
+---
+
+## 6. Error handling
+
+If pinning fails because preference storage is unavailable:
+
+* Do not break Patient Detail or Patient Search.
+* Show a concise non-clinical error such as:
+
+  * `Unable to save pinned patient on this device.`
+* Do not display raw browser or storage errors.
+* Keep the patient record usable.
+
+---
+
+## 7. Accessibility
+
+Requirements:
+
+* Use `aria-pressed` for pin state.
+* Provide visible keyboard focus.
+* Announce pin and unpin results.
+* Ensure pin controls are not nested inside other buttons or links.
+* Ensure row navigation and pin actions are separate interactive elements.
+* Confirm correct tab order.
+* Confirm the control works with Enter and Space.
+* Do not rely on gold, blue, or filled icons alone to indicate state.
+
+---
+
+## 8. Do not change
+
+Do not change:
+
+* Production database schema
+* Authentication
+* Patient access rules
+* Facility access rules
+* Existing patient routing
+* Existing sidebar preference key format
+* Existing Recent Patients behavior
+* Existing Favorite Modules behavior
+* Clinical data
+* Seeded demo data
+* Existing role definitions
+* Existing audit behavior
+
+Do not create duplicate patient-detail or patient-search components.
+
+---
+
+## Acceptance criteria
+
+* A patient can be pinned from Patient Detail.
+* A patient can be unpinned from Patient Detail.
+* A patient can be pinned from Patient Search or Patient List.
+* A patient can be unpinned from Patient Search or Patient List.
+* Sidebar state updates immediately.
+* Patient Detail state updates immediately after a change elsewhere.
+* Patient Search row state updates immediately after a change elsewhere.
+* No duplicate pinned entries are created.
+* Row navigation does not fire when the pin control is clicked.
+* Unauthorized patients do not expose pin controls.
+* Only the approved minimal patient fields are stored.
+* Discharged patients remain pinnable and visibly labeled.
+* Keyboard navigation works.
+* TypeScript check passes.
+* Production build passes.
+* Existing tests pass, if configured.
+
+---
+
+## Required deliverables
+
+1. List of files changed.
+2. Explanation of how Patient Detail, Patient Search, and Sidebar share pinned state.
+3. Screenshot of an unpinned patient on Patient Detail.
+4. Screenshot of the same patient after pinning.
+5. Screenshot showing the patient immediately appearing in the Sidebar.
+6. Screenshot showing Pin and Pinned states in Patient Search.
+7. Screenshot showing a discharged pinned patient.
+8. Screenshot showing a role or access-restricted patient without a pin control.
+9. Keyboard and accessibility test results.
+10. TypeScript result.
+11. Production build result.
+12. Test and lint status, or confirmation that no scripts are configured.
+13. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge it into main.
+
+Stop after completing this single task and wait for review.
