@@ -115,7 +115,7 @@ export interface AIAuditEvent {
 
 // ─── Clinical Review Pipeline types ──────────────────────────────────────────
 
-type ReviewStepId = 'validate' | 'clarity' | 'consistency' | 'necessity' | 'summary';
+type ReviewStepId = 'validate' | 'draft' | 'clarity' | 'consistency' | 'necessity' | 'summary';
 type ReviewStepStatus = 'pending' | 'running' | 'done' | 'skipped';
 
 interface ReviewStep {
@@ -146,6 +146,38 @@ type OverallReadiness =
   | 'Significant Gaps'
   | 'Unable to Assess';
 
+// ─── Clinical Confidence Panel types ─────────────────────────────────────────
+// All values are derived exclusively from documented information and existing
+// review findings. No random or fabricated values are ever used.
+
+type DocStrength =
+  | 'Strong'
+  | 'Adequate'
+  | 'Needs Attention'
+  | 'Insufficient Information'
+  | 'Missing Documentation';
+
+type RiskAreaLevel =
+  | 'No significant concerns'
+  | 'Minor review recommended'
+  | 'Important review required'
+  | 'Critical clinician review required';
+
+type ReviewReadiness =
+  | 'Ready for Clinician Final Review'
+  | 'Ready for Supervisor Review'
+  | 'Needs Revision Before Review'
+  | 'Insufficient Information';
+
+interface ConfidencePanel {
+  documentationStrength: DocStrength;
+  documentationSummary: string;
+  /** Short labels for each missing element, for the bullet list */
+  missingItems: string[];
+  potentialRiskAreas: RiskAreaLevel;
+  reviewReadiness: ReviewReadiness;
+}
+
 interface ClinicalReviewResult {
   timestamp: string;
   completeness: CompletenessScore;
@@ -160,6 +192,10 @@ interface ClinicalReviewResult {
   prioritizedFindings: PrioritizedFinding[];
   summary: string;
   noteWasEmpty: boolean;
+  /** Draft generated as part of the pipeline (only when clinician opted in).
+   *  NEVER auto-inserted. Requires explicit "Insert Draft" action. */
+  reviewDraft: DraftResult | null;
+  confidence: ConfidencePanel;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -467,14 +503,24 @@ function createAuditEvent(
   return event;
 }
 
-// ─── Review pipeline step definitions ────────────────────────────────────────
-const REVIEW_STEPS_INITIAL: ReviewStep[] = [
-  { id: 'validate',    label: 'Reviewing documented information', status: 'pending' },
-  { id: 'clarity',     label: 'Evaluating clarity',               status: 'pending' },
-  { id: 'consistency', label: 'Checking internal consistency',    status: 'pending' },
-  { id: 'necessity',   label: 'Reviewing medical necessity',      status: 'pending' },
-  { id: 'summary',     label: 'Preparing clinical summary',       status: 'pending' },
-];
+// ─── Review pipeline step factory ────────────────────────────────────────────
+// The draft step is injected only when the clinician enables the pre-review
+// "Generate a suggested draft first" option.
+function getReviewSteps(withDraft: boolean): ReviewStep[] {
+  const steps: ReviewStep[] = [
+    { id: 'validate',    label: 'Reviewing documented information', status: 'pending' },
+  ];
+  if (withDraft) {
+    steps.push({ id: 'draft', label: 'Generating suggested draft', status: 'pending' });
+  }
+  steps.push(
+    { id: 'clarity',     label: 'Evaluating clarity',               status: 'pending' },
+    { id: 'consistency', label: 'Checking internal consistency',    status: 'pending' },
+    { id: 'necessity',   label: 'Reviewing medical necessity',      status: 'pending' },
+    { id: 'summary',     label: 'Preparing clinical summary',       status: 'pending' },
+  );
+  return steps;
+}
 
 // ─── Individual action tab definitions ───────────────────────────────────────
 const ACTION_TABS: { id: AIAction; label: string; description: string }[] = [
@@ -512,6 +558,30 @@ const PRIORITY_CONFIG: Record<FindingPriority, { cls: string; label: string }> =
   suggestion: { cls: 'bg-slate-50 border-slate-200 text-slate-700', label: 'Suggestion' },
 };
 
+// ─── Clinical Confidence Panel badge configs ──────────────────────────────────
+// All values derive from documented information — no random or fabricated values.
+const DOC_STRENGTH_CONFIG: Record<DocStrength, { cls: string; icon: React.ReactNode; dotCls: string }> = {
+  'Strong':                  { cls: 'bg-green-100 text-green-800 border-green-200', dotCls: 'bg-green-500', icon: <Check className="w-3 h-3" /> },
+  'Adequate':                { cls: 'bg-blue-100 text-blue-800 border-blue-200',    dotCls: 'bg-blue-500',  icon: <Check className="w-3 h-3" /> },
+  'Needs Attention':         { cls: 'bg-amber-100 text-amber-800 border-amber-200', dotCls: 'bg-amber-500', icon: <AlertTriangle className="w-3 h-3" /> },
+  'Insufficient Information':{ cls: 'bg-slate-100 text-slate-700 border-slate-200', dotCls: 'bg-slate-400', icon: <Info className="w-3 h-3" /> },
+  'Missing Documentation':   { cls: 'bg-red-100 text-red-800 border-red-200',       dotCls: 'bg-red-500',   icon: <AlertTriangle className="w-3 h-3" /> },
+};
+
+const RISK_AREA_CONFIG: Record<RiskAreaLevel, { cls: string; dotCls: string }> = {
+  'No significant concerns':          { cls: 'text-green-700',  dotCls: 'bg-green-500' },
+  'Minor review recommended':         { cls: 'text-slate-600',  dotCls: 'bg-slate-400' },
+  'Important review required':        { cls: 'text-amber-700',  dotCls: 'bg-amber-500' },
+  'Critical clinician review required':{ cls: 'text-red-700',   dotCls: 'bg-red-500' },
+};
+
+const REVIEW_READINESS_CONFIG: Record<ReviewReadiness, { cls: string; badgeCls: string; icon: React.ReactNode }> = {
+  'Ready for Clinician Final Review': { cls: 'text-green-800',  badgeCls: 'bg-green-100 text-green-800 border-green-200',  icon: <Check className="w-3.5 h-3.5" /> },
+  'Ready for Supervisor Review':      { cls: 'text-blue-800',   badgeCls: 'bg-blue-100 text-blue-800 border-blue-200',     icon: <Check className="w-3.5 h-3.5" /> },
+  'Needs Revision Before Review':     { cls: 'text-amber-800',  badgeCls: 'bg-amber-100 text-amber-800 border-amber-200', icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+  'Insufficient Information':         { cls: 'text-slate-600',  badgeCls: 'bg-slate-100 text-slate-700 border-slate-200', icon: <Info className="w-3.5 h-3.5" /> },
+};
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ProgressNoteAIAssist({
@@ -546,10 +616,15 @@ export function ProgressNoteAIAssist({
   const [discardWarning, setDiscardWarning] = useState(false);
 
   // ── Clinical Review Pipeline state ─────────────────────────────────────────
-  const [reviewSteps, setReviewSteps] = useState<ReviewStep[]>(REVIEW_STEPS_INITIAL.map(s => ({ ...s })));
+  const [reviewSteps, setReviewSteps] = useState<ReviewStep[]>(getReviewSteps(false));
   const [reviewStatus, setReviewStatus] = useState<'idle' | 'loading' | 'result' | 'error'>('idle');
   const [reviewResult, setReviewResult] = useState<ClinicalReviewResult | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  /** OFF by default when clinician text exists; ON only when note is empty and a patient is selected. */
+  const [generateDraftWithReview, setGenerateDraftWithReview] = useState(false);
+  /** Tracks whether the review-pipeline draft has been explicitly inserted by the clinician. */
+  const [reviewDraftInserted, setReviewDraftInserted] = useState(false);
+  const [reviewDraftPendingOverwrite, setReviewDraftPendingOverwrite] = useState(false);
 
   const patient = MOCK_PATIENTS.find(p => p.id === patientId);
 
@@ -559,11 +634,16 @@ export function ProgressNoteAIAssist({
     onAuditEvent?.(ev);
   }, [authorName, patientId, noteRef, onAuditEvent]);
 
-  // ── Focus management ────────────────────────────────────────────────────────
+  // ── Focus management + draft-toggle default ──────────────────────────────────
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => firstFocusRef.current?.focus(), 50);
+      // Default: ON only when note is completely empty and a patient is selected.
+      // OFF whenever clinician-entered text already exists.
+      const noteIsEmpty = fields.every(f => !values[f]?.trim());
+      setGenerateDraftWithReview(noteIsEmpty && !!patient);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // ── Focus trap ──────────────────────────────────────────────────────────────
@@ -588,7 +668,8 @@ export function ProgressNoteAIAssist({
   // ── Close logic ─────────────────────────────────────────────────────────────
   const hasUninsertedOutput =
     (activeAction === 'draft'    && draftResult   && !draftInserted) ||
-    (activeAction === 'clarity'  && clarityResult && !clarityRevisionAccepted);
+    (activeAction === 'clarity'  && clarityResult && !clarityRevisionAccepted) ||
+    (reviewResult?.reviewDraft != null && !reviewDraftInserted);
 
   function handleClose() {
     if (hasUninsertedOutput && !discardWarning) { setDiscardWarning(true); return; }
@@ -649,9 +730,15 @@ export function ProgressNoteAIAssist({
   }
 
   // ── Clinical Review Pipeline ────────────────────────────────────────────────
+  // Safety contract (enforced here, not just at the UI layer):
+  //   • Never modifies the legal note during the review.
+  //   • Never auto-saves, auto-submits, auto-signs, auto-locks,
+  //     auto-finalizes, or auto-submits for co-signature.
+  //   • Any generated draft is stored in reviewResult.reviewDraft and requires
+  //     explicit "Insert Draft" action before it enters the note fields.
   async function runClinicalReview() {
-    if (!patient && fields.every(f => !values[f]?.trim())) {
-      setReviewError('Select a patient and enter note content before running the clinical review.');
+    if (!patient) {
+      setReviewError('Select a patient above to enable the clinical review.');
       setReviewStatus('error');
       return;
     }
@@ -660,7 +747,9 @@ export function ProgressNoteAIAssist({
     setReviewStatus('loading');
     setReviewError(null);
     setReviewResult(null);
-    setReviewSteps(REVIEW_STEPS_INITIAL.map(s => ({ ...s })));
+    setReviewDraftInserted(false);
+    setReviewDraftPendingOverwrite(false);
+    setReviewSteps(getReviewSteps(generateDraftWithReview));
 
     const setStep = (id: ReviewStepId, s: ReviewStepStatus) =>
       setReviewSteps(prev => prev.map(step => step.id === id ? { ...step, status: s } : step));
@@ -672,7 +761,62 @@ export function ProgressNoteAIAssist({
       const noteIsEmpty = fields.every(f => !values[f]?.trim());
       setStep('validate', 'done');
 
-      // ── Step 2: Evaluate clarity ─────────────────
+      // ── Step 2 (optional): Generate suggested draft ───────────────────────
+      // Only runs when the clinician explicitly enabled the toggle.
+      // The draft is NEVER auto-inserted into the note.
+      let reviewDraft: DraftResult | null = null;
+      if (generateDraftWithReview && patient) {
+        setStep('draft', 'running');
+        await simulateLatency(500);
+        const combinedText = fields.map(f => values[f] ?? '').join(' ');
+        const draftInput: ProgressNoteInput = {
+          clientName: `${patient.firstName} ${patient.lastName}`,
+          noteType,
+          counselorName: authorName,
+          sessionDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+          presentation: 'calm and cooperative',
+          engagementLevel: /active/i.test(combinedText) ? 'Active'
+            : /passive/i.test(combinedText) ? 'Passive'
+            : /minimal/i.test(combinedText) ? 'Minimal'
+            : 'Moderate',
+          siHiStatus: /active si|active suicidal/i.test(combinedText) ? 'Active SI present'
+            : /passive idea/i.test(combinedText) ? 'Passive ideation present'
+            : 'None',
+          safetyPlanStatus: /safety plan updated/i.test(combinedText) ? 'Updated'
+            : /safety plan current/i.test(combinedText) ? 'Current'
+            : 'Not Applicable',
+          goalAddressed: patient.goals.find(g => g.status === 'In Progress')?.shortTerm ?? undefined,
+          modality: /cbt/i.test(combinedText) ? 'Cognitive Behavioral Therapy (CBT)'
+            : /dbt/i.test(combinedText) ? 'Dialectical Behavior Therapy (DBT)'
+            : /mi\b|motivational/i.test(combinedText) ? 'Motivational Interviewing (MI)'
+            : 'evidence-based counseling',
+          riskFactors: patient.amaRisk !== 'Low' ? `AMA risk rated ${patient.amaRisk}` : undefined,
+          plan: `Continue ${noteType.toLowerCase()} sessions. Review treatment plan goals. Follow up on documented barriers.`,
+        };
+        const sections = generateProgressNote(format, draftInput);
+        reviewDraft = {
+          sections,
+          sourceFields: [
+            { label: 'Patient',               value: `${patient.firstName} ${patient.lastName} (${patient.mrn})` },
+            { label: 'Program / Level of Care', value: patient.program },
+            { label: 'Primary Diagnosis',     value: patient.primaryDiagnosis },
+            { label: 'Note Type',             value: noteType },
+            { label: 'Note Format',           value: format },
+            { label: 'Clinician',             value: authorName },
+            { label: 'Active Treatment Goal', value: patient.goals.find(g => g.status === 'In Progress')?.shortTerm ?? 'None documented' },
+            { label: 'AMA Risk',              value: patient.amaRisk },
+            { label: 'Mood (session record)', value: `${patient.mood}/10` },
+            { label: 'SI/HI from structured fields', value: /none/i.test(draftInput.siHiStatus ?? '') ? 'None reported' : (draftInput.siHiStatus ?? 'Not documented') },
+          ],
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          requestedBy: authorName,
+          patientContext: `${patient.firstName} ${patient.lastName} — ${patient.program}`,
+        };
+        emit('AI Draft Generated (Review Pipeline)', 'success');
+        setStep('draft', 'done');
+      }
+
+      // ── Step 3: Evaluate clarity ─────────────────────────────────────────
       setStep('clarity', 'running');
       await simulateLatency(400);
       const combined = fields.map(f => values[f] ?? '').join('\n\n').trim();
@@ -691,7 +835,7 @@ export function ProgressNoteAIAssist({
       }
       setStep('clarity', 'done');
 
-      // ── Step 3: Check internal consistency ───────
+      // ── Step 4: Check internal consistency ──────────────────────────────
       setStep('consistency', 'running');
       await simulateLatency(400);
       const consistencyFindings = noteIsEmpty
@@ -699,7 +843,7 @@ export function ProgressNoteAIAssist({
         : checkInternalConsistency(values, fields, format, patient).findings;
       setStep('consistency', 'done');
 
-      // ── Step 4: Review medical necessity ─────────
+      // ── Step 5: Review medical necessity ────────────────────────────────
       setStep('necessity', 'running');
       await simulateLatency(500);
       const necessityRaw = evaluateMedicalNecessity(values, fields, format, patient);
@@ -707,11 +851,10 @@ export function ProgressNoteAIAssist({
       const necessityData: NecessityResult = { ...necessityRaw, timestamp: ts };
       setStep('necessity', 'done');
 
-      // ── Step 5: Calculate completeness + prioritize + summarize ──
+      // ── Step 6: Completeness + findings + summary ────────────────────────
       setStep('summary', 'running');
       await simulateLatency(300);
 
-      // Completeness
       const filled = fields.filter(f => values[f]?.trim()).length;
       const total  = fields.length;
       const pct    = total > 0 ? Math.round((filled / total) * 100) : 0;
@@ -720,87 +863,123 @@ export function ProgressNoteAIAssist({
         pct >= 75   ? 'Mostly Complete' :
         pct >= 50   ? 'Partially Complete' : 'Incomplete';
 
-      // Prioritized findings — ordered: critical → important → suggestion
+      // Prioritized findings — critical → important → suggestion
       const pFindings: PrioritizedFinding[] = [];
 
-      // Critical
       if (noteIsEmpty) {
         pFindings.push({
-          priority: 'critical',
-          category: 'Documentation',
+          priority: 'critical', category: 'Documentation',
           text: 'No note content has been entered. Complete the note fields and run the review again.',
           jumpTo: 'draft',
         });
       }
       if (!noteIsEmpty && necessityRaw.category === 'Insufficiently Supported') {
         pFindings.push({
-          priority: 'critical',
-          category: 'Medical Necessity',
+          priority: 'critical', category: 'Medical Necessity',
           text: 'Documentation insufficiently supports medical necessity. Multiple required elements are missing.',
           jumpTo: 'necessity',
         });
       }
-      consistencyFindings
-        .filter(f => f.type === 'potential_inconsistency')
-        .forEach(f => {
-          pFindings.push({
-            priority: 'critical',
-            category: 'Internal Consistency',
-            text: `${f.conflictA} ${f.conflictB}`.trim(),
-            jumpTo: 'consistency',
-          });
+      consistencyFindings.filter(f => f.type === 'potential_inconsistency').forEach(f => {
+        pFindings.push({
+          priority: 'critical', category: 'Internal Consistency',
+          text: `${f.conflictA} ${f.conflictB}`.trim(), jumpTo: 'consistency',
         });
-
-      // Important
+      });
       necessityRaw.missingElements.forEach(m => {
         pFindings.push({ priority: 'important', category: 'Medical Necessity', text: m, jumpTo: 'necessity' });
       });
-      consistencyFindings
-        .filter(f => f.type === 'missing_connection')
-        .forEach(f => {
-          pFindings.push({
-            priority: 'important',
-            category: 'Internal Consistency',
-            text: f.conflictA,
-            jumpTo: 'consistency',
-          });
-        });
+      consistencyFindings.filter(f => f.type === 'missing_connection').forEach(f => {
+        pFindings.push({ priority: 'important', category: 'Internal Consistency', text: f.conflictA, jumpTo: 'consistency' });
+      });
       if (!noteIsEmpty && clarityChanges > 0) {
         pFindings.push({
-          priority: 'important',
-          category: 'Clarity',
+          priority: 'important', category: 'Clarity',
           text: `${clarityChanges} grammar or style issue${clarityChanges !== 1 ? 's' : ''} identified. Use the Clarity tool to review and apply suggested corrections.`,
           jumpTo: 'clarity',
         });
       }
-
-      // Suggestions
       necessityRaw.clinicianReviewAreas.forEach(r => {
         pFindings.push({ priority: 'suggestion', category: 'Medical Necessity', text: r, jumpTo: 'necessity' });
       });
-      consistencyFindings
-        .filter(f => f.type === 'requires_review')
-        .forEach(f => {
-          pFindings.push({
-            priority: 'suggestion',
-            category: 'Internal Consistency',
-            text: f.explanation,
-            jumpTo: 'consistency',
-          });
-        });
+      consistencyFindings.filter(f => f.type === 'requires_review').forEach(f => {
+        pFindings.push({ priority: 'suggestion', category: 'Internal Consistency', text: f.explanation, jumpTo: 'consistency' });
+      });
 
-      // Overall readiness
       const hasCritical  = pFindings.some(f => f.priority === 'critical');
       const hasImportant = pFindings.some(f => f.priority === 'important');
       const overallReadiness: OverallReadiness =
-        noteIsEmpty      ? 'Unable to Assess' :
-        hasCritical      ? 'Significant Gaps' :
-        hasImportant     ? 'Needs Attention'  : 'Ready to Review';
+        noteIsEmpty  ? 'Unable to Assess' :
+        hasCritical  ? 'Significant Gaps' :
+        hasImportant ? 'Needs Attention'  : 'Ready to Review';
+
+      // ── Clinical Confidence Panel (derived from findings — no random values) ──
+      // Documentation Strength
+      const hasPotentialInconsistency = consistencyFindings.some(f => f.type === 'potential_inconsistency');
+      let documentationStrength: DocStrength;
+      let documentationSummary: string;
+      const missingItems = [...necessityRaw.missingElements];
+
+      if (noteIsEmpty) {
+        documentationStrength = 'Missing Documentation';
+        documentationSummary = 'No note content has been entered';
+      } else if (pct > 0 && pct < 30) {
+        documentationStrength = 'Insufficient Information';
+        documentationSummary = 'Insufficient content for full evaluation';
+      } else if (necessityRaw.missingElements.length === 0 && !hasPotentialInconsistency && clarityChanges === 0) {
+        documentationStrength = 'Strong';
+        documentationSummary = 'No missing documentation identified';
+      } else if (necessityRaw.missingElements.length <= 1 && !hasPotentialInconsistency) {
+        documentationStrength = 'Adequate';
+        documentationSummary = necessityRaw.missingElements.length === 0
+          ? 'Documentation is adequate — minor areas suggested for review'
+          : '1 documentation element needs attention';
+      } else {
+        documentationStrength = 'Needs Attention';
+        documentationSummary = `${necessityRaw.missingElements.length} documentation element${necessityRaw.missingElements.length !== 1 ? 's' : ''} need${necessityRaw.missingElements.length === 1 ? 's' : ''} attention`;
+      }
+
+      // Potential Risk Areas
+      const hasMissingConnection = consistencyFindings.some(f => f.type === 'missing_connection');
+      const hasRequiresReview    = consistencyFindings.some(f => f.type === 'requires_review');
+      let potentialRiskAreas: RiskAreaLevel;
+      if (hasPotentialInconsistency) {
+        potentialRiskAreas = 'Critical clinician review required';
+      } else if (hasMissingConnection) {
+        potentialRiskAreas = 'Important review required';
+      } else if (hasRequiresReview) {
+        potentialRiskAreas = 'Minor review recommended';
+      } else {
+        potentialRiskAreas = 'No significant concerns';
+      }
+
+      // Review Readiness
+      // Guard: never "Ready for Supervisor Review" when Critical or Important findings remain.
+      let reviewReadiness: ReviewReadiness;
+      if (noteIsEmpty || pct < 25) {
+        reviewReadiness = 'Insufficient Information';
+      } else if (hasCritical || hasImportant) {
+        reviewReadiness = 'Needs Revision Before Review';
+      } else if (pct === 100) {
+        reviewReadiness = 'Ready for Supervisor Review';
+      } else {
+        reviewReadiness = 'Ready for Clinician Final Review';
+      }
+
+      const confidence: ConfidencePanel = {
+        documentationStrength,
+        documentationSummary,
+        missingItems,
+        potentialRiskAreas,
+        reviewReadiness,
+      };
 
       // Consolidated summary
       let summary = '';
       if (noteIsEmpty) {
-        summary = 'No note content has been entered. Complete the note fields and run the review again. If you need a starting point, use the Draft Note tool in the Individual AI Tools section below.';
+        summary = generateDraftWithReview
+          ? 'No note content has been entered. A suggested draft has been generated below — review it carefully, then use Insert Draft if it meets your clinical needs. The draft is not inserted automatically.'
+          : 'No note content has been entered. Complete the note fields and run the review again, or use the Draft Note tool below to generate a starting point.';
       } else if (overallReadiness === 'Ready to Review') {
         const clarityNote = clarityChanges > 0
           ? `${clarityChanges} minor style correction${clarityChanges !== 1 ? 's' : ''} is available via the Clarity tool.`
@@ -808,7 +987,7 @@ export function ProgressNoteAIAssist({
         summary = `This note appears complete and internally consistent. ${clarityNote} Medical necessity documentation is ${necessityRaw.category.toLowerCase()}. The note is ready for your final review before signing.`;
       } else if (overallReadiness === 'Needs Attention') {
         const itemCount = pFindings.filter(f => f.priority === 'important').length;
-        summary = `The note is partially complete but has ${itemCount} area${itemCount !== 1 ? 's' : ''} that may require attention before signing. Review the findings below, address any gaps, and re-run the clinical review when ready.`;
+        summary = `The note is partially complete but has ${itemCount} area${itemCount !== 1 ? 's' : ''} that may require attention before signing. Review the findings below, address any gaps, and re-run the review when ready.`;
       } else {
         const critCount = pFindings.filter(f => f.priority === 'critical').length;
         summary = `The note has ${critCount} critical issue${critCount !== 1 ? 's' : ''} that should be addressed before submission. These may affect documentation compliance, payer acceptance, or clinical record integrity.`;
@@ -830,6 +1009,8 @@ export function ProgressNoteAIAssist({
         prioritizedFindings: pFindings,
         summary,
         noteWasEmpty: noteIsEmpty,
+        reviewDraft,
+        confidence,
       });
       setReviewStatus('result');
       emit('Clinical Review Completed', 'success');
@@ -838,6 +1019,26 @@ export function ProgressNoteAIAssist({
       setReviewError('Clinical review is temporarily unavailable. Your note has not been changed.');
       emit('Clinical Review Completed', 'error');
     }
+  }
+
+  // ── Insert review-pipeline draft ────────────────────────────────────────────
+  // The review draft is completely separate from the legal note until this function
+  // runs. It does NOT save, submit, sign, lock, finalize, or co-sign anything.
+  function handleInsertReviewDraft() {
+    const draft = reviewResult?.reviewDraft;
+    if (!draft) return;
+    const hasExistingText = fields.some(f => values[f]?.trim());
+    if (hasExistingText && !reviewDraftPendingOverwrite) {
+      setReviewDraftPendingOverwrite(true);
+      return;
+    }
+    const sectionValues = Object.values(draft.sections);
+    const newValues: Record<string, string> = {};
+    fields.forEach((f, i) => { if (sectionValues[i]) newValues[f] = sectionValues[i]; });
+    onInsertDraft(newValues);
+    setReviewDraftInserted(true);
+    setReviewDraftPendingOverwrite(false);
+    emit('AI Draft Inserted (Review Pipeline)', 'inserted', true);
   }
 
   // ── Draft Progress Note ─────────────────────────────────────────────────────
@@ -1163,21 +1364,47 @@ export function ProgressNoteAIAssist({
 
                 {/* ── Review idle ── */}
                 {reviewStatus === 'idle' && !reviewError && (
-                  <button
-                    type="button"
-                    onClick={runClinicalReview}
-                    disabled={!patient}
-                    className="w-full flex items-start gap-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 text-left"
-                  >
-                    <ClipboardList className="w-5 h-5 flex-none mt-0.5" />
-                    <div>
-                      <div className="text-sm font-bold leading-tight">Run Clinical Documentation Review</div>
-                      <div className="text-[11px] text-violet-200 mt-0.5">
-                        Clarity · Consistency · Medical Necessity · Completeness
+                  <div className="space-y-2">
+                    {/* Optional pre-review draft toggle */}
+                    <label className={`flex items-start gap-3 border rounded-xl px-3 py-2.5 cursor-pointer transition-colors select-none ${
+                      generateDraftWithReview
+                        ? 'border-violet-300 bg-violet-50'
+                        : 'border-border bg-white hover:bg-slate-50'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={generateDraftWithReview}
+                        onChange={e => setGenerateDraftWithReview(e.target.checked)}
+                        className="mt-0.5 w-3.5 h-3.5 accent-violet-600 flex-none"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-navy leading-tight">
+                          Generate a suggested draft first
+                        </div>
+                        <div className="text-[10px] text-slate mt-0.5">
+                          {fields.some(f => values[f]?.trim())
+                            ? 'Your existing note will be reviewed as-is. The draft will be shown separately and will not replace your text unless you choose Insert Draft.'
+                            : 'Adds a draft generation step before the review. The draft stays separate until you explicitly choose Insert Draft.'}
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 flex-none mt-0.5 ml-auto opacity-70" />
-                  </button>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={runClinicalReview}
+                      disabled={!patient}
+                      className="w-full flex items-start gap-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 text-left"
+                    >
+                      <ClipboardList className="w-5 h-5 flex-none mt-0.5" />
+                      <div>
+                        <div className="text-sm font-bold leading-tight">Run Clinical Documentation Review</div>
+                        <div className="text-[11px] text-violet-200 mt-0.5">
+                          Clarity · Consistency · Medical Necessity · Completeness
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 flex-none mt-0.5 ml-auto opacity-70" />
+                    </button>
+                  </div>
                 )}
 
                 {!patient && reviewStatus === 'idle' && (
@@ -1249,18 +1476,111 @@ export function ProgressNoteAIAssist({
                 {reviewStatus === 'result' && reviewResult && (
                   <div className="border border-border rounded-xl overflow-hidden space-y-0">
 
-                    {/* Result header */}
-                    <div className="px-4 py-3 bg-slate-50 border-b border-border flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${READINESS_CONFIG[reviewResult.overallReadiness].cls}`}>
-                          {READINESS_CONFIG[reviewResult.overallReadiness].icon}
-                          {reviewResult.overallReadiness}
-                        </span>
-                        <span className="text-[10px] text-slate">
-                          {reviewResult.completeness.filled}/{reviewResult.completeness.total} fields · {reviewResult.completeness.pct}% complete
-                        </span>
+                    {/* ══ CLINICAL CONFIDENCE PANEL ══════════════════════════
+                        All values derived from documented information and
+                        existing review findings — no random or fabricated values.
+                    ══════════════════════════════════════════════════════════ */}
+                    <div className="bg-slate-50 border-b border-border">
+                      {/* Panel header */}
+                      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                        <div className="text-[10px] font-bold text-slate uppercase tracking-wider">
+                          Clinical Documentation Review
+                        </div>
+                        <span className="text-[10px] text-slate">{reviewResult.timestamp}</span>
                       </div>
-                      <span className="text-[10px] text-slate flex-none">{reviewResult.timestamp}</span>
+
+                      {/* 2-column confidence grid */}
+                      <div className="px-4 pb-3 grid grid-cols-2 gap-2">
+
+                        {/* Documentation Strength */}
+                        <div className="bg-white border border-border rounded-lg p-2.5">
+                          <div className="text-[9px] font-bold text-slate uppercase tracking-wider mb-1.5">
+                            Documentation Strength
+                          </div>
+                          <div className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border mb-1.5 ${DOC_STRENGTH_CONFIG[reviewResult.confidence.documentationStrength].cls}`}>
+                            {DOC_STRENGTH_CONFIG[reviewResult.confidence.documentationStrength].icon}
+                            {reviewResult.confidence.documentationStrength}
+                          </div>
+                          <div className="text-[10px] text-slate leading-snug">
+                            {reviewResult.confidence.documentationSummary}
+                          </div>
+                          {reviewResult.confidence.missingItems.length > 0 && (
+                            <ul className="mt-1.5 space-y-0.5">
+                              {reviewResult.confidence.missingItems.slice(0, 3).map((item, i) => (
+                                <li key={i} className="flex items-start gap-1 text-[10px] text-red-700">
+                                  <span className="flex-none mt-0.5 text-red-400">·</span>
+                                  <span className="leading-snug line-clamp-2">{item.replace(/\.$/, '').replace(/^No specific /, '')}</span>
+                                </li>
+                              ))}
+                              {reviewResult.confidence.missingItems.length > 3 && (
+                                <li className="text-[10px] text-slate italic">
+                                  +{reviewResult.confidence.missingItems.length - 3} more
+                                </li>
+                              )}
+                            </ul>
+                          )}
+                        </div>
+
+                        {/* Potential Risk Areas */}
+                        <div className="bg-white border border-border rounded-lg p-2.5">
+                          <div className="text-[9px] font-bold text-slate uppercase tracking-wider mb-1.5">
+                            Potential Risk Areas
+                          </div>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className={`w-2 h-2 rounded-full flex-none ${RISK_AREA_CONFIG[reviewResult.confidence.potentialRiskAreas].dotCls}`} />
+                            <span className={`text-[10px] font-bold leading-tight ${RISK_AREA_CONFIG[reviewResult.confidence.potentialRiskAreas].cls}`}>
+                              {reviewResult.confidence.potentialRiskAreas}
+                            </span>
+                          </div>
+                          {reviewResult.consistencyFindings.filter(f => f.type === 'potential_inconsistency').length > 0 && (
+                            <ul className="mt-1 space-y-0.5">
+                              {reviewResult.consistencyFindings
+                                .filter(f => f.type === 'potential_inconsistency')
+                                .slice(0, 2)
+                                .map((f, i) => (
+                                  <li key={i} className="flex items-start gap-1 text-[10px] text-red-700">
+                                    <span className="flex-none mt-0.5 text-red-400">·</span>
+                                    <span className="leading-snug line-clamp-2">{f.conflictA.replace(/\.$/, '')}</span>
+                                  </li>
+                                ))}
+                            </ul>
+                          )}
+                          {reviewResult.consistencyFindings.filter(f => f.type === 'potential_inconsistency').length === 0 && (
+                            <div className="text-[10px] text-slate leading-snug">
+                              {reviewResult.confidence.potentialRiskAreas === 'No significant concerns'
+                                ? 'No internal conflicts identified'
+                                : 'Review consistency findings below'}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Review Readiness — full width */}
+                        <div className="col-span-2 bg-white border border-border rounded-lg p-2.5">
+                          <div className="text-[9px] font-bold text-slate uppercase tracking-wider mb-1.5">
+                            Review Readiness
+                          </div>
+                          <div className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${REVIEW_READINESS_CONFIG[reviewResult.confidence.reviewReadiness].badgeCls}`}>
+                            {REVIEW_READINESS_CONFIG[reviewResult.confidence.reviewReadiness].icon}
+                            {reviewResult.confidence.reviewReadiness}
+                          </div>
+                          {(reviewResult.confidence.reviewReadiness === 'Needs Revision Before Review' ||
+                            reviewResult.confidence.reviewReadiness === 'Insufficient Information') && (
+                            <div className="mt-1.5 text-[10px] text-slate">
+                              Address the findings below before submitting for review.
+                            </div>
+                          )}
+                          {reviewResult.confidence.reviewReadiness === 'Ready for Supervisor Review' && (
+                            <div className="mt-1.5 text-[10px] text-slate">
+                              Note is complete with no blocking findings. Ready for co-sign or supervisor review.
+                            </div>
+                          )}
+                          {reviewResult.confidence.reviewReadiness === 'Ready for Clinician Final Review' && (
+                            <div className="mt-1.5 text-[10px] text-slate">
+                              Review the suggestions below, then proceed with your normal signing workflow.
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Completeness bar */}
@@ -1268,8 +1588,8 @@ export function ProgressNoteAIAssist({
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] font-semibold text-slate uppercase tracking-wider">Documentation Completeness</span>
                         <span className={`text-[10px] font-bold ${
-                          reviewResult.completeness.label === 'Complete'         ? 'text-green-700' :
-                          reviewResult.completeness.label === 'Mostly Complete'  ? 'text-blue-700' :
+                          reviewResult.completeness.label === 'Complete'           ? 'text-green-700' :
+                          reviewResult.completeness.label === 'Mostly Complete'    ? 'text-blue-700' :
                           reviewResult.completeness.label === 'Partially Complete' ? 'text-amber-700' :
                           'text-red-700'
                         }`}>{reviewResult.completeness.label}</span>
@@ -1285,6 +1605,9 @@ export function ProgressNoteAIAssist({
                           style={{ width: `${reviewResult.completeness.pct}%` }}
                         />
                       </div>
+                      <div className="text-[10px] text-slate mt-1">
+                        {reviewResult.completeness.filled} of {reviewResult.completeness.total} fields completed
+                      </div>
                     </div>
 
                     {/* Summary */}
@@ -1292,50 +1615,108 @@ export function ProgressNoteAIAssist({
                       <p className="text-xs text-navy leading-relaxed">{reviewResult.summary}</p>
                     </div>
 
-                    {/* Prioritized findings */}
-                    {reviewResult.prioritizedFindings.length > 0 && (
-                      <div className="px-4 pt-3 space-y-2">
-                        <div className="text-[10px] font-bold text-slate uppercase tracking-wider">Prioritized Findings</div>
-                        {reviewResult.prioritizedFindings.map((finding, i) => (
-                          <div
-                            key={i}
-                            className={`flex items-start gap-2.5 border rounded-lg px-3 py-2.5 ${PRIORITY_CONFIG[finding.priority].cls}`}
-                          >
-                            <div className="flex-none mt-0.5">
-                              {finding.priority === 'critical'   && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
-                              {finding.priority === 'important'  && <Info className="w-3.5 h-3.5 text-amber-500" />}
-                              {finding.priority === 'suggestion' && <Eye className="w-3.5 h-3.5 text-slate-400" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                                <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">
-                                  {finding.category}
-                                </span>
-                                <span className="text-[10px] font-semibold opacity-60">
-                                  {finding.priority === 'critical' ? '· Critical' : finding.priority === 'important' ? '· Important' : '· Suggestion'}
-                                </span>
+                    {/* ── Review-pipeline draft card ───────────────────────
+                        Shown only when clinician enabled the toggle.
+                        NEVER auto-inserted. Explicit Insert Draft required.
+                        Overwrite confirmation required if note has content.
+                    ═══════════════════════════════════════════════════════ */}
+                    {reviewResult.reviewDraft && (
+                      <div className="px-4 pt-3">
+                        <div className="border border-violet-200 rounded-xl overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 py-2 bg-violet-50 border-b border-violet-100">
+                            <FileText className="w-3.5 h-3.5 text-violet-500 flex-none" />
+                            <span className="text-[11px] font-bold text-violet-800 flex-1">
+                              AI-Generated Draft — Requires Clinician Review
+                            </span>
+                            <span className="text-[10px] text-violet-400">{reviewResult.reviewDraft.timestamp}</span>
+                          </div>
+
+                          <div className="px-3 py-2.5 space-y-2 bg-white">
+                            {/* Draft sections */}
+                            {Object.entries(reviewResult.reviewDraft.sections).map(([label, text]) => (
+                              <div key={label}>
+                                <div className="text-[9px] font-bold text-slate uppercase tracking-wider mb-0.5">{label}</div>
+                                <div className="text-[11px] text-navy bg-violet-50/60 border border-violet-100 rounded-lg p-2 leading-relaxed whitespace-pre-wrap">
+                                  {text}
+                                </div>
                               </div>
-                              <div className="text-[11px] leading-snug">{finding.text}</div>
-                              {finding.jumpTo && (
+                            ))}
+
+                            {/* Safety notice */}
+                            <div className="text-[10px] text-slate italic bg-slate-50 border border-border rounded-lg px-2.5 py-1.5">
+                              This draft does not modify your note. It will not be saved, submitted,
+                              signed, or finalized until you explicitly choose Insert Draft.
+                            </div>
+
+                            {/* Overwrite confirmation */}
+                            {reviewDraftPendingOverwrite && (
+                              <div className="flex items-start gap-2 bg-amber-50 border border-amber-300 rounded-lg p-2.5">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-none mt-0.5" />
+                                <div className="flex-1">
+                                  <div className="text-[11px] font-semibold text-amber-800 mb-1">
+                                    This will replace your existing note content
+                                  </div>
+                                  <div className="text-[10px] text-amber-700 mb-2">
+                                    You have already entered content in one or more fields. Inserting will overwrite that text.
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={handleInsertReviewDraft}
+                                      className="text-[10px] font-bold px-2.5 py-1 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                                    >
+                                      Replace my draft
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setReviewDraftPendingOverwrite(false)}
+                                      className="text-[10px] font-semibold px-2.5 py-1 border border-amber-300 text-amber-800 rounded-lg hover:bg-amber-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                                    >
+                                      Keep my text
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Inserted confirmation */}
+                            {reviewDraftInserted && (
+                              <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-2.5 py-1.5 text-[11px] text-green-800 font-semibold">
+                                <Check className="w-3 h-3 text-green-600" />
+                                Draft inserted — review and edit before signing.
+                              </div>
+                            )}
+
+                            {/* Action buttons */}
+                            {!reviewDraftInserted && !reviewDraftPendingOverwrite && (
+                              <div className="flex flex-wrap gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => handleJumpToTool(finding.jumpTo!)}
-                                  className="mt-1.5 text-[10px] font-bold underline underline-offset-2 opacity-80 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current rounded"
+                                  onClick={handleInsertReviewDraft}
+                                  className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                                 >
-                                  {finding.jumpTo === 'clarity'     && 'Open Clarity Tool →'}
-                                  {finding.jumpTo === 'necessity'   && 'Open Medical Necessity →'}
-                                  {finding.jumpTo === 'consistency' && 'Open Consistency Tool →'}
-                                  {finding.jumpTo === 'draft'       && 'Open Draft Tool →'}
+                                  <ChevronRight className="w-3 h-3" /> Insert Draft
                                 </button>
-                              )}
-                            </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const text = Object.entries(reviewResult.reviewDraft!.sections)
+                                      .map(([l, v]) => `${l}\n${v}`).join('\n\n');
+                                    navigator.clipboard.writeText(text).catch(() => {});
+                                  }}
+                                  className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                                >
+                                  <Copy className="w-3 h-3" /> Copy
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        ))}
+                        </div>
                       </div>
                     )}
 
-                    {/* If note was empty — offer draft */}
-                    {reviewResult.noteWasEmpty && (
+                    {/* If note was empty and no draft was generated — offer draft tool */}
+                    {reviewResult.noteWasEmpty && !reviewResult.reviewDraft && (
                       <div className="px-4 pt-3">
                         <button
                           type="button"
