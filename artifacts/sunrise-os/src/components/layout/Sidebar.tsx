@@ -150,8 +150,8 @@ function getSectionForScreen(screen: Screen): string | null {
   return null;
 }
 
-const SESSION_OPEN_KEY  = 'sunrise_sidebar_open_v1';
-const SESSION_COMPACT_KEY = 'sunrise_sidebar_compact_v1';
+const SESSION_OPEN_KEY    = 'sunrise_sidebar_open_v1';
+const SESSION_COMPACT_KEY = 'sidebar_compact';
 
 function loadOpenKeys(): Set<string> {
   try {
@@ -165,10 +165,6 @@ function saveOpenKeys(keys: Set<string>) {
   try { sessionStorage.setItem(SESSION_OPEN_KEY, JSON.stringify([...keys])); } catch { /* ignore */ }
 }
 
-function loadCompact(): boolean {
-  try { return sessionStorage.getItem(SESSION_COMPACT_KEY) === 'true'; } catch { return false; }
-}
-
 function saveCompact(v: boolean) {
   try { sessionStorage.setItem(SESSION_COMPACT_KEY, String(v)); } catch { /* ignore */ }
 }
@@ -178,7 +174,7 @@ export function Sidebar({ currentScreen, navigate }: SidebarProps) {
 
   const [openKeys, setOpenKeys] = useState<Set<string>>(loadOpenKeys);
   const [compact, setCompact] = useState<boolean>(() => {
-    const raw = typeof window !== 'undefined' ? sessionStorage.getItem(SESSION_COMPACT_KEY) : null;
+    const raw = typeof window !== 'undefined' ? sessionStorage.getItem('sidebar_compact') : null;
     return raw === 'true';
   });
 
