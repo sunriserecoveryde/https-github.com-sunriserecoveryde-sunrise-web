@@ -1,0 +1,197 @@
+Next, fix the **notification reliability issues** before moving to Task Group 2.
+
+Copy and paste this into Replit:
+
+Complete one refinement task on the existing Task Group 1 branch:
+
+**Task: Fix Notification Panel overflow behavior and synchronize snooze expiration with the Topbar badge**
+
+Do not begin any other improvement task during this run.
+
+Use the existing notification categories, state model, acknowledgment flow, deduplication logic, snooze durations, resolution behavior, and audit logging already implemented.
+
+Do not rebuild the notification system.
+
+## Primary problems to correct
+
+1. Notification overflow menus can clip near the bottom of the panel.
+2. The Topbar badge does not update automatically when a snoozed notification expires while the Notification Panel is closed.
+3. Notification active-state calculations must remain consistent across the Topbar and Notification Panel.
+
+## 1. Fix overflow-menu clipping
+
+Render notification overflow menus using a portal or another positioning approach that is not clipped by:
+
+* The Notification Panel container
+* `overflow: hidden`
+* `overflow-y: auto`
+* The panel’s maximum height
+* The browser viewport edges
+
+Requirements:
+
+* The menu should open below the trigger when space allows.
+* The menu should automatically open above the trigger when insufficient space exists below.
+* The menu must remain inside the visible browser viewport.
+* The menu position must update when:
+
+  * The notification list scrolls
+  * The browser resizes
+  * The panel moves
+* The menu must close when:
+
+  * The user selects an action
+  * The user clicks outside
+  * The user presses Escape
+  * The Notification Panel closes
+* Focus must move into the menu when opened by keyboard.
+* Focus must return to the originating overflow button when the menu closes.
+* Only one notification overflow menu may be open at a time.
+* Do not use temporary viewport-size assumptions.
+* Do not increase the Notification Panel height merely to hide the problem.
+
+## 2. Centralize active notification calculations
+
+Create one shared helper, selector, or hook that determines whether a notification is currently active.
+
+An active notification must:
+
+* Not be resolved
+* Not be currently snoozed
+* Not be removed by deduplication
+* Be permitted for the current user
+* Otherwise qualify for display under the existing rules
+
+Use the same active-notification calculation for:
+
+* Topbar critical-clinical badge
+* Total unread count
+* Per-category unread counts
+* Notification Panel active list
+* Footer count
+* Snoozed count
+* Resolved count, if displayed
+
+Do not independently reproduce the filtering logic in multiple components.
+
+## 3. Make snooze expiration update globally
+
+The system must reevaluate snooze expiration even when the Notification Panel is closed.
+
+Requirements:
+
+* When a snoozed notification reaches its expiration time, it must automatically become active again.
+* The Topbar badge must update without requiring the user to reopen the Notification Panel.
+* Per-category and total counts must update when the panel is next opened.
+* Do not require a page refresh.
+* Avoid creating multiple competing intervals.
+* Use one global timer, shared state mechanism, or expiration scheduler.
+* Clean up timers properly when components unmount.
+* Do not poll more frequently than necessary.
+* A 30- or 60-second reevaluation interval is acceptable unless a more efficient timeout-based approach is already appropriate.
+
+Preferred behavior:
+
+* Schedule the next update for the earliest pending snooze expiration.
+* After that expiration, calculate the next pending expiration.
+* Use a low-frequency fallback check only if needed.
+
+## 4. Preserve notification state distinctions
+
+Do not change the meaning of:
+
+* Unread
+* Read
+* Acknowledged
+* Snoozed
+* Resolved
+
+Critical Clinical rules must remain:
+
+* Acknowledgment is required before snoozing.
+* Acknowledgment is required before resolution.
+* Acknowledgment does not equal resolution.
+* Audit history remains preserved.
+
+## 5. Preserve counts and deduplication
+
+After this task:
+
+* Resolved notifications must not count as active.
+* Currently snoozed notifications must not count as active.
+* Expired snoozes must return to the active list.
+* Deduplicated notifications must not count more than once.
+* Read notifications must not count as unread.
+* Acknowledged but unresolved Critical Clinical notifications must remain active according to the current policy.
+* Category counts must exactly match the active unread records represented by each tab.
+
+## 6. Accessibility
+
+Requirements:
+
+* Overflow buttons must have specific accessible labels, such as:
+
+  * “More actions for Marcus Webb AMA alert”
+* Portal menus must use appropriate menu semantics.
+* Keyboard users must be able to:
+
+  * Open the menu with Enter or Space
+  * Move through menu items
+  * Select an item
+  * Close with Escape
+* Focus must return to the correct trigger.
+* Screen readers must be notified when a snoozed notification becomes active again, where practical without creating excessive announcements.
+
+## 7. Do not change
+
+Do not change:
+
+* Production database schema
+* Existing notification IDs
+* Existing routes
+* Existing role permissions
+* Deduplication-key format unless required to fix a verified bug
+* Notification category taxonomy
+* Existing demo notification content
+* Clinical severity rules
+* Acknowledgment language
+* Audit-history retention
+* Existing snooze durations
+
+## Acceptance criteria
+
+* No overflow menu is clipped at the top or bottom of the Notification Panel.
+* Menus reposition correctly near browser viewport edges.
+* Only one overflow menu can be open.
+* Escape closes the menu and restores focus.
+* A snoozed notification automatically becomes active after expiration without reopening the panel.
+* The Topbar badge updates after snooze expiration without page refresh.
+* The Topbar and Notification Panel use the same active-notification calculation.
+* Total and category counts match the visible active unread notifications.
+* No duplicate timers remain active.
+* Existing notification states and audit behavior remain intact.
+* TypeScript check passes.
+* Production build passes.
+* Existing tests pass, if configured.
+
+## Required deliverables
+
+1. List of files changed.
+2. Explanation of the shared active-notification selector or hook.
+3. Explanation of how snooze expiration is scheduled globally.
+4. Screenshot showing an overflow menu near the bottom of the panel without clipping.
+5. Screenshot showing a menu repositioned above its trigger.
+6. Screenshot showing the Topbar badge before snooze expiration.
+7. Screenshot showing the Topbar badge after snooze expiration without reopening the panel.
+8. Screenshot showing matching category and active-list counts.
+9. Keyboard and focus test results.
+10. TypeScript result.
+11. Production build result.
+12. Test and lint status, or confirmation that no scripts are configured.
+13. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge it into main.
+
+Stop after completing this single task and wait for review.
