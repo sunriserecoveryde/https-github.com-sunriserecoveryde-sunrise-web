@@ -3,7 +3,13 @@
  *
  * Contextual AI assistance panel for the Progress Notes workflow.
  *
- * Four clinician-controlled actions:
+ * PRIMARY ACTION — Clinical Documentation Review (recommended):
+ *   Runs a multi-step pipeline: validate → clarity → consistency →
+ *   medical necessity → completeness → prioritized summary.
+ *   Uses the same rule-based functions as the individual tools.
+ *   No logic is duplicated.
+ *
+ * INDIVIDUAL AI TOOLS (available below the primary action):
  *   1. Draft Progress Note    — generates a structured draft from available context
  *   2. Improve Clarity        — suggests grammar/style edits without adding new facts
  *   3. Check Medical Necessity — evaluates whether the draft supports the documented service
@@ -16,6 +22,7 @@
  *   • The existing signing/co-sign workflow is unaffected.
  *   • Unauthorized roles never see this component (gate externally via canAccessScreen).
  *   • The AI cannot diagnose, prescribe, or modify risk thresholds.
+ *   • The note is never modified during the review pipeline.
  *
  * Audit events are emitted via addAuditEvent() which appends to the in-memory
  * audit log and mirrors each event to the browser console for devtools visibility.
@@ -30,6 +37,7 @@ import {
   Sparkles, X, ChevronRight, RotateCcw, Check, Copy,
   AlertTriangle, Info, Shield, FileText, Eye,
   Loader2, WifiOff, ChevronDown, ChevronUp,
+  ClipboardList, Circle,
 } from 'lucide-react';
 import {
   generateProgressNote,
@@ -105,6 +113,55 @@ export interface AIAuditEvent {
   contentLaterEdited?: boolean;
 }
 
+// ─── Clinical Review Pipeline types ──────────────────────────────────────────
+
+type ReviewStepId = 'validate' | 'clarity' | 'consistency' | 'necessity' | 'summary';
+type ReviewStepStatus = 'pending' | 'running' | 'done' | 'skipped';
+
+interface ReviewStep {
+  id: ReviewStepId;
+  label: string;
+  status: ReviewStepStatus;
+}
+
+type FindingPriority = 'critical' | 'important' | 'suggestion';
+
+interface PrioritizedFinding {
+  priority: FindingPriority;
+  category: string;
+  text: string;
+  jumpTo?: AIAction;
+}
+
+interface CompletenessScore {
+  filled: number;
+  total: number;
+  pct: number;
+  label: 'Complete' | 'Mostly Complete' | 'Partially Complete' | 'Incomplete';
+}
+
+type OverallReadiness =
+  | 'Ready to Review'
+  | 'Needs Attention'
+  | 'Significant Gaps'
+  | 'Unable to Assess';
+
+interface ClinicalReviewResult {
+  timestamp: string;
+  completeness: CompletenessScore;
+  overallReadiness: OverallReadiness;
+  clarityChanges: number;
+  hasClarityRevision: boolean;
+  clarityData: ClarityResult | null;
+  consistencyFindings: ConsistencyFinding[];
+  necessityCategory: NecessityCategory;
+  necessityMissing: string[];
+  necessityData: NecessityResult | null;
+  prioritizedFindings: PrioritizedFinding[];
+  summary: string;
+  noteWasEmpty: boolean;
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -125,83 +182,55 @@ interface Props {
 }
 
 // ─── Simulated network delay ──────────────────────────────────────────────────
-// Represents the time a real AI service would take.  Keeping this honest at
-// 600–900 ms so the loading state is visible and the UX communicates clearly
-// that a request is being processed.
 function simulateLatency(ms = 700): Promise<void> {
   return new Promise(res => setTimeout(res, ms));
 }
 
 // ─── Local clarity improvement engine ────────────────────────────────────────
-// Applies a rule-based set of improvements to clinical note text.
-// Rules: correct common abbreviation misuse, standardize SI/HI phrasing,
-// reduce redundancy, fix sentence endings, professional tone.
-// SAFETY: This function MUST NOT add new facts, diagnoses, interventions,
-// or change any quotations, risk statements, or clinical judgments.
+// SAFETY: MUST NOT add new facts, diagnoses, interventions, change quotations,
+// risk statements, or clinical judgments.
 function improveClarity(text: string): { revised: string; changes: string[] } {
   const changes: string[] = [];
   let out = text;
 
-  // Standardize "pt." → "patient" (documentation standard)
   if (/\bpt\.\b/i.test(out)) {
     out = out.replace(/\bpt\.\b/gi, 'patient');
     changes.push('Replaced informal "pt." abbreviation with "patient" for formal documentation clarity.');
   }
-
-  // Standardize "c/o" → "reports"
   if (/\bc\/o\b/i.test(out)) {
     out = out.replace(/\bc\/o\b/gi, 'reports');
     changes.push('Replaced "c/o" with "reports" for readability in non-medical-record contexts.');
   }
-
-  // Standardize "w/" → "with"
   if (/\bw\//i.test(out)) {
     out = out.replace(/\bw\//gi, 'with');
     changes.push('Replaced shorthand "w/" with "with" for formal tone.');
   }
-
-  // Standardize "d/t" → "due to"
   if (/\bd\/t\b/i.test(out)) {
     out = out.replace(/\bd\/t\b/gi, 'due to');
     changes.push('Replaced "d/t" with "due to" for readability.');
   }
-
-  // "Denies SI/HI" → "Denies suicidal ideation or homicidal ideation" on first occurrence in formal note
   if (/Denies SI\/HI\./i.test(out)) {
     out = out.replace(/Denies SI\/HI\./gi, 'Denies suicidal ideation (SI) or homicidal ideation (HI).');
     changes.push('Expanded "Denies SI/HI" to full form for documentation clarity; the abbreviation remains in parentheses for reference.');
   }
-
-  // Remove double spaces
   if (/  +/.test(out)) {
     out = out.replace(/  +/g, ' ');
     changes.push('Removed extra whitespace.');
   }
-
-  // Ensure sentences end with proper punctuation before a capital letter
-  const fixedPunctuation = out.replace(/([a-z])\s{1,2}([A-Z])/g, (_, lower, upper) => {
-    return `${lower}. ${upper}`;
-  });
+  const fixedPunctuation = out.replace(/([a-z])\s{1,2}([A-Z])/g, (_, lower, upper) => `${lower}. ${upper}`);
   if (fixedPunctuation !== out) {
     out = fixedPunctuation;
     changes.push('Added missing sentence-ending periods where a sentence ended without punctuation before a new sentence began.');
   }
-
-  // Trim trailing whitespace from each line
   out = out.split('\n').map(l => l.trimEnd()).join('\n');
-
-  // Passive voice nudge: "was given" → "received" (common in nursing notes)
   if (/\bwas given\b/i.test(out)) {
     out = out.replace(/\bwas given\b/gi, 'received');
     changes.push('Replaced passive "was given" with active "received" for stronger clinical documentation voice.');
   }
-
-  // "There was" → stronger construction (limited, only for clarity)
   if (/\bthere was no\b/i.test(out)) {
     out = out.replace(/\bthere was no\b/gi, 'No');
     changes.push('Simplified "there was no" to "No" for concise clinical phrasing.');
   }
-
   if (changes.length === 0) {
     changes.push('No grammar or style issues identified. The note meets professional documentation standards.');
   }
@@ -210,8 +239,6 @@ function improveClarity(text: string): { revised: string; changes: string[] } {
 }
 
 // ─── Medical necessity evaluator ─────────────────────────────────────────────
-// Evaluates whether the current note text demonstrates medical necessity
-// by checking for required documentation elements.
 // Returns structured findings — NEVER rewrites content or makes clinical judgments.
 function evaluateMedicalNecessity(
   values: Record<string, string>,
@@ -224,7 +251,6 @@ function evaluateMedicalNecessity(
   const missingElements: string[] = [];
   const clinicianReviewAreas: string[] = [];
 
-  // 1. Intervention documented?
   const hasIntervention =
     /\b(cbt|dbt|mi\b|motivational interviewing|psychoeducation|relapse prevention|skill|intervention|counseling|therapy)\b/i.test(allText);
   if (hasIntervention) {
@@ -233,7 +259,6 @@ function evaluateMedicalNecessity(
     missingElements.push('No specific therapeutic intervention or modality is documented.');
   }
 
-  // 2. Patient response to intervention?
   const hasResponse =
     /\b(response|engaged|receptive|resistant|participated|verbalized|denied|reported|expressed|demonstrated)\b/i.test(allText);
   if (hasResponse) {
@@ -242,7 +267,6 @@ function evaluateMedicalNecessity(
     missingElements.push('Patient response to the documented intervention is not described.');
   }
 
-  // 3. Safety / SI / HI addressed?
   const hasSafety =
     /\b(si|hi|suicidal|homicidal|safety plan|risk|denies)\b/i.test(allText);
   if (hasSafety) {
@@ -251,7 +275,6 @@ function evaluateMedicalNecessity(
     clinicianReviewAreas.push('SI/HI status and safety plan review are not explicitly documented. Add a brief statement even when negative (e.g., "Denies SI/HI. Safety plan reviewed and current.")');
   }
 
-  // 4. Connection to treatment goals?
   const hasGoalRef = patient
     ? patient.goals.some(g =>
         g.shortTerm && allText.includes(g.shortTerm.slice(0, 10).toLowerCase()),
@@ -260,10 +283,9 @@ function evaluateMedicalNecessity(
   if (hasGoalRef) {
     evidencePresent.push('Connection to treatment plan goals is evident.');
   } else {
-    missingElements.push('The note does not reference the patient\'s treatment-plan goals. Payers may require explicit goal linkage.');
+    missingElements.push("The note does not reference the patient's treatment-plan goals. Payers may require explicit goal linkage.");
   }
 
-  // 5. Plan documented?
   const hasPlan = /\b(plan|next session|follow.?up|continue|schedule|referral)\b/i.test(allText);
   if (hasPlan) {
     evidencePresent.push('A follow-up plan is documented.');
@@ -271,7 +293,6 @@ function evaluateMedicalNecessity(
     missingElements.push('No follow-up plan or next-session goal is documented.');
   }
 
-  // 6. Continued need for service?
   const hasContinuedNeed =
     /\b(ongoing|continue|persistent|barrier|challenge|risk factor|unresolved|maintain)\b/i.test(allText);
   if (hasContinuedNeed) {
@@ -280,7 +301,6 @@ function evaluateMedicalNecessity(
     clinicianReviewAreas.push('The note may not clearly articulate continued medical necessity. Consider documenting ongoing barriers, risk factors, or unresolved clinical concerns that support the current level of care.');
   }
 
-  // 7. Level-of-care support?
   if (patient) {
     const locMatch =
       allText.includes(patient.program.toLowerCase()) ||
@@ -288,25 +308,21 @@ function evaluateMedicalNecessity(
     if (locMatch) {
       evidencePresent.push('Current level of care is referenced in the note.');
     } else {
-      clinicianReviewAreas.push('Consider explicitly referencing the patient\'s current level of care to strengthen medical necessity documentation.');
+      clinicianReviewAreas.push("Consider explicitly referencing the patient's current level of care to strengthen medical necessity documentation.");
     }
   }
 
-  // Determine overall category
-  const score = evidencePresent.length;
-  const total = 5; // core elements
   let category: NecessityCategory;
   if (missingElements.length === 0 && clinicianReviewAreas.length <= 1) {
     category = 'Supported';
-  } else if (missingElements.length <= 1 && score >= 3) {
+  } else if (missingElements.length <= 1 && evidencePresent.length >= 3) {
     category = 'Partially Supported';
-  } else if (score < 2) {
+  } else if (evidencePresent.length < 2) {
     category = 'Insufficiently Supported';
   } else {
     category = 'Partially Supported';
   }
 
-  // If the note is empty or nearly empty
   if (fields.every(f => !values[f]?.trim())) {
     category = 'Unable to Determine';
     evidencePresent.length = 0;
@@ -324,7 +340,6 @@ function evaluateMedicalNecessity(
 }
 
 // ─── Internal consistency checker ─────────────────────────────────────────────
-// Identifies conflicts within the note and between the note and structured fields.
 // NEVER silently corrects the note. Returns findings for clinician review.
 function checkInternalConsistency(
   values: Record<string, string>,
@@ -333,22 +348,19 @@ function checkInternalConsistency(
   patient: ReturnType<typeof MOCK_PATIENTS.find> | undefined,
 ): Omit<ConsistencyResult, 'timestamp'> {
   const findings: ConsistencyFinding[] = [];
-
   const allText = fields.map(f => values[f] ?? '').join(' ');
   const lower = allText.toLowerCase();
 
-  // 1. "Denied cravings" vs. high craving score from patient data
   if (patient && patient.craving >= 7 && /denies? crav/i.test(lower)) {
     findings.push({
       type: 'potential_inconsistency',
       conflictA: 'Note states patient denied cravings.',
-      conflictB: `Patient\'s documented craving score at time of session: ${patient.craving}/10 (high).`,
+      conflictB: `Patient's documented craving score at time of session: ${patient.craving}/10 (high).`,
       explanation: 'The written note indicates denial of cravings, but the structured craving score recorded at session time is elevated. This may reflect different time points, but payers and supervisors may flag the discrepancy.',
       suggestedAction: 'Clarify whether the craving score reflects a different time point, or revise the note to acknowledge the craving rating and explain any discrepancy (e.g., patient denied active cravings at time of session; CAMS score from morning assessment noted).',
     });
   }
 
-  // 2. "No progress" in one field but "Met" / "Completed" in another
   const noProgressMatch = /no progress|not progressing|minimal progress/i.test(allText);
   const progressMet = /goals? (?:were |has been )?met|substantial progress|completed goal/i.test(allText);
   if (noProgressMatch && progressMet) {
@@ -357,43 +369,39 @@ function checkInternalConsistency(
       conflictA: 'Note contains language suggesting no or minimal progress.',
       conflictB: 'Note also contains language suggesting goals were met or substantial progress was made.',
       explanation: 'The note appears to state both that there was no progress and that goals were met, which is contradictory.',
-      suggestedAction: 'Review progress statements for consistency. Ensure the note accurately describes the patient\'s status at the time of service.',
+      suggestedAction: "Review progress statements for consistency. Ensure the note accurately describes the patient's status at the time of service.",
     });
   }
 
-  // 3. Intervention documented without patient response
   const hasIntervention = /\b(cbt|dbt|mi\b|motivational interviewing|psychoeducation|relapse prevention|skill|intervention|used|applied|facilitated|explored)\b/i.test(allText);
   const hasResponse = /\b(response|engaged|receptive|resistant|participated|client|patient)\s+\w+/i.test(allText);
   const format_has_response_field = format === 'BIRP' || format === 'GIRP';
   if (hasIntervention && !hasResponse && format_has_response_field) {
-    const responseFieldName = format === 'BIRP' ? 'Response (R)' : 'Response (R)';
+    const responseFieldName = 'Response (R)';
     findings.push({
       type: 'missing_connection',
       conflictA: 'An intervention or therapeutic technique is documented.',
-      conflictB: `The ${responseFieldName} field appears to be empty or does not describe the patient\'s response to the intervention.`,
+      conflictB: `The ${responseFieldName} field appears to be empty or does not describe the patient's response to the intervention.`,
       explanation: 'Documenting an intervention without a corresponding patient response weakens the medical necessity rationale and may not satisfy payer or accreditation requirements.',
       suggestedAction: `Complete the ${responseFieldName} section with a description of how the patient responded to the intervention.`,
     });
   }
 
-  // 4. Risk statement conflicts — "low risk" vs. patient risk flags
   if (patient) {
     const hasHighRiskFlag = patient.flags.some(f => f.type === 'Risk');
     const lowRiskInNote = /low risk|no risk|denied si\/hi|denies si\/hi|no safety concerns/i.test(allText);
     const highRiskInNote = /high risk|moderate risk|elevated risk|active si|active suicidal/i.test(allText);
-
     if (hasHighRiskFlag && lowRiskInNote && !highRiskInNote) {
       findings.push({
         type: 'requires_review',
         conflictA: 'Note documents low or no safety risk.',
         conflictB: `Patient has an active Risk flag in their chart: "${patient.flags.find(f => f.type === 'Risk')?.note ?? 'Risk flag'}"`,
-        explanation: 'The note\'s safety narrative may not be aligned with the active risk documentation in the patient\'s chart. This does not mean the note is wrong — the session-level assessment may differ from a standing chart flag — but it warrants clinical review.',
-        suggestedAction: 'Verify that the current session\'s risk assessment is consistent with or explicitly addresses the standing chart risk flag. If the risk has resolved, document the basis for that determination.',
+        explanation: "The note's safety narrative may not be aligned with the active risk documentation in the patient's chart. This does not mean the note is wrong — the session-level assessment may differ from a standing chart flag — but it warrants clinical review.",
+        suggestedAction: "Verify that the current session's risk assessment is consistent with or explicitly addresses the standing chart risk flag. If the risk has resolved, document the basis for that determination.",
       });
     }
   }
 
-  // 5. Note references intervention but plan field is empty
   const planFieldKey = fields.find(f => f.toLowerCase().includes('plan'));
   if (planFieldKey && !values[planFieldKey]?.trim() && hasIntervention) {
     findings.push({
@@ -405,7 +413,6 @@ function checkInternalConsistency(
     });
   }
 
-  // 6. Format-specific: SOAP Objective field empty while Subjective is complete
   if (format === 'SOAP') {
     const subjectiveKey = fields.find(f => f.toLowerCase().includes('subjective'));
     const objectiveKey = fields.find(f => f.toLowerCase().includes('objective'));
@@ -421,7 +428,6 @@ function checkInternalConsistency(
     }
   }
 
-  // 7. All fields empty — can't evaluate
   if (fields.every(f => !values[f]?.trim())) {
     findings.push({
       type: 'requires_review',
@@ -456,21 +462,29 @@ function createAuditEvent(
     outcome,
     contentInserted,
   };
-  // Mirror to console for devtools visibility — does NOT log clinical content
   // eslint-disable-next-line no-console
   console.info('[AI Audit]', action, '|', outcome, '| patient:', patientId, '| staff:', staffName, '| ref:', noteRef);
   return event;
 }
 
-// ─── Action tab definition ────────────────────────────────────────────────────
-const ACTION_TABS: { id: AIAction; label: string; description: string }[] = [
-  { id: 'draft',       label: 'Draft Note',     description: 'Generate a structured draft from current session context' },
-  { id: 'clarity',     label: 'Improve Clarity', description: 'Suggest grammar and style improvements without adding new facts' },
-  { id: 'necessity',   label: 'Medical Necessity', description: 'Evaluate whether the draft supports the documented service' },
-  { id: 'consistency', label: 'Consistency',     description: 'Identify conflicts within the note and structured fields' },
+// ─── Review pipeline step definitions ────────────────────────────────────────
+const REVIEW_STEPS_INITIAL: ReviewStep[] = [
+  { id: 'validate',    label: 'Reviewing documented information', status: 'pending' },
+  { id: 'clarity',     label: 'Evaluating clarity',               status: 'pending' },
+  { id: 'consistency', label: 'Checking internal consistency',    status: 'pending' },
+  { id: 'necessity',   label: 'Reviewing medical necessity',      status: 'pending' },
+  { id: 'summary',     label: 'Preparing clinical summary',       status: 'pending' },
 ];
 
-// ─── Necessity badge ──────────────────────────────────────────────────────────
+// ─── Individual action tab definitions ───────────────────────────────────────
+const ACTION_TABS: { id: AIAction; label: string; description: string }[] = [
+  { id: 'draft',       label: 'Draft Note',       description: 'Generate a structured draft from current session context' },
+  { id: 'clarity',     label: 'Improve Clarity',  description: 'Suggest grammar and style improvements without adding new facts' },
+  { id: 'necessity',   label: 'Medical Necessity', description: 'Evaluate whether the draft supports the documented service' },
+  { id: 'consistency', label: 'Consistency',       description: 'Identify conflicts within the note and structured fields' },
+];
+
+// ─── Badge maps ───────────────────────────────────────────────────────────────
 const NECESSITY_BADGE: Record<NecessityCategory, { cls: string; icon: React.ReactNode }> = {
   'Supported':                { cls: 'bg-green-100 text-green-800 border-green-200',  icon: <Check className="w-3.5 h-3.5" /> },
   'Partially Supported':      { cls: 'bg-amber-100 text-amber-800 border-amber-200',  icon: <AlertTriangle className="w-3.5 h-3.5" /> },
@@ -485,6 +499,19 @@ const CONSISTENCY_BADGE: Record<ConsistencyType, { cls: string; label: string }>
   requires_review:         { cls: 'bg-slate-100 text-slate-700 border-slate-200',  label: 'Requires clinician review' },
 };
 
+const READINESS_CONFIG: Record<OverallReadiness, { cls: string; dotCls: string; icon: React.ReactNode }> = {
+  'Ready to Review':  { cls: 'bg-green-100 text-green-800 border-green-200',  dotCls: 'bg-green-500',  icon: <Check className="w-3.5 h-3.5" /> },
+  'Needs Attention':  { cls: 'bg-amber-100 text-amber-800 border-amber-200',  dotCls: 'bg-amber-500',  icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+  'Significant Gaps': { cls: 'bg-red-100 text-red-800 border-red-200',        dotCls: 'bg-red-500',    icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+  'Unable to Assess': { cls: 'bg-slate-100 text-slate-700 border-slate-200',  dotCls: 'bg-slate-400',  icon: <Info className="w-3.5 h-3.5" /> },
+};
+
+const PRIORITY_CONFIG: Record<FindingPriority, { cls: string; label: string }> = {
+  critical:   { cls: 'bg-red-50 border-red-200 text-red-800',     label: 'Critical' },
+  important:  { cls: 'bg-amber-50 border-amber-200 text-amber-800', label: 'Important' },
+  suggestion: { cls: 'bg-slate-50 border-slate-200 text-slate-700', label: 'Suggestion' },
+};
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ProgressNoteAIAssist({
@@ -495,8 +522,11 @@ export function ProgressNoteAIAssist({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const firstFocusRef = useRef<HTMLButtonElement>(null);
+  const individualToolsRef = useRef<HTMLDivElement>(null);
 
   const [isOpen, setIsOpen] = useState(false);
+
+  // ── Individual tool state ───────────────────────────────────────────────────
   const [activeAction, setActiveAction] = useState<AIAction>('draft');
   const [status, setStatus] = useState<AIStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -515,9 +545,15 @@ export function ProgressNoteAIAssist({
 
   const [discardWarning, setDiscardWarning] = useState(false);
 
+  // ── Clinical Review Pipeline state ─────────────────────────────────────────
+  const [reviewSteps, setReviewSteps] = useState<ReviewStep[]>(REVIEW_STEPS_INITIAL.map(s => ({ ...s })));
+  const [reviewStatus, setReviewStatus] = useState<'idle' | 'loading' | 'result' | 'error'>('idle');
+  const [reviewResult, setReviewResult] = useState<ClinicalReviewResult | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
   const patient = MOCK_PATIENTS.find(p => p.id === patientId);
 
-  // ── Emit audit event ────────────────────────────────────────────────────────
+  // ── Audit emit ──────────────────────────────────────────────────────────────
   const emit = useCallback((action: string, outcome: string, contentInserted = false) => {
     const ev = createAuditEvent(authorName, patientId, noteRef, action, outcome, contentInserted);
     onAuditEvent?.(ev);
@@ -526,17 +562,13 @@ export function ProgressNoteAIAssist({
   // ── Focus management ────────────────────────────────────────────────────────
   useEffect(() => {
     if (isOpen) {
-      // Focus the first interactive element inside the panel
       setTimeout(() => firstFocusRef.current?.focus(), 50);
     }
   }, [isOpen]);
 
   // ── Focus trap ──────────────────────────────────────────────────────────────
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Escape') {
-      handleClose();
-      return;
-    }
+    if (e.key === 'Escape') { handleClose(); return; }
     if (e.key !== 'Tab') return;
     const panel = panelRef.current;
     if (!panel) return;
@@ -555,36 +587,257 @@ export function ProgressNoteAIAssist({
 
   // ── Close logic ─────────────────────────────────────────────────────────────
   const hasUninsertedOutput =
-    (activeAction === 'draft' && draftResult && !draftInserted) ||
-    (activeAction === 'clarity' && clarityResult && !clarityRevisionAccepted);
+    (activeAction === 'draft'    && draftResult   && !draftInserted) ||
+    (activeAction === 'clarity'  && clarityResult && !clarityRevisionAccepted);
 
   function handleClose() {
-    if (hasUninsertedOutput && !discardWarning) {
-      setDiscardWarning(true);
-      return;
-    }
+    if (hasUninsertedOutput && !discardWarning) { setDiscardWarning(true); return; }
     commitClose();
   }
 
   function commitClose() {
     setIsOpen(false);
     setDiscardWarning(false);
-    // Return focus to the trigger button
     triggerRef.current?.focus();
     emit('Panel Closed', 'closed');
   }
 
-  // ── Open / switch action ────────────────────────────────────────────────────
+  // ── Open ────────────────────────────────────────────────────────────────────
   function handleOpen() {
     setIsOpen(true);
     emit('AI Assist Opened', 'opened');
   }
 
+  // ── Switch individual action tab ────────────────────────────────────────────
   function handleSwitchAction(action: AIAction) {
     setActiveAction(action);
     setStatus('idle');
     setError(null);
     setDiscardWarning(false);
+  }
+
+  // ── Jump from review result to individual tool ──────────────────────────────
+  // Pre-populates individual tool state from the review's already-computed data
+  // so the clinician does not have to re-run the step.
+  function handleJumpToTool(action: AIAction) {
+    setActiveAction(action);
+    setError(null);
+    setDiscardWarning(false);
+
+    if (action === 'clarity' && reviewResult?.clarityData) {
+      setClarityResult(reviewResult.clarityData);
+      setClarityRevisionAccepted(false);
+      setShowOriginal(false);
+      setStatus('result');
+    } else if (action === 'necessity' && reviewResult?.necessityData) {
+      setNecessityResult(reviewResult.necessityData);
+      setStatus('result');
+    } else if (action === 'consistency' && reviewResult) {
+      setConsistencyResult({
+        findings: reviewResult.consistencyFindings,
+        timestamp: reviewResult.timestamp,
+      });
+      setStatus('result');
+    } else {
+      setStatus('idle');
+    }
+
+    // Scroll individual tools section into view
+    setTimeout(() => {
+      individualToolsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  }
+
+  // ── Clinical Review Pipeline ────────────────────────────────────────────────
+  async function runClinicalReview() {
+    if (!patient && fields.every(f => !values[f]?.trim())) {
+      setReviewError('Select a patient and enter note content before running the clinical review.');
+      setReviewStatus('error');
+      return;
+    }
+
+    emit('Clinical Review Requested', 'loading');
+    setReviewStatus('loading');
+    setReviewError(null);
+    setReviewResult(null);
+    setReviewSteps(REVIEW_STEPS_INITIAL.map(s => ({ ...s })));
+
+    const setStep = (id: ReviewStepId, s: ReviewStepStatus) =>
+      setReviewSteps(prev => prev.map(step => step.id === id ? { ...step, status: s } : step));
+
+    try {
+      // ── Step 1: Validate documented information ──
+      setStep('validate', 'running');
+      await simulateLatency(300);
+      const noteIsEmpty = fields.every(f => !values[f]?.trim());
+      setStep('validate', 'done');
+
+      // ── Step 2: Evaluate clarity ─────────────────
+      setStep('clarity', 'running');
+      await simulateLatency(400);
+      const combined = fields.map(f => values[f] ?? '').join('\n\n').trim();
+      let clarityData: ClarityResult | null = null;
+      let clarityChanges = 0;
+      if (!noteIsEmpty) {
+        const { revised, changes } = improveClarity(combined);
+        clarityChanges = changes.filter(c => !c.includes('No grammar')).length;
+        clarityData = {
+          originalText: combined,
+          revisedText: revised,
+          changeCount: clarityChanges,
+          changesDescription: changes,
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        };
+      }
+      setStep('clarity', 'done');
+
+      // ── Step 3: Check internal consistency ───────
+      setStep('consistency', 'running');
+      await simulateLatency(400);
+      const consistencyFindings = noteIsEmpty
+        ? []
+        : checkInternalConsistency(values, fields, format, patient).findings;
+      setStep('consistency', 'done');
+
+      // ── Step 4: Review medical necessity ─────────
+      setStep('necessity', 'running');
+      await simulateLatency(500);
+      const necessityRaw = evaluateMedicalNecessity(values, fields, format, patient);
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const necessityData: NecessityResult = { ...necessityRaw, timestamp: ts };
+      setStep('necessity', 'done');
+
+      // ── Step 5: Calculate completeness + prioritize + summarize ──
+      setStep('summary', 'running');
+      await simulateLatency(300);
+
+      // Completeness
+      const filled = fields.filter(f => values[f]?.trim()).length;
+      const total  = fields.length;
+      const pct    = total > 0 ? Math.round((filled / total) * 100) : 0;
+      const completenessLabel: CompletenessScore['label'] =
+        pct === 100 ? 'Complete' :
+        pct >= 75   ? 'Mostly Complete' :
+        pct >= 50   ? 'Partially Complete' : 'Incomplete';
+
+      // Prioritized findings — ordered: critical → important → suggestion
+      const pFindings: PrioritizedFinding[] = [];
+
+      // Critical
+      if (noteIsEmpty) {
+        pFindings.push({
+          priority: 'critical',
+          category: 'Documentation',
+          text: 'No note content has been entered. Complete the note fields and run the review again.',
+          jumpTo: 'draft',
+        });
+      }
+      if (!noteIsEmpty && necessityRaw.category === 'Insufficiently Supported') {
+        pFindings.push({
+          priority: 'critical',
+          category: 'Medical Necessity',
+          text: 'Documentation insufficiently supports medical necessity. Multiple required elements are missing.',
+          jumpTo: 'necessity',
+        });
+      }
+      consistencyFindings
+        .filter(f => f.type === 'potential_inconsistency')
+        .forEach(f => {
+          pFindings.push({
+            priority: 'critical',
+            category: 'Internal Consistency',
+            text: `${f.conflictA} ${f.conflictB}`.trim(),
+            jumpTo: 'consistency',
+          });
+        });
+
+      // Important
+      necessityRaw.missingElements.forEach(m => {
+        pFindings.push({ priority: 'important', category: 'Medical Necessity', text: m, jumpTo: 'necessity' });
+      });
+      consistencyFindings
+        .filter(f => f.type === 'missing_connection')
+        .forEach(f => {
+          pFindings.push({
+            priority: 'important',
+            category: 'Internal Consistency',
+            text: f.conflictA,
+            jumpTo: 'consistency',
+          });
+        });
+      if (!noteIsEmpty && clarityChanges > 0) {
+        pFindings.push({
+          priority: 'important',
+          category: 'Clarity',
+          text: `${clarityChanges} grammar or style issue${clarityChanges !== 1 ? 's' : ''} identified. Use the Clarity tool to review and apply suggested corrections.`,
+          jumpTo: 'clarity',
+        });
+      }
+
+      // Suggestions
+      necessityRaw.clinicianReviewAreas.forEach(r => {
+        pFindings.push({ priority: 'suggestion', category: 'Medical Necessity', text: r, jumpTo: 'necessity' });
+      });
+      consistencyFindings
+        .filter(f => f.type === 'requires_review')
+        .forEach(f => {
+          pFindings.push({
+            priority: 'suggestion',
+            category: 'Internal Consistency',
+            text: f.explanation,
+            jumpTo: 'consistency',
+          });
+        });
+
+      // Overall readiness
+      const hasCritical  = pFindings.some(f => f.priority === 'critical');
+      const hasImportant = pFindings.some(f => f.priority === 'important');
+      const overallReadiness: OverallReadiness =
+        noteIsEmpty      ? 'Unable to Assess' :
+        hasCritical      ? 'Significant Gaps' :
+        hasImportant     ? 'Needs Attention'  : 'Ready to Review';
+
+      // Consolidated summary
+      let summary = '';
+      if (noteIsEmpty) {
+        summary = 'No note content has been entered. Complete the note fields and run the review again. If you need a starting point, use the Draft Note tool in the Individual AI Tools section below.';
+      } else if (overallReadiness === 'Ready to Review') {
+        const clarityNote = clarityChanges > 0
+          ? `${clarityChanges} minor style correction${clarityChanges !== 1 ? 's' : ''} is available via the Clarity tool.`
+          : 'No clarity issues were identified.';
+        summary = `This note appears complete and internally consistent. ${clarityNote} Medical necessity documentation is ${necessityRaw.category.toLowerCase()}. The note is ready for your final review before signing.`;
+      } else if (overallReadiness === 'Needs Attention') {
+        const itemCount = pFindings.filter(f => f.priority === 'important').length;
+        summary = `The note is partially complete but has ${itemCount} area${itemCount !== 1 ? 's' : ''} that may require attention before signing. Review the findings below, address any gaps, and re-run the clinical review when ready.`;
+      } else {
+        const critCount = pFindings.filter(f => f.priority === 'critical').length;
+        summary = `The note has ${critCount} critical issue${critCount !== 1 ? 's' : ''} that should be addressed before submission. These may affect documentation compliance, payer acceptance, or clinical record integrity.`;
+      }
+
+      setStep('summary', 'done');
+
+      setReviewResult({
+        timestamp: ts,
+        completeness: { filled, total, pct, label: completenessLabel },
+        overallReadiness,
+        clarityChanges,
+        hasClarityRevision: clarityChanges > 0,
+        clarityData,
+        consistencyFindings,
+        necessityCategory: necessityRaw.category,
+        necessityMissing: necessityRaw.missingElements,
+        necessityData,
+        prioritizedFindings: pFindings,
+        summary,
+        noteWasEmpty: noteIsEmpty,
+      });
+      setReviewStatus('result');
+      emit('Clinical Review Completed', 'success');
+    } catch {
+      setReviewStatus('error');
+      setReviewError('Clinical review is temporarily unavailable. Your note has not been changed.');
+      emit('Clinical Review Completed', 'error');
+    }
   }
 
   // ── Draft Progress Note ─────────────────────────────────────────────────────
@@ -593,7 +846,6 @@ export function ProgressNoteAIAssist({
       setError('Select a patient before generating a draft.');
       return;
     }
-    // Guard: existing clinician text?
     const hasExistingText = fields.some(f => values[f]?.trim());
     if (hasExistingText && !forceRegenerate && !draftResult) {
       setPendingOverwrite(true);
@@ -608,8 +860,6 @@ export function ProgressNoteAIAssist({
 
     try {
       await simulateLatency(700);
-
-      // Build input from available structured fields already in the form
       const combinedText = fields.map(f => values[f] ?? '').join(' ');
       const input: ProgressNoteInput = {
         clientName: `${patient.firstName} ${patient.lastName}`,
@@ -638,29 +888,26 @@ export function ProgressNoteAIAssist({
 
       const sections = generateProgressNote(format, input);
 
-      // Source fields — what we used from available context
       const sourceFields: DraftResult['sourceFields'] = [
-        { label: 'Patient',             value: `${patient.firstName} ${patient.lastName} (${patient.mrn})` },
+        { label: 'Patient',               value: `${patient.firstName} ${patient.lastName} (${patient.mrn})` },
         { label: 'Program / Level of Care', value: patient.program },
-        { label: 'Primary Diagnosis',   value: patient.primaryDiagnosis },
-        { label: 'Note Type',           value: noteType },
-        { label: 'Note Format',         value: format },
-        { label: 'Clinician',           value: authorName },
+        { label: 'Primary Diagnosis',     value: patient.primaryDiagnosis },
+        { label: 'Note Type',             value: noteType },
+        { label: 'Note Format',           value: format },
+        { label: 'Clinician',             value: authorName },
         { label: 'Active Treatment Goal', value: patient.goals.find(g => g.status === 'In Progress')?.shortTerm ?? 'None documented' },
-        { label: 'AMA Risk',            value: patient.amaRisk },
+        { label: 'AMA Risk',              value: patient.amaRisk },
         { label: 'Mood (session record)', value: `${patient.mood}/10` },
         { label: 'SI/HI from structured fields', value: /none/i.test(input.siHiStatus ?? '') ? 'None reported' : input.siHiStatus ?? 'Not documented' },
       ];
 
-      const result: DraftResult = {
+      setDraftResult({
         sections,
         sourceFields,
         timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
         requestedBy: authorName,
         patientContext: `${patient.firstName} ${patient.lastName} — ${patient.program}`,
-      };
-
-      setDraftResult(result);
+      });
       setStatus('result');
       setPendingOverwrite(false);
       emit('AI Draft Generated', 'success');
@@ -674,16 +921,10 @@ export function ProgressNoteAIAssist({
   function handleInsertDraft() {
     if (!draftResult) return;
     const hasExistingText = fields.some(f => values[f]?.trim());
-    if (hasExistingText && !pendingOverwrite) {
-      setPendingOverwrite(true);
-      return;
-    }
-    // Map generated sections to form fields
+    if (hasExistingText && !pendingOverwrite) { setPendingOverwrite(true); return; }
     const sectionValues = Object.values(draftResult.sections);
     const newValues: Record<string, string> = {};
-    fields.forEach((f, i) => {
-      if (sectionValues[i]) newValues[f] = sectionValues[i];
-    });
+    fields.forEach((f, i) => { if (sectionValues[i]) newValues[f] = sectionValues[i]; });
     onInsertDraft(newValues);
     setDraftInserted(true);
     setPendingOverwrite(false);
@@ -692,9 +933,7 @@ export function ProgressNoteAIAssist({
 
   function handleCopyDraft() {
     if (!draftResult) return;
-    const text = Object.entries(draftResult.sections)
-      .map(([label, val]) => `${label}\n${val}`)
-      .join('\n\n');
+    const text = Object.entries(draftResult.sections).map(([label, val]) => `${label}\n${val}`).join('\n\n');
     navigator.clipboard.writeText(text).catch(() => {});
     setCopiedDraft(true);
     setTimeout(() => setCopiedDraft(false), 2000);
@@ -712,10 +951,7 @@ export function ProgressNoteAIAssist({
   // ── Improve Clarity ─────────────────────────────────────────────────────────
   async function runClarity() {
     const combined = fields.map(f => values[f] ?? '').join('\n\n').trim();
-    if (!combined) {
-      setError('Enter note content before requesting a clarity review.');
-      return;
-    }
+    if (!combined) { setError('Enter note content before requesting a clarity review.'); return; }
 
     emit('Clarity Review Requested', 'loading');
     setStatus('loading');
@@ -726,16 +962,13 @@ export function ProgressNoteAIAssist({
     try {
       await simulateLatency(600);
       const { revised, changes } = improveClarity(combined);
-
-      const result: ClarityResult = {
+      setClarityResult({
         originalText: combined,
         revisedText: revised,
         changeCount: changes.filter(c => !c.includes('No grammar')).length,
         changesDescription: changes,
         timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      };
-
-      setClarityResult(result);
+      });
       setStatus('result');
       emit('Clarity Review Generated', 'success');
     } catch {
@@ -802,7 +1035,7 @@ export function ProgressNoteAIAssist({
     }
   }
 
-  // ── Run the active action ───────────────────────────────────────────────────
+  // ── Run the active individual action ───────────────────────────────────────
   async function handleRun() {
     setError(null);
     if (activeAction === 'draft')       await runDraft();
@@ -824,7 +1057,7 @@ export function ProgressNoteAIAssist({
         aria-expanded={isOpen}
         aria-controls={panelId}
         className="flex items-center gap-1.5 text-xs font-bold text-violet-700 hover:text-violet-900 bg-violet-50 hover:bg-violet-100 border border-violet-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-        title="Open AI Assist — Draft, Clarity, Medical Necessity, Consistency checks"
+        title="Open AI Assist — Clinical Documentation Review and individual AI tools"
       >
         <Sparkles className="w-3.5 h-3.5" />
         AI Assist
@@ -833,7 +1066,7 @@ export function ProgressNoteAIAssist({
       {/* ── Panel overlay ── */}
       {isOpen && (
         <>
-          {/* Backdrop — semi-transparent, click to attempt close */}
+          {/* Backdrop */}
           <div
             className="fixed inset-0 z-40 bg-navy/20 backdrop-blur-[1px]"
             aria-hidden="true"
@@ -904,485 +1137,701 @@ export function ProgressNoteAIAssist({
               </div>
             )}
 
-            {/* ── Action tabs ── */}
-            <div className="flex border-b border-border flex-none overflow-x-auto">
-              {ACTION_TABS.map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => handleSwitchAction(tab.id)}
-                  title={tab.description}
-                  className={`flex-1 min-w-[80px] px-2 py-3 text-[11px] font-semibold whitespace-nowrap border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-500 ${
-                    activeAction === tab.id
-                      ? 'border-violet-600 text-violet-700 bg-violet-50/50'
-                      : 'border-transparent text-slate hover:text-navy hover:bg-slate-50'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            {/* ── Scrollable body ── */}
+            <div className="flex-1 overflow-y-auto">
 
-            {/* ── Panel body ── */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-
-              {/* Action description */}
-              <div className="flex items-start gap-2 text-[11px] text-slate bg-slate-50 border border-border rounded-lg px-3 py-2">
-                <Info className="w-3.5 h-3.5 text-slate-400 flex-none mt-0.5" />
-                <span>{ACTION_TABS.find(t => t.id === activeAction)?.description}</span>
+              {/* Global safety notice */}
+              <div className="px-4 pt-4">
+                <div className="flex items-start gap-2 text-[10px] text-violet-700 bg-violet-50 border border-violet-100 rounded-lg px-3 py-2">
+                  <Shield className="w-3 h-3 flex-none mt-0.5 text-violet-400" />
+                  <span>
+                    AI output requires your explicit review and approval. It will not be inserted,
+                    signed, or submitted automatically. Your note is never modified during a review.
+                  </span>
+                </div>
               </div>
 
-              {/* Safety notice — always visible */}
-              <div className="flex items-start gap-2 text-[10px] text-violet-700 bg-violet-50 border border-violet-100 rounded-lg px-3 py-2">
-                <Shield className="w-3 h-3 flex-none mt-0.5 text-violet-400" />
-                <span>
-                  AI output requires your explicit review and approval. It will not be inserted, signed,
-                  or submitted automatically.
-                </span>
-              </div>
+              {/* ════════════════════════════════════════════════════════════
+                  PRIMARY: Clinical Documentation Review
+              ════════════════════════════════════════════════════════════ */}
+              <div className="px-4 pt-4 pb-2 space-y-3">
 
-              {/* Error state */}
-              {status === 'error' && error && (
-                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-4">
-                  <WifiOff className="w-4 h-4 text-red-500 flex-none mt-0.5" />
-                  <div>
-                    <div className="text-sm font-semibold text-red-800 mb-1">
-                      AI assistance is temporarily unavailable.
-                    </div>
-                    <div className="text-xs text-red-700">{error}</div>
-                    <div className="text-xs text-red-600 mt-1">Your note has not been changed.</div>
-                    <button
-                      type="button"
-                      onClick={handleRun}
-                      className="mt-2 text-xs font-semibold px-3 py-1.5 bg-red-100 text-red-700 border border-red-200 rounded-lg hover:bg-red-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-                    >
-                      <RotateCcw className="w-3 h-3 inline mr-1" /> Retry
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[10px] font-bold text-slate uppercase tracking-wider">Recommended</div>
+                  <div className="flex-1 h-px bg-border" />
                 </div>
-              )}
 
-              {/* Loading state */}
-              {status === 'loading' && (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-                  <div className="text-sm font-semibold text-violet-700">
-                    {activeAction === 'draft'       && 'Generating draft…'}
-                    {activeAction === 'clarity'     && 'Reviewing clarity…'}
-                    {activeAction === 'necessity'   && 'Evaluating medical necessity…'}
-                    {activeAction === 'consistency' && 'Checking consistency…'}
-                  </div>
-                  <div className="text-xs text-slate">Your current note text is preserved.</div>
-                </div>
-              )}
-
-              {/* ── DRAFT RESULT ─────────────────────────────────────────── */}
-              {activeAction === 'draft' && status === 'result' && draftResult && (
-                <div className="space-y-3">
-
-                  {/* Label */}
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-violet-800 bg-violet-100 border border-violet-200 px-3 py-1 rounded-full">
-                      <FileText className="w-3 h-3" />
-                      AI-Generated Draft — Requires Clinician Review
-                    </span>
-                    <span className="text-[10px] text-slate">{draftResult.timestamp}</span>
-                  </div>
-
-                  {/* Source fields used */}
-                  <details className="border border-border rounded-lg overflow-hidden">
-                    <summary className="flex items-center gap-2 px-3 py-2 bg-slate-50 cursor-pointer select-none text-xs font-semibold text-navy">
-                      <Eye className="w-3.5 h-3.5 text-slate" />
-                      Source information used
-                      <ChevronDown className="w-3.5 h-3.5 text-slate ml-auto" />
-                    </summary>
-                    <div className="px-3 py-2 space-y-1">
-                      {draftResult.sourceFields.map(sf => (
-                        <div key={sf.label} className="flex items-start gap-2 text-[11px]">
-                          <span className="text-slate font-semibold w-40 flex-none">{sf.label}:</span>
-                          <span className="text-navy">{sf.value}</span>
-                        </div>
-                      ))}
-                      <div className="mt-2 pt-2 border-t border-border text-[10px] text-slate italic">
-                        Only information already documented in this workflow was used. No external data was inferred.
-                      </div>
-                    </div>
-                  </details>
-
-                  {/* Draft sections */}
-                  {Object.entries(draftResult.sections).map(([label, text]) => (
-                    <div key={label}>
-                      <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1">{label}</div>
-                      <div className="text-xs text-navy bg-violet-50/60 border border-violet-100 rounded-lg p-3 leading-relaxed whitespace-pre-wrap">
-                        {text}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Overwrite confirmation */}
-                  {pendingOverwrite && (
-                    <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-xl p-3">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-none mt-0.5" />
-                      <div className="flex-1">
-                        <div className="text-xs font-semibold text-amber-800 mb-1">
-                          This will replace your current draft text
-                        </div>
-                        <div className="text-[11px] text-amber-700 mb-2">
-                          You have already entered content in one or more fields. Inserting will overwrite that text.
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={handleInsertDraft}
-                            className="text-[11px] font-bold px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-                          >
-                            Replace my draft
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPendingOverwrite(false)}
-                            className="text-[11px] font-semibold px-3 py-1.5 border border-amber-300 text-amber-800 rounded-lg hover:bg-amber-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-                          >
-                            Keep my text
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Insertion success */}
-                  {draftInserted && (
-                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-800 font-semibold">
-                      <Check className="w-3.5 h-3.5 text-green-600" />
-                      Draft inserted into your note — review, edit, and use your normal signing workflow when ready.
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {!draftInserted && (
-                      <button
-                        type="button"
-                        onClick={handleInsertDraft}
-                        className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-                      >
-                        <ChevronRight className="w-3 h-3" /> Insert Draft
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleCopyDraft}
-                      className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                    >
-                      <Copy className="w-3 h-3" />
-                      {copiedDraft ? 'Copied!' : 'Copy Draft'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => runDraft(true)}
-                      className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                    >
-                      <RotateCcw className="w-3 h-3" /> Regenerate
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDiscardDraft}
-                      className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-                    >
-                      <X className="w-3 h-3" /> Discard
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* ── CLARITY RESULT ───────────────────────────────────────── */}
-              {activeAction === 'clarity' && status === 'result' && clarityResult && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-navy">
-                      Suggested Revision
-                      {clarityResult.changeCount > 0
-                        ? ` · ${clarityResult.changeCount} change${clarityResult.changeCount > 1 ? 's' : ''}`
-                        : ' · No changes needed'}
-                    </span>
-                    <span className="text-[10px] text-slate">{clarityResult.timestamp}</span>
-                  </div>
-
-                  {/* Changes list */}
-                  {clarityResult.changesDescription.length > 0 && (
-                    <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
-                      {clarityResult.changesDescription.map((c, i) => (
-                        <div key={i} className={`flex items-start gap-2 px-3 py-2 text-[11px] ${
-                          c.includes('No grammar') ? 'bg-green-50 text-green-700' : 'bg-white text-navy'
-                        }`}>
-                          {c.includes('No grammar')
-                            ? <Check className="w-3 h-3 text-green-500 flex-none mt-0.5" />
-                            : <ChevronRight className="w-3 h-3 text-violet-400 flex-none mt-0.5" />}
-                          {c}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Original */}
+                {/* ── Review idle ── */}
+                {reviewStatus === 'idle' && !reviewError && (
                   <button
                     type="button"
-                    onClick={() => setShowOriginal(o => !o)}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-slate hover:text-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
+                    onClick={runClinicalReview}
+                    disabled={!patient}
+                    className="w-full flex items-start gap-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 text-left"
                   >
-                    {showOriginal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                    {showOriginal ? 'Hide original' : 'Show original'}
-                  </button>
-
-                  {showOriginal && (
+                    <ClipboardList className="w-5 h-5 flex-none mt-0.5" />
                     <div>
-                      <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Original Text</div>
-                      <div className="text-xs text-slate bg-slate-50 border border-border rounded-lg p-3 leading-relaxed whitespace-pre-wrap">
-                        {clarityResult.originalText}
+                      <div className="text-sm font-bold leading-tight">Run Clinical Documentation Review</div>
+                      <div className="text-[11px] text-violet-200 mt-0.5">
+                        Clarity · Consistency · Medical Necessity · Completeness
                       </div>
                     </div>
-                  )}
+                    <ChevronRight className="w-4 h-4 flex-none mt-0.5 ml-auto opacity-70" />
+                  </button>
+                )}
 
-                  {/* Suggested revision */}
-                  <div>
-                    <div className="text-[10px] font-bold text-violet-700 uppercase tracking-wider mb-1">Suggested Revision</div>
-                    <div className="text-xs text-navy bg-violet-50 border border-violet-200 rounded-lg p-3 leading-relaxed whitespace-pre-wrap">
-                      {clarityResult.revisedText}
+                {!patient && reviewStatus === 'idle' && (
+                  <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-none" />
+                    Select a patient above to enable the clinical review.
+                  </div>
+                )}
+
+                {/* ── Review loading: step progress ── */}
+                {reviewStatus === 'loading' && (
+                  <div className="border border-violet-200 rounded-xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-violet-50 border-b border-violet-100">
+                      <Loader2 className="w-3.5 h-3.5 text-violet-500 animate-spin flex-none" />
+                      <span className="text-xs font-bold text-violet-800">Running Clinical Documentation Review…</span>
+                    </div>
+                    <div className="px-4 py-3 space-y-2.5 bg-white">
+                      {reviewSteps.map(step => (
+                        <div key={step.id} className="flex items-center gap-3">
+                          <div className="w-5 h-5 flex-none flex items-center justify-center">
+                            {step.status === 'done' && (
+                              <div className="w-5 h-5 rounded-full bg-green-100 border border-green-200 flex items-center justify-center">
+                                <Check className="w-3 h-3 text-green-600" />
+                              </div>
+                            )}
+                            {step.status === 'running' && (
+                              <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />
+                            )}
+                            {step.status === 'pending' && (
+                              <Circle className="w-4 h-4 text-slate-200" />
+                            )}
+                          </div>
+                          <span className={`text-xs transition-colors ${
+                            step.status === 'done'    ? 'text-green-700 font-semibold' :
+                            step.status === 'running' ? 'text-violet-700 font-bold' :
+                            'text-slate-400'
+                          }`}>
+                            {step.label}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="pt-1 text-[10px] text-slate italic">
+                        Your note content is not modified during this review.
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Safety notice */}
-                  <div className="text-[10px] text-slate italic bg-slate-50 border border-border rounded-lg px-3 py-2">
-                    This revision corrects grammar, style, and abbreviations only. No new facts, diagnoses, interventions, or clinical judgments have been added. Patient quotations are unchanged.
-                  </div>
-
-                  {/* Accepted notice */}
-                  {clarityRevisionAccepted && (
-                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-800 font-semibold">
-                      <Check className="w-3.5 h-3.5 text-green-600" />
-                      Revision applied — review the updated text and use your normal signing workflow.
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  {!clarityRevisionAccepted && (
-                    <div className="flex flex-wrap gap-2 pt-1">
+                {/* ── Review error ── */}
+                {reviewStatus === 'error' && reviewError && (
+                  <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-4">
+                    <WifiOff className="w-4 h-4 text-red-500 flex-none mt-0.5" />
+                    <div>
+                      <div className="text-sm font-semibold text-red-800 mb-1">Clinical review unavailable</div>
+                      <div className="text-xs text-red-700">{reviewError}</div>
+                      <div className="text-xs text-red-600 mt-1">Your note has not been changed.</div>
                       <button
                         type="button"
-                        onClick={handleAcceptClarityRevision}
-                        disabled={clarityResult.changeCount === 0}
-                        className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                        onClick={runClinicalReview}
+                        className="mt-2 text-xs font-semibold px-3 py-1.5 bg-red-100 text-red-700 border border-red-200 rounded-lg hover:bg-red-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                       >
-                        <Check className="w-3 h-3" /> Accept Revision
+                        <RotateCcw className="w-3 h-3 inline mr-1" /> Retry
                       </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Review result ── */}
+                {reviewStatus === 'result' && reviewResult && (
+                  <div className="border border-border rounded-xl overflow-hidden space-y-0">
+
+                    {/* Result header */}
+                    <div className="px-4 py-3 bg-slate-50 border-b border-border flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${READINESS_CONFIG[reviewResult.overallReadiness].cls}`}>
+                          {READINESS_CONFIG[reviewResult.overallReadiness].icon}
+                          {reviewResult.overallReadiness}
+                        </span>
+                        <span className="text-[10px] text-slate">
+                          {reviewResult.completeness.filled}/{reviewResult.completeness.total} fields · {reviewResult.completeness.pct}% complete
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate flex-none">{reviewResult.timestamp}</span>
+                    </div>
+
+                    {/* Completeness bar */}
+                    <div className="px-4 pt-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-semibold text-slate uppercase tracking-wider">Documentation Completeness</span>
+                        <span className={`text-[10px] font-bold ${
+                          reviewResult.completeness.label === 'Complete'         ? 'text-green-700' :
+                          reviewResult.completeness.label === 'Mostly Complete'  ? 'text-blue-700' :
+                          reviewResult.completeness.label === 'Partially Complete' ? 'text-amber-700' :
+                          'text-red-700'
+                        }`}>{reviewResult.completeness.label}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            reviewResult.completeness.pct === 100 ? 'bg-green-500' :
+                            reviewResult.completeness.pct >= 75   ? 'bg-blue-500' :
+                            reviewResult.completeness.pct >= 50   ? 'bg-amber-500' :
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${reviewResult.completeness.pct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Summary */}
+                    <div className="px-4 pt-3">
+                      <p className="text-xs text-navy leading-relaxed">{reviewResult.summary}</p>
+                    </div>
+
+                    {/* Prioritized findings */}
+                    {reviewResult.prioritizedFindings.length > 0 && (
+                      <div className="px-4 pt-3 space-y-2">
+                        <div className="text-[10px] font-bold text-slate uppercase tracking-wider">Prioritized Findings</div>
+                        {reviewResult.prioritizedFindings.map((finding, i) => (
+                          <div
+                            key={i}
+                            className={`flex items-start gap-2.5 border rounded-lg px-3 py-2.5 ${PRIORITY_CONFIG[finding.priority].cls}`}
+                          >
+                            <div className="flex-none mt-0.5">
+                              {finding.priority === 'critical'   && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+                              {finding.priority === 'important'  && <Info className="w-3.5 h-3.5 text-amber-500" />}
+                              {finding.priority === 'suggestion' && <Eye className="w-3.5 h-3.5 text-slate-400" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                                <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                                  {finding.category}
+                                </span>
+                                <span className="text-[10px] font-semibold opacity-60">
+                                  {finding.priority === 'critical' ? '· Critical' : finding.priority === 'important' ? '· Important' : '· Suggestion'}
+                                </span>
+                              </div>
+                              <div className="text-[11px] leading-snug">{finding.text}</div>
+                              {finding.jumpTo && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleJumpToTool(finding.jumpTo!)}
+                                  className="mt-1.5 text-[10px] font-bold underline underline-offset-2 opacity-80 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current rounded"
+                                >
+                                  {finding.jumpTo === 'clarity'     && 'Open Clarity Tool →'}
+                                  {finding.jumpTo === 'necessity'   && 'Open Medical Necessity →'}
+                                  {finding.jumpTo === 'consistency' && 'Open Consistency Tool →'}
+                                  {finding.jumpTo === 'draft'       && 'Open Draft Tool →'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* If note was empty — offer draft */}
+                    {reviewResult.noteWasEmpty && (
+                      <div className="px-4 pt-3">
+                        <button
+                          type="button"
+                          onClick={() => handleJumpToTool('draft')}
+                          className="w-full flex items-center gap-2 justify-center text-xs font-bold px-3 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Generate Draft Note
+                        </button>
+                        <div className="text-[10px] text-slate text-center mt-1">
+                          AI-generated draft — requires your review before insertion
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Re-run button */}
+                    <div className="px-4 py-3 border-t border-border bg-slate-50 mt-3 flex items-center justify-between">
+                      <div className="text-[10px] text-slate italic">No changes were made to your note.</div>
                       <button
                         type="button"
-                        onClick={() => {
-                          const text = clarityResult.revisedText;
-                          navigator.clipboard.writeText(text).catch(() => {});
-                        }}
+                        onClick={runClinicalReview}
+                        className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate bg-white rounded-lg hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Re-run Review
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ════════════════════════════════════════════════════════════
+                  INDIVIDUAL AI TOOLS — labeled section
+              ════════════════════════════════════════════════════════════ */}
+              <div ref={individualToolsRef} className="px-4 pt-4 pb-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-[10px] font-bold text-slate uppercase tracking-wider">Individual AI Tools</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+              </div>
+
+              {/* ── Individual tool tab strip ── */}
+              <div className="flex border-b border-border overflow-x-auto flex-none">
+                {ACTION_TABS.map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => handleSwitchAction(tab.id)}
+                    title={tab.description}
+                    className={`flex-1 min-w-[80px] px-2 py-3 text-[11px] font-semibold whitespace-nowrap border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-500 ${
+                      activeAction === tab.id
+                        ? 'border-violet-600 text-violet-700 bg-violet-50/50'
+                        : 'border-transparent text-slate hover:text-navy hover:bg-slate-50'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* ── Individual tool body ── */}
+              <div className="px-4 py-4 space-y-4">
+
+                {/* Action description */}
+                <div className="flex items-start gap-2 text-[11px] text-slate bg-slate-50 border border-border rounded-lg px-3 py-2">
+                  <Info className="w-3.5 h-3.5 text-slate-400 flex-none mt-0.5" />
+                  <span>{ACTION_TABS.find(t => t.id === activeAction)?.description}</span>
+                </div>
+
+                {/* Error state */}
+                {status === 'error' && error && (
+                  <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-4">
+                    <WifiOff className="w-4 h-4 text-red-500 flex-none mt-0.5" />
+                    <div>
+                      <div className="text-sm font-semibold text-red-800 mb-1">
+                        AI assistance is temporarily unavailable.
+                      </div>
+                      <div className="text-xs text-red-700">{error}</div>
+                      <div className="text-xs text-red-600 mt-1">Your note has not been changed.</div>
+                      <button
+                        type="button"
+                        onClick={handleRun}
+                        className="mt-2 text-xs font-semibold px-3 py-1.5 bg-red-100 text-red-700 border border-red-200 rounded-lg hover:bg-red-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                      >
+                        <RotateCcw className="w-3 h-3 inline mr-1" /> Retry
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Loading state */}
+                {status === 'loading' && (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
+                    <div className="text-sm font-semibold text-violet-700">
+                      {activeAction === 'draft'       && 'Generating draft…'}
+                      {activeAction === 'clarity'     && 'Reviewing clarity…'}
+                      {activeAction === 'necessity'   && 'Evaluating medical necessity…'}
+                      {activeAction === 'consistency' && 'Checking consistency…'}
+                    </div>
+                    <div className="text-xs text-slate">Your current note text is preserved.</div>
+                  </div>
+                )}
+
+                {/* ── DRAFT RESULT ───────────────────────────────────────── */}
+                {activeAction === 'draft' && status === 'result' && draftResult && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-violet-800 bg-violet-100 border border-violet-200 px-3 py-1 rounded-full">
+                        <FileText className="w-3 h-3" />
+                        AI-Generated Draft — Requires Clinician Review
+                      </span>
+                      <span className="text-[10px] text-slate">{draftResult.timestamp}</span>
+                    </div>
+
+                    <details className="border border-border rounded-lg overflow-hidden">
+                      <summary className="flex items-center gap-2 px-3 py-2 bg-slate-50 cursor-pointer select-none text-xs font-semibold text-navy">
+                        <Eye className="w-3.5 h-3.5 text-slate" />
+                        Source information used
+                        <ChevronDown className="w-3.5 h-3.5 text-slate ml-auto" />
+                      </summary>
+                      <div className="px-3 py-2 space-y-1">
+                        {draftResult.sourceFields.map(sf => (
+                          <div key={sf.label} className="flex items-start gap-2 text-[11px]">
+                            <span className="text-slate font-semibold w-40 flex-none">{sf.label}:</span>
+                            <span className="text-navy">{sf.value}</span>
+                          </div>
+                        ))}
+                        <div className="mt-2 pt-2 border-t border-border text-[10px] text-slate italic">
+                          Only information already documented in this workflow was used. No external data was inferred.
+                        </div>
+                      </div>
+                    </details>
+
+                    {Object.entries(draftResult.sections).map(([label, text]) => (
+                      <div key={label}>
+                        <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1">{label}</div>
+                        <div className="text-xs text-navy bg-violet-50/60 border border-violet-100 rounded-lg p-3 leading-relaxed whitespace-pre-wrap">
+                          {text}
+                        </div>
+                      </div>
+                    ))}
+
+                    {pendingOverwrite && (
+                      <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-xl p-3">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 flex-none mt-0.5" />
+                        <div className="flex-1">
+                          <div className="text-xs font-semibold text-amber-800 mb-1">
+                            This will replace your current draft text
+                          </div>
+                          <div className="text-[11px] text-amber-700 mb-2">
+                            You have already entered content in one or more fields. Inserting will overwrite that text.
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={handleInsertDraft}
+                              className="text-[11px] font-bold px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                            >
+                              Replace my draft
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPendingOverwrite(false)}
+                              className="text-[11px] font-semibold px-3 py-1.5 border border-amber-300 text-amber-800 rounded-lg hover:bg-amber-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                            >
+                              Keep my text
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {draftInserted && (
+                      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-800 font-semibold">
+                        <Check className="w-3.5 h-3.5 text-green-600" />
+                        Draft inserted into your note — review, edit, and use your normal signing workflow when ready.
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {!draftInserted && (
+                        <button
+                          type="button"
+                          onClick={handleInsertDraft}
+                          className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                        >
+                          <ChevronRight className="w-3 h-3" /> Insert Draft
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleCopyDraft}
                         className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                       >
-                        <Copy className="w-3 h-3" /> Copy Suggested Revision
+                        <Copy className="w-3 h-3" />
+                        {copiedDraft ? 'Copied!' : 'Copy Draft'}
                       </button>
                       <button
                         type="button"
-                        onClick={handleRejectClarityRevision}
-                        className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 text-slate border border-border rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                        onClick={() => runDraft(true)}
+                        className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                       >
-                        <X className="w-3 h-3" /> Keep Original
+                        <RotateCcw className="w-3 h-3" /> Regenerate
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDiscardDraft}
+                        className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                      >
+                        <X className="w-3 h-3" /> Discard
                       </button>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* ── NECESSITY RESULT ─────────────────────────────────────── */}
-              {activeAction === 'necessity' && status === 'result' && necessityResult && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                {/* ── CLARITY RESULT ─────────────────────────────────────── */}
+                {activeAction === 'clarity' && status === 'result' && clarityResult && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-navy">
+                        Suggested Revision
+                        {clarityResult.changeCount > 0
+                          ? ` · ${clarityResult.changeCount} change${clarityResult.changeCount > 1 ? 's' : ''}`
+                          : ' · No changes needed'}
+                      </span>
+                      <span className="text-[10px] text-slate">{clarityResult.timestamp}</span>
+                    </div>
+
+                    {clarityResult.changesDescription.length > 0 && (
+                      <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
+                        {clarityResult.changesDescription.map((c, i) => (
+                          <div key={i} className={`flex items-start gap-2 px-3 py-2 text-[11px] ${
+                            c.includes('No grammar') ? 'bg-green-50 text-green-700' : 'bg-white text-navy'
+                          }`}>
+                            {c.includes('No grammar')
+                              ? <Check className="w-3 h-3 text-green-500 flex-none mt-0.5" />
+                              : <ChevronRight className="w-3 h-3 text-violet-400 flex-none mt-0.5" />}
+                            {c}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setShowOriginal(o => !o)}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-slate hover:text-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
+                    >
+                      {showOriginal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      {showOriginal ? 'Hide original' : 'Show original'}
+                    </button>
+
+                    {showOriginal && (
+                      <div>
+                        <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Original Text</div>
+                        <div className="text-xs text-slate bg-slate-50 border border-border rounded-lg p-3 leading-relaxed whitespace-pre-wrap">
+                          {clarityResult.originalText}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="text-[10px] font-bold text-violet-700 uppercase tracking-wider mb-1">Suggested Revision</div>
+                      <div className="text-xs text-navy bg-violet-50 border border-violet-200 rounded-lg p-3 leading-relaxed whitespace-pre-wrap">
+                        {clarityResult.revisedText}
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-slate italic bg-slate-50 border border-border rounded-lg px-3 py-2">
+                      This revision corrects grammar, style, and abbreviations only. No new facts, diagnoses, interventions, or clinical judgments have been added. Patient quotations are unchanged.
+                    </div>
+
+                    {clarityRevisionAccepted && (
+                      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-800 font-semibold">
+                        <Check className="w-3.5 h-3.5 text-green-600" />
+                        Revision applied — review the updated text and use your normal signing workflow.
+                      </div>
+                    )}
+
+                    {!clarityRevisionAccepted && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleAcceptClarityRevision}
+                          disabled={clarityResult.changeCount === 0}
+                          className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                        >
+                          <Check className="w-3 h-3" /> Accept Revision
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(clarityResult.revisedText).catch(() => {});
+                          }}
+                          className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                        >
+                          <Copy className="w-3 h-3" /> Copy Suggested Revision
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRejectClarityRevision}
+                          className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 text-slate border border-border rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                        >
+                          <X className="w-3 h-3" /> Keep Original
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── NECESSITY RESULT ───────────────────────────────────── */}
+                {activeAction === 'necessity' && status === 'result' && necessityResult && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
                       <span className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full border ${NECESSITY_BADGE[necessityResult.category].cls}`}>
                         {NECESSITY_BADGE[necessityResult.category].icon}
                         {necessityResult.category}
                       </span>
+                      <span className="text-[10px] text-slate">{necessityResult.timestamp}</span>
                     </div>
-                    <span className="text-[10px] text-slate">{necessityResult.timestamp}</span>
-                  </div>
 
-                  {necessityResult.evidencePresent.length > 0 && (
-                    <div>
-                      <div className="text-[10px] font-bold text-green-700 uppercase tracking-wider mb-1.5">Evidence Present</div>
-                      <div className="space-y-1">
-                        {necessityResult.evidencePresent.map((e, i) => (
-                          <div key={i} className="flex items-start gap-2 text-[11px] text-green-800 bg-green-50 border border-green-100 rounded-lg px-3 py-1.5">
-                            <Check className="w-3 h-3 text-green-500 flex-none mt-0.5" />
-                            {e}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {necessityResult.missingElements.length > 0 && (
-                    <div>
-                      <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1.5">Missing Documentation</div>
-                      <div className="space-y-1">
-                        {necessityResult.missingElements.map((e, i) => (
-                          <div key={i} className="flex items-start gap-2 text-[11px] text-red-800 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5">
-                            <AlertTriangle className="w-3 h-3 text-red-500 flex-none mt-0.5" />
-                            {e}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {necessityResult.clinicianReviewAreas.length > 0 && (
-                    <div>
-                      <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1.5">Suggested Clinician Review</div>
-                      <div className="space-y-1">
-                        {necessityResult.clinicianReviewAreas.map((e, i) => (
-                          <div key={i} className="flex items-start gap-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
-                            <Info className="w-3 h-3 text-amber-500 flex-none mt-0.5" />
-                            {e}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Disclaimer — mandatory */}
-                  <div className="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[10px] text-slate italic">
-                    <Shield className="w-3 h-3 flex-none mt-0.5 text-slate-400" />
-                    {necessityResult.disclaimer}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={runNecessity}
-                    className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                  >
-                    <RotateCcw className="w-3 h-3" /> Re-evaluate
-                  </button>
-                </div>
-              )}
-
-              {/* ── CONSISTENCY RESULT ───────────────────────────────────── */}
-              {activeAction === 'consistency' && status === 'result' && consistencyResult && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-navy">
-                      {consistencyResult.findings.length === 0 || consistencyResult.findings.every(f => f.type === 'no_concerns')
-                        ? '✓ No consistency concerns identified'
-                        : `${consistencyResult.findings.length} finding${consistencyResult.findings.length > 1 ? 's' : ''} require${consistencyResult.findings.length === 1 ? 's' : ''} review`}
-                    </span>
-                    <span className="text-[10px] text-slate">{consistencyResult.timestamp}</span>
-                  </div>
-
-                  {consistencyResult.findings.length === 0 && (
-                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
-                      <Check className="w-4 h-4 text-green-500 flex-none" />
-                      No consistency concerns identified in this note.
-                    </div>
-                  )}
-
-                  {consistencyResult.findings.map((finding, i) => (
-                    <div key={i} className="border border-border rounded-xl overflow-hidden">
-                      <div className={`flex items-center gap-2 px-3 py-2 ${
-                        finding.type === 'potential_inconsistency' ? 'bg-red-50 border-b border-red-100' :
-                        finding.type === 'missing_connection'      ? 'bg-amber-50 border-b border-amber-100' :
-                        finding.type === 'requires_review'         ? 'bg-slate-50 border-b border-border' :
-                        'bg-green-50 border-b border-green-100'
-                      }`}>
-                        <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${CONSISTENCY_BADGE[finding.type].cls}`}>
-                          {finding.type === 'potential_inconsistency' && <AlertTriangle className="w-2.5 h-2.5" />}
-                          {finding.type === 'missing_connection'      && <Info className="w-2.5 h-2.5" />}
-                          {finding.type === 'requires_review'         && <Eye className="w-2.5 h-2.5" />}
-                          {finding.type === 'no_concerns'             && <Check className="w-2.5 h-2.5" />}
-                          {CONSISTENCY_BADGE[finding.type].label}
-                        </span>
-                      </div>
-                      <div className="p-3 space-y-2 bg-white">
-                        <div className="text-[11px]">
-                          <span className="font-semibold text-navy">Field A: </span>
-                          <span className="text-navy">{finding.conflictA}</span>
+                    {necessityResult.evidencePresent.length > 0 && (
+                      <div>
+                        <div className="text-[10px] font-bold text-green-700 uppercase tracking-wider mb-1.5">Evidence Present</div>
+                        <div className="space-y-1">
+                          {necessityResult.evidencePresent.map((e, i) => (
+                            <div key={i} className="flex items-start gap-2 text-[11px] text-green-800 bg-green-50 border border-green-100 rounded-lg px-3 py-1.5">
+                              <Check className="w-3 h-3 text-green-500 flex-none mt-0.5" />
+                              {e}
+                            </div>
+                          ))}
                         </div>
-                        {finding.conflictB && (
+                      </div>
+                    )}
+
+                    {necessityResult.missingElements.length > 0 && (
+                      <div>
+                        <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1.5">Missing Documentation</div>
+                        <div className="space-y-1">
+                          {necessityResult.missingElements.map((e, i) => (
+                            <div key={i} className="flex items-start gap-2 text-[11px] text-red-800 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5">
+                              <AlertTriangle className="w-3 h-3 text-red-500 flex-none mt-0.5" />
+                              {e}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {necessityResult.clinicianReviewAreas.length > 0 && (
+                      <div>
+                        <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1.5">Suggested Clinician Review</div>
+                        <div className="space-y-1">
+                          {necessityResult.clinicianReviewAreas.map((e, i) => (
+                            <div key={i} className="flex items-start gap-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
+                              <Info className="w-3 h-3 text-amber-500 flex-none mt-0.5" />
+                              {e}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[10px] text-slate italic">
+                      <Shield className="w-3 h-3 flex-none mt-0.5 text-slate-400" />
+                      {necessityResult.disclaimer}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={runNecessity}
+                      className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Re-evaluate
+                    </button>
+                  </div>
+                )}
+
+                {/* ── CONSISTENCY RESULT ─────────────────────────────────── */}
+                {activeAction === 'consistency' && status === 'result' && consistencyResult && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-navy">
+                        {consistencyResult.findings.length === 0 || consistencyResult.findings.every(f => f.type === 'no_concerns')
+                          ? '✓ No consistency concerns identified'
+                          : `${consistencyResult.findings.length} finding${consistencyResult.findings.length > 1 ? 's' : ''} require${consistencyResult.findings.length === 1 ? 's' : ''} review`}
+                      </span>
+                      <span className="text-[10px] text-slate">{consistencyResult.timestamp}</span>
+                    </div>
+
+                    {consistencyResult.findings.length === 0 && (
+                      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
+                        <Check className="w-4 h-4 text-green-500 flex-none" />
+                        No consistency concerns identified in this note.
+                      </div>
+                    )}
+
+                    {consistencyResult.findings.map((finding, i) => (
+                      <div key={i} className="border border-border rounded-xl overflow-hidden">
+                        <div className={`flex items-center gap-2 px-3 py-2 ${
+                          finding.type === 'potential_inconsistency' ? 'bg-red-50 border-b border-red-100' :
+                          finding.type === 'missing_connection'      ? 'bg-amber-50 border-b border-amber-100' :
+                          finding.type === 'requires_review'         ? 'bg-slate-50 border-b border-border' :
+                          'bg-green-50 border-b border-green-100'
+                        }`}>
+                          <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${CONSISTENCY_BADGE[finding.type].cls}`}>
+                            {finding.type === 'potential_inconsistency' && <AlertTriangle className="w-2.5 h-2.5" />}
+                            {finding.type === 'missing_connection'      && <Info className="w-2.5 h-2.5" />}
+                            {finding.type === 'requires_review'         && <Eye className="w-2.5 h-2.5" />}
+                            {finding.type === 'no_concerns'             && <Check className="w-2.5 h-2.5" />}
+                            {CONSISTENCY_BADGE[finding.type].label}
+                          </span>
+                        </div>
+                        <div className="p-3 space-y-2 bg-white">
                           <div className="text-[11px]">
-                            <span className="font-semibold text-navy">Field B: </span>
-                            <span className="text-navy">{finding.conflictB}</span>
+                            <span className="font-semibold text-navy">Field A: </span>
+                            <span className="text-navy">{finding.conflictA}</span>
                           </div>
-                        )}
-                        <div className="text-[11px] text-slate border-t border-border pt-2">
-                          <span className="font-semibold">Why this may be inconsistent: </span>
-                          {finding.explanation}
-                        </div>
-                        <div className="text-[11px] text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-1.5">
-                          <span className="font-semibold">Suggested action: </span>
-                          {finding.suggestedAction}
+                          {finding.conflictB && (
+                            <div className="text-[11px]">
+                              <span className="font-semibold text-navy">Field B: </span>
+                              <span className="text-navy">{finding.conflictB}</span>
+                            </div>
+                          )}
+                          <div className="text-[11px] text-slate border-t border-border pt-2">
+                            <span className="font-semibold">Why this may be inconsistent: </span>
+                            {finding.explanation}
+                          </div>
+                          <div className="text-[11px] text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-2.5 py-1.5">
+                            <span className="font-semibold">Suggested action: </span>
+                            {finding.suggestedAction}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
 
-                  <div className="text-[10px] text-slate italic bg-slate-50 border border-border rounded-lg px-3 py-2">
-                    Consistency findings are for clinician review only. No changes have been made to the note. Only the clinician may correct documentation.
+                    <div className="text-[10px] text-slate italic bg-slate-50 border border-border rounded-lg px-3 py-2">
+                      Consistency findings are for clinician review only. No changes have been made to the note. Only the clinician may correct documentation.
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={runConsistency}
+                      className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Re-check
+                    </button>
                   </div>
+                )}
 
-                  <button
-                    type="button"
-                    onClick={runConsistency}
-                    className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                  >
-                    <RotateCcw className="w-3 h-3" /> Re-check
-                  </button>
-                </div>
-              )}
+                {/* ── IDLE state — Run button ── */}
+                {status === 'idle' && !error && (
+                  <div className="space-y-3">
+                    {activeAction === 'draft' && !patient && (
+                      <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-none" />
+                        Select a patient above before generating a draft.
+                      </div>
+                    )}
+                    {activeAction === 'clarity' && fields.every(f => !values[f]?.trim()) && (
+                      <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-none" />
+                        Enter note content before requesting a clarity review.
+                      </div>
+                    )}
 
-              {/* ── IDLE state — Run button ── */}
-              {status === 'idle' && !error && (
-                <div className="space-y-3">
-                  {activeAction === 'draft' && !patient && (
-                    <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
-                      <AlertTriangle className="w-3.5 h-3.5 flex-none" />
-                      Select a patient above before generating a draft.
-                    </div>
-                  )}
-                  {activeAction === 'clarity' && fields.every(f => !values[f]?.trim()) && (
-                    <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
-                      <AlertTriangle className="w-3.5 h-3.5 flex-none" />
-                      Enter note content before requesting a clarity review.
-                    </div>
-                  )}
+                    <button
+                      type="button"
+                      onClick={handleRun}
+                      disabled={
+                        (activeAction === 'draft'    && !patient) ||
+                        (activeAction === 'clarity'  && fields.every(f => !values[f]?.trim()))
+                      }
+                      className="flex items-center gap-2 w-full justify-center bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold px-4 py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      {activeAction === 'draft'       && 'Generate Draft Progress Note'}
+                      {activeAction === 'clarity'     && 'Review Clarity'}
+                      {activeAction === 'necessity'   && 'Check Medical Necessity'}
+                      {activeAction === 'consistency' && 'Check Internal Consistency'}
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={handleRun}
-                    disabled={
-                      (activeAction === 'draft' && !patient) ||
-                      (activeAction === 'clarity' && fields.every(f => !values[f]?.trim()))
-                    }
-                    className="flex items-center gap-2 w-full justify-center bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold px-4 py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    {activeAction === 'draft'       && 'Generate Draft Progress Note'}
-                    {activeAction === 'clarity'     && 'Review Clarity'}
-                    {activeAction === 'necessity'   && 'Check Medical Necessity'}
-                    {activeAction === 'consistency' && 'Check Internal Consistency'}
-                  </button>
+                    {activeAction === 'draft' && !patient && (
+                      <div className="text-xs text-slate text-center italic">
+                        Not enough documented information to generate a clinically supported draft.
+                        <br />
+                        Missing: Patient selection
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                  {/* Insufficient info message when no patient for draft */}
-                  {activeAction === 'draft' && !patient && (
-                    <div className="text-xs text-slate text-center italic">
-                      Not enough documented information to generate a clinically supported draft.
-                      <br />
-                      Missing: Patient selection
-                    </div>
-                  )}
-                </div>
-              )}
-
+                {/* Bottom padding for scroll clearance */}
+                <div className="h-2" />
+              </div>
             </div>
 
             {/* ── Panel footer ── */}
