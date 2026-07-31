@@ -12,388 +12,275 @@
  *  - Must be acknowledged before it can be snoozed or resolved.
  *  - Acknowledgment ≠ resolution; both are explicit separate actions.
  *  - Audit entry written on resolve.
+ *
+ * Overflow menu:
+ *  - Rendered via ReactDOM.createPortal so it is never clipped by the panel's
+ *    overflow-y:auto or max-height constraints.
+ *  - Auto-flips above its trigger when insufficient space exists below.
+ *  - Repositions on scroll (capture) and window resize.
+ *  - Accessible: focus moves to first item on open; returns to trigger on close;
+ *    Arrow keys navigate items; Escape closes.
  */
 
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import React, {
+  useEffect, useRef, useState, useMemo, useCallback,
+} from 'react';
+import { createPortal } from 'react-dom';
 import {
-  X, AlertCircle, AlertTriangle, Info, CheckCircle,
-  ExternalLink, BellOff, Check, CheckCheck, Clock,
-  MoreHorizontal, ShieldCheck,
+  X, ExternalLink, BellOff, Check, CheckCheck, Clock,
+  MoreHorizontal, ShieldCheck, CheckCircle,
 } from 'lucide-react';
 import { Screen } from '../../App';
-import { MOCK_PATIENTS } from '../../data/mockPatients';
 import { useDemoStore } from '../../store/demoStore';
+import {
+  ALL_NOTIFICATIONS, ALL_NOTIFICATION_IDS,
+  LEVEL_CONFIG, CATEGORY_TABS, SNOOZE_OPTIONS,
+  type NotifCategory,
+} from '../../data/notificationData';
+import { useActiveNotifications, type ActiveNotification } from '../../hooks/useActiveNotifications';
+
+// Re-export so Topbar does not need a separate import path (backward compat)
+export { ALL_NOTIFICATION_IDS } from '../../data/notificationData';
+export { type NotifCategory } from '../../data/notificationData';
 
 interface Props {
   onClose: () => void;
   navigate: (s: Screen, patientId?: string) => void;
 }
 
-// ── Notification type ─────────────────────────────────────────────────────────
+// ── Portal overflow menu ───────────────────────────────────────────────────────
 
-interface Notification {
-  id: string;
-  /**
-   * Stable key used for deduplication.
-   * Format: `{filterTag}:{category-slug}:{patientId|'_'}:{screen|'_'}`
-   * Two notifications with the same dedupeKey are considered the same
-   * unresolved issue — only the first is shown.
-   */
-  dedupeKey: string;
-  level: 'critical' | 'warning' | 'info' | 'success';
-  category: string;
-  filterTag: NotifCategory;
-  title: string;
-  body: string;
-  time: string;
-  responsible?: string;
-  patientId?: string;
-  screen?: Screen;
-  /** True for critical-clinical items — acknowledgment required before snooze/resolve */
-  requiresAck?: boolean;
-  /** Pre-computed specific primary action label */
-  actionLabel: string;
+const MENU_WIDTH = 208; // w-52 = 13rem
+
+interface MenuPos {
+  openAbove: boolean;
+  top?: number;
+  bottom?: number;
+  left: number;
 }
 
-export type NotifCategory =
-  | 'critical-clinical'
-  | 'documentation'
-  | 'medication'
-  | 'authorization'
-  | 'billing'
-  | 'compliance'
-  | 'scheduling'
-  | 'system';
-
-// ── Action label derivation ───────────────────────────────────────────────────
-
-function deriveActionLabel(
-  filterTag: NotifCategory,
-  category: string,
-  screen?: Screen,
-): string {
-  if (filterTag === 'critical-clinical') {
-    if (category === 'AMA Risk')       return 'Review AMA Risk';
-    if (category === 'Positive UA')    return 'Open Patient Chart';
-    if (category === 'Clinical Alert') return 'Open Patient Chart';
-    if (category === 'Mood Alert')     return 'Open Patient Chart';
-    return 'Open Patient Chart';
+function computeMenuPos(rect: DOMRect): MenuPos {
+  const MENU_EST_H = 200; // conservative px estimate for flip decision
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const openAbove   = spaceBelow < MENU_EST_H && rect.top > MENU_EST_H;
+  const left = Math.min(
+    Math.max(8, rect.right - MENU_WIDTH),
+    window.innerWidth - MENU_WIDTH - 8,
+  );
+  if (openAbove) {
+    return { openAbove: true, bottom: window.innerHeight - rect.top + 4, left };
   }
-  if (filterTag === 'documentation') {
-    if (screen === 'CosignQueue') return 'Open Co-Sign Queue';
-    if (screen === 'ChartReview') return 'Open Chart Review';
-    if (screen === 'Discharges')  return 'Open Discharge Plan';
-    return 'Open Documentation';
-  }
-  if (filterTag === 'medication')     return 'Review Medication Issue';
-  if (filterTag === 'authorization')  return 'Open Authorization';
-  if (filterTag === 'billing')        return 'Open Claim';
-  if (filterTag === 'compliance')     return 'Review Compliance Item';
-  if (filterTag === 'scheduling')     return 'Open Calendar';
-  if (filterTag === 'system')         return 'Open Patient Chart';
-  return 'Open';
+  return { openAbove: false, top: rect.bottom + 4, left };
 }
 
-// ── Snooze duration helpers ───────────────────────────────────────────────────
-
-const SNOOZE_OPTIONS: { label: string; ms: () => number }[] = [
-  { label: 'Snooze 1 hour',         ms: () => Date.now() + 1  * 60 * 60 * 1000 },
-  { label: 'Snooze 4 hours',        ms: () => Date.now() + 4  * 60 * 60 * 1000 },
-  { label: 'Snooze until tomorrow', ms: () => Date.now() + 24 * 60 * 60 * 1000 },
-];
-
-// ── Build notification list (with deduplication) ───────────────────────────────
-
-function buildNotifications(): Notification[] {
-  const raw: Notification[] = [];
-
-  MOCK_PATIENTS.forEach(p => {
-    const name = `${p.firstName} ${p.lastName}`;
-
-    if (p.amaRisk === 'High') {
-      const filterTag: NotifCategory = 'critical-clinical';
-      const category = 'AMA Risk';
-      const screen: Screen = 'PatientDetail';
-      raw.push({
-        id: `ama-${p.id}`,
-        dedupeKey: `${filterTag}:ama:${p.id}:${screen}`,
-        level: 'critical', category, filterTag,
-        title: `AMA High Risk — ${name}`,
-        body: `${p.program} | ${p.primaryDiagnosis.split(' ').slice(0, 4).join(' ')}. Immediate counselor check-in recommended.`,
-        time: '8 min ago', responsible: 'Clinical Team',
-        patientId: p.id, screen, requiresAck: true,
-        actionLabel: deriveActionLabel(filterTag, category, screen),
-      });
-    }
-
-    if (p.lastUa && p.lastUa !== 'Negative' && p.lastUa !== 'Pending') {
-      const filterTag: NotifCategory = 'critical-clinical';
-      const category = 'Positive UA';
-      const screen: Screen = 'PatientDetail';
-      raw.push({
-        id: `ua-${p.id}`,
-        dedupeKey: `${filterTag}:ua:${p.id}:${screen}`,
-        level: 'critical', category, filterTag,
-        title: `Positive UA — ${name}`,
-        body: `${p.lastUa}. Physician notification required. Treatment plan review recommended.`,
-        time: '24 min ago', responsible: 'Prescriber',
-        patientId: p.id, screen, requiresAck: true,
-        actionLabel: deriveActionLabel(filterTag, category, screen),
-      });
-    }
-
-    if (p.craving >= 7) {
-      const filterTag: NotifCategory = 'critical-clinical';
-      const category = 'Clinical Alert';
-      const screen: Screen = 'PatientDetail';
-      raw.push({
-        id: `craving-${p.id}`,
-        dedupeKey: `${filterTag}:craving:${p.id}:${screen}`,
-        level: 'warning', category, filterTag,
-        title: `High Craving Score — ${name}`,
-        body: `Craving ${p.craving}/10. Mood ${p.mood}/10. ${p.program}. MAT adjustment may be indicated.`,
-        time: '1 hr ago', responsible: 'Primary Counselor',
-        patientId: p.id, screen,
-        actionLabel: deriveActionLabel(filterTag, category, screen),
-      });
-    }
-
-    if (p.mood <= 3) {
-      const filterTag: NotifCategory = 'critical-clinical';
-      const category = 'Mood Alert';
-      const screen: Screen = 'PatientDetail';
-      raw.push({
-        id: `mood-${p.id}`,
-        dedupeKey: `${filterTag}:mood:${p.id}:${screen}`,
-        level: 'warning', category, filterTag,
-        title: `Low Mood Score — ${name}`,
-        body: `Mood self-report ${p.mood}/10. Safety screening recommended per policy.`,
-        time: '2 hr ago', responsible: 'Assigned Counselor',
-        patientId: p.id, screen,
-        actionLabel: deriveActionLabel(filterTag, category, screen),
-      });
-    }
-
-    p.notes?.forEach(n => {
-      if (n.status === 'Awaiting Co-sign') {
-        const filterTag: NotifCategory = 'documentation';
-        const category = 'Co-sign Required';
-        const screen: Screen = 'CosignQueue';
-        raw.push({
-          id: `cosign-${p.id}-${n.id}`,
-          dedupeKey: `${filterTag}:cosign:${p.id}:${n.id}`,
-          level: 'info', category, filterTag,
-          title: `Co-sign Required — ${name}`,
-          body: `${n.type} by ${n.author} dated ${n.date}. Pending clinical director review.`,
-          time: '3 hr ago', responsible: 'Clinical Supervisor',
-          screen, actionLabel: deriveActionLabel(filterTag, category, screen),
-        });
-      }
-    });
-  });
-
-  // Authorization
-  (['auth-1', 'auth-2'] as const).forEach((id, i) => {
-    const filterTag: NotifCategory = 'authorization';
-    const category = 'Auth Expiring';
-    const screen: Screen = 'InsuranceAuthorization';
-    const name  = i === 0 ? 'Marcus Webb'  : 'Donna Reyes';
-    const pid   = i === 0 ? 'p1'           : 'p2'; // stable patient surrogate for dedup
-    const days  = i === 0 ? '2 days (07/29)' : '3 days (07/30)';
-    const payer = i === 0 ? 'Aetna'        : 'BlueCross';
-    raw.push({
-      id,
-      dedupeKey: `${filterTag}:auth-expiring:${pid}:${screen}`,
-      level: 'warning', category, filterTag,
-      title: `Authorization Expiring — ${name}`,
-      body: `${payer} authorization expires in ${days}. UR review required immediately.`,
-      time: '4 hr ago', responsible: 'UR Coordinator',
-      screen, actionLabel: deriveActionLabel(filterTag, category, screen),
-    });
-  });
-
-  // Documentation
-  {
-    const filterTag: NotifCategory = 'documentation';
-    const screen: Screen = 'ChartReview';
-    raw.push({
-      id: 'chart-1',
-      dedupeKey: `${filterTag}:chart-deficiency:_:${screen}`,
-      level: 'info', category: 'Chart Deficiency', filterTag,
-      title: '3 Charts Overdue for Completion',
-      body: 'Jordan Kim, Tyler Brooks, Gregory Mills have documentation deficiencies >48 hours.',
-      time: '6 hr ago', responsible: 'Assigned Clinicians',
-      screen, actionLabel: deriveActionLabel(filterTag, 'Chart Deficiency', screen),
-    });
-
-    const dscreen: Screen = 'Discharges';
-    raw.push({
-      id: 'discharge-1',
-      dedupeKey: `${filterTag}:discharge-planning:sarah-okafor:${dscreen}`,
-      level: 'info', category: 'Discharge Planning', filterTag,
-      title: 'Discharge Tomorrow — Sarah Okafor',
-      body: 'Expected discharge 07/28. Discharge checklist is 80% complete. Aftercare plan needs signature.',
-      time: '8 hr ago', responsible: 'Primary Counselor',
-      screen: dscreen, actionLabel: deriveActionLabel(filterTag, 'Discharge Planning', dscreen),
-    });
-  }
-
-  // Medication
-  {
-    const filterTag: NotifCategory = 'medication';
-    const screen: Screen = 'NursingMAR';
-    raw.push({
-      id: 'med-1',
-      dedupeKey: `${filterTag}:mar-incomplete:_:${screen}`,
-      level: 'warning', category: 'Medication', filterTag,
-      title: 'MAR Incomplete — Evening Medications',
-      body: '3 patients have evening medications unrecorded. Nursing follow-up required before midnight.',
-      time: '5 hr ago', responsible: 'Charge Nurse',
-      screen, requiresAck: false,
-      actionLabel: deriveActionLabel(filterTag, 'Medication', screen),
-    });
-  }
-
-  // Compliance
-  {
-    const filterTag: NotifCategory = 'compliance';
-    const screen: Screen = 'WorkforceCompliance';
-    raw.push({
-      id: 'compliance-1',
-      dedupeKey: `${filterTag}:credential-expiry:sarah-jenkins:${screen}`,
-      level: 'warning', category: 'Credential Expiry', filterTag,
-      title: 'Credential Expiring — Sarah Jenkins',
-      body: 'CAC-AD III expires in 22 days. Renewal documentation must be submitted to HR.',
-      time: '1 day ago', responsible: 'HR / Staff',
-      screen, actionLabel: deriveActionLabel(filterTag, 'Credential Expiry', screen),
-    });
-  }
-
-  // Scheduling
-  {
-    const filterTag: NotifCategory = 'scheduling';
-    const screen: Screen = 'GroupSchedule';
-    raw.push({
-      id: 'sched-1',
-      dedupeKey: `${filterTag}:session-conflict:_:${screen}`,
-      level: 'info', category: 'Scheduling', filterTag,
-      title: 'Group Session Facilitator Conflict',
-      body: 'Thursday 2:00 PM CBT group has no assigned facilitator. Assign before 48 hrs prior.',
-      time: '2 hr ago', responsible: 'Clinical Supervisor',
-      screen, actionLabel: deriveActionLabel(filterTag, 'Scheduling', screen),
-    });
-  }
-
-  // Billing
-  {
-    const filterTag: NotifCategory = 'billing';
-    const screen: Screen = 'RevenueCycle';
-    raw.push({
-      id: 'billing-1',
-      dedupeKey: `${filterTag}:claim-denial:_:${screen}`,
-      level: 'warning', category: 'Claim Denial', filterTag,
-      title: '12 Claims Denied This Month',
-      body: 'Blue Cross: medical necessity not established (6). Medicaid: missing prior auth (6). Appeals due within 30 days.',
-      time: '3 hr ago', responsible: 'Billing Team',
-      screen, actionLabel: deriveActionLabel(filterTag, 'Claim Denial', screen),
-    });
-  }
-
-  // System / milestones
-  {
-    const filterTag: NotifCategory = 'system';
-    const screen: Screen = 'PatientDetail';
-    raw.push({
-      id: 'success-1',
-      dedupeKey: `${filterTag}:milestone:p15:${screen}`,
-      level: 'success', category: 'Milestone', filterTag,
-      title: 'Milestone — Aaron Fletcher',
-      body: '30 days continuous abstinence achieved. Consider milestone recognition at group today.',
-      time: '9 hr ago', screen, patientId: 'p15',
-      actionLabel: deriveActionLabel(filterTag, 'Milestone', screen),
-    });
-    raw.push({
-      id: 'success-2',
-      dedupeKey: `${filterTag}:milestone:p20:${screen}`,
-      level: 'success', category: 'Milestone', filterTag,
-      title: 'Discharge Outcome — Michelle Park',
-      body: 'IOP completion with housing secured and sponsor confirmed. Excellent outcome.',
-      time: '10 hr ago', screen, patientId: 'p20',
-      actionLabel: deriveActionLabel(filterTag, 'Milestone', screen),
-    });
-  }
-
-  // Deduplicate: only the first notification per dedupeKey reaches the active list
-  const seenKeys = new Set<string>();
-  return raw.filter(n => {
-    if (seenKeys.has(n.dedupeKey)) return false;
-    seenKeys.add(n.dedupeKey);
-    return true;
-  });
+interface OverflowMenuProps {
+  notification: ActiveNotification;
+  triggerEl: HTMLButtonElement;
+  onClose: () => void;
+  onSnooze: (id: string, ms: number) => void;
+  onMarkRead: (id: string) => void;
+  onResolve: (id: string) => void;
+  onOpenAckModal: (id: string) => void;
 }
 
-// ── Module-level constants (stable IDs) ───────────────────────────────────────
+function NotifOverflowMenu({
+  notification: n,
+  triggerEl,
+  onClose,
+  onSnooze,
+  onMarkRead,
+  onResolve,
+  onOpenAckModal,
+}: OverflowMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<MenuPos>(() =>
+    computeMenuPos(triggerEl.getBoundingClientRect()),
+  );
 
-const ALL_NOTIFICATIONS = buildNotifications();
+  // Focus first enabled menu item on mount
+  useEffect(() => {
+    const first = menuRef.current?.querySelector<HTMLElement>(
+      '[role="menuitem"]:not([disabled])',
+    );
+    first?.focus();
+  }, []);
 
-/** All stable notification IDs — exported so Topbar can derive the unread badge count */
-export const ALL_NOTIFICATION_IDS: string[] = ALL_NOTIFICATIONS.map(n => n.id);
+  // Return focus to the trigger button when the menu unmounts
+  useEffect(() => () => { triggerEl.focus(); }, [triggerEl]);
 
-/** IDs of critical-clinical notifications — used to compute the topbar badge */
-export const CRITICAL_NOTIFICATION_IDS: string[] = ALL_NOTIFICATIONS
-  .filter(n => n.filterTag === 'critical-clinical')
-  .map(n => n.id);
+  // Reposition on scroll (capture phase catches inner panel scroll too) + resize
+  useEffect(() => {
+    function reposition() {
+      setPos(computeMenuPos(triggerEl.getBoundingClientRect()));
+    }
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [triggerEl]);
 
-// ── Visual config ─────────────────────────────────────────────────────────────
+  // Click-outside: close unless click is on the trigger (handled by toggle)
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      const t = e.target as Node;
+      if (menuRef.current?.contains(t)) return;
+      if (triggerEl.contains(t)) return;
+      onClose();
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [triggerEl, onClose]);
 
-const LEVEL_CONFIG = {
-  critical: { icon: AlertCircle,   bg: 'bg-red-50',    border: 'border-l-red-400',    iconColor: 'text-red-500',   badge: 'bg-red-100 text-red-700' },
-  warning:  { icon: AlertTriangle, bg: 'bg-amber-50',  border: 'border-l-amber-400',  iconColor: 'text-amber-500', badge: 'bg-amber-100 text-amber-700' },
-  info:     { icon: Info,          bg: 'bg-blue-50',   border: 'border-l-blue-400',   iconColor: 'text-blue-500',  badge: 'bg-blue-100 text-blue-700' },
-  success:  { icon: CheckCircle,   bg: 'bg-green-50',  border: 'border-l-green-400',  iconColor: 'text-green-500', badge: 'bg-green-100 text-green-700' },
-};
+  // Arrow-key navigation + Escape
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onClose(); return; }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const items = Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])') ?? [],
+    );
+    const idx = items.indexOf(document.activeElement as HTMLElement);
+    const next = e.key === 'ArrowDown'
+      ? (idx + 1) % items.length
+      : (idx - 1 + items.length) % items.length;
+    items[next]?.focus();
+  }
 
-const CATEGORY_TABS: { id: NotifCategory | 'all'; label: string }[] = [
-  { id: 'all',               label: 'All' },
-  { id: 'critical-clinical', label: 'Clinical' },
-  { id: 'documentation',     label: 'Docs' },
-  { id: 'medication',        label: 'Meds' },
-  { id: 'authorization',     label: 'Auth' },
-  { id: 'billing',           label: 'Billing' },
-  { id: 'compliance',        label: 'Compliance' },
-  { id: 'scheduling',        label: 'Scheduling' },
-  { id: 'system',            label: 'System' },
-];
+  const needsAck   = !!(n.requiresAck && !n.acknowledged);
+  const canResolve = !n.requiresAck || n.acknowledged;
+
+  const style: React.CSSProperties = pos.openAbove
+    ? { position: 'fixed', bottom: pos.bottom, left: pos.left, width: MENU_WIDTH, zIndex: 9999 }
+    : { position: 'fixed', top: pos.top,    left: pos.left, width: MENU_WIDTH, zIndex: 9999 };
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      role="menu"
+      aria-label={`Actions for ${n.title}`}
+      style={style}
+      className="bg-white border border-border rounded-xl shadow-xl overflow-hidden"
+      onKeyDown={handleKeyDown}
+    >
+      {needsAck ? (
+        <>
+          <div className="px-3 py-2 text-[11px] text-slate bg-amber-50 border-b border-border">
+            Acknowledge first to enable snooze and resolve.
+          </div>
+          <button
+            role="menuitem"
+            type="button"
+            onClick={() => { onOpenAckModal(n.id); onClose(); }}
+            className="w-full text-left text-xs px-3 py-2 text-navy font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:bg-gray-100"
+          >
+            <ShieldCheck className="w-3 h-3 shrink-0" aria-hidden="true" />
+            Acknowledge
+          </button>
+          <div className="border-t border-border" />
+        </>
+      ) : (
+        <>
+          <div className="px-3 py-1.5 text-[10px] font-bold text-slate uppercase tracking-wider border-b border-border bg-gray-50">
+            Snooze
+          </div>
+          {SNOOZE_OPTIONS.map(opt => (
+            <button
+              key={opt.label}
+              role="menuitem"
+              type="button"
+              onClick={() => onSnooze(n.id, opt.ms())}
+              className="w-full text-left text-xs px-3 py-2 text-slate hover:bg-gray-50 hover:text-navy transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:bg-gray-100"
+            >
+              <Clock className="w-3 h-3 text-slate-400 shrink-0" aria-hidden="true" />
+              {opt.label}
+            </button>
+          ))}
+          <div className="border-t border-border" />
+        </>
+      )}
+
+      {!n.read && (
+        <button
+          role="menuitem"
+          type="button"
+          onClick={() => { onMarkRead(n.id); onClose(); }}
+          className="w-full text-left text-xs px-3 py-2 text-slate hover:bg-gray-50 hover:text-navy transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:bg-gray-100"
+        >
+          <Check className="w-3 h-3 text-slate-400 shrink-0" aria-hidden="true" />
+          Mark as read
+        </button>
+      )}
+
+      <button
+        role="menuitem"
+        type="button"
+        disabled={!canResolve}
+        onClick={() => { if (canResolve) { onResolve(n.id); onClose(); } }}
+        className={`w-full text-left text-xs px-3 py-2 transition-colors flex items-center gap-2 focus-visible:outline-none focus-visible:bg-gray-100 ${
+          canResolve
+            ? 'text-slate hover:bg-gray-50 hover:text-navy'
+            : 'text-slate-300 cursor-not-allowed'
+        }`}
+      >
+        <CheckCircle
+          className={`w-3 h-3 shrink-0 ${canResolve ? 'text-green-500' : 'text-slate-300'}`}
+          aria-hidden="true"
+        />
+        {canResolve ? 'Resolve' : 'Resolve (ack required)'}
+      </button>
+    </div>,
+    document.body,
+  );
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function NotificationPanel({ onClose, navigate }: Props) {
-  const panelRef       = useRef<HTMLDivElement>(null);
-  const overflowRef    = useRef<HTMLDivElement>(null);
-  const [filter, setFilter]           = useState<NotifCategory | 'all'>('all');
-  const [pendingAck, setPendingAck]   = useState<string | null>(null);
-  const [overflowId, setOverflowId]   = useState<string | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  // Tick every 60 seconds so snooze expiry is re-evaluated without user interaction
-  const [now, setNow] = useState(Date.now);
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(timer);
-  }, []);
+  const [filter, setFilter]         = useState<NotifCategory | 'all'>('all');
+  const [pendingAck, setPendingAck] = useState<string | null>(null);
+
+  // Portal overflow state: which notification's menu is open + the trigger element
+  const [overflowState, setOverflowState] = useState<{
+    notifId: string;
+    triggerEl: HTMLButtonElement;
+  } | null>(null);
+
+  // aria-live announcement when a snoozed notification reactivates
+  const [liveMsg, setLiveMsg] = useState('');
+
 
   const {
-    state,
+    notifications,
+    snoozedCount,
+    resolvedCount,
+    unreadTotal,
+  } = useActiveNotifications();
+
+  const {
     markRead, markAllRead,
     snoozeNotification,
     acknowledgeNotification,
     resolveNotification,
     addAuditEntry,
+    state,
   } = useDemoStore();
 
-  // Click-outside for the panel itself
+  // ── Close overflow when panel closes ─────────────────────────────────────────
+  // (Handled naturally: when NotificationPanel unmounts, overflowState cleanup
+  //  in NotifOverflowMenu returns focus to trigger and removes listeners.)
+
+  // Click-outside closes the panel (but not when clicking the overflow portal menu)
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      const t = e.target as Node;
+      if (panelRef.current && !panelRef.current.contains(t)) {
+        // Don't close if click was inside a portal overflow menu
+        const anyPortalMenu = document.querySelector('[role="menu"]');
+        if (anyPortalMenu && anyPortalMenu.contains(t)) return;
         onClose();
       }
     }
@@ -401,73 +288,43 @@ export function NotificationPanel({ onClose, navigate }: Props) {
     return () => document.removeEventListener('mousedown', handler);
   }, [onClose]);
 
-  // Click-outside for the overflow menu
-  useEffect(() => {
-    if (!overflowId) return;
-    function handler(e: MouseEvent) {
-      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
-        setOverflowId(null);
-      }
-    }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [overflowId]);
-
-  // Escape closes overflow menu first, then panel
+  // Escape: close overflow first, then panel
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       if (e.key !== 'Escape') return;
-      if (overflowId) { setOverflowId(null); return; }
+      if (overflowState) { setOverflowState(null); return; }
       onClose();
     }
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [overflowId, onClose]);
+  }, [overflowState, onClose]);
 
-  // Merge state — exclude resolved and actively snoozed
-  const notifications = useMemo(() => {
-    return ALL_NOTIFICATIONS
-      .filter(n => {
-        if (state.notificationResolvedIds.includes(n.id)) return false;
-        const snoozedUntil = state.notificationSnoozeExpiry[n.id] ?? 0;
-        if (snoozedUntil > now) return false;
-        return true;
-      })
-      .map(n => ({
-        ...n,
-        read:         state.notificationReadIds.includes(n.id),
-        acknowledged: state.notificationAcknowledgedIds.includes(n.id),
-      }));
-  }, [
-    state.notificationReadIds,
-    state.notificationAcknowledgedIds,
-    state.notificationResolvedIds,
-    state.notificationSnoozeExpiry,
-    now,
-  ]);
+  // Announce when snoozed count drops (a snooze expired and notification reactivated)
+  const prevSnoozedRef = useRef(snoozedCount);
+  useEffect(() => {
+    if (snoozedCount < prevSnoozedRef.current) {
+      const diff = prevSnoozedRef.current - snoozedCount;
+      setLiveMsg(`${diff} snoozed notification${diff > 1 ? 's' : ''} are now active again.`);
+      const t = setTimeout(() => setLiveMsg(''), 4000);
+      prevSnoozedRef.current = snoozedCount;
+      return () => clearTimeout(t);
+    }
+    prevSnoozedRef.current = snoozedCount;
+    return undefined;
+  }, [snoozedCount]);
 
-  // Active snooze count — for footer display
-  const snoozedCount = useMemo(() =>
-    ALL_NOTIFICATIONS.filter(n => (state.notificationSnoozeExpiry[n.id] ?? 0) > now).length,
-    [state.notificationSnoozeExpiry, now],
-  );
+  // ── Filtered view ─────────────────────────────────────────────────────────
 
-  const resolvedCount = state.notificationResolvedIds.length;
-
-  // Filtered view
   const visible = useMemo(() => {
     if (filter === 'all') return notifications;
     return notifications.filter(n => n.filterTag === filter);
   }, [notifications, filter]);
 
-  // Counts — both exclude resolved + snoozed (via `notifications`)
-  const unreadTotal   = notifications.filter(n => !n.read).length;
   const unreadVisible = visible.filter(n => !n.read).length;
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
-  const handlePrimaryAction = useCallback((n: typeof notifications[0]) => {
-    // Critical-clinical, not yet acknowledged → open acknowledgment modal
+  const handlePrimaryAction = useCallback((n: ActiveNotification) => {
     if (n.requiresAck && !n.acknowledged) {
       setPendingAck(n.id);
       return;
@@ -480,15 +337,9 @@ export function NotificationPanel({ onClose, navigate }: Props) {
   const handleAcknowledgeOnly = useCallback((id: string) => {
     acknowledgeNotification(id);
     setPendingAck(null);
-    // Write audit entry for the acknowledgment
     const n = ALL_NOTIFICATIONS.find(x => x.id === id);
     if (n) {
-      addAuditEntry({
-        staffName: 'Current User',
-        action: 'Acknowledged',
-        entity: 'Notification',
-        detail: n.title,
-      });
+      addAuditEntry({ staffName: 'Current User', action: 'Acknowledged', entity: 'Notification', detail: n.title });
     }
   }, [acknowledgeNotification, addAuditEntry]);
 
@@ -498,9 +349,7 @@ export function NotificationPanel({ onClose, navigate }: Props) {
     acknowledgeNotification(id);
     setPendingAck(null);
     addAuditEntry({
-      staffName: 'Current User',
-      action: 'Acknowledged',
-      entity: 'Notification',
+      staffName: 'Current User', action: 'Acknowledged', entity: 'Notification',
       detail: n?.title ?? id,
     });
     if (n?.screen) { navigate(n.screen, n.patientId); onClose(); }
@@ -508,33 +357,52 @@ export function NotificationPanel({ onClose, navigate }: Props) {
 
   const handleResolve = useCallback((id: string) => {
     const n = ALL_NOTIFICATIONS.find(x => x.id === id);
-    // Guard: critical-clinical must be acknowledged first (UI also enforces this)
     if (n?.requiresAck && !state.notificationAcknowledgedIds.includes(id)) return;
     resolveNotification(id);
-    setOverflowId(null);
     addAuditEntry({
-      staffName: 'Current User',
-      action: 'Resolved',
-      entity: 'Notification',
+      staffName: 'Current User', action: 'Resolved', entity: 'Notification',
       detail: n?.title ?? id,
     });
   }, [resolveNotification, addAuditEntry, state.notificationAcknowledgedIds]);
 
   const handleSnooze = useCallback((id: string, untilMs: number) => {
     snoozeNotification(id, untilMs);
-    setOverflowId(null);
   }, [snoozeNotification]);
 
-  // ── Group by severity for rendering ─────────────────────────────────────────
+  // Toggle overflow: open on a new notif, close if same notif clicked again
+  const handleOverflowToggle = useCallback((
+    e: React.MouseEvent<HTMLButtonElement>,
+    notifId: string,
+  ) => {
+    e.stopPropagation();
+    setOverflowState(prev =>
+      prev?.notifId === notifId
+        ? null
+        : { notifId, triggerEl: e.currentTarget },
+    );
+  }, []);
+
+  // ── Group by severity ─────────────────────────────────────────────────────
 
   const bySeverity = (['critical', 'warning', 'info', 'success'] as const)
     .map(level => ({ level, items: visible.filter(n => n.level === level) }))
     .filter(g => g.items.length > 0);
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── The notification whose overflow menu is open (if any) ─────────────────
+
+  const overflowNotif = overflowState
+    ? notifications.find(n => n.id === overflowState.notifId) ?? null
+    : null;
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <>
+      {/* Screen-reader live region for snooze expiry announcements */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {liveMsg}
+      </div>
+
       <div
         ref={panelRef}
         className="absolute top-full right-0 mt-2 w-[480px] bg-white rounded-xl shadow-2xl border border-border z-50 overflow-hidden"
@@ -576,7 +444,6 @@ export function NotificationPanel({ onClose, navigate }: Props) {
         {/* ── Category filter tabs ── */}
         <div className="flex gap-1 px-3 py-2 border-b border-border bg-white overflow-x-auto no-scrollbar">
           {CATEGORY_TABS.map(tab => {
-            // Per-tab unread = active (not resolved/snoozed) + unread + matching tag
             const tabUnread = tab.id === 'all'
               ? unreadTotal
               : notifications.filter(n => n.filterTag === tab.id && !n.read).length;
@@ -623,7 +490,7 @@ export function NotificationPanel({ onClose, navigate }: Props) {
               <BellOff className="w-8 h-8 text-gray-300" aria-hidden="true" />
               <div className="text-sm font-medium">No active notifications</div>
               <div className="text-xs">
-                {filter !== 'all' ? 'Try switching to "All"' : 'You\'re all caught up'}
+                {filter !== 'all' ? 'Try switching to "All"' : "You're all caught up"}
               </div>
             </div>
           ) : (
@@ -656,8 +523,6 @@ export function NotificationPanel({ onClose, navigate }: Props) {
                     const cfg     = LEVEL_CONFIG[n.level];
                     const NIcon   = cfg.icon;
                     const needsAck = n.requiresAck && !n.acknowledged;
-                    const canResolve = !n.requiresAck || n.acknowledged;
-                    const isOverflow = overflowId === n.id;
 
                     return (
                       <div
@@ -747,96 +612,17 @@ export function NotificationPanel({ onClose, navigate }: Props) {
                                 </button>
                               )}
 
-                              {/* Overflow menu ⋯ */}
-                              <div className="relative ml-auto" ref={isOverflow ? overflowRef : undefined}>
-                                <button
-                                  type="button"
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    setOverflowId(isOverflow ? null : n.id);
-                                  }}
-                                  aria-label={`More options for ${n.title}`}
-                                  aria-expanded={isOverflow}
-                                  aria-haspopup="menu"
-                                  className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-navy"
-                                >
-                                  <MoreHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
-                                </button>
-
-                                {isOverflow && (
-                                  <div
-                                    role="menu"
-                                    className="absolute right-0 top-full mt-1 w-52 bg-white border border-border rounded-xl shadow-xl z-50 overflow-hidden"
-                                  >
-                                    {/* Snooze options — only available after ack for critical-clinical */}
-                                    {(!n.requiresAck || n.acknowledged) ? (
-                                      <>
-                                        <div className="px-3 py-1.5 text-[10px] font-bold text-slate uppercase tracking-wider border-b border-border bg-gray-50">
-                                          Snooze
-                                        </div>
-                                        {SNOOZE_OPTIONS.map(opt => (
-                                          <button
-                                            key={opt.label}
-                                            role="menuitem"
-                                            type="button"
-                                            onClick={e => { e.stopPropagation(); handleSnooze(n.id, opt.ms()); }}
-                                            className="w-full text-left text-xs px-3 py-2 text-slate hover:bg-gray-50 hover:text-navy transition-colors flex items-center gap-2"
-                                          >
-                                            <Clock className="w-3 h-3 text-slate-400 shrink-0" aria-hidden="true" />
-                                            {opt.label}
-                                          </button>
-                                        ))}
-                                        <div className="border-t border-border" />
-                                      </>
-                                    ) : (
-                                      <>
-                                        <div className="px-3 py-2 text-[11px] text-slate bg-amber-50 border-b border-border">
-                                          Acknowledge first to enable snooze and resolve.
-                                        </div>
-                                        <button
-                                          role="menuitem"
-                                          type="button"
-                                          onClick={e => { e.stopPropagation(); setPendingAck(n.id); setOverflowId(null); }}
-                                          className="w-full text-left text-xs px-3 py-2 text-navy font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
-                                        >
-                                          <ShieldCheck className="w-3 h-3 shrink-0" aria-hidden="true" />
-                                          Acknowledge
-                                        </button>
-                                        <div className="border-t border-border" />
-                                      </>
-                                    )}
-
-                                    {/* Mark as read */}
-                                    {!n.read && (
-                                      <button
-                                        role="menuitem"
-                                        type="button"
-                                        onClick={e => { e.stopPropagation(); markRead(n.id); setOverflowId(null); }}
-                                        className="w-full text-left text-xs px-3 py-2 text-slate hover:bg-gray-50 hover:text-navy transition-colors flex items-center gap-2"
-                                      >
-                                        <Check className="w-3 h-3 text-slate-400 shrink-0" aria-hidden="true" />
-                                        Mark as read
-                                      </button>
-                                    )}
-
-                                    {/* Resolve */}
-                                    <button
-                                      role="menuitem"
-                                      type="button"
-                                      disabled={!canResolve}
-                                      onClick={e => { e.stopPropagation(); if (canResolve) handleResolve(n.id); }}
-                                      className={`w-full text-left text-xs px-3 py-2 transition-colors flex items-center gap-2 ${
-                                        canResolve
-                                          ? 'text-slate hover:bg-gray-50 hover:text-navy'
-                                          : 'text-slate-300 cursor-not-allowed'
-                                      }`}
-                                    >
-                                      <CheckCircle className={`w-3 h-3 shrink-0 ${canResolve ? 'text-green-500' : 'text-slate-300'}`} aria-hidden="true" />
-                                      {canResolve ? 'Resolve' : 'Resolve (ack required)'}
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                              {/* ⋯ overflow trigger — no relative positioning; menu is portalled */}
+                              <button
+                                type="button"
+                                onClick={e => handleOverflowToggle(e, n.id)}
+                                aria-label={`More actions for ${n.title}`}
+                                aria-expanded={overflowState?.notifId === n.id}
+                                aria-haspopup="menu"
+                                className="ml-auto p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-navy"
+                              >
+                                <MoreHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -852,7 +638,10 @@ export function NotificationPanel({ onClose, navigate }: Props) {
         {/* ── Footer ── */}
         <div className="px-4 py-2.5 border-t border-border bg-gray-50 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 text-[11px] text-slate">
-            <span>{unreadVisible > 0 ? `${unreadVisible} unread` : 'All caught up'}{filter !== 'all' && ' · Filtered'}</span>
+            <span>
+              {unreadVisible > 0 ? `${unreadVisible} unread` : 'All caught up'}
+              {filter !== 'all' && ' · Filtered'}
+            </span>
             {snoozedCount > 0 && (
               <span className="text-slate/60">· {snoozedCount} snoozed</span>
             )}
@@ -869,7 +658,21 @@ export function NotificationPanel({ onClose, navigate }: Props) {
         </div>
       </div>
 
-      {/* ── Acknowledgment modal ──────────────────────────────────────────────── */}
+      {/* ── Portal overflow menu ─────────────────────────────────────────────── */}
+      {overflowNotif && overflowState && (
+        <NotifOverflowMenu
+          key={overflowState.notifId}
+          notification={overflowNotif}
+          triggerEl={overflowState.triggerEl}
+          onClose={() => setOverflowState(null)}
+          onSnooze={(id, ms) => { handleSnooze(id, ms); setOverflowState(null); }}
+          onMarkRead={(id) => { markRead(id); }}
+          onResolve={(id) => { handleResolve(id); setOverflowState(null); }}
+          onOpenAckModal={(id) => { setPendingAck(id); setOverflowState(null); }}
+        />
+      )}
+
+      {/* ── Acknowledgment modal ─────────────────────────────────────────────── */}
       {pendingAck && (() => {
         const n = notifications.find(x => x.id === pendingAck)
           ?? ALL_NOTIFICATIONS.find(x => x.id === pendingAck);
@@ -899,8 +702,8 @@ export function NotificationPanel({ onClose, navigate }: Props) {
                 )}
                 <p className="text-xs text-slate mt-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   This is a <strong>critical clinical alert</strong>. Acknowledging confirms you have
-                  read this alert and are taking responsibility for follow-up.
-                  <strong> Acknowledgment does not resolve the alert.</strong>
+                  read this alert and are taking responsibility for follow-up.{' '}
+                  <strong>Acknowledgment does not resolve the alert.</strong>
                 </p>
               </div>
 
@@ -912,7 +715,6 @@ export function NotificationPanel({ onClose, navigate }: Props) {
                   Cancel
                 </button>
                 <div className="flex items-center gap-2">
-                  {/* Acknowledge only — stays in list, does NOT navigate */}
                   <button
                     onClick={() => handleAcknowledgeOnly(pendingAck)}
                     className="flex items-center gap-2 text-sm font-medium text-navy border border-navy px-3 py-1.5 rounded hover:bg-navy/5 transition-colors"
@@ -920,7 +722,6 @@ export function NotificationPanel({ onClose, navigate }: Props) {
                     <ShieldCheck className="w-3.5 h-3.5" />
                     Acknowledge Only
                   </button>
-                  {/* Acknowledge + open record */}
                   <button
                     onClick={() => handleAcknowledgeAndOpen(pendingAck)}
                     className="flex items-center gap-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition-colors"

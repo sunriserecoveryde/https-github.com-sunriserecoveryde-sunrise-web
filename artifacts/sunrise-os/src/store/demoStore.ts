@@ -6,6 +6,7 @@
  * synchronously whenever any component calls an update.
  */
 import { useSyncExternalStore, useCallback } from 'react';
+import { scheduleSnoozeCheck } from '../hooks/useNotifNow';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
 export const STORE_KEY   = 'sunrise_demo_state_v3';   // bumped: timed snooze, ack, resolved states
@@ -257,6 +258,8 @@ export function useDemoStore() {
         ? s.notificationReadIds
         : [...s.notificationReadIds, id],
     }));
+    // Wake the global timer early so Topbar badge updates at expiry, not up to 60 s later
+    scheduleSnoozeCheck(untilMs);
   }, []);
 
   /**
