@@ -1,0 +1,234 @@
+{
+  "phase": "1A \u2014 Server-Backed Persistence Foundation",
+  "branch": "readiness/p0-persistence-foundation",
+  "commits": {
+    "initial_implementation": "eb3956006d0d19bb35706cb55a366810caee517d",
+    "production_mock_safety_correction": "49f41910b7b36025af226ad248b978741b084747",
+    "usememo_stale_closure_fix": "9a5049389a77ab9f4754c4d55ff750fb4554c88e"
+  },
+  "final_commit": "9a5049389a77ab9f4754c4d55ff750fb4554c88e",
+  "merged_into_main": false,
+  "timestamp": "2026-08-01T12:00:00Z",
+  "files_changed": {
+    "added": [
+      "lib/db/src/client.ts",
+      "lib/db/src/schema/sunrise-os.ts",
+      "lib/db/src/repositories/errors.ts",
+      "lib/db/src/repositories/organizationRepo.ts",
+      "lib/db/src/repositories/facilityRepo.ts",
+      "lib/db/src/repositories/staffRepo.ts",
+      "lib/db/src/repositories/patientRepo.ts",
+      "lib/db/src/repositories/episodeRepo.ts",
+      "lib/db/src/repositories/index.ts",
+      "lib/db/src/repositories/__tests__/integration.test.ts",
+      "lib/db/vitest.config.ts",
+      "artifacts/api-server/src/middlewares/devIdentity.ts",
+      "artifacts/api-server/src/routes/patientsV1.ts",
+      "artifacts/api-server/src/seed/developmentSeed.ts",
+      "artifacts/sunrise-os/src/lib/dataMode.ts",
+      "docs/readiness/phase-1a-persistence-foundation.md"
+    ],
+    "modified": [
+      "lib/db/src/index.ts",
+      "lib/db/src/schema/index.ts",
+      "lib/db/package.json",
+      "artifacts/api-server/src/app.ts",
+      "artifacts/api-server/src/routes/index.ts",
+      "artifacts/api-server/package.json",
+      "artifacts/sunrise-os/src/pages/PatientList.tsx",
+      "artifacts/sunrise-os/src/pages/PatientDetail.tsx"
+    ],
+    "deleted": []
+  },
+  "database": {
+    "technology": "PostgreSQL (Replit-provisioned)",
+    "orm": "Drizzle ORM (drizzle-orm/pg-core)",
+    "migration_technology": "drizzle-kit push (no migration files)",
+    "migration_command": "pnpm --filter @workspace/db push",
+    "migration_result": "SUCCESS \u2014 [\u2713] Changes applied",
+    "rollback_procedure": "drizzle-kit push after reverting schema; or DROP TABLE sos_episodes_of_care, sos_patients, sos_staff_profiles, sos_user_identity_refs, sos_facilities, sos_organizations CASCADE",
+    "seed_command": "pnpm --filter @workspace/api-server run seed:dev",
+    "seed_result": "SUCCESS \u2014 1 org, 1 facility, 5 staff, 10 patients, 10 episodes"
+  },
+  "tables_created": [
+    "sos_organizations",
+    "sos_facilities",
+    "sos_user_identity_refs",
+    "sos_staff_profiles",
+    "sos_patients",
+    "sos_episodes_of_care"
+  ],
+  "seeded_record_counts": {
+    "organizations": 1,
+    "facilities": 1,
+    "staff_profiles": 5,
+    "user_identity_refs": 5,
+    "patients": 10,
+    "episodes_of_care": 10
+  },
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/patients",
+      "purpose": "List patients scoped to org + optional facility",
+      "identity_source": "req.devIdentity (Phase 1A dev adapter)",
+      "tenant_scope": "WHERE org_id = $orgId",
+      "facility_scope": "AND facility_id = $facilityId (when header present)",
+      "empty_behavior": "200 []",
+      "not_found_behavior": "N/A (returns empty array)",
+      "db_error_behavior": "503"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/patients/:id",
+      "purpose": "Single patient record + active episode",
+      "identity_source": "req.devIdentity",
+      "tenant_scope": "WHERE id = $id AND org_id = $orgId",
+      "invalid_id_behavior": "400",
+      "not_found_behavior": "404 (opaque \u2014 same as cross-tenant)",
+      "access_denied_behavior": "404 (opaque \u2014 does not reveal cross-tenant existence)",
+      "db_error_behavior": "503"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/patients/:id/episode",
+      "purpose": "Active episode for one patient (patient ownership verified first)",
+      "identity_source": "req.devIdentity",
+      "patient_verification": "getPatient(id, orgId) runs first \u2014 404 if cross-tenant",
+      "no_episode_behavior": "404 'No active episode found'",
+      "db_error_behavior": "503"
+    }
+  ],
+  "repository_functions": [
+    "createOrganization",
+    "getOrganization",
+    "listOrganizations",
+    "createFacility",
+    "getFacility",
+    "listFacilities",
+    "createPatient",
+    "getPatient",
+    "listPatients",
+    "createEpisode",
+    "getActiveEpisode",
+    "listPatientEpisodes",
+    "createStaff",
+    "getStaff",
+    "listStaff"
+  ],
+  "test_commands": {
+    "db_integration": "pnpm --filter @workspace/db run test",
+    "sunrise_os_typecheck": "pnpm --filter @workspace/sunrise-os run typecheck",
+    "api_server_typecheck": "pnpm --filter @workspace/api-server run typecheck",
+    "production_build": "PORT=5173 BASE_PATH=/sunrise-os VITE_SUNRISE_DATA_MODE=demo pnpm --filter @workspace/sunrise-os run build"
+  },
+  "test_results": {
+    "db_integration_tests": {
+      "files": 1,
+      "total": 23,
+      "passed": 23,
+      "failed": 0,
+      "skipped": 0,
+      "duration_ms": 1890
+    },
+    "sunrise_os_typecheck": "PASS \u2014 0 errors",
+    "api_server_typecheck": "PASS \u2014 0 errors",
+    "production_build": "PASS \u2014 3143 modules, built in 14.39s (pre-existing large-chunk warning only)"
+  },
+  "tenant_isolation_results": {
+    "org_a_list_returns_own_patients": "PASS \u2014 10 patients",
+    "org_b_list_returns_zero": "PASS \u2014 0 patients",
+    "facility_scoped_list_correct": "PASS \u2014 all in Fac A",
+    "wrong_facility_returns_zero": "PASS \u2014 0 patients",
+    "cross_org_patient_by_id": "PASS \u2014 404",
+    "cross_org_episode": "PASS \u2014 404",
+    "invalid_uuid": "PASS \u2014 400",
+    "nonexistent_uuid_opaque": "PASS \u2014 404 (no cross-tenant disclosure)"
+  },
+  "facility_isolation_result": "PASS \u2014 facility_id filter enforced in listPatients",
+  "demo_mode_result": "PASS \u2014 MOCK_PATIENTS used exclusively when DATA_MODE === 'demo'",
+  "production_no_fallback_result": "PASS \u2014 code-verified; mock data never rendered when DATA_MODE === 'production'",
+  "localStorage_review": {
+    "result": "PASS",
+    "findings": [
+      {
+        "location": "useSidebarPrefs.ts",
+        "key": "sunrise-os:sidebar-prefs:<staffId>",
+        "class": "UI preference",
+        "contains_patient_data": "patient id + display name (navigation convenience only, not clinical)"
+      },
+      {
+        "location": "CommandPalette.tsx",
+        "key": "DEMO_QUERY_KEY / RECENT_DEMO_QUERIES_KEY",
+        "storage": "sessionStorage",
+        "class": "Demo-only convenience",
+        "contains_patient_data": false
+      },
+      {
+        "location": "Sidebar.tsx",
+        "key": "SESSION_OPEN_KEY / SESSION_COMPACT_KEY",
+        "storage": "sessionStorage",
+        "class": "Non-clinical UI preference",
+        "contains_patient_data": false
+      },
+      {
+        "location": "UADrugTesting.tsx",
+        "key": "sunrise-os:ua-workflow-items",
+        "class": "Non-clinical workflow UI state",
+        "contains_patient_data": false
+      },
+      {
+        "location": "WorkforceCompliance.tsx",
+        "key": "various COMPLIANCE_* keys",
+        "class": "Non-clinical UI filter preferences",
+        "contains_patient_data": false
+      },
+      {
+        "location": "useRecordingStore.ts",
+        "storage": "IndexedDB",
+        "class": "Transient session audio blob (in-progress recording only)",
+        "contains_patient_data": false
+      }
+    ],
+    "conclusion": "No production patient or episode records stored in browser storage. Server is authoritative."
+  },
+  "development_identity_safety": {
+    "result": "PASS (Phase 1A scope)",
+    "adapter_disabled_in_production": true,
+    "browser_can_override_in_dev": true,
+    "known_limitation": "In dev mode, browser can supply arbitrary X-Dev-Org-Id. Acceptable because DB contains only fictitious seed data."
+  },
+  "screenshots": [
+    {
+      "filename": "01-patient-list-production-mode.jpg",
+      "mode": "demo",
+      "screen": "Login / App landing",
+      "viewport": "1440x900",
+      "data_source": "n/a (login screen)",
+      "state": "Login picker with demo mode banner",
+      "note": "Production-mode Patient List requires authenticated browser session; code evidence in architecture doc"
+    },
+    {
+      "filename": "03-demo-mode-indicator.jpg",
+      "mode": "demo",
+      "screen": "Demo mode banner",
+      "viewport": "1440x100 (cropped to banner)",
+      "data_source": "Demo \u2014 MOCK_PATIENTS",
+      "state": "Orange Demo Mode banner visible"
+    }
+  ],
+  "known_limitations": [
+    "No authentication \u2014 dev identity adapter trusts browser-supplied headers in dev mode",
+    "Error response in production when devIdentity absent is 500, not 401 \u2014 Phase 2 fix required",
+    "Clinical data (notes, goals, ASAM, medications, vitals) not persisted \u2014 Phase 1B",
+    "Demo Mode banner not suppressed in production mode \u2014 must be gated before real patient use",
+    "sos_user_identity_refs.ext_auth_ref is always null \u2014 Phase 2",
+    "No audit event persistence",
+    "Pages outside PatientList/PatientDetail still use MOCK_PATIENTS unconditionally"
+  ],
+  "deferred_work": {
+    "phase_2": "Replace devIdentityMiddleware with real authentication; populate user identity refs; all routes return 401 for unauthenticated requests",
+    "phase_1b": "Persist clinical notes, treatment goals, ASAM scores to database; migrate ProgressNotes.tsx and PatientDetail note/goal sections to server mode",
+    "future": "Migrate remaining pages (FinancialCounseling, RecoveryEngagementScore, MedicalRecords, CommandPalette, notification data) to server-backed data; audit persistence; per-user role/permission persistence"
+  }
+}

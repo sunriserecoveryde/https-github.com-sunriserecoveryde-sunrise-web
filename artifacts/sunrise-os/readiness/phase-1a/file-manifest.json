@@ -1,0 +1,142 @@
+[
+  {
+    "path": "architecture/phase-1a-persistence-foundation.md",
+    "sha256": "26be238198671572150d60011a2d1500de265339920f002e99e788cb9defcce0",
+    "size_bytes": 16353
+  },
+  {
+    "path": "db/schema/sunrise-os.ts",
+    "sha256": "30e21f98f752e1b3fb662c44aaf134e4d108c17b45eddb5f9b7c794e2cca6776",
+    "size_bytes": 8041
+  },
+  {
+    "path": "db/schema/index.ts",
+    "sha256": "3f8fa24daf95cdb38dff5d828469fe03bc472f07d94430a4352188c0d2b5c7d5",
+    "size_bytes": 879
+  },
+  {
+    "path": "db/client.ts",
+    "sha256": "0bc6a49f96f965b58671caa21a19410221286ea48db6c55bc62ca91cc4a39e0b",
+    "size_bytes": 583
+  },
+  {
+    "path": "db/index.ts",
+    "sha256": "0c25160bfbbeaef565c5f572f3037aa48035d028cd99417f4370a8b7a19ad727",
+    "size_bytes": 95
+  },
+  {
+    "path": "db/repositories/errors.ts",
+    "sha256": "b8afb21ebd367c4a3cdb81ca3198521c10347824dbf3cf6b19ea7c037c4ea835",
+    "size_bytes": 749
+  },
+  {
+    "path": "db/repositories/organizationRepo.ts",
+    "sha256": "f1e586e3329ed64bf3d4eaa8812d93051dc7fac4affb6a05aba9748e791ca9fc",
+    "size_bytes": 1100
+  },
+  {
+    "path": "db/repositories/facilityRepo.ts",
+    "sha256": "e33cbdfaeb260ee077be7580e3ffcae7faea19c27416d1c57696e0a5bece33cb",
+    "size_bytes": 1284
+  },
+  {
+    "path": "db/repositories/staffRepo.ts",
+    "sha256": "c687cc60da6c1ec93f85c458940b6f62945875b6f63b7a1b585b738ed5086379",
+    "size_bytes": 1724
+  },
+  {
+    "path": "db/repositories/patientRepo.ts",
+    "sha256": "4aabdd5bf2cfa89062d5cc8304d0fa085381f48eedd20f0520ff579a56246bb7",
+    "size_bytes": 3274
+  },
+  {
+    "path": "db/repositories/episodeRepo.ts",
+    "sha256": "816083430fbab529292145ef82bdab7704d13499cffa510ed05b77322b463d60",
+    "size_bytes": 1582
+  },
+  {
+    "path": "db/repositories/index.ts",
+    "sha256": "0d91cd0ecb38026625d444df1d2ae349b91493718d84be24c3201eb036650a00",
+    "size_bytes": 185
+  },
+  {
+    "path": "db/vitest.config.ts",
+    "sha256": "c104b0eaa47919750876936b9dce1b08e91a61858e3f7837a327eb541117f9a4",
+    "size_bytes": 388
+  },
+  {
+    "path": "api-server/middlewares/devIdentity.ts",
+    "sha256": "358be59fca4e9e0107e0fa7ab698654e6393c2473286d467bebf483220f01e2a",
+    "size_bytes": 1573
+  },
+  {
+    "path": "api-server/routes/patientsV1.ts",
+    "sha256": "89e72e97d897f845a4f4eca4782e895dc1cc8c8fd603aa8a476382d28294e7b3",
+    "size_bytes": 3523
+  },
+  {
+    "path": "api-server/routes/index.ts",
+    "sha256": "6908963c34bbbd0fb3de252fea8101c3ddb6258fa161f11e7ac5682a240d8052",
+    "size_bytes": 728
+  },
+  {
+    "path": "api-server/app.ts",
+    "sha256": "85cb83cd81dd70812c34f7187ca0e6c33f623e7e117c78d2627fde4a4fc968e5",
+    "size_bytes": 2213
+  },
+  {
+    "path": "api-server/seed/developmentSeed.ts",
+    "sha256": "fa6d2aad47754347faac8c187f944d3751b5c03e6addae6223b85934e13e2979",
+    "size_bytes": 8012
+  },
+  {
+    "path": "frontend/dataMode.ts",
+    "sha256": "0d3d173580d5b71aeeb86634f89590bb6d7030c8140f54727877fbe67d962256",
+    "size_bytes": 1562
+  },
+  {
+    "path": "frontend/PatientList.tsx",
+    "sha256": "926feaf4592176f00722ae803b23232e973167312f1285264a76388e1a74fec9",
+    "size_bytes": 51334
+  },
+  {
+    "path": "frontend/PatientDetail.tsx",
+    "sha256": "836c343daa7cf0089614104af89daa2ed8b0bd972d56e2706bd9ff7d2c1047bb",
+    "size_bytes": 126418
+  },
+  {
+    "path": "tests/integration.test.ts",
+    "sha256": "a7d08639359306584c1bd5f8766a2346142a6ce77e246c7d0189de3aef9197dd",
+    "size_bytes": 10713
+  },
+  {
+    "path": "tests/test-output-sanitized.txt",
+    "sha256": "7c9aedd9b4ddf546d04d919d9a80f197c44302c200e8b216540c5ba4810106aa",
+    "size_bytes": 2443
+  },
+  {
+    "path": "api-examples/api-examples-sanitized.txt",
+    "sha256": "5ec28d5a1b5ffeba6dfb8a82f8472fbace473770c67a8c66053bca0e38580f10",
+    "size_bytes": 1854
+  },
+  {
+    "path": "diff/phase-1a.diff",
+    "sha256": "303ab6df13cdbd63402e3e4942f0728f6f8efb6f13a4f0dea00f0c70f94f5353",
+    "size_bytes": 75229
+  },
+  {
+    "path": "screenshots/01-patient-list-production-mode.jpg",
+    "sha256": "47c6a0cbe1692fa457bd1f3f781c5910321963a7d342106b0280eff7b6898bd6",
+    "size_bytes": 109289
+  },
+  {
+    "path": "screenshots/03-demo-mode-indicator.jpg",
+    "sha256": "9389ea903da6342405fb982b50fe9e169d408b17153c92011101dd1f1ebab36d",
+    "size_bytes": 17478
+  },
+  {
+    "path": "evidence-manifest.json",
+    "sha256": "8d374d47d9f1d7e45b0db385b67053c4bd9730b30465f32a2d320307e8fd18c8",
+    "size_bytes": 9699
+  }
+]
