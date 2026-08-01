@@ -145,6 +145,34 @@ export function filterAcceptAllUpdates(
   return { updates, staleFieldIds };
 }
 
+// ─── resolveNextStaleSection ──────────────────────────────────────────────────
+
+/**
+ * Advances through a queue of stale fieldIds to find the next ClaritySectionResult
+ * that should be surfaced to the clinician.
+ *
+ * Used by handleConfirmStaleAccept and handleDismissStaleAccept in
+ * ProgressNoteAIAssist.tsx so that every stale section is surfaced in order —
+ * not just the first one.
+ *
+ * @param remainingQueue  — fieldIds not yet surfaced (subset of the original staleFieldIds)
+ * @param sections        — the full ClarityReviewResult.sections list
+ * @returns { nextSection, newQueue } when there is another section to show,
+ *          or null when the queue is exhausted.
+ */
+export function resolveNextStaleSection(
+  remainingQueue: readonly ProgressNoteFieldId[],
+  sections: readonly ClaritySectionResult[],
+): { nextSection: ClaritySectionResult; newQueue: ProgressNoteFieldId[] } | null {
+  for (let i = 0; i < remainingQueue.length; i++) {
+    const section = sections.find(s => s.fieldId === remainingQueue[i]);
+    if (section) {
+      return { nextSection: section, newQueue: remainingQueue.slice(i + 1) };
+    }
+  }
+  return null;
+}
+
 // ─── applyClarityAcceptAll ────────────────────────────────────────────────────
 
 export function applyClarityAcceptAll(

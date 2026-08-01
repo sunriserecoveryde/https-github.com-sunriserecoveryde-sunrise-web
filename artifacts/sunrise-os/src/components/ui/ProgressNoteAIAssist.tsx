@@ -65,7 +65,7 @@ import {
   type ClaritySectionResult,
   type ClarityReviewResult,
 } from './clarityConfig';
-import { filterAcceptAllUpdates } from './clarityAcceptHelpers';
+import { filterAcceptAllUpdates, resolveNextStaleSection } from './clarityAcceptHelpers';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -785,6 +785,14 @@ export function ProgressNoteAIAssist({
   const [claritySectionRejected, setClaritySectionRejected] = useState<Set<ProgressNoteFieldId>>(new Set());
   /** Section pending stale-result confirmation; null when no warning is shown. */
   const [stalePending, setStalePending] = useState<ClaritySectionResult | null>(null);
+  /**
+   * Remaining stale fieldIds not yet surfaced, in order.
+   * Populated by handleAcceptAllClaritySections when multiple stale sections
+   * are detected. Consumed one-at-a-time by handleConfirmStaleAccept and
+   * handleDismissStaleAccept so that every stale section is reviewed — not
+   * just the first one.
+   */
+  const [staleQueue, setStaleQueue] = useState<ProgressNoteFieldId[]>([]);
   /** fieldIds whose original text is currently shown (toggled per-section). */
   const [showOriginalFields, setShowOriginalFields] = useState<Set<ProgressNoteFieldId>>(new Set());
 
@@ -893,6 +901,7 @@ export function ProgressNoteAIAssist({
     setDiscardWarning(false);
     // Dismiss stale warning when leaving the clarity tab.
     setStalePending(null);
+    setStaleQueue([]);
   }
 
   // ── Jump from review finding to exact note field ────────────────────────────
@@ -921,6 +930,7 @@ export function ProgressNoteAIAssist({
       setClaritySectionAccepted(new Set());
       setClaritySectionRejected(new Set());
       setStalePending(null);
+      setStaleQueue([]);
       setShowOriginalFields(new Set());
       setStatus('result');
       // When a specific section was flagged, scroll to it and briefly highlight it.
@@ -1531,6 +1541,7 @@ export function ProgressNoteAIAssist({
     setClaritySectionAccepted(new Set());
     setClaritySectionRejected(new Set());
     setStalePending(null);
+    setStaleQueue([]);
     setShowOriginalFields(new Set());
 
     try {
@@ -1580,13 +1591,47 @@ export function ProgressNoteAIAssist({
   function handleConfirmStaleAccept() {
     if (!stalePending || !clarityResult) return;
     const section = stalePending;
-    setStalePending(null);
     onAcceptClaritySection(section.fieldId, section.suggestedText);
     setClaritySectionAccepted(prev => new Set([...prev, section.fieldId]));
     emit('Clarity Section Revision Accepted', 'accepted-after-stale-warning', true, {
       fieldId: section.fieldId,
       reviewVersion: clarityResult.reviewedAt,
     });
+    // Advance to the next stale section in the queue, or clear when exhausted.
+    const next = resolveNextStaleSection(staleQueue, clarityResult.sections);
+    if (next) {
+      setStalePending(next.nextSection);
+      setStaleQueue(next.newQueue);
+      emit('Stale Clarity Revision Warning Displayed', 'warned', false, {
+        fieldId: next.nextSection.fieldId,
+        reviewVersion: clarityResult.reviewedAt,
+      });
+    } else {
+      setStalePending(null);
+      setStaleQueue([]);
+    }
+  }
+
+  /**
+   * Dismisses the current stale warning without accepting the revision, then
+   * advances to the next stale section in the queue (if any).
+   * Replaces the inline `setStalePending(null)` on the Cancel button so that
+   * dismissing one stale warning never silently drops the remaining ones.
+   */
+  function handleDismissStaleAccept() {
+    if (!clarityResult) { setStalePending(null); setStaleQueue([]); return; }
+    const next = resolveNextStaleSection(staleQueue, clarityResult.sections);
+    if (next) {
+      setStalePending(next.nextSection);
+      setStaleQueue(next.newQueue);
+      emit('Stale Clarity Revision Warning Displayed', 'warned', false, {
+        fieldId: next.nextSection.fieldId,
+        reviewVersion: clarityResult.reviewedAt,
+      });
+    } else {
+      setStalePending(null);
+      setStaleQueue([]);
+    }
   }
 
   function handleRejectClaritySection(section: ClaritySectionResult) {
@@ -1625,11 +1670,14 @@ export function ProgressNoteAIAssist({
       });
     }
 
-    // If any sections were stale, surface a warning for the first one.
+    // If any sections were stale, surface a warning for the first one and
+    // store the rest in staleQueue so each is shown after the previous is
+    // resolved — none are silently dropped.
     if (staleFieldIds.length > 0) {
       const staleSection = clarityResult.sections.find(s => s.fieldId === staleFieldIds[0]);
       if (staleSection) {
         setStalePending(staleSection);
+        setStaleQueue(staleFieldIds.slice(1));
         emit('Stale Clarity Revision Warning Displayed', 'warned', false, {
           fieldId: staleSection.fieldId,
           reviewVersion: clarityResult.reviewedAt,
@@ -2550,7 +2598,7 @@ export function ProgressNoteAIAssist({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setStalePending(null)}
+                              onClick={handleDismissStaleAccept}
                               className="text-[11px] font-semibold px-3 py-1.5 border border-amber-300 text-amber-800 rounded-lg hover:bg-amber-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                             >
                               Cancel
