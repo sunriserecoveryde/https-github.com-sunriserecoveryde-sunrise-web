@@ -1,0 +1,394 @@
+Good progress, but **do not merge yet**. The current “Open Tool” links do not satisfy the requested jump-to-note-section behavior. The review also needs the full four-level finding taxonomy.
+
+Copy and paste this into Replit:
+
+Complete one refinement task on the existing improvement branch:
+
+**Task: Add true jump-to-note-field navigation and complete the four-level finding-priority system**
+
+Do not work on permissions, audit persistence, review-version metadata, scoring changes, or other AI modules during this task.
+
+Do not merge into `main`.
+
+## Current issue
+
+The Clinical Documentation Review currently provides links such as:
+
+* Open Clarity
+* Open Consistency
+* Open Medical Necessity
+
+These links switch to an individual AI tool tab, but they do not move the clinician to the relevant field in the Progress Notes form.
+
+This does not yet meet the intended jump-to-section requirement.
+
+The current findings also appear to support:
+
+* Critical
+* Important
+* Suggestion
+
+Complete the required fourth level:
+
+* Informational
+
+## Objective
+
+Every actionable Clinical Documentation Review finding should direct the clinician to the exact Progress Notes field or section that needs attention.
+
+The navigation must:
+
+1. Identify the related note field.
+2. Close or minimize the AI panel when necessary.
+3. Scroll the field into view.
+4. Move keyboard focus to the field.
+5. Briefly highlight the field.
+6. Leave all existing field content unchanged.
+
+The AI findings must also use the complete four-level priority taxonomy:
+
+1. Critical
+2. Important
+3. Suggested Improvement
+4. Informational
+
+---
+
+# 1. Add Stable Note-Field Targets
+
+Use stable field IDs, React refs, or the existing form-section architecture.
+
+Do not search for fields using visible label text or fragile DOM selectors.
+
+Create targets for all relevant fields currently available in the Progress Notes form, including where present:
+
+* Behavior
+* Intervention
+* Patient Response
+* Plan
+* Subjective
+* Objective
+* Assessment
+* Goal
+* Progress Toward Goal
+* Barriers
+* Treatment-Plan Connection
+* Safety or Risk Assessment
+* SI/HI Statement
+* Craving Information
+* Follow-Up Plan
+* Continued-Service Rationale
+* Level of Care
+* Date of Service
+* Patient Selection
+* Clinician
+* Program
+* Note Type
+
+Only create targets for fields that actually exist.
+
+Do not create duplicate fields to support navigation.
+
+---
+
+# 2. Add a Shared Jump-to-Field Contract
+
+Add a clear navigation contract between:
+
+* `ProgressNoteAIAssist.tsx`
+* `ProgressNotes.tsx`
+* The existing Progress Notes form component
+
+Preferred approach:
+
+* Add an `onJumpToField(fieldId)` callback to the AI Assist component.
+* Keep the actual field refs and scrolling behavior in the Progress Notes form.
+* Let the AI component identify the semantic destination.
+* Do not let the AI component directly query arbitrary DOM content.
+
+Use a typed field identifier.
+
+Example:
+
+```ts
+type ProgressNoteFieldId =
+  | "behavior"
+  | "intervention"
+  | "response"
+  | "plan"
+  | "treatmentGoal"
+  | "riskAssessment"
+  | "followUpPlan"
+  | "levelOfCare";
+```
+
+Adapt the exact identifiers to the existing note formats and fields.
+
+Avoid untyped strings where practical.
+
+---
+
+# 3. Jump Behavior
+
+When the clinician activates a finding action:
+
+1. Emit the existing or new audit event for the finding.
+2. Close or minimize the AI panel if it blocks the note field.
+3. Scroll the corresponding field into view using smooth scrolling.
+4. Focus the input, textarea, select, or field group.
+5. Apply a temporary visible highlight for approximately 2–4 seconds.
+6. Remove the highlight automatically.
+7. Preserve all field values.
+8. Preserve unsaved note text.
+9. Do not submit or validate the form automatically.
+
+Use specific action labels such as:
+
+* Review Intervention
+* Add Patient Response
+* Review Treatment Goal
+* Clarify Craving Documentation
+* Review Safety Assessment
+* Add Follow-Up Plan
+* Review Level of Care
+* Complete Continued-Service Rationale
+
+Do not use:
+
+* Open
+* Go
+* View
+* Fix It
+
+---
+
+# 4. Map Findings to Note Fields
+
+Create a deterministic mapping from review findings to form targets.
+
+Examples:
+
+| Finding                                | Destination                                |
+| -------------------------------------- | ------------------------------------------ |
+| Intervention missing                   | Intervention                               |
+| Patient response missing               | Patient Response                           |
+| Treatment-goal connection missing      | Treatment Goal or Goal Connection          |
+| Follow-up plan missing                 | Plan or Follow-Up Plan                     |
+| Safety statement missing               | Safety or Risk Assessment                  |
+| SI/HI documentation missing            | SI/HI field or Safety Assessment           |
+| Craving narrative conflicts with score | Craving field or related narrative section |
+| Level-of-care support missing          | Level of Care                              |
+| Continued-service rationale missing    | Continued-Service Rationale                |
+| Behavior section incomplete            | Behavior                                   |
+| SOAP Objective missing                 | Objective                                  |
+| Progress statement missing             | Progress Toward Goal                       |
+
+If there is no exact destination:
+
+* Do not show a nonfunctional jump button.
+* Show the individual AI-tool detail action instead.
+* Clearly label it, such as:
+
+  * Review Consistency Details
+  * Review Medical Necessity Details
+
+Do not invent a field that does not exist.
+
+---
+
+# 5. Complete the Four-Level Finding Taxonomy
+
+Use these exact user-facing labels:
+
+## Critical
+
+Reserve for issues requiring immediate clinician attention before signing.
+
+Examples:
+
+* Wrong patient referenced
+* Wrong date, clinician, or program
+* Serious safety contradiction
+* Conflicting SI/HI documentation
+* Significant withdrawal-risk contradiction
+* Clinically significant unsupported statement
+
+## Important
+
+Examples:
+
+* Required intervention missing
+* Patient response missing
+* Medical necessity insufficiently supported
+* Continued-service rationale missing
+* Major internal inconsistency
+* Required note section missing
+
+## Suggested Improvement
+
+Examples:
+
+* Treatment-goal linkage could be clearer
+* Follow-up plan could be more specific
+* Level-of-care connection could be strengthened
+* Clarity or repetition issue
+* Professional wording improvement
+
+## Informational
+
+Examples:
+
+* Documentation strength identified
+* No consistency concern found
+* Medical necessity is supported
+* Required field is complete
+* Optional formatting guidance
+* Review completed without significant concerns
+
+Requirements:
+
+* Do not classify grammar or style findings as Critical.
+* Do not classify a positive finding as Important.
+* Do not fabricate an Informational concern merely to display all four levels.
+* The UI must support all four levels even if a particular review has no findings in one category.
+* Hide empty priority sections or show a concise zero-state.
+* Communicate priority using text and icon, not color alone.
+
+---
+
+# 6. Finding Data Structure
+
+Use one consistent finding structure.
+
+Include fields such as:
+
+```ts
+interface ClinicalReviewFinding {
+  id: string;
+  priority:
+    | "critical"
+    | "important"
+    | "suggested"
+    | "informational";
+  category:
+    | "clarity"
+    | "consistency"
+    | "medical-necessity"
+    | "completeness";
+  title: string;
+  explanation: string;
+  recommendedAction?: string;
+  targetFieldId?: ProgressNoteFieldId;
+  sourceFields?: string[];
+}
+```
+
+Adapt this to the existing implementation.
+
+Do not maintain separate incompatible finding formats for each AI tool.
+
+Reuse the existing pipeline results and helper functions.
+
+Do not duplicate the clarity, consistency, or medical-necessity engines.
+
+---
+
+# 7. Accessibility
+
+Requirements:
+
+* Jump controls must be keyboard-accessible buttons.
+* Accessible labels must identify the destination.
+* Example:
+
+  * `Review Intervention field`
+  * `Move to Safety Assessment`
+* Focus must land on the actual field or field group.
+* The temporary highlight must not be the only indication of focus.
+* Preserve visible focus outlines.
+* Announce navigation using an existing or new polite live region:
+
+  * `Moved to Follow-Up Plan`
+* Respect reduced-motion preferences.
+* Smooth scrolling should be disabled or minimized when the user prefers reduced motion.
+* Do not trap focus in the AI panel after jump navigation.
+* After the clinician reopens AI Assist, normal dialog focus behavior must continue working.
+
+---
+
+# 8. Preserve Existing Functionality
+
+Do not change:
+
+* Clinical Documentation Review pipeline order
+* Draft-generation behavior
+* Clinical Confidence panel
+* Documentation-completeness calculation
+* Existing four individual AI tools
+* AI safety restrictions
+* Note signing
+* Note submission
+* Co-signature behavior
+* Patient access rules
+* AI access permissions
+* Existing audit behavior
+* Existing AI engine
+* Database schema
+* Seeded data
+
+Do not automatically modify any note field.
+
+Do not insert suggested text as part of jump navigation.
+
+---
+
+# Acceptance Criteria
+
+The task is complete only when:
+
+* Findings use Critical, Important, Suggested Improvement, and Informational priorities.
+* Every actionable finding has a specific clinician action.
+* Findings with a valid target move the clinician to the correct note field.
+* The selected field scrolls into view.
+* Keyboard focus moves to the selected field.
+* The selected field receives a temporary visible highlight.
+* Existing field content remains unchanged.
+* Unsaved note text remains intact.
+* Findings without a valid field do not show broken navigation.
+* Individual AI-tool detail links continue working.
+* Dialog focus trapping still works before navigation.
+* Focus is not trapped after jumping to the note.
+* TypeScript passes.
+* Production build passes.
+* Existing tests pass, if configured.
+
+---
+
+# Required Deliverables
+
+Provide:
+
+1. List of files changed.
+2. The typed note-field identifier list.
+3. Table mapping findings to note fields.
+4. Explanation of the shared jump-to-field contract.
+5. Screenshot of all supported finding-priority styles.
+6. Screenshot of a finding with a field-navigation action.
+7. Screenshot of the target field after navigation and highlighting.
+8. Screenshot showing a finding without a valid field using a detail action instead.
+9. Confirmation that note text remains unchanged after navigation.
+10. Keyboard-navigation results.
+11. Screen-reader announcement behavior.
+12. Reduced-motion behavior.
+13. TypeScript result.
+14. Production build result.
+15. Test and lint status.
+16. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge into `main`.
+
+Do not begin another feature.
+
+Stop after completing this single task and wait for review.
