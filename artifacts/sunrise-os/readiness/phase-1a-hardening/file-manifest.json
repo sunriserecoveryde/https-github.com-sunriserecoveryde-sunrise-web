@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "lib/db/drizzle/0000_perpetual_rafael_vega.sql",
-      "sha256": "8513aeb440e64f45852eb665f9ed2b3b009e1dbde3775558902038f2139e2ee8",
+      "sha256": "d469974922cc3fc74bbd81e20697f39d9732ae09456fc01871f6c210e4138c1c",
       "exists": true
     },
     {
@@ -37,13 +37,28 @@
       "exists": true
     },
     {
+      "path": "lib/db/src/repositories/facilityRepo.ts",
+      "sha256": "e33cbdfaeb260ee077be7580e3ffcae7faea19c27416d1c57696e0a5bece33cb",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/repositories/organizationRepo.ts",
+      "sha256": "f1e586e3329ed64bf3d4eaa8812d93051dc7fac4affb6a05aba9748e791ca9fc",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/repositories/staffRepo.ts",
+      "sha256": "c687cc60da6c1ec93f85c458940b6f62945875b6f63b7a1b585b738ed5086379",
+      "exists": true
+    },
+    {
       "path": "lib/db/src/repositories/errors.ts",
       "sha256": "b8afb21ebd367c4a3cdb81ca3198521c10347824dbf3cf6b19ea7c037c4ea835",
       "exists": true
     },
     {
       "path": "lib/db/src/repositories/__tests__/constraints.test.ts",
-      "sha256": "2f5087c803343f975f0632ead865bc2a323d36ba0a72fc5f6acafd0e07adeab8",
+      "sha256": "5b2258c8058984894bc852c6db293e0acf7374613aea1e39248cc0a5126b64bf",
       "exists": true
     },
     {
@@ -68,12 +83,12 @@
     },
     {
       "path": "artifacts/sunrise-os/src/lib/dataMode.ts",
-      "sha256": "7d950521011642712d8299c09479f695052454743cb6e0bed98fa3b82f736831",
+      "sha256": "14b0f3de60b663989c2dc69c602c83944f1adc3eb92fb676f2050a079782c46b",
       "exists": true
     },
     {
       "path": "artifacts/sunrise-os/src/lib/__tests__/dataMode.test.ts",
-      "sha256": "87815883e30922382133683cd399d1e3e64c3bb239ae0a19a4b566a2451b3553",
+      "sha256": "8c053a84af1559c67d493a861ddd7d3ce472852cb9ae11fc73a86220e2e76cc9",
       "exists": true
     },
     {
@@ -119,6 +134,11 @@
     {
       "path": "artifacts/api-server/src/app.ts",
       "sha256": "b9ed496c85f9a96804658da636ab1f1a467f742d6c93d60d2a5baec54332eeef",
+      "exists": true
+    },
+    {
+      "path": "docs/readiness/phase-1a-hardening.md",
+      "sha256": "1cc4a36064a782d793025282fb0fd8d6f731493cd60c3b7bc5f6ca4ab1a983ab",
       "exists": true
     }
   ]

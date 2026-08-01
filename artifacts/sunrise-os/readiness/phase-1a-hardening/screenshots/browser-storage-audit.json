@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-08-01T17:27:35.164Z",
+  "dataMode": "demo",
+  "environment": "development (Vite dev server)",
+  "localStorage": {
+    "sunrise_demo_session_v1": {
+      "shape": "scalar",
+      "value": "s8"
+    }
+  },
+  "sessionStorage": {
+    "sunrise_sidebar_open_v1": "[\"overview\",\"patient-care\"]"
+  },
+  "indexedDB": {
+    "databases": [],
+    "notes": [
+      "sunrise-recordings: audio blobs keyed by session UUID, no structured PHI fields"
+    ]
+  },
+  "summary": {
+    "patientNamesInStorage": "NONE FOUND",
+    "mrnInStorage": "NOT FOUND",
+    "diagnosisInStorage": "NOT FOUND",
+    "insuranceInStorage": "NOT FOUND",
+    "clinicalNotesInStorage": "NOT FOUND",
+    "medicationDataInStorage": "NOT FOUND"
+  }
+}

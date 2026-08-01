@@ -114,11 +114,26 @@ CREATE TABLE "sos_user_identity_refs" (
 	CONSTRAINT "ck_sos_user_refs_status" CHECK ("sos_user_identity_refs"."status" IN ('active', 'inactive', 'revoked'))
 );
 --> statement-breakpoint
+-- ── Composite-FK prerequisite indexes ────────────────────────────────────────
+-- These unique indexes MUST be created before the composite foreign-key
+-- constraints that reference them.  PostgreSQL requires a unique constraint
+-- or unique index on the referenced column tuple before the FK can be added.
+--
+--   fk_sos_patients_org_facility   → sos_facilities(org_id, id)
+--   fk_sos_episodes_org_facility   → sos_facilities(org_id, id)
+CREATE UNIQUE INDEX "idx_sos_facilities_org_id_id" ON "sos_facilities" USING btree ("org_id","id");--> statement-breakpoint
+--   fk_sos_episodes_org_patient    → sos_patients(org_id, id)
+CREATE UNIQUE INDEX "idx_sos_patients_org_id_id" ON "sos_patients" USING btree ("org_id","id");--> statement-breakpoint
+--   fk_sos_staff_profiles_org_user → sos_user_identity_refs(org_id, id)
+CREATE UNIQUE INDEX "idx_sos_user_refs_org_id_id" ON "sos_user_identity_refs" USING btree ("org_id","id");--> statement-breakpoint
+-- ── Simple foreign keys ───────────────────────────────────────────────────────
 ALTER TABLE "grow_user_state" ADD CONSTRAINT "grow_user_state_user_id_grow_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."grow_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sos_episodes_of_care" ADD CONSTRAINT "sos_episodes_of_care_org_id_sos_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."sos_organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sos_episodes_of_care" ADD CONSTRAINT "sos_episodes_of_care_facility_id_sos_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."sos_facilities"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sos_episodes_of_care" ADD CONSTRAINT "sos_episodes_of_care_patient_id_sos_patients_id_fk" FOREIGN KEY ("patient_id") REFERENCES "public"."sos_patients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+-- ── Composite foreign keys (cross-tenant isolation) ───────────────────────────
+-- These require the unique indexes above to already exist.
 ALTER TABLE "sos_episodes_of_care" ADD CONSTRAINT "fk_sos_episodes_org_patient" FOREIGN KEY ("org_id","patient_id") REFERENCES "public"."sos_patients"("org_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sos_episodes_of_care" ADD CONSTRAINT "fk_sos_episodes_org_facility" FOREIGN KEY ("org_id","facility_id") REFERENCES "public"."sos_facilities"("org_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sos_facilities" ADD CONSTRAINT "sos_facilities_org_id_sos_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."sos_organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -128,15 +143,13 @@ ALTER TABLE "sos_patients" ADD CONSTRAINT "fk_sos_patients_org_facility" FOREIGN
 ALTER TABLE "sos_staff_profiles" ADD CONSTRAINT "sos_staff_profiles_org_id_sos_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."sos_organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sos_staff_profiles" ADD CONSTRAINT "fk_sos_staff_profiles_org_user" FOREIGN KEY ("org_id","user_id") REFERENCES "public"."sos_user_identity_refs"("org_id","id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sos_user_identity_refs" ADD CONSTRAINT "sos_user_identity_refs_org_id_sos_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."sos_organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+-- ── Remaining indexes ─────────────────────────────────────────────────────────
 CREATE INDEX "idx_sos_episodes_org_id" ON "sos_episodes_of_care" USING btree ("org_id");--> statement-breakpoint
 CREATE INDEX "idx_sos_episodes_patient_id" ON "sos_episodes_of_care" USING btree ("patient_id");--> statement-breakpoint
 CREATE INDEX "idx_sos_facilities_org_id" ON "sos_facilities" USING btree ("org_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "idx_sos_facilities_org_id_id" ON "sos_facilities" USING btree ("org_id","id");--> statement-breakpoint
 CREATE INDEX "idx_sos_patients_org_id" ON "sos_patients" USING btree ("org_id");--> statement-breakpoint
 CREATE INDEX "idx_sos_patients_facility_id" ON "sos_patients" USING btree ("facility_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "idx_sos_patients_org_mrn" ON "sos_patients" USING btree ("org_id","mrn");--> statement-breakpoint
-CREATE UNIQUE INDEX "idx_sos_patients_org_id_id" ON "sos_patients" USING btree ("org_id","id");--> statement-breakpoint
 CREATE INDEX "idx_sos_staff_profiles_org_id" ON "sos_staff_profiles" USING btree ("org_id");--> statement-breakpoint
 CREATE INDEX "idx_sos_user_refs_org_id" ON "sos_user_identity_refs" USING btree ("org_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "idx_sos_user_refs_org_id_id" ON "sos_user_identity_refs" USING btree ("org_id","id");--> statement-breakpoint
 CREATE UNIQUE INDEX "idx_sos_user_refs_org_ext_auth_ref" ON "sos_user_identity_refs" USING btree ("org_id","ext_auth_ref") WHERE "sos_user_identity_refs"."ext_auth_ref" IS NOT NULL;

@@ -1,13 +1,14 @@
+=== @workspace/db ===
 
 > @workspace/db@0.0.0 test /home/runner/workspace/lib/db
-> vitest run
+> vitest run -- --reporter=verbose
 
 
  RUN  v4.1.10 /home/runner/workspace/lib/db
 
 
  Test Files  5 passed (5)
-      Tests  54 passed (54)
-   Start at  12:59:55
-   Duration  1.13s (transform 266ms, setup 0ms, import 1.46s, tests 692ms, environment 0ms)
+      Tests  69 passed (69)
+   Start at  17:28:49
+   Duration  1.21s (transform 287ms, setup 0ms, import 1.52s, tests 643ms, environment 0ms)
 

@@ -1,0 +1,390 @@
+Complete one final verification task on:
+
+`readiness/p0-persistence-foundation`
+
+**Task: Prove Phase 1A Hardening is reproducible and package the final review archive**
+
+Do not begin Phase 2.
+
+Do not add authentication providers, roles, permissions, clinical tables, or new product features.
+
+Do not merge into `main`.
+
+The current hardening summary contains claims that must be verified before approval.
+
+---
+
+# 1. Verify `parseDataMode()` Supports Production
+
+The summary states:
+
+> `parseDataMode() accepts only "demo"`
+
+Inspect the actual implementation and correct the summary or code.
+
+Required valid behavior:
+
+| Environment | Input         | Expected                     |
+| ----------- | ------------- | ---------------------------- |
+| development | `demo`        | `demo`                       |
+| development | `production`  | `production`                 |
+| test        | `demo`        | `demo`                       |
+| test        | `production`  | `production`                 |
+| production  | `production`  | `production`                 |
+| production  | `demo`        | blocking configuration error |
+| production  | missing       | blocking configuration error |
+| production  | invalid value | blocking configuration error |
+
+Requirements:
+
+* Production-backed mode must remain usable.
+* A production deployment must require the explicit value `production`.
+* Production must never silently activate demo mode.
+* Invalid configuration must not load real or mock patient data.
+* Do not use unsafe type casting to accept arbitrary strings.
+
+Provide the complete `parseDataMode()` truth table and test output.
+
+---
+
+# 2. Prove Migrations Work Without Manual SQL
+
+The implementation log shows that the generated migration initially failed and tables and constraints were then applied through direct SQL steps.
+
+That is acceptable only as a development recovery action.
+
+It is not sufficient evidence that the checked-in migrations are reproducible.
+
+Create a disposable, isolated PostgreSQL test database or schema.
+
+Do not use the main development schema for this proof.
+
+Run only the documented migration command against the clean target.
+
+Do not manually execute:
+
+* Table DDL
+* Index DDL
+* Foreign-key DDL
+* Check constraints
+* Schema repair SQL
+
+Required sequence:
+
+1. Create clean isolated migration target.
+2. Confirm no Sunrise OS tables exist.
+3. Run the checked-in migration command.
+4. Confirm all six tables exist.
+5. Confirm all indexes exist.
+6. Confirm all composite foreign keys exist.
+7. Confirm all check constraints exist.
+8. Confirm all date columns use PostgreSQL `date`.
+9. Confirm migration journal entry exists.
+10. Run the migration command again.
+11. Confirm no pending migration and no schema error.
+12. Seed the clean target.
+13. Run repository and constraint tests against the clean target.
+14. Destroy the disposable target.
+
+If the migration fails:
+
+* Fix the migration files.
+* Do not use manual SQL as the final solution.
+* Repeat the clean migration proof from the beginning.
+
+Provide sanitized command output.
+
+---
+
+# 3. Inspect the Generated Migration Ordering
+
+Review:
+
+`lib/db/drizzle/0000_perpetual_rafael_vega.sql`
+
+Confirm that:
+
+* Referenced tables are created before foreign keys.
+* Required unique constraints or indexes are created before composite foreign keys reference them.
+* Check constraints are created in a valid order.
+* Migration execution does not depend on existing partial schema objects.
+* Migration execution does not depend on commands previously run manually.
+* Migration execution works from an empty database.
+
+If a single generated migration has unsafe ordering, split or edit it into a valid versioned migration sequence.
+
+Do not leave a migration that works only because the development database was manually repaired.
+
+---
+
+# 4. Verify Database Constraints Directly
+
+Using the clean migrated test target, run direct PostgreSQL-backed tests proving rejection of:
+
+1. Patient whose organization does not own the selected facility.
+2. Staff profile whose organization does not match the referenced identity.
+3. Episode whose organization does not match the patient.
+4. Episode whose facility does not match the patient.
+5. Discharge date earlier than admission date.
+6. Invalid organization status.
+7. Invalid facility status.
+8. Invalid patient status.
+9. Invalid episode status.
+10. Duplicate MRN in the same organization.
+11. Duplicate external authentication reference in its prohibited scope.
+
+Also prove valid matching records can be inserted.
+
+For every test include:
+
+* Constraint name
+* Invalid operation attempted
+* PostgreSQL result
+* Test result
+
+---
+
+# 5. Verify the Production Authentication Boundary
+
+Run the API with:
+
+```bash
+NODE_ENV=production
+```
+
+Do not use the development identity middleware.
+
+Test:
+
+1. `GET /health/live` → 200
+2. `GET /health/ready` with working database → 200
+3. `GET /api/v1/patients` with no identity → 401
+4. Same request with `X-Dev-Org-Id` → still 401
+5. Same request with `X-Dev-Facility-Id` → still 401
+6. Invalid patient ID with no identity follows the documented middleware order
+7. Database unavailable on readiness endpoint → 503
+8. Database unavailable after valid test identity injection → 503
+9. No response contains stack traces, connection strings, SQL, or secrets
+
+Document how tests inject a trusted identity without activating the development-header adapter.
+
+Do not describe a development-mode 200 response as production authentication evidence.
+
+---
+
+# 6. Verify Browser-Storage Privacy
+
+Inspect actual stored values, not only source-code conditions.
+
+Test in production-backed mode:
+
+* Pin a patient.
+* Add a recent patient.
+* Use Favorites.
+* Open UA Drug Testing.
+* Start and cancel an audio recording.
+* Reload the browser.
+
+Inspect:
+
+* localStorage
+* sessionStorage
+* IndexedDB
+
+Required production result:
+
+* No patient display name in localStorage.
+* No MRN in localStorage.
+* No diagnosis in localStorage.
+* No insurance data in localStorage.
+* No patient object in localStorage.
+* No clinical notes in localStorage.
+* No medication data in localStorage.
+* No UA clinical workflow data in localStorage.
+* No completed audio retained after cancellation.
+* Any stored patient identifier is documented, minimized, session-scoped where possible, and never trusted as display data.
+
+Create a sanitized storage dump showing keys and value shapes, without patient-facing values.
+
+Update the browser-storage inventory based on observed runtime values.
+
+---
+
+# 7. Run the Complete Validation Suite
+
+Report exact commands and results for:
+
+* Clean migration proof
+* Migration reapplication
+* Development seed
+* Database tests
+* Constraint tests
+* Authentication-boundary tests
+* Health endpoint tests
+* Data-mode tests
+* Browser-storage tests
+* Tenant-isolation tests
+* Facility-isolation tests
+* Sunrise OS Vitest
+* API-server Vitest
+* Database Vitest
+* Sunrise OS TypeScript
+* API-server TypeScript
+* Database TypeScript
+* Production build
+
+The production build must use:
+
+```bash
+NODE_ENV=production
+VITE_SUNRISE_DATA_MODE=production
+```
+
+along with all other required safe test configuration.
+
+Do not use demo mode as the final production-build proof.
+
+Report:
+
+* Test files
+* Tests
+* Passed
+* Failed
+* Skipped
+* Duration
+
+---
+
+# 8. Capture Accurate Runtime Evidence
+
+Capture actual runtime screenshots of:
+
+1. Production-backed Patient List
+2. Production-backed Patient Detail
+3. Production empty state
+4. Production API error state
+5. Production patient-not-found state
+6. Demo mode with demo indicator
+7. Production mode without demo indicator
+8. Invalid production configuration blocking state
+
+Every screenshot record must include:
+
+* Filename
+* Viewport
+* Data mode
+* Environment
+* Identity context
+* Data source
+* State shown
+* Temporary test setup
+* Related test or requirement
+
+A login screen does not count as Patient List or Patient Detail evidence.
+
+Do not label code inspection as runtime evidence.
+
+If browser automation is unavailable, use the interactive Replit preview manually.
+
+---
+
+# 9. Verify the Review ZIP
+
+Create or regenerate:
+
+`artifacts/sunrise-os/readiness/phase-1a-hardening-review.zip`
+
+It must contain the final, corrected hardening implementation.
+
+Include:
+
+* Versioned migrations
+* Migration journal metadata
+* Schema files
+* Repository files
+* Data-mode parser
+* Authentication boundary
+* Health routes
+* API contracts
+* Browser-storage remediation
+* All hardening tests
+* Sanitized validation output
+* Runtime screenshots
+* Updated architecture documentation
+* Evidence manifest
+* File manifest with SHA-256 values
+
+Do not include:
+
+* The old Phase 1A archive
+* Database credentials
+* `.env` files
+* Database dumps
+* Secrets
+* Dependency caches
+* Build caches
+* Real patient data
+
+Run:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-1a-hardening-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-1a-hardening-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-1a-hardening-review.zip
+```
+
+Confirm:
+
+* ZIP opens successfully.
+* Entry count is correct.
+* ZIP size is reported.
+* SHA-256 is reported.
+* Every manifest file exists.
+* Manifest hashes match.
+* The old archive hash is not reused.
+
+---
+
+# 10. Commit and Stop
+
+Commit all necessary verification corrections to:
+
+`readiness/p0-persistence-foundation`
+
+Do not merge into `main`.
+
+Do not begin Phase 2.
+
+## Required final response
+
+Provide:
+
+1. Branch.
+2. Starting commit.
+3. New verification or correction commits.
+4. Final HEAD.
+5. Whether `parseDataMode()` accepts production correctly.
+6. Complete data-mode truth table.
+7. Migration filenames.
+8. Clean migration result.
+9. Migration reapplication result.
+10. Confirmation that no manual SQL was required.
+11. Constraint-test result.
+12. Production 401 result.
+13. Development headers ignored in production result.
+14. Health endpoint result.
+15. Browser-storage runtime result.
+16. Total test files.
+17. Total tests.
+18. Passed, failed, and skipped counts.
+19. TypeScript result.
+20. Production build result.
+21. Screenshot count.
+22. Correct ZIP path.
+23. ZIP size.
+24. ZIP SHA-256.
+25. ZIP entry count.
+26. Known limitations.
+27. Exact Phase 2 recommendation.
+
+Stop after producing and verifying the archive.
