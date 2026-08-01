@@ -226,7 +226,61 @@ describe('buildClarityFindingId', () => {
   });
 });
 
-// ── 7. validateClarityReview (smoke / no-throw) ───────────────────────────────
+// ── 7. detectStaleSection — BIRP clarity review flow ─────────────────────────
+// These three tests cover the acceptance-guard path described in the task:
+//   1. After a BIRP review, a clinician edit to Intervention makes the section stale.
+//   2. No edit → not stale.
+//   3. No-stale path → suggestedText from the engine is still correct (engine hasn't drifted).
+
+describe('detectStaleSection — BIRP clarity review flow', () => {
+  const BIRP_FIELDS = ['Behavior', 'Intervention', 'Response', 'Plan'];
+  // Intervention contains "w/" so the rule engine will expand it to "with",
+  // giving us a predictable suggestedText to assert in test 3.
+  const BIRP_VALUES = {
+    Behavior: 'pt. appeared anxious and reported low mood.',
+    Intervention: 'Clinician used CBT techniques w/ patient to address negative thought patterns.',
+    Response: 'Patient engaged receptively.',
+    Plan: 'Continue weekly sessions.',
+  };
+
+  it('returns true when clinician edits the Intervention field after a BIRP clarity review', () => {
+    const inputs = buildClaritySectionInputs(BIRP_FIELDS, BIRP_VALUES);
+    const review = runClarityReview(inputs, '9:00 AM');
+    const interventionSection = review.sections.find(s => s.fieldId === 'intervention')!;
+    expect(interventionSection).toBeDefined();
+
+    // Simulate a clinician edit made after the review was generated
+    const editedLiveText = BIRP_VALUES.Intervention + ' Also explored coping skills.';
+    expect(detectStaleSection(editedLiveText, interventionSection.sourceSnapshot)).toBe(true);
+  });
+
+  it('returns false when the Intervention field is unchanged since the BIRP clarity review', () => {
+    const inputs = buildClaritySectionInputs(BIRP_FIELDS, BIRP_VALUES);
+    const review = runClarityReview(inputs, '9:00 AM');
+    const interventionSection = review.sections.find(s => s.fieldId === 'intervention')!;
+    expect(interventionSection).toBeDefined();
+
+    // Live text is exactly what was present at review time — no edit was made
+    expect(detectStaleSection(BIRP_VALUES.Intervention, interventionSection.sourceSnapshot)).toBe(false);
+  });
+
+  it('no-stale path: suggestedText contains the correct clarity revision when the Intervention field is unchanged', () => {
+    const inputs = buildClaritySectionInputs(BIRP_FIELDS, BIRP_VALUES);
+    const review = runClarityReview(inputs, '9:00 AM');
+    const interventionSection = review.sections.find(s => s.fieldId === 'intervention')!;
+    expect(interventionSection).toBeDefined();
+
+    // Confirm the section is not stale (clinician made no edit)
+    expect(detectStaleSection(BIRP_VALUES.Intervention, interventionSection.sourceSnapshot)).toBe(false);
+
+    // The engine should have expanded "w/" → "with" and flagged a change
+    expect(interventionSection.hasChanges).toBe(true);
+    expect(interventionSection.suggestedText).toContain('with');
+    expect(interventionSection.suggestedText).not.toMatch(/\bw\/(?!\w)/);
+  });
+});
+
+// ── 8. validateClarityReview (smoke / no-throw) ───────────────────────────────
 
 describe('validateClarityReview', () => {
   it('does not throw for a valid review result', () => {
