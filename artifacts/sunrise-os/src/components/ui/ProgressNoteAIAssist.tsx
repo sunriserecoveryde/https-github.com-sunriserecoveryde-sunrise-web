@@ -124,13 +124,39 @@ interface ReviewStep {
   status: ReviewStepStatus;
 }
 
-type FindingPriority = 'critical' | 'important' | 'suggestion';
+type FindingPriority = 'critical' | 'important' | 'suggested' | 'informational';
 
-interface PrioritizedFinding {
+// ─── Stable note-field identifiers ───────────────────────────────────────────
+// Used to navigate from a review finding to the exact textarea in the note form.
+// Must stay in sync with FORMAT_FIELDS in ProgressNotes.tsx.
+// Only identifiers for fields that actually exist in the form are listed here.
+export type ProgressNoteFieldId =
+  | 'behavior'       // BIRP: Behavior
+  | 'intervention'   // BIRP / GIRP: Intervention
+  | 'response'       // BIRP / GIRP: Response (Patient Response)
+  | 'plan'           // BIRP / DAP / SOAP / GIRP: Plan
+  | 'data'           // DAP: Data
+  | 'assessment'     // DAP / SOAP: Assessment
+  | 'subjective'     // SOAP: Subjective
+  | 'objective'      // SOAP: Objective
+  | 'goal'           // GIRP: Goal
+  | 'patientSelect'  // Header: Patient dropdown
+  | 'noteTypeSelect';// Header: Note Type dropdown
+
+// ─── Finding structure ────────────────────────────────────────────────────────
+// Single unified structure for all review findings.
+// Do NOT maintain separate formats per AI tool.
+export interface ClinicalReviewFinding {
+  id: string;
   priority: FindingPriority;
-  category: string;
-  text: string;
-  jumpTo?: AIAction;
+  category: 'clarity' | 'consistency' | 'medical-necessity' | 'completeness';
+  title: string;
+  explanation: string;
+  recommendedAction?: string;
+  /** When set, the action button navigates to this exact note field. */
+  targetFieldId?: ProgressNoteFieldId;
+  /** When targetFieldId is absent, fall back to opening an individual AI tool tab. */
+  fallbackTool?: AIAction;
 }
 
 interface CompletenessScore {
@@ -189,7 +215,7 @@ interface ClinicalReviewResult {
   necessityCategory: NecessityCategory;
   necessityMissing: string[];
   necessityData: NecessityResult | null;
-  prioritizedFindings: PrioritizedFinding[];
+  prioritizedFindings: ClinicalReviewFinding[];
   summary: string;
   noteWasEmpty: boolean;
   /** Draft generated as part of the pipeline (only when clinician opted in).
@@ -215,6 +241,12 @@ interface Props {
   onAcceptRevision: (revisedText: string) => void;
   /** Accumulates audit events in the parent; parent may persist these as needed */
   onAuditEvent?: (event: AIAuditEvent) => void;
+  /**
+   * Called when a review finding's field-navigation action is activated.
+   * The parent is responsible for scrolling, focusing, and highlighting the
+   * target field. The AI panel closes itself before calling this.
+   */
+  onJumpToField?: (fieldId: ProgressNoteFieldId) => void;
 }
 
 // ─── Simulated network delay ──────────────────────────────────────────────────
@@ -552,11 +584,86 @@ const READINESS_CONFIG: Record<OverallReadiness, { cls: string; dotCls: string; 
   'Unable to Assess': { cls: 'bg-slate-100 text-slate-700 border-slate-200',  dotCls: 'bg-slate-400',  icon: <Info className="w-3.5 h-3.5" /> },
 };
 
-const PRIORITY_CONFIG: Record<FindingPriority, { cls: string; label: string }> = {
-  critical:   { cls: 'bg-red-50 border-red-200 text-red-800',     label: 'Critical' },
-  important:  { cls: 'bg-amber-50 border-amber-200 text-amber-800', label: 'Important' },
-  suggestion: { cls: 'bg-slate-50 border-slate-200 text-slate-700', label: 'Suggestion' },
+const PRIORITY_CONFIG: Record<FindingPriority, {
+  cls: string; label: string; badgeCls: string; icon: React.ReactNode;
+}> = {
+  critical:     {
+    cls:      'bg-red-50 border-red-200 text-red-900',
+    badgeCls: 'bg-red-100 text-red-800 border-red-300',
+    label:    'Critical',
+    icon:     <AlertTriangle className="w-3.5 h-3.5 text-red-500" />,
+  },
+  important:    {
+    cls:      'bg-amber-50 border-amber-200 text-amber-900',
+    badgeCls: 'bg-amber-100 text-amber-800 border-amber-300',
+    label:    'Important',
+    icon:     <Info className="w-3.5 h-3.5 text-amber-500" />,
+  },
+  suggested:    {
+    cls:      'bg-blue-50 border-blue-200 text-blue-900',
+    badgeCls: 'bg-blue-100 text-blue-800 border-blue-300',
+    label:    'Suggested Improvement',
+    icon:     <Eye className="w-3.5 h-3.5 text-blue-400" />,
+  },
+  informational:{
+    cls:      'bg-green-50 border-green-200 text-green-900',
+    badgeCls: 'bg-green-100 text-green-800 border-green-300',
+    label:    'Informational',
+    icon:     <Check className="w-3.5 h-3.5 text-green-500" />,
+  },
 };
+
+// ─── Field-navigation action labels ──────────────────────────────────────────
+// Specific, verb-led labels per the UX spec. No "Open / Go / View / Fix It".
+const FIELD_ACTION_LABEL: Record<ProgressNoteFieldId, string> = {
+  behavior:      'Review Behavior section',
+  intervention:  'Review Intervention section',
+  response:      'Add Patient Response',
+  plan:          'Add Follow-Up Plan',
+  data:          'Review Data section',
+  assessment:    'Review Assessment section',
+  subjective:    'Review Subjective section',
+  objective:     'Review Objective section',
+  goal:          'Review Treatment Goal',
+  patientSelect: 'Review Patient Selection',
+  noteTypeSelect:'Review Note Type',
+};
+
+// Accessible aria-label companion (destination-first phrasing for screen readers).
+const FIELD_ARIA_LABEL: Record<ProgressNoteFieldId, string> = {
+  behavior:      'Move to Behavior field',
+  intervention:  'Move to Intervention field',
+  response:      'Move to Patient Response field',
+  plan:          'Move to Follow-Up Plan field',
+  data:          'Move to Data field',
+  assessment:    'Move to Assessment field',
+  subjective:    'Move to Subjective field',
+  objective:     'Move to Objective field',
+  goal:          'Move to Treatment Goal field',
+  patientSelect: 'Move to Patient Selection',
+  noteTypeSelect:'Move to Note Type selector',
+};
+
+// ─── Keyword-to-field inference ───────────────────────────────────────────────
+// Maps finding text to a note-field ID based on semantic content.
+// Only returns a fieldId when that label is present in the current format.
+// Do NOT use visible label text or fragile DOM selectors — use the stable
+// ProgressNoteFieldId union defined above.
+function inferFieldId(text: string, currentFields: string[]): ProgressNoteFieldId | undefined {
+  const lower = text.toLowerCase();
+  const has = (label: string) => currentFields.includes(label);
+
+  if (/\bintervention\b/.test(lower) && has('Intervention')) return 'intervention';
+  if (/\b(patient\s+)?response\b|\bclient\s+response\b/.test(lower) && has('Response')) return 'response';
+  if (/\btreatment\s+goal\b|\bgoal\s+connection\b|\bgoal\b/.test(lower) && has('Goal')) return 'goal';
+  if (/\bbehavior\b|\bpresentation\b|\bpresented\b/.test(lower) && has('Behavior')) return 'behavior';
+  if (/\bsubjective\b/.test(lower) && has('Subjective')) return 'subjective';
+  if (/\bobjective\b/.test(lower) && has('Objective')) return 'objective';
+  if (/\b(assessment|safety|risk|si\/hi|si\b|hi\b|suicidal|withdrawal)\b/.test(lower) && has('Assessment')) return 'assessment';
+  if (/\bdata\b/.test(lower) && has('Data')) return 'data';
+  if (/\bplan\b|\bfollow.?up\b|\bcontinued.?service\b|\blevel.?of.?care\b|\brationale\b/.test(lower) && has('Plan')) return 'plan';
+  return undefined;
+}
 
 // ─── Clinical Confidence Panel badge configs ──────────────────────────────────
 // All values derive from documented information — no random or fabricated values.
@@ -587,6 +694,7 @@ const REVIEW_READINESS_CONFIG: Record<ReviewReadiness, { cls: string; badgeCls: 
 export function ProgressNoteAIAssist({
   format, patientId, noteType, fields, values, authorName,
   noteRef, isLocked, onInsertDraft, onAcceptRevision, onAuditEvent,
+  onJumpToField,
 }: Props) {
   const panelId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -695,6 +803,18 @@ export function ProgressNoteAIAssist({
     setStatus('idle');
     setError(null);
     setDiscardWarning(false);
+  }
+
+  // ── Jump from review finding to exact note field ────────────────────────────
+  // Closes the AI panel WITHOUT showing the discard prompt (the jump is an
+  // explicit clinician action), then delegates scroll/focus/highlight to parent.
+  // Safety: no note content is modified. Focus is released from the panel so
+  // the clinician can edit the field immediately.
+  function handleFieldJump(fieldId: ProgressNoteFieldId) {
+    emit('Jump to Note Field', fieldId, false);
+    setIsOpen(false);       // close panel — do NOT call handleClose() to bypass discard prompt
+    setDiscardWarning(false);
+    onJumpToField?.(fieldId);
   }
 
   // ── Jump from review result to individual tool ──────────────────────────────
@@ -863,48 +983,116 @@ export function ProgressNoteAIAssist({
         pct >= 75   ? 'Mostly Complete' :
         pct >= 50   ? 'Partially Complete' : 'Incomplete';
 
-      // Prioritized findings — critical → important → suggestion
-      const pFindings: PrioritizedFinding[] = [];
+      // ── Prioritized findings: critical → important → suggested → informational ──
+      // All four levels supported. Informational only added when genuinely warranted.
+      // Grammar/style findings are never Critical. Positive findings are never Important.
+      let _fSeq = 0;
+      const mkF = (
+        priority: FindingPriority,
+        category: ClinicalReviewFinding['category'],
+        title: string,
+        explanation: string,
+        opts?: Partial<Pick<ClinicalReviewFinding, 'recommendedAction' | 'targetFieldId' | 'fallbackTool'>>,
+      ): ClinicalReviewFinding => ({ id: `f-${++_fSeq}`, priority, category, title, explanation, ...(opts ?? {}) });
 
+      const pFindings: ClinicalReviewFinding[] = [];
+
+      // ── Critical ──
       if (noteIsEmpty) {
-        pFindings.push({
-          priority: 'critical', category: 'Documentation',
-          text: 'No note content has been entered. Complete the note fields and run the review again.',
-          jumpTo: 'draft',
-        });
+        pFindings.push(mkF(
+          'critical', 'completeness',
+          'No note content has been entered',
+          'All note fields are empty. Clinical review cannot be completed without documentation.',
+          { recommendedAction: 'Complete each note section, then re-run the review. Use the Draft Note tool to generate a starting point.', fallbackTool: 'draft' },
+        ));
       }
       if (!noteIsEmpty && necessityRaw.category === 'Insufficiently Supported') {
-        pFindings.push({
-          priority: 'critical', category: 'Medical Necessity',
-          text: 'Documentation insufficiently supports medical necessity. Multiple required elements are missing.',
-          jumpTo: 'necessity',
-        });
+        pFindings.push(mkF(
+          'critical', 'medical-necessity',
+          'Medical necessity documentation is insufficient',
+          'The note does not adequately support medical necessity for the documented service. Multiple required elements are absent or insufficiently described.',
+          { recommendedAction: 'Review and address the specific missing elements listed below, then re-run the review.', fallbackTool: 'necessity' },
+        ));
       }
       consistencyFindings.filter(f => f.type === 'potential_inconsistency').forEach(f => {
-        pFindings.push({
-          priority: 'critical', category: 'Internal Consistency',
-          text: `${f.conflictA} ${f.conflictB}`.trim(), jumpTo: 'consistency',
-        });
+        const tgt = inferFieldId(`${f.conflictA} ${f.conflictB} ${f.explanation}`, fields);
+        pFindings.push(mkF(
+          'critical', 'consistency',
+          'Internal consistency conflict detected',
+          `${f.conflictA} ${f.conflictB}`.trim(),
+          { recommendedAction: f.suggestedAction, targetFieldId: tgt, fallbackTool: tgt ? undefined : 'consistency' },
+        ));
       });
+
+      // ── Important ──
       necessityRaw.missingElements.forEach(m => {
-        pFindings.push({ priority: 'important', category: 'Medical Necessity', text: m, jumpTo: 'necessity' });
+        const tgt = inferFieldId(m, fields);
+        pFindings.push(mkF(
+          'important', 'medical-necessity',
+          m.replace(/\.$/, ''),
+          'This element is required to support medical necessity for the service type and level of care.',
+          { recommendedAction: tgt ? FIELD_ACTION_LABEL[tgt] : 'Review Medical Necessity Details', targetFieldId: tgt, fallbackTool: tgt ? undefined : 'necessity' },
+        ));
       });
       consistencyFindings.filter(f => f.type === 'missing_connection').forEach(f => {
-        pFindings.push({ priority: 'important', category: 'Internal Consistency', text: f.conflictA, jumpTo: 'consistency' });
+        const tgt = inferFieldId(`${f.conflictA} ${f.conflictB}`, fields);
+        pFindings.push(mkF(
+          'important', 'consistency',
+          'Required section connection missing',
+          f.conflictA,
+          { recommendedAction: f.suggestedAction, targetFieldId: tgt, fallbackTool: tgt ? undefined : 'consistency' },
+        ));
       });
+      // Grammar/style is Important, never Critical.
       if (!noteIsEmpty && clarityChanges > 0) {
-        pFindings.push({
-          priority: 'important', category: 'Clarity',
-          text: `${clarityChanges} grammar or style issue${clarityChanges !== 1 ? 's' : ''} identified. Use the Clarity tool to review and apply suggested corrections.`,
-          jumpTo: 'clarity',
-        });
+        pFindings.push(mkF(
+          'important', 'clarity',
+          `${clarityChanges} clarity issue${clarityChanges !== 1 ? 's' : ''} identified`,
+          `${clarityChanges} grammar or style improvement${clarityChanges !== 1 ? 's' : ''} ${clarityChanges === 1 ? 'was' : 'were'} found. These do not add new clinical facts — they improve documentation readability.`,
+          { recommendedAction: 'Review Clarity Details', fallbackTool: 'clarity' },
+        ));
       }
+
+      // ── Suggested Improvement ──
       necessityRaw.clinicianReviewAreas.forEach(r => {
-        pFindings.push({ priority: 'suggestion', category: 'Medical Necessity', text: r, jumpTo: 'necessity' });
+        const tgt = inferFieldId(r, fields);
+        pFindings.push(mkF(
+          'suggested', 'medical-necessity',
+          r.replace(/\.$/, ''),
+          'This area may benefit from additional documentation to further strengthen the medical necessity rationale.',
+          { recommendedAction: tgt ? FIELD_ACTION_LABEL[tgt] : 'Review Medical Necessity Details', targetFieldId: tgt, fallbackTool: tgt ? undefined : 'necessity' },
+        ));
       });
       consistencyFindings.filter(f => f.type === 'requires_review').forEach(f => {
-        pFindings.push({ priority: 'suggestion', category: 'Internal Consistency', text: f.explanation, jumpTo: 'consistency' });
+        const tgt = inferFieldId(`${f.explanation} ${f.conflictA}`, fields);
+        pFindings.push(mkF(
+          'suggested', 'consistency',
+          f.conflictA.replace(/\.$/, ''),
+          f.explanation,
+          { recommendedAction: f.suggestedAction, targetFieldId: tgt, fallbackTool: tgt ? undefined : 'consistency' },
+        ));
       });
+
+      // ── Informational: genuine positive findings — never fabricated ──
+      // Positive findings are never classified as Important.
+      if (!noteIsEmpty && clarityChanges === 0) {
+        pFindings.push(mkF('informational', 'clarity',
+          'Clarity appears appropriate',
+          'No grammar or style issues were identified. The note language is appropriate for clinical documentation.',
+        ));
+      }
+      if (!noteIsEmpty && consistencyFindings.filter(f => f.type !== 'no_concerns').length === 0) {
+        pFindings.push(mkF('informational', 'consistency',
+          'No internal consistency concerns found',
+          'The note sections appear internally consistent. No conflicting statements or missing section connections were identified.',
+        ));
+      }
+      if (!noteIsEmpty && necessityRaw.category === 'Supported' && necessityRaw.missingElements.length === 0) {
+        pFindings.push(mkF('informational', 'medical-necessity',
+          'Medical necessity appears adequately supported',
+          'The documentation appears to support medical necessity for the documented service. No missing required elements were identified.',
+        ));
+      }
 
       const hasCritical  = pFindings.some(f => f.priority === 'critical');
       const hasImportant = pFindings.some(f => f.priority === 'important');
@@ -1614,6 +1802,112 @@ export function ProgressNoteAIAssist({
                     <div className="px-4 pt-3">
                       <p className="text-xs text-navy leading-relaxed">{reviewResult.summary}</p>
                     </div>
+
+                    {/* ══ PRIORITIZED FINDINGS ══════════════════════════════════
+                        Grouped by level: Critical → Important → Suggested → Informational.
+                        Empty levels are hidden. Each finding shows title, explanation,
+                        recommended action, and a specific navigation button:
+                          • Field-jump button  — closes AI panel, focuses exact note field
+                          • Tool-detail button — opens individual AI tool tab (no panel close)
+                        No finding has both. Findings without a valid destination show
+                        a tool-detail button. Findings with no destination show neither.
+                    ════════════════════════════════════════════════════════════ */}
+                    {reviewResult.prioritizedFindings.length > 0 && (
+                      <div className="px-4 pt-3 pb-1 space-y-3">
+                        <div className="text-[10px] font-bold text-slate uppercase tracking-wider">Findings</div>
+                        {(['critical', 'important', 'suggested', 'informational'] as FindingPriority[]).map(priority => {
+                          const group = reviewResult!.prioritizedFindings.filter(f => f.priority === priority);
+                          if (group.length === 0) return null;
+                          const cfg = PRIORITY_CONFIG[priority];
+                          return (
+                            <div key={priority}>
+                              {/* Priority-level section header — text + icon, not color alone */}
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                {cfg.icon}
+                                <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                                  {cfg.label}
+                                </span>
+                                <div className="flex-1 h-px bg-border" />
+                              </div>
+                              <div className="space-y-2">
+                                {group.map(finding => (
+                                  <div key={finding.id} className={`border rounded-lg px-3 py-2.5 ${cfg.cls}`}>
+                                    <div className="flex items-start gap-2">
+                                      <span className="flex-none mt-0.5" aria-hidden="true">{cfg.icon}</span>
+                                      <div className="flex-1 min-w-0">
+                                        {/* Category + priority badge (text + icon — not color alone) */}
+                                        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                                          <span className={`text-[9px] font-bold border px-1.5 py-0.5 rounded uppercase tracking-wide ${cfg.badgeCls}`}>
+                                            {cfg.label}
+                                          </span>
+                                          <span className="text-[10px] font-semibold opacity-60">
+                                            {finding.category === 'clarity'           ? 'Clarity' :
+                                             finding.category === 'consistency'       ? 'Consistency' :
+                                             finding.category === 'medical-necessity' ? 'Medical Necessity' :
+                                             'Completeness'}
+                                          </span>
+                                        </div>
+                                        <div className="text-[11px] font-semibold leading-tight mb-0.5">
+                                          {finding.title}
+                                        </div>
+                                        <div className="text-[11px] opacity-80 leading-snug">
+                                          {finding.explanation}
+                                        </div>
+                                        {/* Field-navigation button — closes the AI panel,
+                                            then parent scrolls + focuses + highlights the target field.
+                                            No note content is modified. */}
+                                        {finding.targetFieldId && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleFieldJump(finding.targetFieldId!)}
+                                            aria-label={FIELD_ARIA_LABEL[finding.targetFieldId]}
+                                            className="mt-2 flex items-center gap-1 text-[10px] font-bold underline underline-offset-2 opacity-90 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current rounded"
+                                          >
+                                            <ChevronRight className="w-3 h-3" aria-hidden="true" />
+                                            {FIELD_ACTION_LABEL[finding.targetFieldId]}
+                                          </button>
+                                        )}
+                                        {/* Tool-detail fallback — opens individual AI tool tab.
+                                            Only shown when targetFieldId is absent (no valid destination). */}
+                                        {!finding.targetFieldId && finding.fallbackTool && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleJumpToTool(finding.fallbackTool!)}
+                                            aria-label={
+                                              finding.fallbackTool === 'clarity'     ? 'Review Clarity tool details' :
+                                              finding.fallbackTool === 'necessity'   ? 'Review Medical Necessity tool details' :
+                                              finding.fallbackTool === 'consistency' ? 'Review Consistency tool details' :
+                                              'Open Draft tool'
+                                            }
+                                            className="mt-2 flex items-center gap-1 text-[10px] font-bold underline underline-offset-2 opacity-90 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current rounded"
+                                          >
+                                            <ChevronRight className="w-3 h-3" aria-hidden="true" />
+                                            {finding.fallbackTool === 'clarity'     ? 'Review Clarity Details' :
+                                             finding.fallbackTool === 'necessity'   ? 'Review Medical Necessity Details' :
+                                             finding.fallbackTool === 'consistency' ? 'Review Consistency Details' :
+                                             'Open Draft Tool'}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Zero-state when review produces no findings */}
+                    {reviewResult.prioritizedFindings.length === 0 && !reviewResult.noteWasEmpty && (
+                      <div className="px-4 pt-3">
+                        <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-800 font-semibold">
+                          <Check className="w-3.5 h-3.5 flex-none" aria-hidden="true" />
+                          Review completed — no significant findings.
+                        </div>
+                      </div>
+                    )}
 
                     {/* ── Review-pipeline draft card ───────────────────────
                         Shown only when clinician enabled the toggle.

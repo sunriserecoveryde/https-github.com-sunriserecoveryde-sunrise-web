@@ -14,7 +14,7 @@ import { getRolesWithEditAccess } from '../data/mockRoles';
 import { SignatureModal, SignedBadge, SignatureRecord } from '../components/ui/SignatureModal';
 import { NoteFormat } from '../lib/aiNoteEngine';
 import { NoteIntelligencePanel } from '../components/ui/NoteIntelligencePanel';
-import { ProgressNoteAIAssist, type AIAuditEvent } from '../components/ui/ProgressNoteAIAssist';
+import { ProgressNoteAIAssist, type AIAuditEvent, type ProgressNoteFieldId } from '../components/ui/ProgressNoteAIAssist';
 import { useDocumentForm } from '../hooks/useDocumentForm';
 import { DocumentFormBar } from '../components/ui/DocumentFormBar';
 import { useRole } from '../context/RoleContext';
@@ -329,8 +329,77 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
     setAiAuditLog(prev => [...prev, event]);
   }
 
+  // ── Jump-to-field infrastructure ────────────────────────────────────────────
+  // Refs for note-section textareas (keyed by field label, e.g. "Behavior").
+  // Also refs for the Patient and Note Type header selects.
+  const fieldRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const patientSelectRef = useRef<HTMLSelectElement | null>(null);
+  const noteTypeSelectRef = useRef<HTMLSelectElement | null>(null);
+  const [highlightedField, setHighlightedField] = useState<string | null>(null);
+  const liveRegionRef = useRef<HTMLDivElement | null>(null);
+
+  // Maps ProgressNoteFieldId values back to the field label used as the
+  // textarea key. Keep in sync with FORMAT_FIELDS above.
+  const FIELD_ID_TO_LABEL: Partial<Record<ProgressNoteFieldId, string>> = {
+    behavior:    'Behavior',
+    intervention:'Intervention',
+    response:    'Response',
+    plan:        'Plan',
+    data:        'Data',
+    assessment:  'Assessment',
+    subjective:  'Subjective',
+    objective:   'Objective',
+    goal:        'Goal',
+  };
+
+  function handleJumpToField(fieldId: ProgressNoteFieldId) {
+    const fieldLabel = FIELD_ID_TO_LABEL[fieldId];
+    let el: HTMLElement | null = null;
+
+    if (fieldLabel) {
+      el = fieldRefs.current[fieldLabel] ?? null;
+    } else if (fieldId === 'patientSelect') {
+      el = patientSelectRef.current;
+    } else if (fieldId === 'noteTypeSelect') {
+      el = noteTypeSelectRef.current;
+    }
+
+    if (!el) return;
+
+    // Respect prefers-reduced-motion: use instant scroll when set.
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
+    el.focus();
+
+    // Temporary visible highlight (~2.5 s). Field content is never modified.
+    setHighlightedField(fieldLabel ?? fieldId);
+    setTimeout(() => setHighlightedField(null), 2500);
+
+    // Polite screen-reader announcement. Clear + rAF pattern ensures announcement
+    // fires even if the same field is jumped to twice in a row.
+    if (liveRegionRef.current) {
+      liveRegionRef.current.textContent = '';
+      requestAnimationFrame(() => {
+        if (liveRegionRef.current) {
+          liveRegionRef.current.textContent =
+            `Moved to ${FIELD_ID_TO_LABEL[fieldId] ?? fieldId}`;
+        }
+      });
+    }
+  }
+
   return (
     <div className="bg-white border border-border rounded-xl shadow-sm p-5 mb-6">
+      {/* Polite live region for screen-reader jump announcements.
+          Visually hidden — content is set programmatically via handleJumpToField. */}
+      <div
+        ref={liveRegionRef}
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      />
+
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-bold text-navy text-lg flex items-center gap-2">
           <PenTool className="w-5 h-5 text-sunrise-blue" /> New Progress Note
@@ -356,6 +425,7 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
               onInsertDraft={handleAIInsertDraft}
               onAcceptRevision={handleAIAcceptRevision}
               onAuditEvent={handleAIAuditEvent}
+              onJumpToField={handleJumpToField}
             />
           )}
           <button onClick={onClose} className="text-slate hover:text-navy text-sm">Cancel</button>
@@ -366,14 +436,14 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">Patient</label>
-          <select value={patient} onChange={e => setPatient(e.target.value)} className="w-full bg-bg border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue">
+          <select ref={patientSelectRef} value={patient} onChange={e => setPatient(e.target.value)} className="w-full bg-bg border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue">
             <option value="">Select patient…</option>
             {MOCK_PATIENTS.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName} ({p.mrn})</option>)}
           </select>
         </div>
         <div>
           <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">Note Type</label>
-          <select value={type} onChange={e => setType(e.target.value)} className="w-full bg-bg border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue">
+          <select ref={noteTypeSelectRef} value={type} onChange={e => setType(e.target.value)} className="w-full bg-bg border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-sunrise-blue">
             {['Individual', 'Group', 'Medical', 'Nursing', 'Psychiatric'].map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
@@ -394,11 +464,19 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
       {/* Note sections */}
       <div className="space-y-3 mt-3">
         {fields.map(f => (
-          <div key={f}>
+          <div
+            key={f}
+            className={`rounded-lg transition-all duration-200 ${
+              highlightedField === f
+                ? 'ring-2 ring-violet-400 ring-offset-2 bg-violet-50/50'
+                : ''
+            }`}
+          >
             <label className="block text-xs font-bold text-slate uppercase tracking-wider mb-1">
               {f} <span className="text-red-400">*</span>
             </label>
             <textarea
+              ref={el => { fieldRefs.current[f] = el; }}
               rows={3}
               value={values[f] ?? ''}
               onChange={e => { setValues(prev => ({ ...prev, [f]: e.target.value })); docForm.markDirty(); }}
