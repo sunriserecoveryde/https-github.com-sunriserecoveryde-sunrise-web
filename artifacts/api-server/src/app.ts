@@ -5,6 +5,7 @@ import { rateLimit } from "express-rate-limit";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { notifySpamAlert } from "./lib/spamAlert";
+import { devIdentityMiddleware } from "./middlewares/devIdentity";
 
 const app: Express = express();
 
@@ -65,6 +66,11 @@ app.use("/api/subscribe", makeLimiter(10));
 // Rate-limit Grow auth endpoints: 20 per IP per hour (covers login + register)
 app.use("/api/grow/register", makeLimiter(10));
 app.use("/api/grow/login", makeLimiter(20));
+
+// Dev-only identity adapter — no-op in production (Phase 2 replaces with real auth).
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api/v1", devIdentityMiddleware);
+}
 
 app.use("/api", router);
 

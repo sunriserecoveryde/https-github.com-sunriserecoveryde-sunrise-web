@@ -7,6 +7,7 @@ import subscribeRouter from "./subscribe";
 import growRouter from "./grow";
 import anthropicRouter from "./anthropic";
 import complianceRouter from "./compliance";
+import patientsV1Router from "./patientsV1";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(subscribeRouter);
 router.use(growRouter);
 router.use("/anthropic", anthropicRouter);
 router.use(complianceRouter);
+router.use(patientsV1Router);
 
 export default router;

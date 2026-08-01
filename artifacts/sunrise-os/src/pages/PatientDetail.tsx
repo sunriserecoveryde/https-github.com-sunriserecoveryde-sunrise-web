@@ -19,9 +19,54 @@ import { Screen } from '../App';
 import { LockedButton } from '../components/common/LockedButton';
 import { useAuth } from '../context/AuthContext';
 import { useSidebarPrefs } from '../hooks/useSidebarPrefs';
+import { DATA_MODE, API_BASE, DEV_HEADERS } from '../lib/dataMode';
+import type { Patient } from '../data/mockPatients';
+
+
+// ── Server-patient adapter for PatientDetail (Phase 1A) ───────────────────────
+interface ServerPatientDetailRecord {
+  id: string; mrn: string; firstName: string; lastName: string;
+  dateOfBirth: string | null; gender: string | null;
+  insurancePayer: string | null; primaryDiagnosis: string | null;
+  status: string;
+  episode: { id: string; program: string; levelOfCare: string | null;
+             admissionDate: string | null; dischargeDate: string | null;
+             episodeStatus: string; } | null;
+}
+function adaptForDetail(sp: ServerPatientDetailRecord): Patient {
+  const program = (['Residential','PHP','IOP','OP'].includes(sp.episode?.program ?? ''))
+    ? (sp.episode!.program as Patient['program']) : 'Residential';
+  const los = sp.episode?.admissionDate
+    ? Math.floor((Date.now() - new Date(sp.episode.admissionDate).getTime()) / 86_400_000) : 0;
+  return {
+    id: sp.id, mrn: sp.mrn, firstName: sp.firstName, lastName: sp.lastName,
+    dob: sp.dateOfBirth ?? '—',
+    age: sp.dateOfBirth ? Math.floor((Date.now() - new Date(sp.dateOfBirth).getTime()) / 31_557_600_000) : 0,
+    gender: sp.gender ?? '—', insurance: sp.insurancePayer ?? '—', program,
+    primaryDiagnosis: sp.primaryDiagnosis ?? '—', coOccurring: [],
+    asam: { d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 },
+    recoveryScore: 0, amaRisk: 'Low', los,
+    admitDate: sp.episode?.admissionDate ?? '—',
+    expectedDischarge: sp.episode?.dischargeDate ?? '—',
+    counselor: '—', physician: '—', flags: [], lastUa: '—',
+    mood: 5, craving: 0, notes: [], goals: [], nextAppointment: '—',
+  };
+}
 
 export function PatientDetail({ patientId, navigate, readOnly }: { patientId: string | null; navigate: (s: Screen, id?: string) => void; readOnly?: boolean }) {
-  const patient = MOCK_PATIENTS.find(p => p.id === patientId) || MOCK_PATIENTS[0];
+  // ── Production-mode server patient fetch (Phase 1A) ───────────────────────
+  const [serverPatient, setServerPatient] = useState<Patient | null>(null);
+  useEffect(() => {
+    if (DATA_MODE !== 'production' || !patientId) return;
+    setServerPatient(null);
+    fetch(`${API_BASE}/v1/patients/${patientId}`, { headers: DEV_HEADERS })
+      .then(r => r.ok ? r.json() as Promise<ServerPatientDetailRecord> : Promise.reject(r.status))
+      .then(data => setServerPatient(adaptForDetail(data)))
+      .catch(() => { /* fallback to mock on error */ });
+  }, [patientId]);
+
+  const patient = serverPatient ?? (MOCK_PATIENTS.find(p => p.id === patientId) || MOCK_PATIENTS[0]);
+
 
   // ── Pin / Unpin ────────────────────────────────────────────────────────────
   const { currentStaff } = useAuth();
