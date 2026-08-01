@@ -787,6 +787,11 @@ export function ProgressNoteAIAssist({
   /** fieldIds whose original text is currently shown (toggled per-section). */
   const [showOriginalFields, setShowOriginalFields] = useState<Set<ProgressNoteFieldId>>(new Set());
 
+  /** fieldId of the clarity section card that should be briefly highlighted after a jump. */
+  const [highlightedClaritySection, setHighlightedClaritySection] = useState<ProgressNoteFieldId | null>(null);
+  /** Stable DOM-node map for per-section clarity cards, keyed by fieldId. */
+  const claritySectionRefsMap = useRef<Map<ProgressNoteFieldId, HTMLDivElement>>(new Map());
+
   const [necessityResult, setNecessityResult] = useState<NecessityResult | null>(null);
   const [consistencyResult, setConsistencyResult] = useState<ConsistencyResult | null>(null);
 
@@ -904,7 +909,7 @@ export function ProgressNoteAIAssist({
   // ── Jump from review result to individual tool ──────────────────────────────
   // Pre-populates individual tool state from the review's already-computed data
   // so the clinician does not have to re-run the step.
-  function handleJumpToTool(action: AIAction) {
+  function handleJumpToTool(action: AIAction, targetSectionFieldId?: ProgressNoteFieldId) {
     setActiveAction(action);
     setError(null);
     setDiscardWarning(false);
@@ -917,6 +922,20 @@ export function ProgressNoteAIAssist({
       setStalePending(null);
       setShowOriginalFields(new Set());
       setStatus('result');
+      // When a specific section was flagged, scroll to it and briefly highlight it.
+      if (targetSectionFieldId) {
+        setHighlightedClaritySection(targetSectionFieldId);
+        // Allow the section cards to mount before scrolling (after the panel
+        // itself scrolls into view at 80 ms, so use a slightly longer delay).
+        setTimeout(() => {
+          const el = claritySectionRefsMap.current.get(targetSectionFieldId);
+          el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 180);
+        // Clear the highlight after ~2 s.
+        setTimeout(() => {
+          setHighlightedClaritySection(null);
+        }, 2200);
+      }
     } else if (action === 'necessity' && reviewResult?.necessityData) {
       setNecessityResult(reviewResult.necessityData);
       setStatus('result');
@@ -2128,7 +2147,17 @@ export function ProgressNoteAIAssist({
                                         {!finding.targetFieldId && finding.fallbackTool && (
                                           <button
                                             type="button"
-                                            onClick={() => handleJumpToTool(finding.fallbackTool!)}
+                                            onClick={() => {
+                                              // For clarity findings, extract the fieldId from the stable
+                                              // finding ID (format: `clarity:{fieldId}`) so the panel can
+                                              // scroll to and highlight the specific section card.
+                                              const sectionFieldId =
+                                                finding.fallbackTool === 'clarity' &&
+                                                finding.id.startsWith('clarity:')
+                                                  ? (finding.id.slice('clarity:'.length) as ProgressNoteFieldId)
+                                                  : undefined;
+                                              handleJumpToTool(finding.fallbackTool!, sectionFieldId);
+                                            }}
                                             aria-label={
                                               finding.fallbackTool === 'clarity'     ? 'Review Clarity tool details' :
                                               finding.fallbackTool === 'necessity'   ? 'Review Medical Necessity tool details' :
@@ -2564,7 +2593,15 @@ export function ProgressNoteAIAssist({
                           return (
                             <div
                               key={section.fieldId}
-                              className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 flex items-center gap-2"
+                              ref={el => {
+                                if (el) claritySectionRefsMap.current.set(section.fieldId, el);
+                                else claritySectionRefsMap.current.delete(section.fieldId);
+                              }}
+                              className={`rounded-xl border border-green-200 bg-green-50 px-3 py-2 flex items-center gap-2 transition-shadow duration-300${
+                                highlightedClaritySection === section.fieldId
+                                  ? ' ring-2 ring-violet-400 ring-offset-1'
+                                  : ''
+                              }`}
                             >
                               <Check className="w-3.5 h-3.5 text-green-500 flex-none" />
                               <span className="text-[11px] text-green-800 font-semibold">{section.fieldLabel}</span>
@@ -2576,11 +2613,15 @@ export function ProgressNoteAIAssist({
                         return (
                           <div
                             key={section.fieldId}
-                            className={`rounded-xl border overflow-hidden ${
+                            ref={el => {
+                              if (el) claritySectionRefsMap.current.set(section.fieldId, el);
+                              else claritySectionRefsMap.current.delete(section.fieldId);
+                            }}
+                            className={`rounded-xl border overflow-hidden transition-shadow duration-300 ${
                               accepted  ? 'border-green-300 bg-green-50'  :
                               rejected  ? 'border-slate-200 bg-slate-50'  :
                               'border-violet-200 bg-white'
-                            }`}
+                            }${highlightedClaritySection === section.fieldId ? ' ring-2 ring-violet-400 ring-offset-1' : ''}`}
                           >
                             {/* Section heading */}
                             <div className={`flex items-center justify-between px-3 py-2 border-b ${
