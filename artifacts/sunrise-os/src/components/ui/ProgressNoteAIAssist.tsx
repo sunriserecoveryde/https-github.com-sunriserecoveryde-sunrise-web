@@ -45,6 +45,17 @@ import {
   type ProgressNoteInput,
 } from '../../lib/aiNoteEngine';
 import { MOCK_PATIENTS } from '../../data/mockPatients';
+import {
+  resolveFieldTarget,
+  buildNecessityDisplay,
+  validateMedicalNecessityResults,
+  MEDICAL_NECESSITY_REQUIREMENTS,
+  FIELD_ID_LABELS,
+  type ProgressNoteFieldId,
+  type FindingPriority,
+  type MedicalNecessityRequirementCode,
+  type MedicalNecessityRequirementResult,
+} from './medicalNecessityConfig';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,24 +147,10 @@ interface ReviewStep {
   status: ReviewStepStatus;
 }
 
-type FindingPriority = 'critical' | 'important' | 'suggested' | 'informational';
-
-// ─── Stable note-field identifiers ───────────────────────────────────────────
-// Used to navigate from a review finding to the exact textarea in the note form.
-// Must stay in sync with FORMAT_FIELDS in ProgressNotes.tsx.
-// Only identifiers for fields that actually exist in the form are listed here.
-export type ProgressNoteFieldId =
-  | 'behavior'       // BIRP: Behavior
-  | 'intervention'   // BIRP / GIRP: Intervention
-  | 'response'       // BIRP / GIRP: Response (Patient Response)
-  | 'plan'           // BIRP / DAP / SOAP / GIRP: Plan
-  | 'data'           // DAP: Data
-  | 'assessment'     // DAP / SOAP: Assessment
-  | 'subjective'     // SOAP: Subjective
-  | 'objective'      // SOAP: Objective
-  | 'goal'           // GIRP: Goal
-  | 'patientSelect'  // Header: Patient dropdown
-  | 'noteTypeSelect';// Header: Note Type dropdown
+// FindingPriority and ProgressNoteFieldId are defined in medicalNecessityConfig.ts
+// and imported at the top of this file. Re-export ProgressNoteFieldId so that
+// ProgressNotes.tsx can continue to import it from here without change.
+export type { ProgressNoteFieldId } from './medicalNecessityConfig';
 
 // ─── Finding structure ────────────────────────────────────────────────────────
 // Single unified structure for all review findings.
@@ -332,104 +329,86 @@ function improveClarity(text: string): { revised: string; changes: string[] } {
 }
 
 // ─── Medical necessity evaluator ─────────────────────────────────────────────
-// Returns structured findings — NEVER rewrites content or makes clinical judgments.
+// Returns structured requirement results keyed by stable MedicalNecessityRequirementCode.
+// NEVER rewrites content or makes clinical judgments.
+//
+// The evaluator determines only the STATUS of each requirement.
+// All display text, priorities, destinations, and source fields are configured in
+// MEDICAL_NECESSITY_REQUIREMENTS (medicalNecessityConfig.ts) and looked up by code.
+// Changing a requirement's title or explanation never changes its destination.
 function evaluateMedicalNecessity(
   values: Record<string, string>,
   fields: string[],
-  format: NoteFormat,
+  _format: NoteFormat,
   patient: ReturnType<typeof MOCK_PATIENTS.find> | undefined,
-): Omit<NecessityResult, 'timestamp'> {
-  const allText = fields.map(f => values[f] ?? '').join(' ').toLowerCase();
-  const evidencePresent: string[] = [];
-  const missingElements: string[] = [];
-  const clinicianReviewAreas: string[] = [];
+): { results: MedicalNecessityRequirementResult[]; category: NecessityCategory; disclaimer: string } {
+  const DISCLAIMER = 'This review supports documentation quality and does not guarantee reimbursement, authorization, or payer acceptance.';
 
+  // Empty note — none of the per-requirement checks are meaningful.
+  if (fields.every(f => !values[f]?.trim())) {
+    return { results: [], category: 'Unable to Determine', disclaimer: DISCLAIMER };
+  }
+
+  const allText = fields.map(f => values[f] ?? '').join(' ').toLowerCase();
+  const results: MedicalNecessityRequirementResult[] = [];
+
+  // intervention-documented
   const hasIntervention =
     /\b(cbt|dbt|mi\b|motivational interviewing|psychoeducation|relapse prevention|skill|intervention|counseling|therapy)\b/i.test(allText);
-  if (hasIntervention) {
-    evidencePresent.push('Therapeutic intervention is identified in the note.');
-  } else {
-    missingElements.push('No specific therapeutic intervention or modality is documented.');
-  }
+  results.push({ code: 'intervention-documented', status: hasIntervention ? 'present' : 'missing' });
 
+  // patient-response-documented
   const hasResponse =
     /\b(response|engaged|receptive|resistant|participated|verbalized|denied|reported|expressed|demonstrated)\b/i.test(allText);
-  if (hasResponse) {
-    evidencePresent.push('Patient response to the intervention is documented.');
-  } else {
-    missingElements.push('Patient response to the documented intervention is not described.');
-  }
+  results.push({ code: 'patient-response-documented', status: hasResponse ? 'present' : 'missing' });
 
+  // safety-status-documented (needs-review, not hard-required)
   const hasSafety =
     /\b(si|hi|suicidal|homicidal|safety plan|risk|denies)\b/i.test(allText);
-  if (hasSafety) {
-    evidencePresent.push('Suicide/homicide ideation status or safety plan is addressed.');
-  } else {
-    clinicianReviewAreas.push('SI/HI status and safety plan review are not explicitly documented. Add a brief statement even when negative (e.g., "Denies SI/HI. Safety plan reviewed and current.")');
-  }
+  results.push({ code: 'safety-status-documented', status: hasSafety ? 'present' : 'needs-review' });
 
+  // treatment-goal-linked
   const hasGoalRef = patient
     ? patient.goals.some(g =>
         g.shortTerm && allText.includes(g.shortTerm.slice(0, 10).toLowerCase()),
       ) || /\b(goal|treatment plan|objective|outcome)\b/i.test(allText)
     : /\b(goal|treatment plan|objective|outcome)\b/i.test(allText);
-  if (hasGoalRef) {
-    evidencePresent.push('Connection to treatment plan goals is evident.');
-  } else {
-    missingElements.push("The note does not reference the patient's treatment-plan goals. Payers may require explicit goal linkage.");
-  }
+  results.push({ code: 'treatment-goal-linked', status: hasGoalRef ? 'present' : 'missing' });
 
+  // follow-up-plan-documented
   const hasPlan = /\b(plan|next session|follow.?up|continue|schedule|referral)\b/i.test(allText);
-  if (hasPlan) {
-    evidencePresent.push('A follow-up plan is documented.');
-  } else {
-    missingElements.push('No follow-up plan or next-session goal is documented.');
-  }
+  results.push({ code: 'follow-up-plan-documented', status: hasPlan ? 'present' : 'missing' });
 
+  // continued-service-supported (needs-review, not hard-required)
   const hasContinuedNeed =
     /\b(ongoing|continue|persistent|barrier|challenge|risk factor|unresolved|maintain)\b/i.test(allText);
-  if (hasContinuedNeed) {
-    evidencePresent.push('Continued need for the current level of care is suggested by documented barriers or ongoing clinical concerns.');
-  } else {
-    clinicianReviewAreas.push('The note may not clearly articulate continued medical necessity. Consider documenting ongoing barriers, risk factors, or unresolved clinical concerns that support the current level of care.');
-  }
+  results.push({ code: 'continued-service-supported', status: hasContinuedNeed ? 'present' : 'needs-review' });
 
+  // level-of-care-referenced (needs-review; only emitted when patient data is available)
   if (patient) {
     const locMatch =
       allText.includes(patient.program.toLowerCase()) ||
       /\b(residential|outpatient|iop|php|detox|inpatient|level of care|loc)\b/i.test(allText);
-    if (locMatch) {
-      evidencePresent.push('Current level of care is referenced in the note.');
-    } else {
-      clinicianReviewAreas.push("Consider explicitly referencing the patient's current level of care to strengthen medical necessity documentation.");
-    }
+    results.push({ code: 'level-of-care-referenced', status: locMatch ? 'present' : 'needs-review' });
   }
 
+  // Derive the category from structured results — same logic as before.
+  const missingCount = results.filter(r => r.status === 'missing').length;
+  const presentCount = results.filter(r => r.status === 'present').length;
+  const reviewCount  = results.filter(r => r.status === 'needs-review').length;
+
   let category: NecessityCategory;
-  if (missingElements.length === 0 && clinicianReviewAreas.length <= 1) {
+  if (missingCount === 0 && reviewCount <= 1) {
     category = 'Supported';
-  } else if (missingElements.length <= 1 && evidencePresent.length >= 3) {
+  } else if (missingCount <= 1 && presentCount >= 3) {
     category = 'Partially Supported';
-  } else if (evidencePresent.length < 2) {
+  } else if (presentCount < 2) {
     category = 'Insufficiently Supported';
   } else {
     category = 'Partially Supported';
   }
 
-  if (fields.every(f => !values[f]?.trim())) {
-    category = 'Unable to Determine';
-    evidencePresent.length = 0;
-    missingElements.push('No note content has been entered. Medical necessity cannot be evaluated without documented clinical content.');
-  }
-
-  return {
-    category,
-    evidencePresent,
-    missingElements,
-    clinicianReviewAreas,
-    disclaimer:
-      'This review supports documentation quality and does not guarantee reimbursement, authorization, or payer acceptance.',
-  };
+  return { results, category, disclaimer: DISCLAIMER };
 }
 
 // ─── Internal consistency checker ─────────────────────────────────────────────
@@ -701,110 +680,19 @@ const FIELD_ARIA_LABEL: Record<ProgressNoteFieldId, string> = {
   noteTypeSelect:'Move to Note Type selector',
 };
 
-// ─── Field ID → display label map ────────────────────────────────────────────
-// Maps every ProgressNoteFieldId to the exact label string that appears in
-// the FORMAT_FIELDS map in ProgressNotes.tsx, and that the `fields` prop
-// array is keyed by. Used to validate targetFieldId against the active note
-// format at runtime.
-// patientSelect and noteTypeSelect are header controls — they are never
-// in the currentFields[] array but are always valid navigation targets.
-const FIELD_ID_LABELS: Record<ProgressNoteFieldId, string | null> = {
-  behavior:      'Behavior',
-  intervention:  'Intervention',
-  response:      'Response',
-  plan:          'Plan',
-  data:          'Data',
-  assessment:    'Assessment',
-  subjective:    'Subjective',
-  objective:     'Objective',
-  goal:          'Goal',
-  patientSelect: null,   // header control — not in currentFields[]
-  noteTypeSelect: null,  // header control — not in currentFields[]
-};
-
-// Resolve a preferred targetFieldId against the currently active note fields.
-// Tries each candidate in order; returns the first whose form label exists in
-// currentFields[]. Returns undefined when no candidate is valid.
-// patientSelect / noteTypeSelect are header controls and are always valid.
-function resolveFieldTarget(
-  currentFields: string[],
-  ...candidates: (ProgressNoteFieldId | undefined)[]
-): ProgressNoteFieldId | undefined {
-  for (const cand of candidates) {
-    if (!cand) continue;
-    const label = FIELD_ID_LABELS[cand];
-    if (label === null) return cand;                  // header control — always present
-    if (label && currentFields.includes(label)) return cand;
-  }
-  return undefined;
-}
-
-// ─── Necessity element → structured destination ───────────────────────────────
-// Maps the EXACT strings produced by evaluateMedicalNecessity() to a
-// structured destination. Keys are exact-equality matches — no substring
-// or regex matching. Changing a key here is a conscious, explicit decision.
-//
-// candidates[] lists preferred ProgressNoteFieldIds in format-priority order.
-// resolveFieldTarget() picks the first that exists in the active note fields.
-// fallbackTool is shown when no candidate matches the active format.
-type NecessityDest = {
-  candidates: ProgressNoteFieldId[];
-  sourceFields?: string[];
-  fallbackTool: AIAction;
-};
-
-const NECESSITY_ELEMENT_DEST: Record<string, NecessityDest> = {
-  'No specific therapeutic intervention or modality is documented.': {
-    candidates:   ['intervention'],
-    sourceFields: ['Intervention'],
-    fallbackTool: 'necessity',
-  },
-  'Patient response to the documented intervention is not described.': {
-    // response (BIRP/GIRP) → assessment (DAP/SOAP, which has no separate response field)
-    candidates:   ['response', 'assessment'],
-    sourceFields: ['Response'],
-    fallbackTool: 'necessity',
-  },
-  "The note does not reference the patient's treatment-plan goals. Payers may require explicit goal linkage.": {
-    // goal (GIRP) → plan (BIRP/DAP/SOAP, where goal references live in the plan)
-    candidates:   ['goal', 'plan'],
-    sourceFields: ['Goal', 'Plan'],
-    fallbackTool: 'necessity',
-  },
-  'No follow-up plan or next-session goal is documented.': {
-    candidates:   ['plan'],
-    sourceFields: ['Plan'],
-    fallbackTool: 'necessity',
-  },
-  'No note content has been entered. Medical necessity cannot be evaluated without documented clinical content.': {
-    candidates:   [],
-    fallbackTool: 'draft',
-  },
-};
-
-const NECESSITY_REVIEW_DEST: Record<string, NecessityDest> = {
-  'SI/HI status and safety plan review are not explicitly documented. Add a brief statement even when negative (e.g., "Denies SI/HI. Safety plan reviewed and current.")': {
-    // assessment (DAP/SOAP) → response (BIRP/GIRP, where safety status is documented)
-    candidates:   ['assessment', 'response'],
-    fallbackTool: 'necessity',
-  },
-  'The note may not clearly articulate continued medical necessity. Consider documenting ongoing barriers, risk factors, or unresolved clinical concerns that support the current level of care.': {
-    candidates:   [],
-    fallbackTool: 'necessity',
-  },
-  "Consider explicitly referencing the patient's current level of care to strengthen medical necessity documentation.": {
-    candidates:   [],
-    fallbackTool: 'necessity',
-  },
-};
+// FIELD_ID_LABELS, resolveFieldTarget, and all requirement configuration are
+// defined in medicalNecessityConfig.ts and imported at the top of this file.
+// NECESSITY_ELEMENT_DEST and NECESSITY_REVIEW_DEST have been removed —
+// destinations are now configured by stable requirement codes, not by displayed strings.
 
 // ─── Development-time finding validator ──────────────────────────────────────
-// Logs a concise, structured warning for invalid finding metadata.
+// Logs concise, structured warnings for invalid finding metadata.
 //
 // Guarantees:
-//   • Never logs patient note content.
+//   • Never logs patient note content (no title/explanation/recommendedAction values).
 //   • Never throws — purely advisory.
 //   • No-ops in production (import.meta.env.PROD).
+//   • Medical-necessity findings with stable IDs are validated against known codes.
 //
 // The renderer guards independently against missing navigation targets so that
 // a failed validation never crashes the AI panel or blocks the clinician.
@@ -813,6 +701,7 @@ function validateFindings(findings: ClinicalReviewFinding[], currentFields: stri
   const validPriorities  = new Set<string>(['critical', 'important', 'suggested', 'informational']);
   const validCategories  = new Set<string>(['clarity', 'consistency', 'medical-necessity', 'completeness']);
   const knownFieldIds    = new Set(Object.keys(FIELD_ID_LABELS));
+  const knownMnCodes     = new Set(Object.keys(MEDICAL_NECESSITY_REQUIREMENTS));
   const seenIds          = new Set<string>();
 
   findings.forEach((f, idx) => {
@@ -825,6 +714,14 @@ function validateFindings(findings: ClinicalReviewFinding[], currentFields: stri
     if (!f.explanation)     console.warn(loc, 'Empty explanation');
     if (!validPriorities.has(f.priority))  console.warn(loc, `Unknown priority "${f.priority}"`);
     if (!validCategories.has(f.category))  console.warn(loc, `Unknown category "${f.category}"`);
+
+    // Medical-necessity findings must use stable IDs derived from requirement codes.
+    if (f.category === 'medical-necessity' && f.id?.startsWith('medical-necessity:')) {
+      const code = f.id.slice('medical-necessity:'.length);
+      if (!knownMnCodes.has(code)) {
+        console.warn(loc, `medical-necessity finding references unknown requirement code "${code}"`);
+      }
+    }
 
     if (f.targetFieldId) {
       if (!knownFieldIds.has(f.targetFieldId)) {
@@ -848,21 +745,22 @@ function validateFindings(findings: ClinicalReviewFinding[], currentFields: stri
 }
 
 // ─── DEPRECATED: text-based field inference ───────────────────────────────────
-// @deprecated — Do NOT call this from new Clinical Documentation Review findings.
-//   All review finding destinations are now assigned as structured metadata
-//   via NECESSITY_ELEMENT_DEST, NECESSITY_REVIEW_DEST, and
-//   ConsistencyFinding.targetFieldId — none of which parse finding text.
+// @deprecated — Do NOT call this from Clinical Documentation Review findings.
+//   All finding destinations are now assigned as structured metadata:
+//     • Medical-necessity findings — MEDICAL_NECESSITY_REQUIREMENTS[code].targetCandidates
+//     • Consistency findings       — ConsistencyFinding.targetFieldId (set by the checker)
+//   None of these paths parse finding text.
 //
 //   This function is retained as a dead-code safety net only.
 //   It always returns undefined so that any accidental call is safely neutralised
-//   and caught by the TypeScript compiler if the result is used for navigation.
+//   and caught by TypeScript if the result is used for navigation.
 //   Remove it once all callers are confirmed absent.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function inferFieldId(_text: string, _currentFields: string[]): undefined {
   if (!import.meta.env.PROD) {
     console.warn('[AI Review] inferFieldId() was called — this function is deprecated. ' +
-      'Assign targetFieldId as structured metadata (NECESSITY_ELEMENT_DEST / ' +
-      'NECESSITY_REVIEW_DEST / ConsistencyFinding.targetFieldId) instead.');
+      'Assign targetFieldId via MEDICAL_NECESSITY_REQUIREMENTS[code].targetCandidates ' +
+      'or ConsistencyFinding.targetFieldId instead.');
   }
   return undefined;
 }
@@ -1168,9 +1066,21 @@ export function ProgressNoteAIAssist({
       // ── Step 5: Review medical necessity ────────────────────────────────
       setStep('necessity', 'running');
       await simulateLatency(500);
-      const necessityRaw = evaluateMedicalNecessity(values, fields, format, patient);
+      const necessityEval = evaluateMedicalNecessity(values, fields, format, patient);
       const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      const necessityData: NecessityResult = { ...necessityRaw, timestamp: ts };
+      // Build the clinician-facing NecessityResult from structured requirement results.
+      // The three string arrays (evidencePresent, missingElements, clinicianReviewAreas)
+      // are derived from requirement-code config — not from the evaluation strings themselves.
+      const { evidencePresent: mnEvidence, missingElements: mnMissing, clinicianReviewAreas: mnReview }
+        = buildNecessityDisplay(necessityEval.results);
+      const necessityData: NecessityResult = {
+        category:              necessityEval.category,
+        evidencePresent:       mnEvidence,
+        missingElements:       mnMissing,
+        clinicianReviewAreas:  mnReview,
+        disclaimer:            necessityEval.disclaimer,
+        timestamp:             ts,
+      };
       setStep('necessity', 'done');
 
       // ── Step 6: Completeness + findings + summary ────────────────────────
@@ -1190,14 +1100,15 @@ export function ProgressNoteAIAssist({
       //
       //   • Consistency findings  — targetFieldId set by checkInternalConsistency()
       //                             based on format, not parsed from conflictA/conflictB.
-      //   • Medical necessity     — NECESSITY_ELEMENT_DEST / NECESSITY_REVIEW_DEST
-      //                             exact-key lookup; never parses finding text.
-      //   • Clarity               — always uses fallbackTool: 'clarity' (no field target;
-      //                             grammar issues span multiple sections).
-      //   • Completeness          — fallbackTool: 'draft' (note is fully empty).
+      //   • Medical necessity   — requirement code → MEDICAL_NECESSITY_REQUIREMENTS[code]
+      //                           targetCandidates; resolveFieldTarget() selects the first
+      //                           candidate valid for the active format. Never parses text.
+      //   • Consistency         — ConsistencyFinding.targetFieldId (set by checker, format-aware).
+      //   • Clarity             — always uses fallbackTool: 'clarity' (spans multiple sections).
+      //   • Completeness        — fallbackTool: 'draft' (note is fully empty).
       //
-      // resolveFieldTarget() validates each candidate against the active fields[]
-      // and returns the first valid field, or undefined when none match the format.
+      // Medical-necessity findings use stable IDs: `medical-necessity:${code}`.
+      // Other findings use auto-incremented IDs: `f-N`.
       // Grammar/style findings are never Critical. Positive findings are never Important.
       let _fSeq = 0;
       const mkF = (
@@ -1205,8 +1116,11 @@ export function ProgressNoteAIAssist({
         category: ClinicalReviewFinding['category'],
         title: string,
         explanation: string,
-        opts?: Partial<Pick<ClinicalReviewFinding, 'recommendedAction' | 'targetFieldId' | 'fallbackTool' | 'sourceFields'>>,
-      ): ClinicalReviewFinding => ({ id: `f-${++_fSeq}`, priority, category, title, explanation, ...(opts ?? {}) });
+        opts?: Partial<Omit<ClinicalReviewFinding, 'priority' | 'category' | 'title' | 'explanation'>>,
+      ): ClinicalReviewFinding => {
+        const { id: stableId, ...rest } = opts ?? {};
+        return { id: stableId ?? `f-${++_fSeq}`, priority, category, title, explanation, ...rest };
+      };
 
       const pFindings: ClinicalReviewFinding[] = [];
 
@@ -1219,7 +1133,7 @@ export function ProgressNoteAIAssist({
           { recommendedAction: 'Complete each note section, then re-run the review. Use the Draft Note tool to generate a starting point.', fallbackTool: 'draft' },
         ));
       }
-      if (!noteIsEmpty && necessityRaw.category === 'Insufficiently Supported') {
+      if (!noteIsEmpty && necessityEval.category === 'Insufficiently Supported') {
         pFindings.push(mkF(
           'critical', 'medical-necessity',
           'Medical necessity documentation is insufficient',
@@ -1230,7 +1144,7 @@ export function ProgressNoteAIAssist({
       // Consistency conflicts — targetFieldId already set by checkInternalConsistency()
       // using format-aware logic. No text parsing happens here.
       consistencyFindings.filter(f => f.type === 'potential_inconsistency').forEach(f => {
-        const tgt = resolveFieldTarget(fields, f.targetFieldId);
+        const tgt = resolveFieldTarget(fields, [f.targetFieldId]);
         pFindings.push(mkF(
           'critical', 'consistency',
           'Internal consistency conflict detected',
@@ -1240,21 +1154,29 @@ export function ProgressNoteAIAssist({
       });
 
       // ── Important ──
-      // Medical necessity missing elements — exact-key lookup, never text parsing.
-      necessityRaw.missingElements.forEach(m => {
-        const dest = NECESSITY_ELEMENT_DEST[m];
-        const tgt  = dest ? resolveFieldTarget(fields, ...dest.candidates) : undefined;
-        const fb   = dest?.fallbackTool ?? 'necessity';
-        pFindings.push(mkF(
-          'important', 'medical-necessity',
-          m.replace(/\.$/, ''),
-          'This element is required to support medical necessity for the service type and level of care.',
-          { recommendedAction: tgt ? FIELD_ACTION_LABEL[tgt] : 'Review Medical Necessity Details', targetFieldId: tgt, fallbackTool: tgt ? undefined : fb, sourceFields: dest?.sourceFields },
-        ));
-      });
+      // Medical-necessity missing requirements — destination from typed code config.
+      // Changing title or explanation never changes the destination.
+      necessityEval.results
+        .filter(r => r.status === 'missing')
+        .forEach(r => {
+          const cfg = MEDICAL_NECESSITY_REQUIREMENTS[r.code as MedicalNecessityRequirementCode];
+          const tgt = resolveFieldTarget(fields, cfg.targetCandidates);
+          pFindings.push(mkF(
+            cfg.priority, 'medical-necessity',
+            cfg.title,
+            cfg.explanation,
+            {
+              id:                `medical-necessity:${r.code}`,
+              recommendedAction: tgt ? FIELD_ACTION_LABEL[tgt] : cfg.recommendedAction,
+              targetFieldId:     tgt,
+              fallbackTool:      tgt ? undefined : cfg.fallbackTool,
+              sourceFields:      cfg.sourceFields ? [...cfg.sourceFields] : undefined,
+            },
+          ));
+        });
       // Consistency missing-connections — targetFieldId already set by checker.
       consistencyFindings.filter(f => f.type === 'missing_connection').forEach(f => {
-        const tgt = resolveFieldTarget(fields, f.targetFieldId);
+        const tgt = resolveFieldTarget(fields, [f.targetFieldId]);
         pFindings.push(mkF(
           'important', 'consistency',
           'Required section connection missing',
@@ -1273,21 +1195,28 @@ export function ProgressNoteAIAssist({
       }
 
       // ── Suggested Improvement ──
-      // Medical necessity clinician review areas — exact-key lookup, never text parsing.
-      necessityRaw.clinicianReviewAreas.forEach(r => {
-        const dest = NECESSITY_REVIEW_DEST[r];
-        const tgt  = dest ? resolveFieldTarget(fields, ...dest.candidates) : undefined;
-        const fb   = dest?.fallbackTool ?? 'necessity';
-        pFindings.push(mkF(
-          'suggested', 'medical-necessity',
-          r.replace(/\.$/, ''),
-          'This area may benefit from additional documentation to further strengthen the medical necessity rationale.',
-          { recommendedAction: tgt ? FIELD_ACTION_LABEL[tgt] : 'Review Medical Necessity Details', targetFieldId: tgt, fallbackTool: tgt ? undefined : fb },
-        ));
-      });
+      // Medical-necessity needs-review requirements — destination from typed code config.
+      // Changing title or explanation never changes the destination.
+      necessityEval.results
+        .filter(r => r.status === 'needs-review')
+        .forEach(r => {
+          const cfg = MEDICAL_NECESSITY_REQUIREMENTS[r.code as MedicalNecessityRequirementCode];
+          const tgt = resolveFieldTarget(fields, cfg.targetCandidates);
+          pFindings.push(mkF(
+            'suggested', 'medical-necessity',
+            cfg.title,
+            cfg.explanation,
+            {
+              id:                `medical-necessity:${r.code}`,
+              recommendedAction: tgt ? FIELD_ACTION_LABEL[tgt] : cfg.recommendedAction,
+              targetFieldId:     tgt,
+              fallbackTool:      tgt ? undefined : cfg.fallbackTool,
+            },
+          ));
+        });
       // Consistency requires_review — targetFieldId already set by checker.
       consistencyFindings.filter(f => f.type === 'requires_review').forEach(f => {
-        const tgt = resolveFieldTarget(fields, f.targetFieldId);
+        const tgt = resolveFieldTarget(fields, [f.targetFieldId]);
         pFindings.push(mkF(
           'suggested', 'consistency',
           f.conflictA.replace(/\.$/, ''),
@@ -1310,7 +1239,8 @@ export function ProgressNoteAIAssist({
           'The note sections appear internally consistent. No conflicting statements or missing section connections were identified.',
         ));
       }
-      if (!noteIsEmpty && necessityRaw.category === 'Supported' && necessityRaw.missingElements.length === 0) {
+      const missingCount = necessityEval.results.filter(r => r.status === 'missing').length;
+      if (!noteIsEmpty && necessityEval.category === 'Supported' && missingCount === 0) {
         pFindings.push(mkF('informational', 'medical-necessity',
           'Medical necessity appears adequately supported',
           'The documentation appears to support medical necessity for the documented service. No missing required elements were identified.',
@@ -1318,8 +1248,9 @@ export function ProgressNoteAIAssist({
       }
 
       // ── Development-time metadata validation ─────────────────────────────────
-      // Logs concise warnings for invalid finding metadata in dev.
-      // Never logs patient content. Never crashes the panel.
+      // Runs only in dev. Never logs patient content. Never crashes the panel.
+      // Also validates the structured MN results for unknown codes and config gaps.
+      validateMedicalNecessityResults(necessityEval.results);
       validateFindings(pFindings, fields);
 
       const hasCritical  = pFindings.some(f => f.priority === 'critical');
@@ -1334,7 +1265,10 @@ export function ProgressNoteAIAssist({
       const hasPotentialInconsistency = consistencyFindings.some(f => f.type === 'potential_inconsistency');
       let documentationStrength: DocStrength;
       let documentationSummary: string;
-      const missingItems = [...necessityRaw.missingElements];
+      // Short titles (not explanations) used for the bullet list in the Confidence panel
+      const missingItems = necessityEval.results
+        .filter(r => r.status === 'missing')
+        .map(r => MEDICAL_NECESSITY_REQUIREMENTS[r.code as MedicalNecessityRequirementCode].title);
 
       if (noteIsEmpty) {
         documentationStrength = 'Missing Documentation';
@@ -1342,17 +1276,17 @@ export function ProgressNoteAIAssist({
       } else if (pct > 0 && pct < 30) {
         documentationStrength = 'Insufficient Information';
         documentationSummary = 'Insufficient content for full evaluation';
-      } else if (necessityRaw.missingElements.length === 0 && !hasPotentialInconsistency && clarityChanges === 0) {
+      } else if (missingCount === 0 && !hasPotentialInconsistency && clarityChanges === 0) {
         documentationStrength = 'Strong';
         documentationSummary = 'No missing documentation identified';
-      } else if (necessityRaw.missingElements.length <= 1 && !hasPotentialInconsistency) {
+      } else if (missingCount <= 1 && !hasPotentialInconsistency) {
         documentationStrength = 'Adequate';
-        documentationSummary = necessityRaw.missingElements.length === 0
+        documentationSummary = missingCount === 0
           ? 'Documentation is adequate — minor areas suggested for review'
           : '1 documentation element needs attention';
       } else {
         documentationStrength = 'Needs Attention';
-        documentationSummary = `${necessityRaw.missingElements.length} documentation element${necessityRaw.missingElements.length !== 1 ? 's' : ''} need${necessityRaw.missingElements.length === 1 ? 's' : ''} attention`;
+        documentationSummary = `${missingCount} documentation element${missingCount !== 1 ? 's' : ''} need${missingCount === 1 ? 's' : ''} attention`;
       }
 
       // Potential Risk Areas
@@ -1400,7 +1334,7 @@ export function ProgressNoteAIAssist({
         const clarityNote = clarityChanges > 0
           ? `${clarityChanges} minor style correction${clarityChanges !== 1 ? 's' : ''} is available via the Clarity tool.`
           : 'No clarity issues were identified.';
-        summary = `This note appears complete and internally consistent. ${clarityNote} Medical necessity documentation is ${necessityRaw.category.toLowerCase()}. The note is ready for your final review before signing.`;
+        summary = `This note appears complete and internally consistent. ${clarityNote} Medical necessity documentation is ${necessityEval.category.toLowerCase()}. The note is ready for your final review before signing.`;
       } else if (overallReadiness === 'Needs Attention') {
         const itemCount = pFindings.filter(f => f.priority === 'important').length;
         summary = `The note is partially complete but has ${itemCount} area${itemCount !== 1 ? 's' : ''} that may require attention before signing. Review the findings below, address any gaps, and re-run the review when ready.`;
@@ -1419,8 +1353,8 @@ export function ProgressNoteAIAssist({
         hasClarityRevision: clarityChanges > 0,
         clarityData,
         consistencyFindings,
-        necessityCategory: necessityRaw.category,
-        necessityMissing: necessityRaw.missingElements,
+        necessityCategory: necessityEval.category,
+        necessityMissing: mnMissing,
         necessityData,
         prioritizedFindings: pFindings,
         summary,
@@ -1616,9 +1550,14 @@ export function ProgressNoteAIAssist({
 
     try {
       await simulateLatency(800);
-      const findings = evaluateMedicalNecessity(values, fields, format, patient);
+      const mnEval = evaluateMedicalNecessity(values, fields, format, patient);
+      const { evidencePresent, missingElements, clinicianReviewAreas } = buildNecessityDisplay(mnEval.results);
       setNecessityResult({
-        ...findings,
+        category:             mnEval.category,
+        evidencePresent,
+        missingElements,
+        clinicianReviewAreas,
+        disclaimer:           mnEval.disclaimer,
         timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
       });
       setStatus('result');
