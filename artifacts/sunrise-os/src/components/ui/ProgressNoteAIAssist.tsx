@@ -65,7 +65,7 @@ import {
   type ClaritySectionResult,
   type ClarityReviewResult,
 } from './clarityConfig';
-import { filterAcceptAllUpdates, resolveNextStaleSection } from './clarityAcceptHelpers';
+import { filterAcceptAllUpdates, resolveNextStaleSection, runAcceptAllClarityCallback } from './clarityAcceptHelpers';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1647,23 +1647,32 @@ export function ProgressNoteAIAssist({
   function handleAcceptAllClaritySections() {
     if (!clarityResult) return;
 
-    // Delegate filtering to the pure helper so the logic is testable
-    // independently of the React component. filterAcceptAllUpdates skips
-    // sections that have no changes, were already individually accepted or
-    // rejected, or whose field text was edited since the review was run.
-    const { updates, staleFieldIds } = filterAcceptAllUpdates(
+    // Delegate filtering AND the empty-updates guard to the pure helper so the
+    // exact callback-gate logic is testable without a DOM.
+    // runAcceptAllClarityCallback calls onAcceptAllClaritySections only when
+    // the updates map is non-empty — see clarityAcceptHelpers.ts.
+    const { callbackFired, staleFieldIds } = runAcceptAllClarityCallback(
       clarityResult.sections,
       values,
       claritySectionAccepted,
       claritySectionRejected,
+      onAcceptAllClaritySections,
     );
 
-    if (Object.keys(updates).length > 0) {
+    if (callbackFired) {
+      // Reconstruct the accepted set from the updates that were passed through.
+      // We re-run filterAcceptAllUpdates only to get the accepted fieldIds —
+      // the callback has already fired above with the correct data.
+      const { updates } = filterAcceptAllUpdates(
+        clarityResult.sections,
+        values,
+        claritySectionAccepted,
+        claritySectionRejected,
+      );
       const newAccepted = new Set([
         ...claritySectionAccepted,
         ...(Object.keys(updates) as ProgressNoteFieldId[]),
       ]);
-      onAcceptAllClaritySections(updates);
       setClaritySectionAccepted(newAccepted);
       emit('All Clarity Revisions Accepted', `accepted:${Object.keys(updates).join(',')}`, true, {
         reviewVersion: clarityResult.reviewedAt,

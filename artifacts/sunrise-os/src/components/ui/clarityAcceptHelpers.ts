@@ -145,6 +145,20 @@ export function filterAcceptAllUpdates(
   return { updates, staleFieldIds };
 }
 
+export interface AcceptAllClarityCallbackResult {
+  /**
+   * True when the updates map was non-empty and onAcceptAllClaritySections was
+   * called. False when every pending section was stale (or no sections had
+   * changes), in which case the callback is intentionally skipped.
+   */
+  callbackFired: boolean;
+  /**
+   * fieldIds of sections skipped because the field was edited after the review
+   * was run. The caller should surface a warning for each.
+   */
+  staleFieldIds: ProgressNoteFieldId[];
+}
+
 // ─── resolveNextStaleSection ──────────────────────────────────────────────────
 
 /**
@@ -198,4 +212,36 @@ export function applyClarityAcceptAll(
     nextValues: { ...currentValues, ...labelUpdates },
     announcement: `${count} section revision${count !== 1 ? 's' : ''} inserted — clinician review required before signing.`,
   };
+}
+
+/**
+ * Applies the empty-updates guard from handleAcceptAllClaritySections and calls
+ * onAcceptAllClaritySections only when at least one non-stale, non-rejected,
+ * non-accepted section with changes remains.
+ *
+ * This function IS the production gate — the React component delegates to it so
+ * automated tests can exercise the exact callback-guard logic without a DOM.
+ * Removing or weakening this guard here will immediately break the regression
+ * tests in acceptAllCallbackNotFired.test.ts.
+ */
+export function runAcceptAllClarityCallback(
+  sections: ClaritySectionResult[],
+  currentValues: Record<string, string>,
+  alreadyAccepted: ReadonlySet<ProgressNoteFieldId>,
+  alreadyRejected: ReadonlySet<ProgressNoteFieldId>,
+  onAcceptAllClaritySections: (updates: Partial<Record<ProgressNoteFieldId, string>>) => void,
+): AcceptAllClarityCallbackResult {
+  const { updates, staleFieldIds } = filterAcceptAllUpdates(
+    sections,
+    currentValues,
+    alreadyAccepted,
+    alreadyRejected,
+  );
+
+  if (Object.keys(updates).length > 0) {
+    onAcceptAllClaritySections(updates);
+    return { callbackFired: true, staleFieldIds };
+  }
+
+  return { callbackFired: false, staleFieldIds };
 }
