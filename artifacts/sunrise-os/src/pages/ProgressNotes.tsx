@@ -18,6 +18,7 @@ import { ProgressNoteAIAssist, type AIAuditEvent, type ProgressNoteFieldId } fro
 import { useDocumentForm } from '../hooks/useDocumentForm';
 import { DocumentFormBar } from '../components/ui/DocumentFormBar';
 import { useRole } from '../context/RoleContext';
+import { FIELD_ID_TO_LABEL, applyClarityAccept, applyClarityAcceptAll } from '../components/ui/clarityAcceptHelpers';
 
 // ─── Extended mock notes ─────────────────────────────────────────────────────
 
@@ -317,22 +318,17 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
    * Called when the clinician accepts a clarity revision for a single note
    * section. Only the specified field is updated — all other field values are
    * preserved. Content is never inserted automatically.
+   * Pure accept logic lives in clarityAcceptHelpers.ts (tested directly).
    */
   function handleAIAcceptClaritySection(fieldId: ProgressNoteFieldId, revisedText: string) {
-    // FIELD_ID_TO_LABEL is Partial<Record<ProgressNoteFieldId, string>> —
-    // direct lookup gives the field label used as the textarea values key.
-    const fieldLabel = FIELD_ID_TO_LABEL[fieldId];
-    if (!fieldLabel) return;
-    setValues(prev => ({ ...prev, [fieldLabel]: revisedText }));
+    const { nextValues, announcement } = applyClarityAccept(fieldId, revisedText, values);
+    if (!announcement) return; // unknown fieldId — no-op
+    setValues(nextValues);
     docForm.markDirty();
-    // Polite announcement so the clinician can confirm the insert.
     if (liveRegionRef.current) {
       liveRegionRef.current.textContent = '';
       requestAnimationFrame(() => {
-        if (liveRegionRef.current) {
-          liveRegionRef.current.textContent =
-            `${fieldLabel} revision inserted — clinician review required before signing.`;
-        }
+        if (liveRegionRef.current) liveRegionRef.current.textContent = announcement;
       });
     }
   }
@@ -340,23 +336,17 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
   /**
    * Called when the clinician accepts all remaining (non-rejected) clarity
    * revisions via "Accept All". Only fields present in updates are changed.
+   * Pure accept logic lives in clarityAcceptHelpers.ts (tested directly).
    */
   function handleAIAcceptAllClaritySections(updates: Partial<Record<ProgressNoteFieldId, string>>) {
-    const labelUpdates: Record<string, string> = {};
-    (Object.entries(updates) as [ProgressNoteFieldId, string | undefined][]).forEach(([fid, revised]) => {
-      const fieldLabel = FIELD_ID_TO_LABEL[fid];
-      if (fieldLabel && revised !== undefined) labelUpdates[fieldLabel] = revised;
-    });
-    if (Object.keys(labelUpdates).length === 0) return;
-    setValues(prev => ({ ...prev, ...labelUpdates }));
+    const { nextValues, announcement } = applyClarityAcceptAll(updates, values);
+    if (!announcement) return; // no recognised fields — no-op
+    setValues(nextValues);
     docForm.markDirty();
     if (liveRegionRef.current) {
       liveRegionRef.current.textContent = '';
       requestAnimationFrame(() => {
-        if (liveRegionRef.current) {
-          liveRegionRef.current.textContent =
-            `${Object.keys(labelUpdates).length} section revision${Object.keys(labelUpdates).length !== 1 ? 's' : ''} inserted — clinician review required before signing.`;
-        }
+        if (liveRegionRef.current) liveRegionRef.current.textContent = announcement;
       });
     }
   }
@@ -374,19 +364,8 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
   const [highlightedField, setHighlightedField] = useState<string | null>(null);
   const liveRegionRef = useRef<HTMLDivElement | null>(null);
 
-  // Maps ProgressNoteFieldId values back to the field label used as the
-  // textarea key. Keep in sync with FORMAT_FIELDS above.
-  const FIELD_ID_TO_LABEL: Partial<Record<ProgressNoteFieldId, string>> = {
-    behavior:    'Behavior',
-    intervention:'Intervention',
-    response:    'Response',
-    plan:        'Plan',
-    data:        'Data',
-    assessment:  'Assessment',
-    subjective:  'Subjective',
-    objective:   'Objective',
-    goal:        'Goal',
-  };
+  // FIELD_ID_TO_LABEL is imported from clarityAcceptHelpers.ts —
+  // the canonical source of truth shared with the accept handlers and tests.
 
   function handleJumpToField(fieldId: ProgressNoteFieldId) {
     const fieldLabel = FIELD_ID_TO_LABEL[fieldId];
