@@ -61,6 +61,22 @@ async function resolveIdentityFromSession(
 
   const now = new Date();
 
+  // ── Absolute session timeout (8 hours from authentication time) ───────────
+  // The idle timeout is enforced by express-session's maxAge/rolling settings.
+  // The absolute timeout is enforced here — the session cookie may still be
+  // "fresh" from a recent idle-timeout reset, but we revoke after 8 hours.
+  if (authenticatedAt) {
+    const ABSOLUTE_TIMEOUT_MS = parseInt(
+      process.env.SESSION_ABSOLUTE_TIMEOUT_MS ?? "28800000",
+      10,
+    );
+    if (Date.now() - new Date(authenticatedAt).getTime() > ABSOLUTE_TIMEOUT_MS) {
+      logger.info({ userId }, "sessionAuthMiddleware: absolute session timeout exceeded — destroying session");
+      req.session.destroy(() => {});
+      return null;
+    }
+  }
+
   // Load user account — validate status and session version.
   const [user] = await db
     .select({
@@ -186,8 +202,10 @@ export async function sessionAuthMiddleware(
       return;
     }
 
-    // Production: no valid session → 401.
-    res.status(401).json({ error: "Authentication required" });
+    // No valid session — leave req.auth undefined.
+    // Public routes (login, csrf-token, password-reset) work without auth.
+    // Protected routes must call requireAuth() or requirePermission() explicitly.
+    next();
   } catch (err) {
     logger.error({ err }, "sessionAuthMiddleware: DB error resolving identity");
     res.status(503).json({ error: "Service temporarily unavailable" });

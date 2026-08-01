@@ -487,9 +487,20 @@ router.get("/v1/auth/session", async (req: Request, res: Response) => {
 // The frontend reads this cookie and sends the value as X-CSRF-Token.
 
 router.get("/v1/auth/csrf-token", (req: Request, res: Response) => {
-  // The csrf-csrf middleware has already set the _csrf cookie when it ran.
-  // We just need to respond with OK — the cookie is the token.
-  res.json({ ok: true });
+  // Generate a CSRF token and set it in the _csrf cookie (readable by JS,
+  // non-HttpOnly per double-submit pattern).  The frontend reads the cookie
+  // value and sends it as X-CSRF-Token on state-changing requests.
+  const generateToken = req.app.get("csrfGenerateToken") as
+    | ((req: Request, res: Response, options?: { overwrite?: boolean; validateOnReuse?: boolean }) => string)
+    | undefined;
+
+  if (!generateToken) {
+    res.status(500).json({ error: "CSRF token generator not configured" });
+    return;
+  }
+
+  const token = generateToken(req, res, { overwrite: true, validateOnReuse: false });
+  res.json({ csrfToken: token });
 });
 
 // ── POST /api/v1/auth/password-reset/request ─────────────────────────────────

@@ -16,6 +16,7 @@
 
 import express, { type Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import { rateLimit } from "express-rate-limit";
 import session from "express-session";
@@ -105,6 +106,10 @@ app.use(
     exposedHeaders: [],
   }),
 );
+
+// ── 4b. Cookie parser — required by csrf-csrf to read the _csrf cookie ───────
+// Must be mounted before CSRF middleware and before any route that needs cookies.
+app.use(cookieParser());
 
 // ── 5. Body parsers ───────────────────────────────────────────────────────────
 // Enlarged limit for /api/v1/patients/* (base64-encoded photo uploads).
