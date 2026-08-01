@@ -1,249 +1,246 @@
 # Sunrise OS — Workflow Test Results
 
 **Audit Date:** 2026-08-01  
-**Method:** Manual walkthrough against demo environment (no backend); UI-level verification only.  
-**Environment:** Demo mode; all data is mock/in-memory React state.
+**Verification Method:** Code inspection only  
+
+> **⚠️ Important limitation:** All workflow results are based on code inspection of source files. No interactive UI session was established. The application requires clicking a staff profile in the login modal to access any inner page, and the Screenshot tool cannot perform this interaction. All steps below are labeled with their actual verification method. **"Code-inspected only — not manually completed"** is the status for all 10 workflows.
 
 ---
 
-## Workflow 1 — New Patient Intake
+## Workflow Result Legend
 
-**User role:** Admissions Coordinator  
-**Expected path:** Referral → Pre-screen → Insurance verification → Intake form → Admission → Assign program  
-**Result: PARTIAL PASS**
-
-| Step | Status | Notes |
-|---|---|---|
-| Navigate to Admissions | ✅ Pass | Route accessible with clinical_supervisor role |
-| View pending referrals | ✅ Pass | Mock referral list renders correctly |
-| Open referral detail | ✅ Pass | Detail panel opens with referral information |
-| Click "Begin Intake" | ✅ Pass | Intake form renders |
-| Complete intake screening (ASAM) | ✅ Pass | ASAM Assessments page accessible; multi-tab assessment form renders |
-| Insurance/VOB verification | ⚠️ Partial | UI fields present; no real eligibility API called |
-| Document upload (consents) | ⚠️ Partial | Upload UI visible; no real file storage |
-| Assign program and level of care | ✅ Pass | Program selection UI present |
-| Admit patient | ⚠️ Partial | Admission button present; state updates locally only; not persisted |
-| Verify patient appears in PatientList | ✅ Pass | Patient appears in local state |
-| **Persistence across refresh** | ❌ Fail | All data lost on page refresh |
-
-**Critical gap:** No real persistence. Entire admission record lost on reload.
+| Status | Meaning |
+|---|---|
+| ✅ Manually completed successfully | Step was completed interactively in the running application |
+| ⚠️ Manually completed with limitation | Step was completed interactively but with a noted limitation |
+| ❌ Blocked | Step could not be completed due to a hard blocker |
+| 🔍 Code-inspected only | Step was verified by reading source code, not by running the application |
+| ℹ️ Not testable in current environment | Step requires infrastructure not present (backend, integrations, etc.) |
 
 ---
 
-## Workflow 2 — Daily Progress Note (BIRP Format)
+## WF-1: Census and Bed Management
 
-**User role:** Certified Clinician  
-**Expected path:** Patient List → Patient Detail → Progress Notes → Draft → AI Review → Edit → Sign  
-**Result: PARTIAL PASS**
+**Goal:** Admit a new patient, assign a bed, view real-time occupancy.  
+**Roles tested:** admin_staff (code-inspected), director_of_operations (code-inspected)  
+**Overall result:** Code-inspected only — not manually completed
 
-| Step | Status | Notes |
-|---|---|---|
-| Navigate to PatientList | ✅ Pass | Renders mock patient list |
-| Open PatientDetail | ✅ Pass | Opens patient chart |
-| Navigate to ProgressNotes | ✅ Pass | Progress Notes page loads |
-| Select patient | ✅ Pass | Patient context populates |
-| Select BIRP format | ✅ Pass | Format selector works; BIRP fields render |
-| Enter note content | ✅ Pass | Textareas accept input |
-| Open AI Assist panel | ✅ Pass | Panel opens; `canUseAIAssist` gate passes |
-| Generate draft | ✅ Pass | Draft generated from aiNoteEngine (~700ms simulated latency) |
-| Insert draft | ✅ Pass | Confirmation dialog shown; draft inserted on confirm |
-| Run Clinical Documentation Review | ✅ Pass | 5-step pipeline runs; findings display |
-| Accept clarity section revision | ✅ Pass | Per-section acceptance works; stale detection active |
-| Accept All clarity revisions | ✅ Pass | Non-stale sections accepted; stale sections queued for warning |
-| Submit for co-sign | ✅ Pass | Co-sign dialog renders |
-| Sign note (wet signature) | ✅ Pass | Signature canvas opens; signature captured |
-| Note marked as signed in UI | ✅ Pass | Note displays signed badge |
-| **Persistence across refresh** | ❌ Fail | All note content lost on page refresh |
-| **Backend submission** | ❌ Fail | No API call made; state is in-memory only |
+| Step | Action | Expected Result | Verification | Status | Evidence |
+|---|---|---|---|---|---|
+| 1 | Navigate to CensusBedBoard | Show current bed occupancy grid | Code inspection of CensusBedBoard.tsx | 🔍 Code-inspected only | CensusBedBoard.tsx renders mockPatients occupancy grid |
+| 2 | Click "Add Patient to Bed" | Show bed selection modal | Code inspection of BedManagement.tsx | 🔍 Code-inspected only | BedManagement.tsx has bed assignment modal in code |
+| 3 | Select an open bed | Assign patient to bed | Code inspection — state update confirmed | 🔍 Code-inspected only | useState assignment; no backend persistence |
+| 4 | Refresh page | Bed assignment should persist | Cannot test interactively | ℹ️ Not testable | No database; all data resets on refresh |
+| 5 | View occupancy rate | Shows updated census | Code inspection of Dashboard.tsx | 🔍 Code-inspected only | Dashboard.tsx reads from mockPatients; mock only |
+| **Persistence** | — | Data survives page refresh | — | ❌ Blocked | No database; in-memory state only |
+| **Permission** | billing_staff navigates to CensusBedBoard | Should show AccessDenied | Code inspection of mockRoles.ts | 🔍 Code-inspected only | billing_staff: none for CensusBedBoard per mockRoles.ts |
+| **Audit event** | Bed assignment event recorded | Audit log entry created | — | ❌ Blocked | No audit log backend |
 
-**Critical gap:** No persistence. No real signing infrastructure.
+**Result:** Code-inspected only. UI components confirmed present. No persistence, no audit trail.
 
 ---
 
-## Workflow 3 — Treatment Plan Creation and Review
+## WF-2: Patient Admissions
 
-**User role:** Clinical Supervisor  
-**Expected path:** Patient Detail → Treatment Plans → Create plan → Add goals → Set objectives → Submit for review → Approve  
-**Result: PARTIAL PASS**
+**Goal:** Complete intake from referral through admission.  
+**Roles tested:** admin_staff (code-inspected)  
+**Overall result:** Code-inspected only — not manually completed
 
-| Step | Status | Notes |
-|---|---|---|
-| Navigate to TreatmentPlans | ✅ Pass | Page loads with mock data |
-| Create new treatment plan | ✅ Pass | Creation form opens |
-| Add treatment goal | ✅ Pass | Goal form renders and updates local state |
-| Add objective to goal | ✅ Pass | Objective nested correctly |
-| Add intervention | ✅ Pass | Intervention fields present |
-| Link to ASAM criteria | ✅ Pass | ASAM linkage UI present |
-| Submit for review | ✅ Pass | Review state changes locally |
-| Clinical supervisor approval | ✅ Pass | Approval action available for supervisor role |
-| Patient signature | ✅ Pass | Signature workflow renders |
-| **Persistence** | ❌ Fail | Lost on refresh |
+| Step | Action | Expected Result | Verification | Status | Evidence |
+|---|---|---|---|---|---|
+| 1 | Navigate to Admissions | Multi-step intake form | Code inspection of Admissions.tsx | 🔍 Code-inspected only | Admissions.tsx has multi-step form with demographics, insurance, consent sections |
+| 2 | Complete demographics | Fields saved | Code inspection — useState | 🔍 Code-inspected only | Local state; no API call |
+| 3 | Run eligibility check | Real-time VOB result | — | ❌ Blocked | No eligibility API integration |
+| 4 | Collect consent | E-signature captured | Code inspection of ClinicalForms.tsx | 🔍 Code-inspected only | Consent UI exists; no persistence |
+| 5 | Finalize admission | Patient appears in census | — | ❌ Blocked | No database; patient list is mockPatients |
+| **Persistence** | — | Patient record survives refresh | — | ❌ Blocked | No database |
+| **Audit event** | Admission recorded | Audit log entry | — | ❌ Blocked | No audit backend |
+| **Integration** | VOB / eligibility | Real-time 270/271 | — | ❌ Blocked | No clearinghouse integration |
 
----
-
-## Workflow 4 — Medication Administration (MAR)
-
-**User role:** Nursing  
-**Expected path:** Patient List → NursingMAR → Select patient → Administer medication → Document given/held/refused  
-**Result: PARTIAL PASS**
-
-| Step | Status | Notes |
-|---|---|---|
-| Navigate to NursingMAR | ✅ Pass | MAR page loads; accessible to nursing role |
-| View scheduled medications | ✅ Pass | Mock medication schedule renders |
-| Select patient for administration | ✅ Pass | Patient selection works |
-| Mark medication as administered | ✅ Pass | Given/held/refused state updates locally |
-| Record PRN administration | ✅ Pass | PRN documentation fields present |
-| Document reason for hold | ✅ Pass | Reason field renders for holds |
-| View administration history | ✅ Pass | History displays in-session events |
-| **Duplicate dose prevention** | ❌ Fail | No backend enforcement; duplicate administration can be entered |
-| **Persistence** | ❌ Fail | MAR state lost on refresh |
-| **E-prescribing connection** | ❌ Fail | No real pharmacy integration |
-
-**Safety gap:** No backend enforcement for duplicate dose prevention. Critical for clinical use.
+**Result:** Code-inspected only. Admissions.tsx UI confirmed. No persistence or real VOB integration.
 
 ---
 
-## Workflow 5 — Withdrawal Monitoring (CIWA-Ar / COWS)
+## WF-3: Clinical Documentation
 
-**User role:** Nursing  
-**Expected path:** WithdrawalMonitor → Select patient → Complete assessment → Score computed → Alert if threshold met  
-**Result: PARTIAL PASS**
+**Goal:** Create, review, sign, and co-sign a progress note.  
+**Roles tested:** certified_clinician (code-inspected), clinical_supervisor (code-inspected)  
+**Overall result:** Code-inspected only — not manually completed
 
-| Step | Status | Notes |
-|---|---|---|
-| Navigate to WithdrawalMonitor | ✅ Pass | Page loads |
-| Select patient | ✅ Pass | Patient selector works |
-| Complete CIWA-Ar scoring | ✅ Pass | All CIWA-Ar items render; scores compute locally |
-| Complete COWS scoring | ✅ Pass | COWS items render; opioid withdrawal scoring works |
-| Score threshold alert displays | ✅ Pass | Alert triggers in UI at threshold |
-| Nurse acknowledgement | ✅ Pass | Acknowledgement action available |
-| Score history view | ✅ Pass | In-session score history shown |
-| Physician notification | ⚠️ Partial | Notification UI exists; no real message delivery |
-| **Persistence** | ❌ Fail | Scores lost on refresh |
-| **Escalation to clinical team** | ⚠️ Partial | Escalation button present; no real routing |
+| Step | Action | Expected Result | Verification | Status | Evidence |
+|---|---|---|---|---|---|
+| 1 | Navigate to ProgressNotes | Note creation UI | Code inspection of ProgressNotes.tsx | 🔍 Code-inspected only | ProgressNotes.tsx (~3,000 lines) confirmed |
+| 2 | Select BIRP format | BIRP fields render | Code inspection | 🔍 Code-inspected only | BIRP format in aiNoteEngine.ts and ProgressNotes.tsx |
+| 3 | Enter note content | Fields accept input | — | ℹ️ Not testable | Requires interactive session |
+| 4 | Run AI draft | Draft inserted into fields | Code inspection of aiNoteEngine.ts | 🔍 Code-inspected only | aiNoteEngine generates template-based draft; requires clinician to click "Insert Draft" |
+| 5 | Review clarity | Clarity suggestions shown | Code inspection of clarityConfig.ts | 🔍 + Automated Test | 96 unit tests covering clarity logic — all passing |
+| 6 | Sign note | Signature modal appears | Code inspection of SignatureModal.tsx | 🔍 Code-inspected only | WetSignatureCanvas.tsx confirmed; signature not persisted |
+| 7 | Submit for co-sign | Appears in co-sign queue | Code inspection of CosignQueue.tsx | 🔍 Code-inspected only | CosignQueue.tsx confirmed; queue is in-memory |
+| 8 | Supervisor co-signs | Note locked | Code inspection of ProgressNotes.tsx | 🔍 Code-inspected only | Note lock is UI state; no backend immutability |
+| **Persistence** | — | Note survives page refresh | — | ❌ Blocked | No database |
+| **Audit event** | AI events, signing, co-sign recorded | Audit log entries | Code inspection of ProgressNotes.tsx | 🔍 Code-inspected only | aiAuditLog useState confirmed; events are in-memory |
 
----
-
-## Workflow 6 — Insurance Authorization Request
-
-**User role:** Billing Staff / Clinical Supervisor  
-**Expected path:** InsuranceAuthorization → New request → Submit to payer → Document response → Manage limits  
-**Result: PARTIAL PASS**
-
-| Step | Status | Notes |
-|---|---|---|
-| Navigate to InsuranceAuthorization | ✅ Pass | Page loads |
-| Create new authorization request | ✅ Pass | Request form renders |
-| Document initial authorization | ✅ Pass | Fields update locally |
-| Record concurrent review dates | ✅ Pass | Review date UI present |
-| Track approved days vs. used days | ✅ Pass | Usage tracking renders |
-| Alert on approaching limits | ✅ Pass | Alert threshold indicator in UI |
-| Submit to payer | ⚠️ Partial | Submit UI present; no real payer API |
-| Document payer response | ⚠️ Partial | Response documentation fields present; not persisted |
-| **Persistence** | ❌ Fail | Lost on refresh |
-| **Real payer integration** | ❌ Fail | No integration exists |
+**Result:** Code-inspected only. Note UI and AI pipeline confirmed by code inspection and automated tests. No persistence or backend immutability.
 
 ---
 
-## Workflow 7 — Discharge Planning and Summary
+## WF-4: AI-Assisted Clinical Documentation Review
 
-**User role:** Clinical Supervisor / Admissions  
-**Expected path:** Discharges → Select patient → Discharge planning → Safety plan → Aftercare referrals → Generate summary → Sign  
-**Result: PARTIAL PASS**
+**Goal:** Complete the 5-step Clinical Documentation Review pipeline.  
+**Roles tested:** certified_clinician (code-inspected, canUseAIAssist permission)  
+**Overall result:** Code-inspected only — not manually completed
 
-| Step | Status | Notes |
-|---|---|---|
-| Navigate to Discharges | ✅ Pass | Page loads |
-| Select patient for discharge | ✅ Pass | Patient list renders |
-| Complete discharge planning tasks | ✅ Pass | Planning checklist available |
-| Assign aftercare provider | ✅ Pass | Referral selection present |
-| Document safety plan | ✅ Pass | Safety plan fields render |
-| Generate DischargeSummary | ✅ Pass | Summary page renders with note sections |
-| Sign discharge summary | ✅ Pass | Signature workflow available |
-| Schedule follow-up appointment | ✅ Pass | Follow-up scheduling UI renders |
-| **42 CFR notice on discharge packet** | ⚠️ Partial | Notice text present; not automatically attached |
-| **Persistence** | ❌ Fail | Lost on refresh |
-| **Aftercare provider notification** | ❌ Fail | No real fax or secure message delivery |
+| Step | Action | Expected Result | Verification | Status | Evidence |
+|---|---|---|---|---|---|
+| 1 | Open AI panel | CDR panel renders | Code inspection of ProgressNoteAIAssist.tsx | 🔍 Code-inspected only | ProgressNoteAIAssist.tsx (~2,900 lines) confirmed |
+| 2 | Run Draft | BIRP/DAP/SOAP/GIRP draft generated | Code inspection + Automated Test | 🔍 + Automated Test | aiNoteEngine.test.ts — draft generation tested |
+| 3 | Run Clarity | Section-aware suggestions shown | Code inspection + Automated Test | 🔍 + Automated Test | clarityConfig.test.ts — 96 tests; stale detection confirmed |
+| 4 | Accept clarity revisions | Fields updated; stale sections skipped | Automated Test | Automated Test | runAcceptAllClarityCallback tests confirm accept behavior |
+| 5 | Run Medical Necessity | Missing documentation flagged | Code inspection + Automated Test | 🔍 + Automated Test | medicalNecessityConfig.test.ts — 28 tests passing |
+| 6 | Run Consistency Check | Cross-field inconsistencies flagged | Code inspection | 🔍 Code-inspected only | Consistency engine in ProgressNoteAIAssist.tsx; no unit tests |
+| 7 | Run Completeness Score | Completeness score shown | Code inspection | 🔍 Code-inspected only | Completeness scoring in ProgressNoteAIAssist.tsx |
+| 8 | AI audit log shows events | All 15+ event types recorded | Code inspection | 🔍 Code-inspected only | aiAuditLog useState confirmed; events are in-memory only |
+| **Persistence** | — | AI audit events survive refresh | — | ❌ Blocked | aiAuditLog in useState; resets on refresh |
+| **Safety** | Auto-insert without clinician action | Should not occur | Code inspection | 🔍 Code-inspected only | onInsertDraft/onAcceptClaritySection require explicit action per code |
 
----
-
-## Workflow 8 — Staff Scheduling
-
-**User role:** Director of Operations / HR  
-**Expected path:** StaffScheduling → View week → Assign shifts → Detect conflicts → Manage PTO  
-**Result: PARTIAL PASS**
-
-| Step | Status | Notes |
-|---|---|---|
-| Navigate to StaffScheduling | ✅ Pass | Calendar/schedule view renders |
-| View current week schedule | ✅ Pass | Week view populates with mock staff |
-| Assign staff member to shift | ✅ Pass | Drag-and-drop or click assignment works |
-| Detect scheduling conflict | ✅ Pass | Conflict detection highlights in UI |
-| Approve PTO request | ✅ Pass | PTO approval flow present |
-| View staffing coverage by role | ✅ Pass | Coverage view renders |
-| Export schedule | ⚠️ Partial | Export button present; no real file output |
-| **Persistence** | ❌ Fail | Schedule changes lost on refresh |
+**Result:** Code-inspected only with automated test support. Best-verified workflow. AI safety controls confirmed by code inspection. Audit event persistence is the critical gap.
 
 ---
 
-## Workflow 9 — Audit Compliance Survey Preparation
+## WF-5: Group Therapy Notes
 
-**User role:** Director of Operations / Compliance  
-**Expected path:** AuditCompliance → Select standard (CARF/JC) → Review requirements → Upload evidence → Generate readiness score  
-**Result: PASS (within demo constraints)**
+**Goal:** Document a group therapy session with per-member participation.  
+**Roles tested:** certified_clinician (code-inspected)  
+**Overall result:** Code-inspected only — not manually completed
 
-| Step | Status | Notes |
-|---|---|---|
-| Navigate to AuditCompliance | ✅ Pass | Page loads |
-| Select compliance standard | ✅ Pass | CARF/Joint Commission selection works |
-| View requirement list | ✅ Pass | Full requirement list renders |
-| Filter by gap status | ✅ Pass | Filter by Needs Evidence / Needs Action Plan works |
-| Mark evidence as confirmed | ✅ Pass | Evidence confirmation persists in localStorage |
-| Enter corrective action plan | ✅ Pass | Action plan fields save to localStorage |
-| View readiness score | ✅ Pass | Score computed from confirmed evidence |
-| Export audit report | ⚠️ Partial | Export button present; CSV export functional for filter state |
-| **Persistence (localStorage)** | ✅ Pass | Evidence confirmed and corrective actions survive refresh (localStorage) |
-| **Document upload** | ⚠️ Partial | Upload UI present; no real file storage |
+| Step | Action | Expected Result | Verification | Status | Evidence |
+|---|---|---|---|---|---|
+| 1 | Navigate to GroupNotes | Group list shown | Code inspection of GroupNotes.tsx | 🔍 Code-inspected only | GroupNotes.tsx confirmed; renders mockGroups |
+| 2 | Select a group | Session documentation form | Code inspection | 🔍 Code-inspected only | Per-member participation form in code |
+| 3 | Document per-member | Each member's participation recorded | Code inspection | 🔍 Code-inspected only | Per-member state in component |
+| 4 | Save group note | Note persisted | — | ❌ Blocked | No database |
+| **Persistence** | — | Group note survives refresh | — | ❌ Blocked | No database |
 
-**Note:** This is the best-persisted workflow in the application — WorkforceCompliance uses localStorage for filter state and confirmed evidence. Not suitable for production audit evidence but demonstrates persistence intent.
+**Result:** Code-inspected only. GroupNotes.tsx UI confirmed. No persistence.
 
 ---
 
-## Workflow 10 — Revenue Cycle Management
+## WF-6: Medication Administration and Nursing Workflow
 
-**User role:** Billing Staff  
-**Expected path:** RevenueCycle → View claim queue → Submit claim → Track status → Post payment → View AR  
-**Result: FAIL (UI only)**
+**Goal:** Document medication administration and withdrawal assessment.  
+**Roles tested:** nursing (code-inspected)  
+**Overall result:** Code-inspected only — not manually completed
 
-| Step | Status | Notes |
-|---|---|---|
-| Navigate to RevenueCycle | ✅ Pass | Page loads |
-| View claim dashboard | ✅ Pass | Mock claim data renders |
-| Select claim for review | ✅ Pass | Claim detail opens |
-| Submit claim to clearinghouse | ❌ Fail | No real submission; button updates local status only |
-| Track payer acknowledgement | ❌ Fail | No clearinghouse integration |
-| Post payment/remittance | ❌ Fail | No ERA integration |
-| View accounts receivable | ✅ Pass | AR dashboard renders mock data |
-| Generate billing report | ⚠️ Partial | Report UI renders; no real data |
+| Step | Action | Expected Result | Verification | Status | Evidence |
+|---|---|---|---|---|---|
+| 1 | Navigate to NursingMAR | MAR grid with scheduled meds | Code inspection of NursingMAR.tsx | 🔍 Code-inspected only | NursingMAR.tsx renders mockMedications |
+| 2 | Administer medication | Mark administered; record time and nurse | Code inspection | 🔍 Code-inspected only | Administration state in component; no backend |
+| 3 | 5-rights check | Patient/drug/dose/route/time verified | — | ❌ Blocked | No 5-rights verification workflow in code |
+| 4 | Navigate to WithdrawalMonitor | CIWA-Ar/COWS form | Code inspection of WithdrawalMonitor.tsx | 🔍 Code-inspected only | WithdrawalMonitor.tsx confirmed; scores in-memory |
+| 5 | Complete CIWA-Ar | Score calculated; trend shown | Code inspection | 🔍 Code-inspected only | Scoring logic in code; trend chart in component |
+| 6 | Score exceeds threshold | Alert triggered | Code inspection | 🔍 Code-inspected only | Alert UI confirmed; no real notification delivery |
+| **Persistence** | — | MAR and CIWA scores survive refresh | — | ❌ Blocked | No database |
 
-**Critical gap:** Revenue cycle is entirely UI-only. No real claim submission capability exists.
+**Result:** Code-inspected only. MAR and withdrawal monitor UI confirmed. No 5-rights check, no alert delivery, no persistence.
 
 ---
 
-## Summary
+## WF-7: Scheduling and Appointment Management
 
-| Workflow | Result | Critical Gaps |
-|---|---|---|
-| 1. New Patient Intake | Partial Pass | No persistence; no real eligibility |
-| 2. Daily Progress Note (AI) | Partial Pass | No persistence; no real signing infrastructure |
-| 3. Treatment Plan | Partial Pass | No persistence |
-| 4. Medication Administration | Partial Pass | No persistence; no duplicate-dose prevention; no pharmacy |
-| 5. Withdrawal Monitoring | Partial Pass | No persistence; no real escalation |
-| 6. Insurance Authorization | Partial Pass | No persistence; no payer API |
-| 7. Discharge Planning | Partial Pass | No persistence; no fax/secure message delivery |
-| 8. Staff Scheduling | Partial Pass | No persistence |
-| 9. Compliance Survey Prep | Pass* | localStorage persistence only; no file storage |
-| 10. Revenue Cycle | Fail | Entirely UI-only |
+**Goal:** Schedule individual and group therapy appointments.  
+**Roles tested:** admin_staff (code-inspected)  
+**Overall result:** Code-inspected only — not manually completed
 
-**Universal gap:** No clinical data persists across a page refresh. This makes every workflow demo-only.
+| Step | Action | Expected Result | Verification | Status | Evidence |
+|---|---|---|---|---|---|
+| 1 | Navigate to AppointmentCalendar | Calendar view with appointments | Code inspection of AppointmentCalendar.tsx | 🔍 Code-inspected only | Calendar UI confirmed |
+| 2 | Create appointment | Appointment added to calendar | Code inspection | 🔍 Code-inspected only | Local state update; no backend |
+| 3 | Send appointment reminder | Patient receives SMS/email | — | ❌ Blocked | No messaging integration |
+| 4 | Link to authorization | Authorization session decremented | — | ❌ Blocked | No authorization-to-appointment linkage |
+| 5 | Record no-show | Status updated | Code inspection | 🔍 Code-inspected only | Status in local state; not persisted |
+| **Persistence** | — | Appointments survive refresh | — | ❌ Blocked | No database |
+
+**Result:** Code-inspected only. Calendar UI confirmed. No booking engine, reminders, or authorization linkage.
+
+---
+
+## WF-8: Utilization Review and Revenue Cycle
+
+**Goal:** Submit prior authorization, track status, manage denial.  
+**Roles tested:** billing_staff (code-inspected)  
+**Overall result:** Code-inspected only — not manually completed. Revenue Cycle is a fail.
+
+| Step | Action | Expected Result | Verification | Status | Evidence |
+|---|---|---|---|---|---|
+| 1 | Navigate to InsuranceAuthorization | Authorization request list | Code inspection of InsuranceAuthorization.tsx | 🔍 Code-inspected only | InsuranceAuthorization.tsx confirmed |
+| 2 | Submit prior authorization | 278 transaction sent to payer | — | ❌ Blocked | No payer API integration |
+| 3 | Receive 278 response | Authorization approved | — | ❌ Blocked | No payer API integration |
+| 4 | Navigate to RevenueCycle | Claim dashboard | Code inspection of RevenueCycle.tsx | 🔍 Code-inspected only | RevenueCycle.tsx confirmed; all mock data |
+| 5 | Capture charges | Charges linked to encounter | — | ❌ Blocked | No charge capture exists |
+| 6 | Generate 837P claim | Claim submitted to clearinghouse | — | ❌ Blocked | No clearinghouse integration |
+| 7 | Receive denial | Denial queue updated | — | ❌ Blocked | No clearinghouse integration |
+| 8 | Post ERA payment | Payment posted to AR | — | ❌ Blocked | No ERA processing |
+| **Persistence** | — | UR records survive refresh | — | ❌ Blocked | No database |
+
+**Result:** Code-inspected only. Revenue Cycle is a comprehensive FAIL. All steps requiring real payer or clearinghouse interaction are blocked. This is the lowest-maturity workflow in the system.
+
+---
+
+## WF-9: Analytics and Outcomes Reporting
+
+**Goal:** Review population analytics and clinical outcomes.  
+**Roles tested:** director_of_operations (code-inspected)  
+**Overall result:** Code-inspected only — not manually completed
+
+| Step | Action | Expected Result | Verification | Status | Evidence |
+|---|---|---|---|---|---|
+| 1 | Navigate to PopulationAnalytics | Population dashboard with charts | Code inspection of PopulationAnalytics.tsx | 🔍 Code-inspected only | PopulationAnalytics.tsx confirmed; all mock data |
+| 2 | Filter by date range | Charts update | Code inspection | 🔍 Code-inspected only | Filter UI in code; operates on mock data |
+| 3 | Export data | CSV/PDF downloaded | Code inspection | 🔍 Code-inspected only | Export button UI; no real data |
+| 4 | Navigate to OutcomeTracking | Outcome metrics shown | Code inspection of OutcomeTracking.tsx | 🔍 Code-inspected only | OutcomeTracking.tsx confirmed; all mock |
+| 5 | View RES scores | Recovery Engagement Scores displayed | Code inspection of RecoveryEngagementScore.tsx | 🔍 Code-inspected only | RES UI confirmed; methodology not clinically validated |
+| **Persistence** | — | Analytics reflect real data | — | ❌ Blocked | No real data; all mock |
+
+**Result:** Code-inspected only. Analytics UI confirmed. All data is mock.
+
+---
+
+## WF-10: Workforce Compliance
+
+**Goal:** Track compliance status, corrective actions, and certifications.  
+**Roles tested:** director_of_operations (code-inspected)  
+**Overall result:** Code-inspected only — partially persistent via localStorage
+
+| Step | Action | Expected Result | Verification | Status | Evidence |
+|---|---|---|---|---|---|
+| 1 | Navigate to WorkforceCompliance | Compliance dashboard | Code inspection of WorkforceCompliance.tsx | 🔍 Code-inspected only | WorkforceCompliance.tsx (~4,300 lines) confirmed |
+| 2 | View CARF standards | Per-standard status shown | Code inspection | 🔍 Code-inspected only | CARF domain sections in code |
+| 3 | Create corrective action | CAP added | Code inspection | 🔍 Code-inspected only | CAP state in code; localStorage for some state |
+| 4 | Upload evidence | Evidence document attached | — | ❌ Blocked | No file upload backend |
+| 5 | Refresh page | CAP state should persist | Code inspection of localStorage keys | 🔍 Code-inspected only | Some compliance state in localStorage; inconsistent |
+| 6 | Navigate to CertificationTracker | License expiration alerts | Code inspection of CertificationTracker.tsx | 🔍 Code-inspected only | CertificationTracker.tsx confirmed; mockStaff data |
+| **Persistence** | — | Compliance state survives refresh | Code inspection of localStorage usage | 🔍 Code-inspected only | Partial: some keys in localStorage; not database-backed |
+
+**Result:** Code-inspected only. Most complex module. LocalStorage persistence confirmed for some state. No file upload backend, no real credential verification.
+
+---
+
+## Workflow Summary
+
+| Workflow | Result | Manual Steps | Code-Inspected Steps | Blocked Steps | Persistence |
+|---|---|---|---|---|---|
+| WF-1 Census | Code-inspected only | 0 | 5 | 3 | ❌ No database |
+| WF-2 Admissions | Code-inspected only | 0 | 4 | 4 | ❌ No database |
+| WF-3 Clinical Documentation | Code-inspected only | 0 | 7 | 3 | ❌ No database |
+| WF-4 AI-Assisted Documentation | Code-inspected only (+ automated tests) | 0 | 6 + 4 tested | 2 | ❌ In-memory |
+| WF-5 Group Notes | Code-inspected only | 0 | 3 | 2 | ❌ No database |
+| WF-6 Medication/Nursing | Code-inspected only | 0 | 5 | 3 | ❌ No database |
+| WF-7 Scheduling | Code-inspected only | 0 | 4 | 4 | ❌ No database |
+| WF-8 Revenue Cycle | Code-inspected only — FAIL | 0 | 2 | 8 | ❌ No database |
+| WF-9 Analytics | Code-inspected only | 0 | 5 | 1 | ❌ Mock data only |
+| WF-10 Compliance | Code-inspected only — partial localStorage | 0 | 7 | 2 | ⚠️ localStorage partial |
+
+**Total manual UI tests performed: 0**  
+**Total code-inspection-only steps: 48**  
+**Total automated test steps: 4 (WF-4)**  
+**Total blocked steps: 32**
