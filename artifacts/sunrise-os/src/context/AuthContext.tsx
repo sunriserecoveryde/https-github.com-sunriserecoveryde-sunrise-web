@@ -229,9 +229,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isProduction]);
 
   // ── Production mode: called after a successful POST /api/v1/auth/login ───
+  // Refreshes the CSRF token immediately after login so it is bound to the
+  // authenticated session (express-session regenerates the session ID on
+  // login; any CSRF token from before login is no longer valid).
   const loginWithSession = useCallback((session: ProductionSessionData) => {
     setProductionSession(session);
-  }, []);
+    void fetchCsrfToken(); // bind CSRF token to the new authenticated session
+  }, [fetchCsrfToken]);
 
   const currentStaff = isProduction
     ? null
