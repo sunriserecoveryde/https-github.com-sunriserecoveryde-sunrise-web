@@ -1,0 +1,980 @@
+# Sunrise OS — Production Readiness Remediation Program
+
+## Governing Objective
+
+Correct the deficiencies identified in the independent Sunrise OS audit and move the application from a high-fidelity demonstration into a secure, durable, testable, production-capable behavioral-health operating system.
+
+The current application must be treated as:
+
+**An advanced demonstration with strong visual maturity, but incomplete production infrastructure, workflow validation, security controls, integrations, and operational evidence.**
+
+Do not describe Sunrise OS as production-ready, HIPAA-compliant, Part 2-compliant, enterprise-ready, or safe for real patient data until the corresponding readiness gates in this program have been independently verified.
+
+---
+
+# Non-Negotiable Execution Rules
+
+1. Do not attempt this entire program in one agent run.
+2. Complete one work package at a time.
+3. Use one branch and one commit series per work package.
+4. Stop for review after every work package.
+5. Do not merge into `main` without explicit approval.
+6. Preserve the current demo experience while production foundations are added.
+7. Do not use real patient data during remediation.
+8. Do not treat polished UI as proof of workflow completion.
+9. Do not treat TypeScript or build success as proof of clinical safety.
+10. Do not treat browser storage as authoritative clinical persistence.
+11. Do not treat client-side permission checks as security enforcement.
+12. Do not treat in-memory audit events as a compliant audit trail.
+13. Do not claim an integration exists unless it has been tested against a real sandbox or vendor environment.
+14. Do not claim zero AI risk.
+15. Do not make compliance claims without legal, privacy, clinical, and security review.
+
+---
+
+# Corrected Baseline
+
+Use the following corrected conclusions as the starting point:
+
+* Visual and demonstration maturity is approximately **2.0–2.5 out of 5**.
+* Evidence-weighted capability maturity is approximately **0.7 out of 5**.
+* Production readiness is approximately **0.5–1.0 out of 5**.
+* Sunrise OS is appropriate for controlled demonstrations using fictitious data.
+* Sunrise OS is not yet appropriate for real-patient production use.
+* No authenticated end-to-end UI workflow has been independently verified.
+* Current permission evidence is primarily client-side.
+* Clinical and operational persistence is primarily mock, browser-local, or in-memory.
+* Durable audit history has not been demonstrated.
+* Real external integrations have not been demonstrated.
+* Security, backup, disaster recovery, monitoring, and tenant isolation have not been demonstrated.
+* The rule-based AI approach may reduce open-ended generation risk, but it does not eliminate clinical, mapping, omission, stale-data, or misclassification risk.
+
+Do not use the prior 2.3/5 overall score as the authoritative readiness score.
+
+---
+
+# Readiness Program
+
+Complete the following phases in order.
+
+| Phase | Workstream                           | Required outcome                                                                 |
+| ----: | ------------------------------------ | -------------------------------------------------------------------------------- |
+|     0 | Evidence and planning integrity      | One accurate, internally consistent readiness ledger                             |
+|     1 | Persistent platform foundation       | Server-backed database, migrations, APIs, and repository layer                   |
+|     2 | Authentication and authorization     | Real identity, sessions, MFA readiness, and server-side access enforcement       |
+|     3 | Security and durable audit           | Persistent audit trail, encryption evidence, secrets, logging, and data controls |
+|     4 | Core clinical episode                | One complete, persistent, permissioned, audited patient episode                  |
+|     5 | Medication and medical safety        | Production-capable medication, withdrawal, vital-sign, and escalation workflows  |
+|     6 | Utilization review and revenue cycle | Persistent authorization, charge, claim, denial, and payment workflows           |
+|     7 | Integrations and interoperability    | Tested vendor and standards-based integrations                                   |
+|     8 | Testing and operational reliability  | CI/CD, automated testing, monitoring, backup, restore, and disaster recovery     |
+|     9 | Accessibility and AI governance      | Verified accessibility and production AI governance controls                     |
+|    10 | Pilot and enterprise readiness       | Manual validation, implementation process, support, training, and launch gates   |
+
+---
+
+# Phase 0 — Evidence and Planning Integrity
+
+Before product readiness can be measured accurately:
+
+* Repair malformed CSV files.
+* Reconcile all capability counts.
+* Reconcile blocker counts.
+* Reconcile manifest values.
+* Correct mislabeled screenshots.
+* Separate manual tests from code inspection.
+* Separate client-side permission hiding from server-side enforcement.
+* Remove unsupported timeline certainty.
+* Ensure every score is linked to reproducible evidence.
+* Establish one canonical readiness ledger.
+
+Phase 0 is documentation and evidence correction only.
+
+Do not use Phase 0 as a substitute for engineering remediation.
+
+---
+
+# Phase 1 — Persistent Platform Foundation
+
+Required outcomes:
+
+* Production-capable relational database
+* Versioned migrations
+* Environment-specific configuration
+* Repository or service layer
+* Validated server APIs
+* Organization and facility scoping
+* Stable identifiers
+* Transaction support
+* Durable persistence
+* Clear separation between demo and production data
+* Removal of clinical browser storage as an authoritative source
+
+Core entities should ultimately include:
+
+* Organizations
+* Facilities
+* Users
+* Staff profiles
+* Roles
+* Permissions
+* Role assignments
+* Patients
+* Contacts
+* Insurance records
+* Episodes of care
+* Admissions
+* Consents
+* Assessments
+* Treatment plans
+* Clinical documents
+* Signatures
+* Medications
+* Medication administrations
+* Authorizations
+* Claims
+* Payments
+* Notifications
+* Audit events
+
+Do not create all application workflows during this phase.
+
+First establish the production data foundation and migrate one small vertical slice.
+
+---
+
+# Phase 2 — Authentication and Server-Side Authorization
+
+Required outcomes:
+
+* Real authenticated users
+* Secure password handling or trusted identity provider
+* Session expiration
+* Logout invalidation
+* MFA-ready architecture
+* Password recovery or identity-provider recovery
+* Server-side role enforcement
+* Server-side facility enforcement
+* Server-side patient access enforcement
+* Deny-by-default APIs
+* Direct-route protection
+* Cross-tenant access prevention
+* Administrative access reviews
+* Terminated-user deactivation
+* Emergency or break-glass workflow, if required
+
+Client-side visibility rules may remain for usability.
+
+They must not be the security boundary.
+
+---
+
+# Phase 3 — Security and Durable Audit
+
+Required outcomes:
+
+* Append-only audit events
+* Durable audit storage
+* User identity
+* Patient and record context
+* Timestamp
+* Action
+* Outcome
+* Source IP or session context where appropriate
+* Document version context
+* Export activity
+* Permission changes
+* Authentication events
+* AI events
+* Audit access controls
+* Audit retention policy
+* Audit export
+* Sensitive-content minimization
+
+Also establish:
+
+* Secrets management
+* Encryption-in-transit evidence
+* Encryption-at-rest evidence
+* Secure session cookies or equivalent
+* Security headers
+* Dependency scanning
+* Vulnerability management
+* Error monitoring
+* Sensitive-log review
+* Backup policy
+* Restore procedure
+* Incident-response procedure
+
+Do not describe a console log or browser-local array as an audit trail.
+
+---
+
+# Phase 4 — Complete One Core Clinical Episode
+
+Create one production-capable vertical workflow:
+
+**Patient admission through discharge**
+
+It should include:
+
+1. Inquiry or referral
+2. Patient creation
+3. Admission
+4. Consent
+5. Insurance information
+6. Bed or program assignment
+7. Initial assessment
+8. ASAM assessment
+9. Treatment plan
+10. Progress note
+11. Group note
+12. Supervisory or medical co-signature
+13. Discharge planning
+14. Discharge summary
+15. Continuing-care plan
+16. Episode closure
+
+Every step must be:
+
+* Server-persisted
+* Tenant-scoped
+* Facility-scoped
+* Permissioned
+* Audited
+* Validated
+* Error-handled
+* Tested
+* Recoverable after browser refresh
+* Accessible through the correct user role
+
+Do not begin multiple incomplete vertical workflows.
+
+Finish and validate one complete episode first.
+
+---
+
+# Phase 5 — Medication, Withdrawal, and Medical Safety
+
+Required outcomes:
+
+* Medication reconciliation
+* Medication orders
+* MAR or eMAR
+* Administration
+* Refusal
+* PRN workflow
+* Allergies
+* Controlled-medication controls
+* Medication count workflow
+* Medication-error workflow
+* CIWA-Ar
+* COWS
+* Vital signs
+* Escalation thresholds
+* Provider notification
+* Provider acknowledgment
+* Drug-screen orders and results
+* Laboratory-result acknowledgment
+* Safety-event audit history
+
+Clinical thresholds must be reviewed and approved by qualified clinicians.
+
+Do not allow AI to finalize medication or withdrawal decisions.
+
+---
+
+# Phase 6 — Utilization Review and Revenue Cycle
+
+Required outcomes:
+
+## Utilization review
+
+* Initial authorization
+* Continued-stay review
+* Authorized units
+* Used units
+* Remaining units
+* Expiration alerts
+* Assignment
+* Payer communications
+* Denials
+* Appeals
+* Peer-to-peer review
+* Clinical-document linkage
+* Treatment-plan linkage
+* Revenue-at-risk calculation
+
+## Revenue cycle
+
+* Eligibility
+* Verification of benefits
+* Charge capture
+* Service-to-charge reconciliation
+* Claim generation
+* Claim validation
+* Clearinghouse submission
+* Claim status
+* Payment posting
+* ERA or EOB
+* Denial management
+* Appeal management
+* Patient responsibility
+* Days in accounts receivable
+* Expected reimbursement
+* Actual reimbursement
+* Underpayment identification
+
+Do not describe static financial cards or mock claims as working RCM.
+
+---
+
+# Phase 7 — Integrations and Interoperability
+
+Do not implement every integration simultaneously.
+
+Prioritize integrations required for the first customer profile.
+
+Potential integration areas:
+
+* Identity provider
+* Clearinghouse
+* Eligibility and VOB
+* E-prescribing
+* Pharmacy
+* Laboratory
+* Drug-testing laboratory
+* Telehealth
+* SMS
+* Email
+* Payment processor
+* FHIR
+* HL7
+* C-CDA
+* State reporting
+* Accounting
+* Data export
+* Public API
+* Webhooks
+
+Each integration must include:
+
+* Sandbox validation
+* Authentication
+* Data mapping
+* Retry behavior
+* Error handling
+* Monitoring
+* Audit events
+* Reconciliation
+* Vendor documentation
+* Failure runbook
+
+A vendor name in a configuration file does not count as an implemented integration.
+
+---
+
+# Phase 8 — Testing and Operational Reliability
+
+Establish:
+
+* Unit tests
+* API integration tests
+* Database tests
+* Permission tests
+* Tenant-isolation tests
+* End-to-end browser tests
+* Accessibility tests
+* Regression tests
+* Security tests
+* Load tests
+* Migration tests
+* Backup tests
+* Restore tests
+* Disaster-recovery exercise
+* CI/CD
+* Build promotion
+* Environment separation
+* Feature flags
+* Rollback procedure
+* Release notes
+* Error monitoring
+* Performance monitoring
+* Uptime monitoring
+
+Required end-to-end automated workflows should eventually include:
+
+* Admission
+* Clinical documentation
+* Medication administration
+* Withdrawal escalation
+* Authorization
+* Claim creation
+* Discharge
+* Role restriction
+* Audit event
+* AI-assisted note review
+
+---
+
+# Phase 9 — Accessibility and AI Governance
+
+## Accessibility
+
+Verify:
+
+* Keyboard-only operation
+* Focus order
+* Focus visibility
+* Dialog focus behavior
+* Screen-reader labels
+* Error announcements
+* Status announcements
+* Color contrast
+* Color-independent meaning
+* 200% zoom
+* Mobile touch targets
+* Reduced motion
+* Table semantics
+* Form labels
+* Heading structure
+
+## AI governance
+
+Maintain an AI registry containing:
+
+* Feature
+* Owner
+* Purpose
+* Inputs
+* Outputs
+* Rule or model type
+* Version
+* Validation results
+* Known limitations
+* Failure modes
+* Human-review requirement
+* Audit behavior
+* Release date
+* Retirement date, where applicable
+
+Test AI for:
+
+* Incorrect mappings
+* Missing context
+* Stale results
+* Unsupported statements
+* Misclassification
+* Wrong-patient context
+* Wrong-note context
+* Version drift
+* Unsafe confidence
+* Permission bypass
+* Audit failure
+
+Do not describe rule-based AI as risk-free.
+
+---
+
+# Phase 10 — Pilot and Enterprise Readiness
+
+Before any real-patient pilot, require:
+
+* Production database
+* Real authentication
+* Server authorization
+* Tenant isolation
+* Durable audit trail
+* Encryption evidence
+* Backup and restore test
+* Incident-response plan
+* Security review
+* Privacy review
+* Clinical review
+* Legal review
+* Workflow acceptance testing
+* Staff training
+* Implementation plan
+* Data-migration plan
+* Support process
+* SLA definition
+* Release process
+* Monitoring
+* Rollback procedure
+* Signed organizational approvals
+
+Before enterprise release, also require:
+
+* Penetration testing
+* Disaster-recovery exercise
+* Load testing
+* Integration certification or sandbox validation
+* Customer implementation playbook
+* Help center
+* Administrator documentation
+* Clinical documentation
+* Support escalation
+* Customer-success ownership
+* Change-management process
+
+---
+
+# Readiness Gates
+
+## Controlled Demo Gate
+
+Permitted when:
+
+* Only fictitious data is used
+* Demo limitations are disclosed
+* No production claims are made
+* No live payer, pharmacy, or laboratory transactions occur
+
+## Internal QA Gate
+
+Permitted when:
+
+* Persistent test database exists
+* Authentication exists
+* Server-side permissions exist
+* Audit events persist
+* Automated tests are running
+* No real patient data is used
+
+## Design-Partner Sandbox Gate
+
+Permitted when:
+
+* Security architecture has been reviewed
+* Tenant isolation is tested
+* Core workflow is end-to-end complete
+* Backup and restore are tested
+* Support and incident procedures exist
+* Data remains synthetic or properly de-identified
+
+## Real-Patient Pilot Gate
+
+Do not enter until all required legal, privacy, security, clinical, operational, and organizational approvals are complete.
+
+## General Production Gate
+
+Do not enter until:
+
+* P0 blockers are closed
+* Required P1 blockers are closed
+* Independent penetration testing is complete
+* Disaster recovery is tested
+* Critical workflows pass automated and manual validation
+* External integrations are validated
+* Executive launch approval is documented
+
+---
+
+# Current Work Package
+
+## Execute Only: Phase 1A — Server-Backed Persistence Foundation
+
+Do not attempt the full readiness program during this run.
+
+Create a branch:
+
+`readiness/p0-persistence-foundation`
+
+Do not merge into `main`.
+
+## Objective
+
+Establish the first production-capable backend persistence layer without disrupting the existing demo application.
+
+The first vertical slice will cover:
+
+* Organization
+* Facility
+* User identity reference
+* Staff profile
+* Patient
+* Episode of care
+* Patient List read workflow
+* Patient Detail read workflow
+
+Do not migrate every module during this task.
+
+---
+
+# Phase 1A Requirements
+
+## 1. Inspect the Existing Stack
+
+Before coding, identify:
+
+* Current frontend framework
+* Current server framework
+* Existing API routes
+* Existing database libraries
+* Existing environment variables
+* Existing deployment model
+* Existing authentication placeholder
+* Current mock-data sources
+* Current Patient List data path
+* Current Patient Detail data path
+
+Reuse compatible infrastructure where practical.
+
+Do not introduce a second backend framework if one already exists.
+
+Document the decision before implementation.
+
+---
+
+## 2. Add a Production-Capable Relational Database Layer
+
+Use the database and migration approach most compatible with the existing project.
+
+Preferred characteristics:
+
+* PostgreSQL-compatible
+* Versioned migrations
+* Typed access
+* Transactions
+* Foreign keys
+* Indexes
+* Environment-based connection configuration
+* Test database support
+
+Do not hardcode credentials.
+
+Do not commit secrets.
+
+Do not use a local JSON file as the production database.
+
+---
+
+## 3. Create the Initial Core Schema
+
+Create migrations for:
+
+### Organization
+
+* ID
+* Name
+* Status
+* Created timestamp
+* Updated timestamp
+
+### Facility
+
+* ID
+* Organization ID
+* Name
+* Status
+* Time zone
+* Created timestamp
+* Updated timestamp
+
+### User identity reference
+
+* ID
+* Organization ID
+* External authentication reference or future identity key
+* Status
+* Created timestamp
+* Updated timestamp
+
+Do not implement full authentication in this work package.
+
+### Staff profile
+
+* ID
+* Organization ID
+* User ID
+* Display name
+* Professional role
+* Status
+* Created timestamp
+* Updated timestamp
+
+### Patient
+
+* ID
+* Organization ID
+* Facility ID
+* Display name fields
+* Status
+* Created timestamp
+* Updated timestamp
+
+Use only the minimum fields needed for this initial slice.
+
+Do not prematurely migrate the entire patient chart.
+
+### Episode of care
+
+* ID
+* Organization ID
+* Facility ID
+* Patient ID
+* Program
+* Level of care
+* Admission date
+* Discharge date
+* Episode status
+* Created timestamp
+* Updated timestamp
+
+Requirements:
+
+* Use stable IDs.
+* Use foreign-key constraints.
+* Include tenant keys where required.
+* Add indexes for organization, facility, patient, and episode lookups.
+* Do not use names as identifiers.
+* Do not store clinical data in localStorage.
+
+---
+
+## 4. Add Repository or Service Boundaries
+
+Create a clear server-side data-access boundary.
+
+Examples:
+
+* Organization repository
+* Facility repository
+* Staff repository
+* Patient repository
+* Episode repository
+
+Requirements:
+
+* UI components must not directly query the database.
+* API handlers must use validated service or repository functions.
+* Tenant and facility scope must be passed explicitly.
+* Cross-tenant results must not be returned.
+* Database errors must be translated into safe application errors.
+* Raw SQL errors must not be displayed to users.
+
+---
+
+## 5. Add Validated API Endpoints
+
+Add server endpoints for the initial vertical slice.
+
+At minimum:
+
+* Health or readiness check
+* List accessible patients
+* Read one accessible patient
+* Read the active episode of care
+
+Requirements:
+
+* Validate request parameters.
+* Validate response structures.
+* Require organization and facility context through the safest existing mechanism.
+* Do not trust tenant or facility values supplied only by the browser.
+* If real authentication is not yet implemented, use an explicit development-only identity adapter.
+* Clearly block the adapter in production mode.
+* Return 404 or access-denied behavior without exposing cross-tenant record existence.
+* Add error and empty states.
+
+---
+
+## 6. Create Explicit Demo and Production Modes
+
+The current mock experience may remain available for demonstrations.
+
+Requirements:
+
+* Demo mode must be explicit.
+* Production mode must not silently fall back to mock clinical data.
+* Add a configuration flag or environment setting.
+* Show a visible non-production indicator in demo mode.
+* Prevent real patient data from being used in demo mode.
+* Document which mode is active.
+* Production mode must fail safely when the database is unavailable.
+
+Do not mix mock and production records in one list.
+
+---
+
+## 7. Migrate One UI Vertical Slice
+
+Update:
+
+* Patient List
+* Patient Detail
+
+Requirements:
+
+* In production-backed mode, retrieve data from the server API.
+* In demo mode, retain the existing fictitious dataset.
+* Add loading state.
+* Add empty state.
+* Add safe error state.
+* Preserve current navigation.
+* Preserve current visual design unless a small adjustment is required.
+* Refresh must retain server-backed data.
+* Do not use localStorage as the patient source of truth.
+* Patient Detail must use the server-returned patient and episode identifiers.
+
+Do not migrate clinical notes, medications, authorizations, or billing during this task.
+
+---
+
+## 8. Seed Development Data Safely
+
+Create development-only seed behavior.
+
+Requirements:
+
+* Use clearly fictitious records.
+* Do not use real patient data.
+* Seed organization, facility, staff, patient, and episode records.
+* Make seed execution explicit.
+* Do not run destructive seeding automatically in production.
+* Document how to reset the development database.
+
+---
+
+## 9. Add Tests
+
+Add automated tests for:
+
+1. Migrations apply successfully.
+2. Organization creates successfully.
+3. Facility requires an organization.
+4. Patient requires organization and facility.
+5. Episode requires an existing patient.
+6. Patient List returns only records in the allowed organization.
+7. Patient List returns only records in the allowed facility.
+8. Patient Detail cannot retrieve a cross-organization patient.
+9. Patient Detail cannot retrieve a cross-facility patient when restricted.
+10. Missing patient returns safe not-found behavior.
+11. Database failure returns a safe error.
+12. Demo mode uses only demo data.
+13. Production mode does not silently use demo data.
+14. Refresh preserves database-backed records.
+15. No patient record is written to localStorage as authoritative data.
+
+Use the existing Vitest setup where appropriate.
+
+Add integration tests for the database and API layer.
+
+Do not treat mocked repository tests as proof of database enforcement.
+
+---
+
+## 10. Add Documentation
+
+Create:
+
+`docs/readiness/phase-1a-persistence-foundation.md`
+
+Include:
+
+* Existing architecture found
+* Database choice
+* Migration choice
+* Schema
+* Repository design
+* API design
+* Tenant-scoping design
+* Demo-mode design
+* Production-mode design
+* Data-flow diagram
+* Security limitations
+* Deferred authentication work
+* Deferred audit work
+* Rollback procedure
+* Local development setup
+* Test commands
+* Known limitations
+
+---
+
+# Phase 1A Acceptance Criteria
+
+This work package is complete only when:
+
+* A real relational database is configured.
+* Versioned migrations exist.
+* Organization, facility, user reference, staff, patient, and episode tables exist.
+* Foreign keys and indexes exist.
+* Patient List can read server-persisted records.
+* Patient Detail can read a server-persisted record.
+* Cross-organization access tests fail safely.
+* Cross-facility access tests fail safely where restrictions apply.
+* Production mode does not silently use mock data.
+* Demo mode is clearly identified.
+* Refresh preserves server-backed records.
+* No authoritative patient data is stored in localStorage.
+* TypeScript passes.
+* Vitest passes.
+* Database integration tests pass.
+* Production build passes with its required environment configuration.
+* Existing demo behavior remains available.
+* No unrelated module is changed.
+* No real patient data is used.
+
+---
+
+# Required Deliverables
+
+Provide:
+
+1. Branch name.
+2. Commit hash.
+3. Files changed.
+4. Architecture decision summary.
+5. Database and migration technology selected.
+6. Schema table.
+7. Foreign-key and index list.
+8. API endpoint table.
+9. Repository or service table.
+10. Demo-versus-production behavior table.
+11. Screenshot of Patient List using server-backed data.
+12. Screenshot of Patient Detail using server-backed data.
+13. Screenshot of demo-mode indicator.
+14. Database migration result.
+15. Database integration-test result.
+16. Tenant-isolation test result.
+17. Facility-isolation test result.
+18. Vitest result.
+19. TypeScript result.
+20. Production build result.
+21. Confirmation that production mode does not fall back to mock data.
+22. Confirmation that authoritative patient data is not stored in localStorage.
+23. Known limitations.
+24. Exact next recommended work package.
+
+Create a review archive:
+
+`artifacts/sunrise-os/readiness/phase-1a-persistence-foundation-review.zip`
+
+Include:
+
+* Documentation
+* Migration files
+* Schema summary
+* API summary
+* Test results
+* Screenshots
+* Evidence manifest
+
+Do not include:
+
+* Secrets
+* Environment credentials
+* Database dumps containing sensitive information
+* Dependency caches
+* Build caches
+
+Commit the completed work to:
+
+`readiness/p0-persistence-foundation`
+
+Do not merge into `main`.
+
+Do not begin authentication, audit logging, medication, billing, or additional workflow migration.
+
+Stop after Phase 1A and wait for review.
