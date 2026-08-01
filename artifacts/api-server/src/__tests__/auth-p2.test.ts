@@ -107,6 +107,7 @@ function makeIdentity(overrides?: Partial<AuthenticatedIdentity>): Authenticated
     roleIds:             ["certified_clinician"],
     permissionCodes:     ["patient.list.view", "patient.chart.view", "patient.episode.view"],
     facilityIds:         [FAC_1],
+    orgWide:             false,
     authenticationMethod: "password",
     authenticatedAt:     new Date().toISOString(),
     sessionVersion:      0,

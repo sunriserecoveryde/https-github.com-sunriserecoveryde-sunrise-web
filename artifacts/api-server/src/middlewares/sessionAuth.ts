@@ -133,6 +133,9 @@ async function resolveIdentityFromSession(
   const permissionCodes: PermissionCode[] = [
     ...new Set(roleIds.flatMap((r) => getPermissionsForRole(r))),
   ];
+  // Org-wide: any assignment with facilityId = null grants org-wide access.
+  // Scoped: collect explicit facilityIds from scoped (non-null) assignments.
+  const orgWide = assignments.some((a) => a.facilityId === null);
   const facilityIds = [
     ...new Set(
       assignments
@@ -149,6 +152,7 @@ async function resolveIdentityFromSession(
     roleIds,
     permissionCodes,
     facilityIds,
+    orgWide,
     authenticationMethod: "password",
     authenticatedAt:      authenticatedAt ?? now.toISOString(),
     sessionVersion:       user.sessionVersion,
@@ -164,6 +168,7 @@ function makeDevIdentity(): AuthenticatedIdentity {
     roleIds:              ["clinical_supervisor"],
     permissionCodes:      getPermissionsForRole("clinical_supervisor"),
     facilityIds:          [DEV_SEED_FACILITY_ID],
+    orgWide:              true, // dev identity gets full org access
     authenticationMethod: "dev-identity",
     authenticatedAt:      new Date().toISOString(),
     sessionVersion:       0,

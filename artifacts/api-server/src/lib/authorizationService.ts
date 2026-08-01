@@ -33,7 +33,17 @@ export interface AuthenticatedIdentity {
   sessionId: string;
   roleIds: string[];
   permissionCodes: PermissionCode[];
+  /**
+   * Explicit facility IDs from scoped role assignments.
+   * Empty when all assignments are org-wide (facilityId = null).
+   * Use orgWide to distinguish "no facility access" from "org-wide access".
+   */
   facilityIds: string[];
+  /**
+   * True when the user has at least one org-wide role assignment (facilityId = null).
+   * Org-wide users bypass facility-level scope checks in authorize().
+   */
+  orgWide: boolean;
   authenticationMethod: "password" | "dev-identity";
   authenticatedAt: string;
   sessionVersion: number;
@@ -126,7 +136,10 @@ export async function authorize(
   }
 
   // 4. Facility scope check (when a facilityId is provided)
-  if (facilityId) {
+  //    Org-wide users bypass this check — their role assignment has facilityId=null,
+  //    meaning they are authorized across all facilities in their org.
+  //    Scoped users must have the specific facility in their identity.facilityIds.
+  if (facilityId && !identity.orgWide) {
     const hasAccess = identity.facilityIds.includes(facilityId);
     if (!hasAccess) {
       await writeAuditDenial(identity, "facility-out-of-scope", req);

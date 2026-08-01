@@ -101,10 +101,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isProduction) {
       try {
         // Revoke server session.
+        // Include CSRF token (double-submit pattern) — required by csrf-csrf middleware.
+        const csrfHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (csrfTokenRef.current) {
+          csrfHeaders['X-CSRF-Token'] = csrfTokenRef.current;
+        }
         await fetch(`${API_BASE}/v1/auth/logout`, {
           method:      'POST',
           credentials: 'include',
-          headers:     { 'Content-Type': 'application/json' },
+          headers:     csrfHeaders,
         });
       } catch {
         // Ignore network errors on logout — still clear local state.
@@ -142,12 +147,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     startInactivityClock(true);
   }, [isProduction, productionSession, currentStaffId, startInactivityClock]);
 
+  // ── Production: CSRF token (double-submit cookie pattern) ────────────────
+  // Fetched on mount and stored in a ref; sent as X-CSRF-Token on all
+  // state-changing requests (logout, etc.).  Not stored in localStorage/state
+  // because it only needs to survive the page session.
+  const csrfTokenRef = useRef<string | null>(null);
+
+  const fetchCsrfToken = useCallback(async () => {
+    if (!isProduction) return;
+    try {
+      const res = await fetch(`${API_BASE}/v1/auth/csrf-token`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json() as { csrfToken?: string };
+        if (data.csrfToken) csrfTokenRef.current = data.csrfToken;
+      }
+    } catch {
+      // Non-fatal — CSRF token will be missing and logout may fail at server.
+      // User can refresh to retry.
+    }
+  }, [isProduction]);
+
   // ── Production: check existing session on mount ───────────────────────────
   useEffect(() => {
     if (!isProduction) return;
 
     let cancelled = false;
     async function checkSession() {
+      // Fetch CSRF token in parallel with session check.
+      void fetchCsrfToken();
       try {
         const res = await fetch(`${API_BASE}/v1/auth/session`, {
           credentials: 'include',
@@ -164,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     void checkSession();
     return () => { cancelled = true; };
-  }, [isProduction]);
+  }, [isProduction, fetchCsrfToken]);
 
   // ── Production: poll to detect server-side session expiry ────────────────
   useEffect(() => {
