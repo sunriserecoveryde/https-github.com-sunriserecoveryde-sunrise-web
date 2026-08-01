@@ -1,0 +1,320 @@
+# Sunrise OS — Compliant Patient Chart Photograph Capture and Identification
+
+Complete one scoped feature:
+
+**Allow authorized staff to take or upload a photograph of a patient and securely display it as a chart-identification photograph.**
+
+The feature must be designed to support:
+
+* HIPAA Privacy, Security, and Breach Notification requirements
+* 42 CFR Part 2 confidentiality requirements
+* Maryland Behavioral Health Administration licensing and COMAR requirements
+* Maryland confidentiality and medical-record requirements
+* Joint Commission Behavioral Health Care and Human Services accreditation readiness
+* CARF Behavioral Health accreditation readiness
+* Organizational privacy, consent, retention, and patient-rights policies
+
+Create a new branch:
+
+`feature/compliant-patient-chart-photo`
+
+Do not merge into `main`.
+
+Do not begin unrelated clinical, medication, billing, authorization, or AI work.
+
+---
+
+# Compliance Boundary
+
+Do not claim that implementation of this feature alone makes Sunrise OS:
+
+* HIPAA compliant
+* 42 CFR Part 2 compliant
+* Maryland BHA compliant
+* Joint Commission compliant
+* CARF compliant
+* Legally approved for production use
+
+The feature must provide technical controls and evidence that support compliance.
+
+Final production approval requires:
+
+* Privacy-officer review
+* Security-officer review
+* Qualified legal review
+* Maryland regulatory review
+* Organizational policy approval
+* Clinical leadership approval
+* Accreditation crosswalk review
+* Staff training
+* Risk analysis
+* Vendor and Business Associate Agreement review
+* Production security testing
+
+Use the phrase:
+
+**Compliance-supporting controls**
+
+Do not use:
+
+**Guaranteed compliant**
+
+---
+
+# 1. Inspect the Existing Architecture
+
+Before implementing, identify:
+
+* Patient database schema
+* Patient Detail page
+* Patient List page
+* Existing avatar components
+* Current API server
+* Current authentication boundary
+* Server-side authorization system
+* Organization and facility scoping
+* Program and episode-of-care scoping
+* Current consent records
+* Current Release of Information records
+* Current Part 2 classification or segmentation logic
+* Existing object-storage service
+* Existing upload utilities
+* Existing image-processing packages
+* Existing audit-event system
+* Existing incident-management system
+* Current staff-training and credential records
+* Existing feature-flag mechanism
+* Existing record-retention configuration
+
+Reuse compatible project infrastructure.
+
+Do not introduce:
+
+* A second API framework
+* A second database framework
+* A separate permission system
+* An unrelated design system
+* A public file-storage mechanism
+
+Document what exists and what is missing before coding.
+
+---
+
+# 2. Treat the Photograph as Sensitive Patient Information
+
+Treat every patient photograph as:
+
+* Individually identifiable patient information
+* Electronic protected health information when HIPAA applies
+* A potentially Part 2-protected record when associated with a Part 2 program or SUD treatment
+* A confidential medical-record component
+* A patient-safety identification aid
+* A restricted chart asset
+
+The system must never assume that a photograph is ordinary profile imagery.
+
+Do not use patient photographs for:
+
+* Marketing
+* Staff directories
+* Public profiles
+* Social media
+* Facial recognition
+* Facial matching
+* Biometric identification
+* Emotion analysis
+* Age estimation
+* Demographic inference
+* Automated diagnosis
+* Attendance surveillance
+* Law-enforcement identification
+* Model training
+* Analytics unrelated to treatment or operations
+
+Do not create:
+
+* Face embeddings
+* Biometric templates
+* Facial-feature measurements
+* Search-by-face functionality
+* Automated patient identification
+
+---
+
+# 3. Production Preconditions
+
+The feature must default to disabled in production.
+
+Create a feature flag:
+
+`PATIENT_CHART_PHOTO_ENABLED`
+
+Production enablement must require validated configuration confirming:
+
+* Real authentication is active.
+* Server-side authorization is active.
+* Patient-level access controls are active.
+* Organization and facility isolation are active.
+* Part 2 confidentiality segmentation is active where applicable.
+* Private object storage is configured.
+* Storage encryption is verified.
+* Transport encryption is active.
+* Durable audit persistence is active.
+* Consent and policy configuration is active.
+* Incident-response procedures exist.
+* Backup and recovery cover photo metadata and storage objects.
+* Approved retention policies are configured.
+* Required vendor agreements have been reviewed.
+* Staff training requirements are configured.
+
+If any required production prerequisite is missing:
+
+* Do not expose upload endpoints.
+* Do not expose camera controls.
+* Do not render existing photographs.
+* Render a blocking configuration message for administrators.
+* Do not silently enter development mode.
+* Do not fall back to public or local storage.
+
+Development may use the feature only with clearly fictitious patients and synthetic images.
+
+---
+
+# 4. Patient Rights and Organizational Policy
+
+Create a versioned organizational policy configuration for patient photographs.
+
+The policy must support:
+
+* Whether patient photographs are permitted
+* Whether they are optional or required by program policy
+* Which programs may use them
+* Which facilities may use them
+* Whether an active consent or acknowledgment is required
+* Whether guardian or authorized-representative approval is required
+* Whether minors have additional requirements
+* Whether Part 2 patients require an additional workflow
+* Whether photographs may appear in patient lists
+* Whether photographs may appear in printed records
+* Whether photographs may be exported
+* Whether replacement history is retained
+* When photographs expire or require renewal
+* What happens when consent is revoked
+* What alternative identification process is used when the patient declines
+* Retention and destruction rules
+
+The patient must be allowed to decline a photograph when organizational policy permits refusal.
+
+Refusal must not:
+
+* Block necessary treatment
+* Reduce quality of care
+* Display stigmatizing language
+* Be treated as noncompliance
+* Be visible to users without a legitimate need
+
+Support these patient-photo states:
+
+* Not requested
+* Offered
+* Accepted
+* Declined
+* Guardian accepted
+* Authorized representative accepted
+* Temporarily deferred
+* Consent revoked
+* Photo expired
+* Photo removed
+* Policy exception approved
+
+When the patient declines, show a neutral text identifier and initials.
+
+Do not use a warning symbol suggesting that the patient is dangerous or difficult.
+
+---
+
+# 5. Consent and Authorization Workflow
+
+Before capture or upload, evaluate the organization’s configured policy.
+
+The workflow must determine:
+
+* Whether a photo may be taken without a separate authorization under organizational policy
+* Whether an acknowledgment is required
+* Whether a HIPAA authorization is required for the intended use
+* Whether a Part 2 consent or other Part 2 authority is required
+* Whether a Maryland-specific consent or authorization requirement applies
+* Whether the patient is a minor
+* Whether a guardian or authorized representative is involved
+* Whether an existing consent has expired or been revoked
+
+Do not embed legal conclusions in frontend code.
+
+Create a policy decision service such as:
+
+```ts
+interface PatientPhotoPolicyDecision {
+  allowed: boolean;
+  requiresConsent: boolean;
+  requiresPart2Review: boolean;
+  requiresGuardianAuthority: boolean;
+  permittedUses: Array<
+    "internal-identification" |
+    "patient-list-thumbnail" |
+    "print" |
+    "export"
+  >;
+  retentionPolicyId: string;
+  policyVersionId: string;
+  denialReasonCode?: string;
+}
+```
+
+The server must make the final decision.
+
+The browser must not be able to override it.
+
+Before upload, require staff attestation:
+
+> I confirmed the patient’s identity using two approved identifiers, verified that this photograph belongs to the patient whose chart is open, and completed the required consent or policy workflow.
+
+Store:
+
+* Attestation confirmed
+* Staff user ID
+* Patient ID
+* Episode ID where applicable
+* Organization ID
+* Facility ID
+* Program ID
+* Consent record ID where required
+* Consent version
+* Policy version
+* Verification timestamp
+* Verification method codes
+* Representative authority record where applicable
+
+Do not store the actual identifier values again in the attestation record.
+
+---
+
+# 6. Two-Identifier Patient Verification
+
+A photograph must supplement patient identification.
+
+It must never replace the required textual identification process.
+
+Before opening the camera or uploading a photograph:
+
+1. Display the patient’s full chart name.
+2. Display two approved patient identifiers.
+3. Require the staff member to confirm the correct patient.
+4. Display the organization, facility, and active episode.
+5. Require a second confirmation before final upload.
+
+Approved identifiers may include, according to organizational policy:
+
+* Full name
+* Medical-record number
+* Date of birth
+* Another approved
