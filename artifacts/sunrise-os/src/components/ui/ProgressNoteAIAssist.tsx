@@ -56,6 +56,15 @@ import {
   type MedicalNecessityRequirementCode,
   type MedicalNecessityRequirementResult,
 } from './medicalNecessityConfig';
+import {
+  buildClaritySectionInputs,
+  runClarityReview,
+  detectStaleSection,
+  buildClarityFindingId,
+  validateClarityReview,
+  type ClaritySectionResult,
+  type ClarityReviewResult,
+} from './clarityConfig';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,13 +79,8 @@ interface DraftResult {
   patientContext: string;
 }
 
-interface ClarityResult {
-  originalText: string;
-  revisedText: string;
-  changeCount: number;
-  changesDescription: string[];
-  timestamp: string;
-}
+// ClarityResult (old combined-string type) has been replaced by ClarityReviewResult
+// imported from clarityConfig.ts, which carries a per-section ClaritySectionResult[].
 
 export type NecessityCategory =
   | 'Supported'
@@ -134,6 +138,10 @@ export interface AIAuditEvent {
   outcome: string;
   contentInserted: boolean;
   contentLaterEdited?: boolean;
+  /** Stable ProgressNoteFieldId for section-level events (e.g. Clarity Section Accepted). */
+  fieldId?: ProgressNoteFieldId;
+  /** Version token for the review that produced this event (reviewedAt timestamp). */
+  reviewVersion?: string;
 }
 
 // ─── Clinical Review Pipeline types ──────────────────────────────────────────
@@ -232,7 +240,7 @@ interface ClinicalReviewResult {
   overallReadiness: OverallReadiness;
   clarityChanges: number;
   hasClarityRevision: boolean;
-  clarityData: ClarityResult | null;
+  clarityData: ClarityReviewResult | null;
   consistencyFindings: ConsistencyFinding[];
   necessityCategory: NecessityCategory;
   necessityMissing: string[];
@@ -259,8 +267,18 @@ interface Props {
   isLocked: boolean;
   /** Called with new section values when the clinician inserts an AI draft */
   onInsertDraft: (newValues: Record<string, string>) => void;
-  /** Called with revised text for a single field when the clinician accepts a clarity revision */
-  onAcceptRevision: (revisedText: string) => void;
+  /**
+   * Called when the clinician accepts a clarity revision for a single note section.
+   * The parent updates only the specified field — no other fields are changed.
+   * Content is never inserted automatically.
+   */
+  onAcceptClaritySection: (fieldId: ProgressNoteFieldId, revisedText: string) => void;
+  /**
+   * Called when the clinician accepts all remaining (non-rejected) clarity revisions.
+   * The updates map contains only the fields the clinician approved — rejected and
+   * unchanged fields are never included.
+   */
+  onAcceptAllClaritySections: (updates: Partial<Record<ProgressNoteFieldId, string>>) => void;
   /** Accumulates audit events in the parent; parent may persist these as needed */
   onAuditEvent?: (event: AIAuditEvent) => void;
   /**
@@ -554,6 +572,7 @@ function createAuditEvent(
   action: string,
   outcome: string,
   contentInserted = false,
+  extra?: { fieldId?: ProgressNoteFieldId; reviewVersion?: string },
 ): AIAuditEvent {
   _auditCounter += 1;
   const event: AIAuditEvent = {
@@ -565,9 +584,12 @@ function createAuditEvent(
     action,
     outcome,
     contentInserted,
+    ...extra,
   };
   // eslint-disable-next-line no-console
-  console.info('[AI Audit]', action, '|', outcome, '| patient:', patientId, '| staff:', staffName, '| ref:', noteRef);
+  console.info('[AI Audit]', action, '|', outcome,
+    extra?.fieldId ? `| field: ${extra.fieldId}` : '',
+    '| patient:', patientId, '| staff:', staffName, '| ref:', noteRef);
   return event;
 }
 
@@ -723,6 +745,14 @@ function validateFindings(findings: ClinicalReviewFinding[], currentFields: stri
       }
     }
 
+    // Clarity findings must use stable IDs: clarity:{fieldId}.
+    if (f.category === 'clarity' && f.id?.startsWith('clarity:')) {
+      const fid = f.id.slice('clarity:'.length);
+      if (!knownFieldIds.has(fid)) {
+        console.warn(loc, `clarity finding id references unknown fieldId "${fid}" — expected clarity:{ProgressNoteFieldId}`);
+      }
+    }
+
     if (f.targetFieldId) {
       if (!knownFieldIds.has(f.targetFieldId)) {
         console.warn(loc, `Unknown targetFieldId "${f.targetFieldId}"`);
@@ -744,28 +774,12 @@ function validateFindings(findings: ClinicalReviewFinding[], currentFields: stri
   });
 }
 
-// ─── DEPRECATED: text-based field inference ───────────────────────────────────
-// @deprecated — Do NOT call this from Clinical Documentation Review findings.
-//   All finding destinations are now assigned as structured metadata:
-//     • Medical-necessity findings — MEDICAL_NECESSITY_REQUIREMENTS[code].targetCandidates
-//     • Consistency findings       — ConsistencyFinding.targetFieldId (set by the checker)
-//   None of these paths parse finding text.
-//
-//   This function is retained as a dead-code safety net only.
-//   It always returns undefined so that any accidental call is safely neutralised
-//   and caught by TypeScript if the result is used for navigation.
-//   Remove it once all callers are confirmed absent.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function inferFieldId(_text: string, _currentFields: string[]): undefined {
-  if (!import.meta.env.PROD) {
-    console.warn('[AI Review] inferFieldId() was called — this function is deprecated. ' +
-      'Assign targetFieldId via MEDICAL_NECESSITY_REQUIREMENTS[code].targetCandidates ' +
-      'or ConsistencyFinding.targetFieldId instead.');
-  }
-  return undefined;
-}
-
 // ─── Clinical Confidence Panel badge configs ──────────────────────────────────
+// inferFieldId() has been deleted. All finding destinations are now structured:
+//   • Medical-necessity findings — MEDICAL_NECESSITY_REQUIREMENTS[code].targetCandidates
+//   • Consistency findings       — ConsistencyFinding.targetFieldId (set by the checker)
+//   • Clarity findings           — ClaritySectionResult.fieldId (from clarityConfig.ts)
+// No text parsing is used anywhere in the finding pipeline.
 // All values derive from documented information — no random or fabricated values.
 const DOC_STRENGTH_CONFIG: Record<DocStrength, { cls: string; icon: React.ReactNode; dotCls: string }> = {
   'Strong':                  { cls: 'bg-green-100 text-green-800 border-green-200', dotCls: 'bg-green-500', icon: <Check className="w-3 h-3" /> },
@@ -793,8 +807,9 @@ const REVIEW_READINESS_CONFIG: Record<ReviewReadiness, { cls: string; badgeCls: 
 
 export function ProgressNoteAIAssist({
   format, patientId, noteType, fields, values, authorName,
-  noteRef, isLocked, onInsertDraft, onAcceptRevision, onAuditEvent,
-  onJumpToField,
+  noteRef, isLocked, onInsertDraft,
+  onAcceptClaritySection, onAcceptAllClaritySections,
+  onAuditEvent, onJumpToField,
 }: Props) {
   const panelId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -814,9 +829,15 @@ export function ProgressNoteAIAssist({
   const [pendingOverwrite, setPendingOverwrite] = useState(false);
   const [copiedDraft, setCopiedDraft] = useState(false);
 
-  const [clarityResult, setClarityResult] = useState<ClarityResult | null>(null);
-  const [clarityRevisionAccepted, setClarityRevisionAccepted] = useState(false);
-  const [showOriginal, setShowOriginal] = useState(false);
+  const [clarityResult, setClarityResult] = useState<ClarityReviewResult | null>(null);
+  /** fieldIds of sections the clinician explicitly accepted. */
+  const [claritySectionAccepted, setClaritySectionAccepted] = useState<Set<ProgressNoteFieldId>>(new Set());
+  /** fieldIds of sections the clinician explicitly rejected (Keep Original). */
+  const [claritySectionRejected, setClaritySectionRejected] = useState<Set<ProgressNoteFieldId>>(new Set());
+  /** Section pending stale-result confirmation; null when no warning is shown. */
+  const [stalePending, setStalePending] = useState<ClaritySectionResult | null>(null);
+  /** fieldIds whose original text is currently shown (toggled per-section). */
+  const [showOriginalFields, setShowOriginalFields] = useState<Set<ProgressNoteFieldId>>(new Set());
 
   const [necessityResult, setNecessityResult] = useState<NecessityResult | null>(null);
   const [consistencyResult, setConsistencyResult] = useState<ConsistencyResult | null>(null);
@@ -837,8 +858,13 @@ export function ProgressNoteAIAssist({
   const patient = MOCK_PATIENTS.find(p => p.id === patientId);
 
   // ── Audit emit ──────────────────────────────────────────────────────────────
-  const emit = useCallback((action: string, outcome: string, contentInserted = false) => {
-    const ev = createAuditEvent(authorName, patientId, noteRef, action, outcome, contentInserted);
+  const emit = useCallback((
+    action: string,
+    outcome: string,
+    contentInserted = false,
+    extra?: { fieldId?: ProgressNoteFieldId; reviewVersion?: string },
+  ) => {
+    const ev = createAuditEvent(authorName, patientId, noteRef, action, outcome, contentInserted, extra);
     onAuditEvent?.(ev);
   }, [authorName, patientId, noteRef, onAuditEvent]);
 
@@ -874,9 +900,17 @@ export function ProgressNoteAIAssist({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Close logic ─────────────────────────────────────────────────────────────
+  // Clarity has unhandled output when any section has changes that haven't been
+  // explicitly accepted or rejected.
+  const clarityHasUnsaved = clarityResult !== null &&
+    clarityResult.sections.some(
+      s => s.hasChanges &&
+           !claritySectionAccepted.has(s.fieldId) &&
+           !claritySectionRejected.has(s.fieldId),
+    );
   const hasUninsertedOutput =
-    (activeAction === 'draft'    && draftResult   && !draftInserted) ||
-    (activeAction === 'clarity'  && clarityResult && !clarityRevisionAccepted) ||
+    (activeAction === 'draft'   && draftResult  && !draftInserted) ||
+    (activeAction === 'clarity' && clarityHasUnsaved) ||
     (reviewResult?.reviewDraft != null && !reviewDraftInserted);
 
   function handleClose() {
@@ -903,6 +937,8 @@ export function ProgressNoteAIAssist({
     setStatus('idle');
     setError(null);
     setDiscardWarning(false);
+    // Dismiss stale warning when leaving the clarity tab.
+    setStalePending(null);
   }
 
   // ── Jump from review finding to exact note field ────────────────────────────
@@ -927,8 +963,11 @@ export function ProgressNoteAIAssist({
 
     if (action === 'clarity' && reviewResult?.clarityData) {
       setClarityResult(reviewResult.clarityData);
-      setClarityRevisionAccepted(false);
-      setShowOriginal(false);
+      // Reset per-section acceptance state — clinician gets a fresh review.
+      setClaritySectionAccepted(new Set());
+      setClaritySectionRejected(new Set());
+      setStalePending(null);
+      setShowOriginalFields(new Set());
       setStatus('result');
     } else if (action === 'necessity' && reviewResult?.necessityData) {
       setNecessityResult(reviewResult.necessityData);
@@ -1037,21 +1076,18 @@ export function ProgressNoteAIAssist({
       }
 
       // ── Step 3: Evaluate clarity ─────────────────────────────────────────
+      // Each section is processed independently — no combined-text concatenation.
+      // clarityChanges = number of sections with at least one improvement.
       setStep('clarity', 'running');
       await simulateLatency(400);
-      const combined = fields.map(f => values[f] ?? '').join('\n\n').trim();
-      let clarityData: ClarityResult | null = null;
+      let clarityData: ClarityReviewResult | null = null;
       let clarityChanges = 0;
       if (!noteIsEmpty) {
-        const { revised, changes } = improveClarity(combined);
-        clarityChanges = changes.filter(c => !c.includes('No grammar')).length;
-        clarityData = {
-          originalText: combined,
-          revisedText: revised,
-          changeCount: clarityChanges,
-          changesDescription: changes,
-          timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-        };
+        const claritySections = buildClaritySectionInputs(fields, values);
+        const clarityTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        clarityData = runClarityReview(claritySections, clarityTs);
+        clarityChanges = clarityData.totalChanges;
+        validateClarityReview(clarityData);
       }
       setStep('clarity', 'done');
 
@@ -1184,14 +1220,28 @@ export function ProgressNoteAIAssist({
           { recommendedAction: f.suggestedAction, targetFieldId: tgt, fallbackTool: tgt ? undefined : 'consistency', sourceFields: f.sourceFields },
         ));
       });
-      // Grammar/style is Important, never Critical.
-      if (!noteIsEmpty && clarityChanges > 0) {
-        pFindings.push(mkF(
-          'important', 'clarity',
-          `${clarityChanges} clarity issue${clarityChanges !== 1 ? 's' : ''} identified`,
-          `${clarityChanges} grammar or style improvement${clarityChanges !== 1 ? 's' : ''} ${clarityChanges === 1 ? 'was' : 'were'} found. These do not add new clinical facts — they improve documentation readability.`,
-          { recommendedAction: 'Review Clarity Details', fallbackTool: 'clarity' },
-        ));
+      // Clarity findings — one per section with improvements.
+      // Stable IDs: clarity:{fieldId}  e.g. "clarity:intervention"
+      // Priority: 'suggested' (grammar/style; never Critical, never Important unless ambiguous).
+      // targetFieldId: typed ProgressNoteFieldId for direct field navigation.
+      // Changing a section title or explanation never changes its destination.
+      if (!noteIsEmpty && clarityData) {
+        clarityData.sections
+          .filter(s => s.hasChanges)
+          .forEach(s => {
+            pFindings.push(mkF(
+              'suggested', 'clarity',
+              `${s.fieldLabel} wording could be clearer`,
+              `The ${s.fieldLabel} section contains ${s.changes.length} wording improvement${s.changes.length !== 1 ? 's' : ''} that may improve readability without changing clinical meaning.`,
+              {
+                id:                buildClarityFindingId(s.fieldId),
+                recommendedAction: `Review ${s.fieldLabel} Wording`,
+                targetFieldId:     s.fieldId,
+                fallbackTool:      'clarity',
+                sourceFields:      [s.fieldLabel],
+              },
+            ));
+          });
       }
 
       // ── Suggested Improvement ──
@@ -1332,7 +1382,7 @@ export function ProgressNoteAIAssist({
           : 'No note content has been entered. Complete the note fields and run the review again, or use the Draft Note tool below to generate a starting point.';
       } else if (overallReadiness === 'Ready to Review') {
         const clarityNote = clarityChanges > 0
-          ? `${clarityChanges} minor style correction${clarityChanges !== 1 ? 's' : ''} is available via the Clarity tool.`
+          ? `${clarityChanges} section${clarityChanges !== 1 ? 's have' : ' has'} clarity improvements available via the Clarity tool.`
           : 'No clarity issues were identified.';
         summary = `This note appears complete and internally consistent. ${clarityNote} Medical necessity documentation is ${necessityEval.category.toLowerCase()}. The note is ready for your final review before signing.`;
       } else if (overallReadiness === 'Needs Attention') {
@@ -1500,46 +1550,135 @@ export function ProgressNoteAIAssist({
   }
 
   // ── Improve Clarity ─────────────────────────────────────────────────────────
+  // Each section is processed independently so the clinician can accept or
+  // reject revisions per-section, and Clinical Review findings navigate
+  // directly to the affected field.
   async function runClarity() {
-    const combined = fields.map(f => values[f] ?? '').join('\n\n').trim();
-    if (!combined) { setError('Enter note content before requesting a clarity review.'); return; }
+    const anyContent = fields.some(f => (values[f] ?? '').trim());
+    if (!anyContent) { setError('Enter note content before requesting a clarity review.'); return; }
 
     emit('Clarity Review Requested', 'loading');
     setStatus('loading');
     setError(null);
-    setClarityRevisionAccepted(false);
-    setShowOriginal(false);
+    setClaritySectionAccepted(new Set());
+    setClaritySectionRejected(new Set());
+    setStalePending(null);
+    setShowOriginalFields(new Set());
 
     try {
       await simulateLatency(600);
-      const { revised, changes } = improveClarity(combined);
-      setClarityResult({
-        originalText: combined,
-        revisedText: revised,
-        changeCount: changes.filter(c => !c.includes('No grammar')).length,
-        changesDescription: changes,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      });
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const inputs = buildClaritySectionInputs(fields, values);
+      const result = runClarityReview(inputs, ts);
+      validateClarityReview(result);
+      setClarityResult(result);
       setStatus('result');
-      emit('Clarity Review Generated', 'success');
+      emit('Clarity Review Completed', 'success');
     } catch {
       setStatus('error');
       setError('AI assistance is temporarily unavailable. Your note has not been changed.');
-      emit('Clarity Review Generated', 'error');
+      emit('Clarity Review Completed', 'error');
     }
   }
 
-  function handleAcceptClarityRevision() {
+  // Accept a single section's revision. Stale-detection runs first —
+  // if the field's current text differs from the snapshot, the stale
+  // warning is shown instead and the accept is deferred.
+  function handleAcceptClaritySection(section: ClaritySectionResult) {
     if (!clarityResult) return;
-    onAcceptRevision(clarityResult.revisedText);
-    setClarityRevisionAccepted(true);
-    emit('Revision Accepted', 'accepted', true);
+
+    const currentText = values[section.fieldId] ?? '';
+    if (detectStaleSection(currentText, section.sourceSnapshot)) {
+      setStalePending(section);
+      emit('Stale Clarity Revision Warning Displayed', 'warned', false, {
+        fieldId: section.fieldId,
+        reviewVersion: clarityResult.reviewedAt,
+      });
+      return;
+    }
+
+    onAcceptClaritySection(section.fieldId, section.suggestedText);
+    setClaritySectionAccepted(prev => new Set([...prev, section.fieldId]));
+    emit('Clarity Section Revision Accepted', 'accepted', true, {
+      fieldId: section.fieldId,
+      reviewVersion: clarityResult.reviewedAt,
+    });
   }
 
-  function handleRejectClarityRevision() {
-    setClarityResult(null);
-    setStatus('idle');
-    emit('Revision Rejected', 'rejected');
+  // The clinician confirmed they want to accept despite the field having changed
+  // since the review was run.
+  function handleConfirmStaleAccept() {
+    if (!stalePending || !clarityResult) return;
+    const section = stalePending;
+    setStalePending(null);
+    onAcceptClaritySection(section.fieldId, section.suggestedText);
+    setClaritySectionAccepted(prev => new Set([...prev, section.fieldId]));
+    emit('Clarity Section Revision Accepted', 'accepted-after-stale-warning', true, {
+      fieldId: section.fieldId,
+      reviewVersion: clarityResult.reviewedAt,
+    });
+  }
+
+  function handleRejectClaritySection(section: ClaritySectionResult) {
+    if (!clarityResult) return;
+    setClaritySectionRejected(prev => new Set([...prev, section.fieldId]));
+    emit('Clarity Section Revision Rejected', 'rejected', false, {
+      fieldId: section.fieldId,
+      reviewVersion: clarityResult.reviewedAt,
+    });
+  }
+
+  // Accept all remaining (not-yet-rejected) sections that have changes.
+  function handleAcceptAllClaritySections() {
+    if (!clarityResult) return;
+    const updates: Partial<Record<ProgressNoteFieldId, string>> = {};
+    const newAccepted = new Set(claritySectionAccepted);
+    const staleWarnings: ProgressNoteFieldId[] = [];
+
+    clarityResult.sections.forEach(s => {
+      if (!s.hasChanges) return;
+      if (claritySectionAccepted.has(s.fieldId)) return;
+      if (claritySectionRejected.has(s.fieldId)) return;
+      const currentText = values[s.fieldId] ?? '';
+      if (detectStaleSection(currentText, s.sourceSnapshot)) {
+        staleWarnings.push(s.fieldId);
+        return;
+      }
+      updates[s.fieldId] = s.suggestedText;
+      newAccepted.add(s.fieldId);
+    });
+
+    if (Object.keys(updates).length > 0) {
+      onAcceptAllClaritySections(updates);
+      setClaritySectionAccepted(newAccepted);
+      emit('All Clarity Revisions Accepted', `accepted:${Object.keys(updates).join(',')}`, true, {
+        reviewVersion: clarityResult.reviewedAt,
+      });
+    }
+
+    // If any sections were stale, show the first one.
+    if (staleWarnings.length > 0) {
+      const staleSection = clarityResult.sections.find(s => s.fieldId === staleWarnings[0]);
+      if (staleSection) {
+        setStalePending(staleSection);
+        emit('Stale Clarity Revision Warning Displayed', 'warned', false, {
+          fieldId: staleSection.fieldId,
+          reviewVersion: clarityResult.reviewedAt,
+        });
+      }
+    }
+  }
+
+  function handleToggleClarityOriginal(fieldId: ProgressNoteFieldId) {
+    setShowOriginalFields(prev => {
+      const next = new Set(prev);
+      if (next.has(fieldId)) next.delete(fieldId);
+      else {
+        next.add(fieldId);
+        emit('Clarity Section Opened', 'toggled', false, { fieldId });
+      }
+      return next;
+    });
   }
 
   // ── Medical Necessity ───────────────────────────────────────────────────────
@@ -2395,99 +2534,227 @@ export function ProgressNoteAIAssist({
                 )}
 
                 {/* ── CLARITY RESULT ─────────────────────────────────────── */}
-                {activeAction === 'clarity' && status === 'result' && clarityResult && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-navy">
-                        Suggested Revision
-                        {clarityResult.changeCount > 0
-                          ? ` · ${clarityResult.changeCount} change${clarityResult.changeCount > 1 ? 's' : ''}`
-                          : ' · No changes needed'}
-                      </span>
-                      <span className="text-[10px] text-slate">{clarityResult.timestamp}</span>
-                    </div>
+                {activeAction === 'clarity' && status === 'result' && clarityResult && (() => {
+                  const sectionsWithChanges = clarityResult.sections.filter(s => s.hasChanges);
+                  const anyUnhandled = sectionsWithChanges.some(
+                    s => !claritySectionAccepted.has(s.fieldId) && !claritySectionRejected.has(s.fieldId),
+                  );
+                  return (
+                    <div className="space-y-4">
 
-                    {clarityResult.changesDescription.length > 0 && (
-                      <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
-                        {clarityResult.changesDescription.map((c, i) => (
-                          <div key={i} className={`flex items-start gap-2 px-3 py-2 text-[11px] ${
-                            c.includes('No grammar') ? 'bg-green-50 text-green-700' : 'bg-white text-navy'
-                          }`}>
-                            {c.includes('No grammar')
-                              ? <Check className="w-3 h-3 text-green-500 flex-none mt-0.5" />
-                              : <ChevronRight className="w-3 h-3 text-violet-400 flex-none mt-0.5" />}
-                            {c}
+                      {/* ── Stale warning overlay ── */}
+                      {stalePending && (
+                        <div
+                          role="alertdialog"
+                          aria-labelledby="stale-warn-title"
+                          aria-describedby="stale-warn-desc"
+                          className="rounded-xl border border-amber-300 bg-amber-50 p-3 space-y-2 shadow-sm"
+                        >
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="w-4 h-4 text-amber-600 flex-none mt-0.5" />
+                            <div>
+                              <div id="stale-warn-title" className="text-[11px] font-bold text-amber-900 mb-0.5">
+                                {FIELD_ID_LABELS[stalePending.fieldId]} section has changed since this review was run
+                              </div>
+                              <div id="stale-warn-desc" className="text-[10px] text-amber-800">
+                                The suggested revision was based on an earlier version of the text. Accepting it now may overwrite recent edits. Review the current text before proceeding.
+                              </div>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => setShowOriginal(o => !o)}
-                      className="flex items-center gap-1 text-[11px] font-semibold text-slate hover:text-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
-                    >
-                      {showOriginal ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                      {showOriginal ? 'Hide original' : 'Show original'}
-                    </button>
-
-                    {showOriginal && (
-                      <div>
-                        <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Original Text</div>
-                        <div className="text-xs text-slate bg-slate-50 border border-border rounded-lg p-3 leading-relaxed whitespace-pre-wrap">
-                          {clarityResult.originalText}
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={handleConfirmStaleAccept}
+                              className="text-[11px] font-bold px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                            >
+                              Accept Anyway
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setStalePending(null)}
+                              className="text-[11px] font-semibold px-3 py-1.5 border border-amber-300 text-amber-800 rounded-lg hover:bg-amber-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    <div>
-                      <div className="text-[10px] font-bold text-violet-700 uppercase tracking-wider mb-1">Suggested Revision</div>
-                      <div className="text-xs text-navy bg-violet-50 border border-violet-200 rounded-lg p-3 leading-relaxed whitespace-pre-wrap">
-                        {clarityResult.revisedText}
+                      {/* ── Header row ── */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-navy">
+                          {clarityResult.totalChanges > 0
+                            ? `${sectionsWithChanges.length} section${sectionsWithChanges.length !== 1 ? 's' : ''} with improvements`
+                            : 'No clarity issues found'}
+                        </span>
+                        <span className="text-[10px] text-slate">{clarityResult.reviewedAt}</span>
                       </div>
+
+                      {/* ── Accept All button ── */}
+                      {anyUnhandled && sectionsWithChanges.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={handleAcceptAllClaritySections}
+                          className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          Accept All Suggested Revisions ({sectionsWithChanges.filter(
+                            s => !claritySectionAccepted.has(s.fieldId) && !claritySectionRejected.has(s.fieldId),
+                          ).length} remaining)
+                        </button>
+                      )}
+
+                      {/* ── Per-section cards ── */}
+                      {clarityResult.sections.map(section => {
+                        const accepted  = claritySectionAccepted.has(section.fieldId);
+                        const rejected  = claritySectionRejected.has(section.fieldId);
+                        const showOrig  = showOriginalFields.has(section.fieldId);
+
+                        if (!section.hasChanges) {
+                          return (
+                            <div
+                              key={section.fieldId}
+                              className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 flex items-center gap-2"
+                            >
+                              <Check className="w-3.5 h-3.5 text-green-500 flex-none" />
+                              <span className="text-[11px] text-green-800 font-semibold">{section.fieldLabel}</span>
+                              <span className="text-[10px] text-green-700 ml-auto">No clarity improvements identified</span>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={section.fieldId}
+                            className={`rounded-xl border overflow-hidden ${
+                              accepted  ? 'border-green-300 bg-green-50'  :
+                              rejected  ? 'border-slate-200 bg-slate-50'  :
+                              'border-violet-200 bg-white'
+                            }`}
+                          >
+                            {/* Section heading */}
+                            <div className={`flex items-center justify-between px-3 py-2 border-b ${
+                              accepted ? 'border-green-200' : rejected ? 'border-slate-200' : 'border-violet-100'
+                            }`}>
+                              <div className="flex items-center gap-2">
+                                {accepted && <Check className="w-3.5 h-3.5 text-green-600" />}
+                                {rejected && <X className="w-3.5 h-3.5 text-slate-400" />}
+                                <span className="text-[11px] font-bold text-navy">{section.fieldLabel}</span>
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                                  accepted ? 'bg-green-100 text-green-700' :
+                                  rejected ? 'bg-slate-200 text-slate-500' :
+                                  'bg-violet-100 text-violet-700'
+                                }`}>
+                                  {accepted ? 'Applied' : rejected ? 'Kept original' : `${section.changes.length} change${section.changes.length !== 1 ? 's' : ''}`}
+                                </span>
+                              </div>
+                              {!accepted && !rejected && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleClarityOriginal(section.fieldId)}
+                                  className="flex items-center gap-1 text-[10px] font-semibold text-slate hover:text-navy transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
+                                >
+                                  {showOrig ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                  {showOrig ? 'Hide original' : 'Show original'}
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="p-3 space-y-2.5">
+                              {/* Changes list */}
+                              {!accepted && !rejected && (
+                                <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
+                                  {section.changes.map((c, i) => (
+                                    <div key={i} className="flex items-start gap-2 px-2.5 py-1.5 text-[11px] bg-white text-navy">
+                                      <ChevronRight className="w-3 h-3 text-violet-400 flex-none mt-0.5" />
+                                      {c.description}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Original text (toggled) */}
+                              {showOrig && (
+                                <div>
+                                  <div className="text-[10px] font-bold text-slate uppercase tracking-wider mb-1">Original</div>
+                                  <div className="text-xs text-slate bg-slate-50 border border-border rounded-lg p-2.5 leading-relaxed whitespace-pre-wrap">
+                                    {section.sourceSnapshot}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Suggested revision */}
+                              {!accepted && !rejected && (
+                                <div>
+                                  <div className="text-[10px] font-bold text-violet-700 uppercase tracking-wider mb-1">Suggested revision</div>
+                                  <div className="text-xs text-navy bg-violet-50 border border-violet-200 rounded-lg p-2.5 leading-relaxed whitespace-pre-wrap">
+                                    {section.suggestedText}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Applied confirmation */}
+                              {accepted && (
+                                <div className="flex items-center gap-2 text-xs text-green-800 font-semibold">
+                                  <Check className="w-3.5 h-3.5 text-green-600 flex-none" />
+                                  Revision applied — review the updated {section.fieldLabel} text before signing.
+                                </div>
+                              )}
+
+                              {/* Rejected confirmation */}
+                              {rejected && (
+                                <div className="text-xs text-slate-500 italic">
+                                  Original {section.fieldLabel} text kept.
+                                </div>
+                              )}
+
+                              {/* Action buttons */}
+                              {!accepted && !rejected && (
+                                <>
+                                  <div className="text-[10px] text-slate italic">
+                                    Corrects grammar, style, and abbreviations only. No new facts or clinical judgments are added. Patient quotations unchanged.
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAcceptClaritySection(section)}
+                                      className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                                    >
+                                      <Check className="w-3 h-3" /> Accept {section.fieldLabel} revision
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => navigator.clipboard.writeText(section.suggestedText).catch(() => {})}
+                                      className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                                    >
+                                      <Copy className="w-3 h-3" /> Copy
+                                    </button>
+                                    {onJumpToField && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleFieldJump(section.fieldId)}
+                                        className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                                      >
+                                        <ChevronRight className="w-3 h-3" /> Go to {section.fieldLabel}
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRejectClaritySection(section)}
+                                      className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 text-slate border border-border rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                                    >
+                                      <X className="w-3 h-3" /> Keep original {section.fieldLabel}
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-
-                    <div className="text-[10px] text-slate italic bg-slate-50 border border-border rounded-lg px-3 py-2">
-                      This revision corrects grammar, style, and abbreviations only. No new facts, diagnoses, interventions, or clinical judgments have been added. Patient quotations are unchanged.
-                    </div>
-
-                    {clarityRevisionAccepted && (
-                      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-800 font-semibold">
-                        <Check className="w-3.5 h-3.5 text-green-600" />
-                        Revision applied — review the updated text and use your normal signing workflow.
-                      </div>
-                    )}
-
-                    {!clarityRevisionAccepted && (
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={handleAcceptClarityRevision}
-                          disabled={clarityResult.changeCount === 0}
-                          className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-                        >
-                          <Check className="w-3 h-3" /> Accept Revision
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(clarityResult.revisedText).catch(() => {});
-                          }}
-                          className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 border border-border text-slate rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                        >
-                          <Copy className="w-3 h-3" /> Copy Suggested Revision
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleRejectClarityRevision}
-                          className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 text-slate border border-border rounded-lg hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                        >
-                          <X className="w-3 h-3" /> Keep Original
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* ── NECESSITY RESULT ───────────────────────────────────── */}
                 {activeAction === 'necessity' && status === 'result' && necessityResult && (

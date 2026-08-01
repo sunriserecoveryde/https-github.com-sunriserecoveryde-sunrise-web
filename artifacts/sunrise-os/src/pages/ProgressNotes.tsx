@@ -313,16 +313,52 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
     docForm.markDirty();
   }
 
-  function handleAIAcceptRevision(revisedText: string) {
-    // The clarity engine combines all fields with \n\n. Split proportionally
-    // back to the current fields so each section gets its revised content.
-    const parts = revisedText.split(/\n\n+/);
-    const newValues: Record<string, string> = { ...values };
-    fields.forEach((f, i) => {
-      if (parts[i] !== undefined) newValues[f] = parts[i];
-    });
-    setValues(newValues);
+  /**
+   * Called when the clinician accepts a clarity revision for a single note
+   * section. Only the specified field is updated — all other field values are
+   * preserved. Content is never inserted automatically.
+   */
+  function handleAIAcceptClaritySection(fieldId: ProgressNoteFieldId, revisedText: string) {
+    // FIELD_ID_TO_LABEL is Partial<Record<ProgressNoteFieldId, string>> —
+    // direct lookup gives the field label used as the textarea values key.
+    const fieldLabel = FIELD_ID_TO_LABEL[fieldId];
+    if (!fieldLabel) return;
+    setValues(prev => ({ ...prev, [fieldLabel]: revisedText }));
     docForm.markDirty();
+    // Polite announcement so the clinician can confirm the insert.
+    if (liveRegionRef.current) {
+      liveRegionRef.current.textContent = '';
+      requestAnimationFrame(() => {
+        if (liveRegionRef.current) {
+          liveRegionRef.current.textContent =
+            `${fieldLabel} revision inserted — clinician review required before signing.`;
+        }
+      });
+    }
+  }
+
+  /**
+   * Called when the clinician accepts all remaining (non-rejected) clarity
+   * revisions via "Accept All". Only fields present in updates are changed.
+   */
+  function handleAIAcceptAllClaritySections(updates: Partial<Record<ProgressNoteFieldId, string>>) {
+    const labelUpdates: Record<string, string> = {};
+    (Object.entries(updates) as [ProgressNoteFieldId, string | undefined][]).forEach(([fid, revised]) => {
+      const fieldLabel = FIELD_ID_TO_LABEL[fid];
+      if (fieldLabel && revised !== undefined) labelUpdates[fieldLabel] = revised;
+    });
+    if (Object.keys(labelUpdates).length === 0) return;
+    setValues(prev => ({ ...prev, ...labelUpdates }));
+    docForm.markDirty();
+    if (liveRegionRef.current) {
+      liveRegionRef.current.textContent = '';
+      requestAnimationFrame(() => {
+        if (liveRegionRef.current) {
+          liveRegionRef.current.textContent =
+            `${Object.keys(labelUpdates).length} section revision${Object.keys(labelUpdates).length !== 1 ? 's' : ''} inserted — clinician review required before signing.`;
+        }
+      });
+    }
   }
 
   function handleAIAuditEvent(event: AIAuditEvent) {
@@ -423,7 +459,8 @@ function NewNoteForm({ onClose, onSave }: { onClose: () => void; onSave: (note: 
               noteRef={docId}
               isLocked={docForm.isLocked}
               onInsertDraft={handleAIInsertDraft}
-              onAcceptRevision={handleAIAcceptRevision}
+              onAcceptClaritySection={handleAIAcceptClaritySection}
+              onAcceptAllClaritySections={handleAIAcceptAllClaritySections}
               onAuditEvent={handleAIAuditEvent}
               onJumpToField={handleJumpToField}
             />
