@@ -21,7 +21,11 @@ description: Hardening items applied on top of the Phase 1A persistence foundati
 
 ## Review package
 `artifacts/sunrise-os/readiness/phase-1a-hardening-review.zip`
-SHA-256: `ade475c9f6decaa46ea30d221540cea4ca5738b09379bda01ef129e1783dc11b`
+SHA-256: `30ed968288a10955c33590204922c0b411551a23ab45ca635f8d9eed21f3c87e`
+Entries: 38 | Size: 632KB
+
+## Test counts (final)
+- DB: 69 tests / 5 files  |  sunrise-os: 119 tests / 8 files  |  Total: 188
 
 ## Gotchas
 - Composite FK migration ordering: unique index on (org_id, id) must be created BEFORE the composite FK that references it. `drizzle-kit migrate` may fail on ordering; apply via psql in 2 passes (CREATE INDEX then ALTER TABLE ADD CONSTRAINT).
