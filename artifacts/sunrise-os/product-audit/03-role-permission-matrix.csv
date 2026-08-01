@@ -1,0 +1,341 @@
+Role,RoleId,Screen,ViewPermission,CreatePermission,EditPermission,DeletePermission,SignPermission,CoSignPermission,ExportPermission,AIPermission,PatientAccessRestriction,FacilityRestriction,ReadOnlyBehavior,HiddenActionBehavior,DirectRouteProtection,Notes,Result
+Clinical Supervisor,clinical_supervisor,Dashboard,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Has full access to all dashboard actions,Pass
+Clinical Supervisor,clinical_supervisor,ProgressNotes,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Can sign and co-sign notes; AI assist enabled,Pass
+Clinical Supervisor,clinical_supervisor,TreatmentPlans,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Can approve and sign treatment plans,Pass
+Clinical Supervisor,clinical_supervisor,ASAMAssessments,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full access to ASAM assessments,Pass
+Clinical Supervisor,clinical_supervisor,GroupNotes,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Can sign and co-sign group notes,Pass
+Clinical Supervisor,clinical_supervisor,CosignQueue,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Primary co-signer role,Pass
+Clinical Supervisor,clinical_supervisor,NursingMAR,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only access to MAR,Pass
+Clinical Supervisor,clinical_supervisor,WithdrawalMonitor,full,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,No,Yes,No,Full access to withdrawal monitoring,Pass
+Clinical Supervisor,clinical_supervisor,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No access to revenue cycle,Pass
+Clinical Supervisor,clinical_supervisor,InsuranceAuthorization,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Can view but not edit auths,Pass
+Clinical Supervisor,clinical_supervisor,AuditCompliance,read,No,No,No,No,No,Yes,No,No,No,Yes,No,View-only compliance access,Pass
+Clinical Supervisor,clinical_supervisor,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No staff admin access,Pass
+Clinical Supervisor,clinical_supervisor,MedicalRecords,full,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,No,Yes,No,Full medical records access including ROI,Pass
+Clinical Supervisor,clinical_supervisor,AIAssistant,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,AI tools enabled,Pass
+Clinical Supervisor,clinical_supervisor,IncidentReporting,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full incident reporting access,Pass
+Clinical Supervisor,clinical_supervisor,PatientList,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full patient list access,Pass
+Clinical Supervisor,clinical_supervisor,Admissions,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full admissions access,Pass
+Clinical Supervisor,clinical_supervisor,Discharges,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full discharges access,Pass
+Clinical Supervisor,clinical_supervisor,BedManagement,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only bed management,Pass
+Clinical Supervisor,clinical_supervisor,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Can manage own settings,Pass
+Certified Clinician,certified_clinician,Dashboard,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only dashboard,Pass
+Certified Clinician,certified_clinician,ProgressNotes,full,Yes,Yes,Yes,Yes,No,Yes,Yes,No,No,No,Yes,No,Can sign own notes; cannot co-sign,Pass
+Certified Clinician,certified_clinician,TreatmentPlans,full,Yes,Yes,Yes,Yes,No,Yes,Yes,No,No,No,Yes,No,Can create and edit treatment plans,Pass
+Certified Clinician,certified_clinician,ASAMAssessments,full,Yes,Yes,Yes,Yes,No,Yes,Yes,No,No,No,Yes,No,Full ASAM assessment access,Pass
+Certified Clinician,certified_clinician,GroupNotes,full,Yes,Yes,Yes,Yes,No,Yes,Yes,No,No,No,Yes,No,Can sign group notes; no co-sign,Pass
+Certified Clinician,certified_clinician,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,Cannot access co-sign queue,Pass
+Certified Clinician,certified_clinician,NursingMAR,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No MAR access,Pass
+Certified Clinician,certified_clinician,WithdrawalMonitor,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only withdrawal monitor,Pass
+Certified Clinician,certified_clinician,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No revenue cycle access,Pass
+Certified Clinician,certified_clinician,InsuranceAuthorization,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only auth access,Pass
+Certified Clinician,certified_clinician,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+Certified Clinician,certified_clinician,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No staff admin access,Pass
+Certified Clinician,certified_clinician,MedicalRecords,full,Yes,Yes,Yes,Yes,No,Yes,Yes,No,No,No,Yes,No,Full medical records; no co-sign,Pass
+Certified Clinician,certified_clinician,AIAssistant,full,Yes,Yes,Yes,Yes,No,Yes,Yes,No,No,No,Yes,No,AI tools enabled,Pass
+Certified Clinician,certified_clinician,IncidentReporting,full,Yes,Yes,Yes,No,No,No,Yes,No,No,No,Yes,No,Can create incidents; cannot delete,Pass
+Certified Clinician,certified_clinician,PatientList,full,Yes,No,No,No,No,No,Yes,No,No,No,Yes,No,Can view and search patient list,Pass
+Certified Clinician,certified_clinician,Admissions,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only admissions,Pass
+Certified Clinician,certified_clinician,Discharges,full,Yes,Yes,Yes,No,No,No,Yes,No,No,No,Yes,No,Can initiate discharges,Pass
+Certified Clinician,certified_clinician,BedManagement,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No bed management access,Pass
+Certified Clinician,certified_clinician,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Can manage own settings,Pass
+Mental Health Therapist,mh_therapist,Dashboard,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only dashboard,Pass
+Mental Health Therapist,mh_therapist,ProgressNotes,full,Yes,Yes,Yes,Yes,No,Yes,Yes,No,No,No,Yes,No,Can write and sign notes,Pass
+Mental Health Therapist,mh_therapist,TreatmentPlans,full,Yes,Yes,Yes,No,No,No,Yes,Yes,No,No,No,Yes,No,Can create treatment plans; no delete,Pass
+Mental Health Therapist,mh_therapist,ASAMAssessments,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only ASAM access,Pass
+Mental Health Therapist,mh_therapist,GroupNotes,full,Yes,Yes,Yes,Yes,No,Yes,Yes,No,No,No,Yes,No,Can document group therapy notes,Pass
+Mental Health Therapist,mh_therapist,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,Cannot access co-sign queue,Pass
+Mental Health Therapist,mh_therapist,NursingMAR,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No MAR access,Pass
+Mental Health Therapist,mh_therapist,WithdrawalMonitor,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No withdrawal monitor access,Pass
+Mental Health Therapist,mh_therapist,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No revenue cycle access,Pass
+Mental Health Therapist,mh_therapist,InsuranceAuthorization,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No auth access,Pass
+Mental Health Therapist,mh_therapist,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+Mental Health Therapist,mh_therapist,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No staff admin access,Pass
+Mental Health Therapist,mh_therapist,MedicalRecords,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only medical records,Pass
+Mental Health Therapist,mh_therapist,AIAssistant,full,Yes,Yes,Yes,No,No,No,Yes,Yes,No,No,No,Yes,No,AI tools enabled,Pass
+Mental Health Therapist,mh_therapist,IncidentReporting,full,Yes,Yes,Yes,No,No,No,Yes,No,No,No,Yes,No,Can document incidents,Pass
+Mental Health Therapist,mh_therapist,PatientList,full,Yes,No,No,No,No,No,Yes,No,No,No,Yes,No,Full patient list view,Pass
+Mental Health Therapist,mh_therapist,Admissions,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only admissions,Pass
+Mental Health Therapist,mh_therapist,Discharges,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only discharges,Pass
+Mental Health Therapist,mh_therapist,BedManagement,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No bed management,Pass
+Mental Health Therapist,mh_therapist,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings only,Pass
+Chief Medical Officer,cmo,Dashboard,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full dashboard access,Pass
+Chief Medical Officer,cmo,ProgressNotes,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Can co-sign clinical notes,Pass
+Chief Medical Officer,cmo,TreatmentPlans,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full treatment plan access,Pass
+Chief Medical Officer,cmo,ASAMAssessments,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full ASAM access,Pass
+Chief Medical Officer,cmo,GroupNotes,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only group notes,Pass
+Chief Medical Officer,cmo,CosignQueue,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Can co-sign as medical authority,Pass
+Chief Medical Officer,cmo,NursingMAR,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full MAR access and oversight,Pass
+Chief Medical Officer,cmo,WithdrawalMonitor,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full withdrawal monitoring access,Pass
+Chief Medical Officer,cmo,RevenueCycle,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only revenue oversight,Pass
+Chief Medical Officer,cmo,InsuranceAuthorization,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Can approve authorizations as medical director,Pass
+Chief Medical Officer,cmo,AuditCompliance,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only compliance oversight,Pass
+Chief Medical Officer,cmo,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No staff admin access,Pass
+Chief Medical Officer,cmo,MedicalRecords,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full medical records access,Pass
+Chief Medical Officer,cmo,AIAssistant,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,AI tools fully enabled,Pass
+Chief Medical Officer,cmo,IncidentReporting,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full incident access,Pass
+Chief Medical Officer,cmo,PatientList,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full patient list access,Pass
+Chief Medical Officer,cmo,Admissions,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only admissions,Pass
+Chief Medical Officer,cmo,Discharges,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full discharge access including medical sign-off,Pass
+Chief Medical Officer,cmo,BedManagement,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only bed view,Pass
+Chief Medical Officer,cmo,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+Prescriber,prescriber,Dashboard,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only dashboard,Pass
+Prescriber,prescriber,ProgressNotes,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only clinical notes,Pass
+Prescriber,prescriber,TreatmentPlans,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only treatment plans,Pass
+Prescriber,prescriber,ASAMAssessments,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only ASAM review,Pass
+Prescriber,prescriber,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No group notes access,Pass
+Prescriber,prescriber,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign queue access,Pass
+Prescriber,prescriber,NursingMAR,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Prescriber has full MAR access for orders,Pass
+Prescriber,prescriber,WithdrawalMonitor,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full withdrawal monitor for medication management,Pass
+Prescriber,prescriber,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No revenue access,Pass
+Prescriber,prescriber,InsuranceAuthorization,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Can view auths for prescribing context,Pass
+Prescriber,prescriber,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+Prescriber,prescriber,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No staff admin access,Pass
+Prescriber,prescriber,MedicalRecords,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only records access,Pass
+Prescriber,prescriber,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI assistant for prescribers,Pass
+Prescriber,prescriber,IncidentReporting,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only incidents,Pass
+Prescriber,prescriber,PatientList,full,Yes,No,No,No,No,No,Yes,No,No,No,Yes,No,Can search and view patient list,Pass
+Prescriber,prescriber,Admissions,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only admissions,Pass
+Prescriber,prescriber,Discharges,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only discharge information,Pass
+Prescriber,prescriber,BedManagement,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No bed management,Pass
+Prescriber,prescriber,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+Nursing,nursing,Dashboard,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only nursing overview,Pass
+Nursing,nursing,ProgressNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No progress note access (nursing notes not yet separate),Pass
+Nursing,nursing,TreatmentPlans,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only treatment plans,Pass
+Nursing,nursing,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No ASAM access,Pass
+Nursing,nursing,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No group notes access,Pass
+Nursing,nursing,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign queue,Pass
+Nursing,nursing,NursingMAR,full,Yes,Yes,Yes,No,Yes,No,Yes,No,No,No,No,Yes,No,Primary MAR user; full administration access,Pass
+Nursing,nursing,WithdrawalMonitor,full,Yes,Yes,Yes,No,Yes,No,Yes,No,No,No,No,Yes,No,Primary withdrawal assessment user,Pass
+Nursing,nursing,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No revenue access,Pass
+Nursing,nursing,InsuranceAuthorization,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No auth access,Pass
+Nursing,nursing,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+Nursing,nursing,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No staff admin access,Pass
+Nursing,nursing,MedicalRecords,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No medical records access,Pass
+Nursing,nursing,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools for nursing,Pass
+Nursing,nursing,IncidentReporting,full,Yes,Yes,Yes,No,No,No,Yes,No,No,No,Yes,No,Nursing can report incidents,Pass
+Nursing,nursing,PatientList,full,Yes,No,No,No,No,No,Yes,No,No,No,Yes,No,Can view patient census,Pass
+Nursing,nursing,Admissions,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only admissions,Pass
+Nursing,nursing,Discharges,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only discharge information,Pass
+Nursing,nursing,BedManagement,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only bed view,Pass
+Nursing,nursing,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+Behavioral Health Technician,bht,Dashboard,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No dashboard access,Pass
+Behavioral Health Technician,bht,ProgressNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No progress notes,Pass
+Behavioral Health Technician,bht,TreatmentPlans,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only treatment plans for care context,Pass
+Behavioral Health Technician,bht,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No ASAM access,Pass
+Behavioral Health Technician,bht,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No group notes,Pass
+Behavioral Health Technician,bht,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign queue,Pass
+Behavioral Health Technician,bht,NursingMAR,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only MAR for care awareness,Pass
+Behavioral Health Technician,bht,WithdrawalMonitor,full,Yes,Yes,Yes,No,No,No,Yes,No,No,No,No,Yes,No,BHT conducts withdrawal assessments,Pass
+Behavioral Health Technician,bht,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No revenue access,Pass
+Behavioral Health Technician,bht,InsuranceAuthorization,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No auth access,Pass
+Behavioral Health Technician,bht,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+Behavioral Health Technician,bht,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admin access,Pass
+Behavioral Health Technician,bht,MedicalRecords,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No records access,Pass
+Behavioral Health Technician,bht,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools,Pass
+Behavioral Health Technician,bht,IncidentReporting,full,Yes,Yes,Yes,No,No,No,Yes,No,No,No,Yes,No,BHT can report incidents,Pass
+Behavioral Health Technician,bht,PatientList,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only patient list,Pass
+Behavioral Health Technician,bht,Admissions,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admissions access,Pass
+Behavioral Health Technician,bht,Discharges,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No discharge access,Pass
+Behavioral Health Technician,bht,BedManagement,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No bed access,Pass
+Behavioral Health Technician,bht,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+BHT Supervisor,bht_supervisor,Dashboard,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only dashboard,Pass
+BHT Supervisor,bht_supervisor,ProgressNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No progress notes,Pass
+BHT Supervisor,bht_supervisor,TreatmentPlans,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only,Pass
+BHT Supervisor,bht_supervisor,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No ASAM,Pass
+BHT Supervisor,bht_supervisor,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No group notes,Pass
+BHT Supervisor,bht_supervisor,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign queue,Pass
+BHT Supervisor,bht_supervisor,NursingMAR,full,Yes,Yes,Yes,No,No,No,Yes,No,No,No,No,Yes,No,Supervises BHT medication monitoring,Pass
+BHT Supervisor,bht_supervisor,WithdrawalMonitor,full,Yes,Yes,Yes,No,Yes,No,Yes,No,No,No,No,Yes,No,BHT supervisor manages withdrawal monitoring team,Pass
+BHT Supervisor,bht_supervisor,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No revenue access,Pass
+BHT Supervisor,bht_supervisor,InsuranceAuthorization,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No auth access,Pass
+BHT Supervisor,bht_supervisor,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+BHT Supervisor,bht_supervisor,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admin access,Pass
+BHT Supervisor,bht_supervisor,MedicalRecords,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No records access,Pass
+BHT Supervisor,bht_supervisor,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools,Pass
+BHT Supervisor,bht_supervisor,IncidentReporting,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,BHT supervisor manages incident reports,Pass
+BHT Supervisor,bht_supervisor,PatientList,full,Yes,No,No,No,No,No,Yes,No,No,No,Yes,No,Can view full patient census,Pass
+BHT Supervisor,bht_supervisor,Admissions,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admissions access,Pass
+BHT Supervisor,bht_supervisor,Discharges,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No discharge access,Pass
+BHT Supervisor,bht_supervisor,BedManagement,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only bed view for staffing,Pass
+BHT Supervisor,bht_supervisor,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+Director of Operations,director_of_operations,Dashboard,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full operational dashboard access,Pass
+Director of Operations,director_of_operations,ProgressNotes,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only oversight of notes,Pass
+Director of Operations,director_of_operations,TreatmentPlans,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only,Pass
+Director of Operations,director_of_operations,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical assessment access,Pass
+Director of Operations,director_of_operations,GroupNotes,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only group notes oversight,Pass
+Director of Operations,director_of_operations,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign access,Pass
+Director of Operations,director_of_operations,NursingMAR,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only MAR oversight,Pass
+Director of Operations,director_of_operations,WithdrawalMonitor,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only monitoring oversight,Pass
+Director of Operations,director_of_operations,RevenueCycle,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full revenue cycle oversight,Pass
+Director of Operations,director_of_operations,InsuranceAuthorization,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full authorization management,Pass
+Director of Operations,director_of_operations,AuditCompliance,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full compliance management,Pass
+Director of Operations,director_of_operations,StaffAdmin,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only staff admin,Pass
+Director of Operations,director_of_operations,MedicalRecords,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only records oversight,Pass
+Director of Operations,director_of_operations,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools for operations,Pass
+Director of Operations,director_of_operations,IncidentReporting,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full incident management,Pass
+Director of Operations,director_of_operations,PatientList,full,Yes,No,No,No,No,No,Yes,No,No,No,Yes,No,Full census view,Pass
+Director of Operations,director_of_operations,Admissions,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full admissions oversight,Pass
+Director of Operations,director_of_operations,Discharges,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full discharge management,Pass
+Director of Operations,director_of_operations,BedManagement,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full bed management,Pass
+Director of Operations,director_of_operations,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Full settings management,Pass
+Administrative Staff,admin_staff,Dashboard,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only admin overview,Pass
+Administrative Staff,admin_staff,ProgressNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical notes,Pass
+Administrative Staff,admin_staff,TreatmentPlans,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No treatment plans,Pass
+Administrative Staff,admin_staff,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No ASAM,Pass
+Administrative Staff,admin_staff,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No group notes,Pass
+Administrative Staff,admin_staff,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign queue,Pass
+Administrative Staff,admin_staff,NursingMAR,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No MAR access,Pass
+Administrative Staff,admin_staff,WithdrawalMonitor,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No withdrawal monitor,Pass
+Administrative Staff,admin_staff,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No revenue access for admin,Pass
+Administrative Staff,admin_staff,InsuranceAuthorization,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Can manage insurance authorizations,Pass
+Administrative Staff,admin_staff,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+Administrative Staff,admin_staff,StaffAdmin,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only staff admin,Pass
+Administrative Staff,admin_staff,MedicalRecords,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Can manage records and ROI requests,Pass
+Administrative Staff,admin_staff,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools,Pass
+Administrative Staff,admin_staff,IncidentReporting,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only incidents,Pass
+Administrative Staff,admin_staff,PatientList,full,Yes,No,No,No,No,No,Yes,No,No,No,Yes,No,Can view full census,Pass
+Administrative Staff,admin_staff,Admissions,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Primary admissions coordinator role,Pass
+Administrative Staff,admin_staff,Discharges,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Can process discharges,Pass
+Administrative Staff,admin_staff,BedManagement,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Can manage bed assignments,Pass
+Administrative Staff,admin_staff,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+Billing Staff,billing_staff,Dashboard,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only billing overview,Pass
+Billing Staff,billing_staff,ProgressNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical notes,Pass
+Billing Staff,billing_staff,TreatmentPlans,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only for billing context,Pass
+Billing Staff,billing_staff,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No ASAM,Pass
+Billing Staff,billing_staff,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No group notes,Pass
+Billing Staff,billing_staff,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign,Pass
+Billing Staff,billing_staff,NursingMAR,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No MAR,Pass
+Billing Staff,billing_staff,WithdrawalMonitor,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No withdrawal monitor,Pass
+Billing Staff,billing_staff,RevenueCycle,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Primary revenue cycle user,Pass
+Billing Staff,billing_staff,InsuranceAuthorization,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Full auth management for billing,Pass
+Billing Staff,billing_staff,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+Billing Staff,billing_staff,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admin access,Pass
+Billing Staff,billing_staff,MedicalRecords,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only records for billing context,Pass
+Billing Staff,billing_staff,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools,Pass
+Billing Staff,billing_staff,IncidentReporting,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No incident access,Pass
+Billing Staff,billing_staff,PatientList,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only patient list for billing,Pass
+Billing Staff,billing_staff,Admissions,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only admissions,Pass
+Billing Staff,billing_staff,Discharges,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only discharge info for billing,Pass
+Billing Staff,billing_staff,BedManagement,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No bed management,Pass
+Billing Staff,billing_staff,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+Accounting Staff,accounting_staff,Dashboard,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Financial overview only,Pass
+Accounting Staff,accounting_staff,ProgressNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical notes,Pass
+Accounting Staff,accounting_staff,TreatmentPlans,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No treatment plans,Pass
+Accounting Staff,accounting_staff,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No ASAM,Pass
+Accounting Staff,accounting_staff,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No group notes,Pass
+Accounting Staff,accounting_staff,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign queue,Pass
+Accounting Staff,accounting_staff,NursingMAR,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No MAR,Pass
+Accounting Staff,accounting_staff,WithdrawalMonitor,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No monitor,Pass
+Accounting Staff,accounting_staff,RevenueCycle,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Full financial management access,Pass
+Accounting Staff,accounting_staff,InsuranceAuthorization,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only for financial context,Pass
+Accounting Staff,accounting_staff,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+Accounting Staff,accounting_staff,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admin access,Pass
+Accounting Staff,accounting_staff,MedicalRecords,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No records access,Pass
+Accounting Staff,accounting_staff,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools,Pass
+Accounting Staff,accounting_staff,IncidentReporting,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No incident access,Pass
+Accounting Staff,accounting_staff,PatientList,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No patient access for accounting,Pass
+Accounting Staff,accounting_staff,Admissions,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admissions,Pass
+Accounting Staff,accounting_staff,Discharges,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No discharges,Pass
+Accounting Staff,accounting_staff,BedManagement,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No bed management,Pass
+Accounting Staff,accounting_staff,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+Business Development,business_development,Dashboard,read,No,No,No,No,No,Yes,No,No,No,Yes,No,BD-focused overview,Pass
+Business Development,business_development,ProgressNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical notes,Pass
+Business Development,business_development,TreatmentPlans,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No treatment plans,Pass
+Business Development,business_development,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical access,Pass
+Business Development,business_development,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No group notes,Pass
+Business Development,business_development,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign queue,Pass
+Business Development,business_development,NursingMAR,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No MAR,Pass
+Business Development,business_development,WithdrawalMonitor,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No monitor,Pass
+Business Development,business_development,RevenueCycle,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only revenue for BD context,Pass
+Business Development,business_development,InsuranceAuthorization,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No auth access,Pass
+Business Development,business_development,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+Business Development,business_development,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admin access,Pass
+Business Development,business_development,MedicalRecords,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No records,Pass
+Business Development,business_development,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools,Pass
+Business Development,business_development,IncidentReporting,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No incidents,Pass
+Business Development,business_development,PatientList,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No patient access for BD,Pass
+Business Development,business_development,Admissions,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only admissions funnel view,Pass
+Business Development,business_development,Discharges,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No discharges,Pass
+Business Development,business_development,BedManagement,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No bed management,Pass
+Business Development,business_development,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+Aftercare Staff,aftercare_staff,Dashboard,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No dashboard,Pass
+Aftercare Staff,aftercare_staff,ProgressNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No progress notes,Pass
+Aftercare Staff,aftercare_staff,TreatmentPlans,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only for aftercare planning context,Pass
+Aftercare Staff,aftercare_staff,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No ASAM,Pass
+Aftercare Staff,aftercare_staff,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No group notes,Pass
+Aftercare Staff,aftercare_staff,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign queue,Pass
+Aftercare Staff,aftercare_staff,NursingMAR,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No MAR,Pass
+Aftercare Staff,aftercare_staff,WithdrawalMonitor,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No monitor,Pass
+Aftercare Staff,aftercare_staff,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No revenue access,Pass
+Aftercare Staff,aftercare_staff,InsuranceAuthorization,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No auth access,Pass
+Aftercare Staff,aftercare_staff,AuditCompliance,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No compliance access,Pass
+Aftercare Staff,aftercare_staff,StaffAdmin,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admin access,Pass
+Aftercare Staff,aftercare_staff,MedicalRecords,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No records access,Pass
+Aftercare Staff,aftercare_staff,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools,Pass
+Aftercare Staff,aftercare_staff,IncidentReporting,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No incidents,Pass
+Aftercare Staff,aftercare_staff,PatientList,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only for aftercare contact,Pass
+Aftercare Staff,aftercare_staff,Admissions,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admissions,Pass
+Aftercare Staff,aftercare_staff,Discharges,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only for aftercare coordination,Pass
+Aftercare Staff,aftercare_staff,BedManagement,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No bed management,Pass
+Aftercare Staff,aftercare_staff,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+Ownership,ownership,Dashboard,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Highest access level; full dashboard,Pass
+Ownership,ownership,ProgressNotes,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Can view all clinical documentation,Pass
+Ownership,ownership,TreatmentPlans,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full oversight,Pass
+Ownership,ownership,ASAMAssessments,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full oversight,Pass
+Ownership,ownership,GroupNotes,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full oversight,Pass
+Ownership,ownership,CosignQueue,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full oversight,Pass
+Ownership,ownership,NursingMAR,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full oversight,Pass
+Ownership,ownership,WithdrawalMonitor,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full oversight,Pass
+Ownership,ownership,RevenueCycle,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full financial oversight,Pass
+Ownership,ownership,InsuranceAuthorization,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full auth oversight,Pass
+Ownership,ownership,AuditCompliance,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full compliance oversight,Pass
+Ownership,ownership,StaffAdmin,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full staff administration,Pass
+Ownership,ownership,MedicalRecords,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full records access,Pass
+Ownership,ownership,AIAssistant,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full AI access,Pass
+Ownership,ownership,IncidentReporting,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full incident oversight,Pass
+Ownership,ownership,PatientList,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full patient access,Pass
+Ownership,ownership,Admissions,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full admissions oversight,Pass
+Ownership,ownership,Discharges,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full discharge oversight,Pass
+Ownership,ownership,BedManagement,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full bed management,Pass
+Ownership,ownership,Settings,full,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,No,Full settings and configuration,Pass
+Human Resources,human_resources,Dashboard,read,No,No,No,No,No,Yes,No,No,No,Yes,No,HR overview,Pass
+Human Resources,human_resources,ProgressNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical access,Pass
+Human Resources,human_resources,TreatmentPlans,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical access,Pass
+Human Resources,human_resources,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical access,Pass
+Human Resources,human_resources,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical access,Pass
+Human Resources,human_resources,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign queue,Pass
+Human Resources,human_resources,NursingMAR,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No MAR,Pass
+Human Resources,human_resources,WithdrawalMonitor,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No monitor,Pass
+Human Resources,human_resources,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No revenue,Pass
+Human Resources,human_resources,InsuranceAuthorization,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No auth,Pass
+Human Resources,human_resources,AuditCompliance,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,HR manages staff compliance documentation,Pass
+Human Resources,human_resources,StaffAdmin,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Primary staff administration role,Pass
+Human Resources,human_resources,MedicalRecords,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No records access,Pass
+Human Resources,human_resources,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools,Pass
+Human Resources,human_resources,IncidentReporting,read,No,No,No,No,No,Yes,No,No,No,Yes,No,Read-only for HR investigation context,Pass
+Human Resources,human_resources,PatientList,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No patient access for HR,Pass
+Human Resources,human_resources,Admissions,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admissions,Pass
+Human Resources,human_resources,Discharges,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No discharges,Pass
+Human Resources,human_resources,BedManagement,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No bed management,Pass
+Human Resources,human_resources,Settings,full,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,No,Own settings,Pass
+Security Administrator,security_admin,Dashboard,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No dashboard,Pass
+Security Administrator,security_admin,ProgressNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No clinical notes,Pass
+Security Administrator,security_admin,TreatmentPlans,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No treatment plans,Pass
+Security Administrator,security_admin,ASAMAssessments,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No ASAM,Pass
+Security Administrator,security_admin,GroupNotes,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No group notes,Pass
+Security Administrator,security_admin,CosignQueue,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No co-sign queue,Pass
+Security Administrator,security_admin,NursingMAR,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No MAR,Pass
+Security Administrator,security_admin,WithdrawalMonitor,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No monitor,Pass
+Security Administrator,security_admin,RevenueCycle,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No revenue,Pass
+Security Administrator,security_admin,InsuranceAuthorization,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No auth,Pass
+Security Administrator,security_admin,AuditCompliance,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Security admin manages compliance evidence,Pass
+Security Administrator,security_admin,StaffAdmin,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Security admin manages access controls,Pass
+Security Administrator,security_admin,MedicalRecords,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No records access — min-necessary,Pass
+Security Administrator,security_admin,AIAssistant,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No AI tools,Pass
+Security Administrator,security_admin,IncidentReporting,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Security manages security incident reports,Pass
+Security Administrator,security_admin,PatientList,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No patient access — min-necessary,Pass
+Security Administrator,security_admin,Admissions,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No admissions,Pass
+Security Administrator,security_admin,Discharges,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No discharges,Pass
+Security Administrator,security_admin,BedManagement,none,No,No,No,No,No,No,No,No,No,AccessDenied,N/A,No,No bed management,Pass
+Security Administrator,security_admin,Settings,full,Yes,Yes,Yes,Yes,No,No,Yes,No,No,No,Yes,No,Full settings and security configuration,Pass
