@@ -224,7 +224,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
     const s = new Set<string>();
     activePatients.forEach(p => { if (p.counselor) s.add(p.counselor); });
     return ['All', ...Array.from(s).sort()];
-  }, []);
+  }, [activePatients]);
 
   // Simulate admit status by LOS bucket (no status field in model)
   function getAdmitStatus(los: number): 'Active' | 'Pending Discharge' | 'Discharged' {
@@ -255,7 +255,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
     });
 
     return list;
-  }, [searchTerm, program, risk, clinician, admitStatus, sort]);
+  }, [activePatients, searchTerm, program, risk, clinician, admitStatus, sort]);
 
   const highRisk  = activePatients.filter(p => p.amaRisk === 'High').length;
   const _n        = activePatients.length || 1; // guard against division-by-zero when census is empty
