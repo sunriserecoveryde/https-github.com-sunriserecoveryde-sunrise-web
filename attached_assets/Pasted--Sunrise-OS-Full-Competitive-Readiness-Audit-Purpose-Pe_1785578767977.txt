@@ -1,0 +1,1347 @@
+# Sunrise OS — Full Competitive Readiness Audit
+
+## Purpose
+
+Perform a comprehensive, evidence-based audit of Sunrise OS to determine whether it has the workflows, capabilities, controls, integrations, usability, and production-readiness required to compete in the behavioral health and substance-use treatment software market.
+
+This is an **audit and documentation task only**.
+
+Do not modify application code, database schemas, permissions, workflows, UI components, routes, seeded data, or configuration.
+
+Do not fix issues during this task.
+
+The objective is to identify:
+
+* What exists
+* What is fully functional
+* What is partially implemented
+* What is represented only by UI or demo data
+* What is missing
+* What is disconnected
+* What is not production-ready
+* What requires external integration
+* What could differentiate Sunrise OS competitively
+
+Work from the current codebase, running application, existing data model, permissions, routes, tests, configuration, and documentation.
+
+Do not assume a feature is complete because a screen or button exists.
+
+---
+
+# Audit Branch and Safety
+
+Create a new branch:
+
+`audit/full-competitive-readiness`
+
+Do not merge this branch into `main`.
+
+Do not modify production application behavior.
+
+Audit files may be added under:
+
+`artifacts/sunrise-os/product-audit/`
+
+Screenshots may be added under:
+
+`artifacts/sunrise-os/product-audit/screenshots/`
+
+Commit only the generated audit package and supporting evidence.
+
+---
+
+# Audit Standard
+
+Score every capability using this maturity scale:
+
+| Score | Meaning                                                             |
+| ----: | ------------------------------------------------------------------- |
+|     0 | Missing                                                             |
+|     1 | UI, mockup, placeholder, or demo-only representation                |
+|     2 | Partially functional workflow                                       |
+|     3 | Complete basic workflow                                             |
+|     4 | Integrated, permissioned, auditable, tested, and production-capable |
+|     5 | Best-in-class or meaningfully differentiated                        |
+
+Do not award a score of 3 or above unless the workflow can be completed.
+
+Do not award a score of 4 unless evidence confirms:
+
+* Permissions
+* Auditability
+* Error handling
+* Integration
+* Testing
+* Production-capable behavior
+
+Do not award a score of 5 merely because AI is present.
+
+A score of 5 requires a credible competitive advantage.
+
+---
+
+# Evidence Rules
+
+Every score must have evidence.
+
+Acceptable evidence includes:
+
+* File paths
+* Component names
+* Routes or screen identifiers
+* API endpoints
+* Data models
+* Database tables
+* Permission rules
+* Audit events
+* Screenshots
+* Build results
+* Automated tests
+* Manual workflow results
+* Error-state results
+* Existing integrations
+* Existing documentation
+
+Do not mark anything complete based only on:
+
+* A button label
+* A navigation item
+* A mock card
+* Static demo data
+* Hardcoded values
+* A component name
+* A planned feature
+* Comments describing intended behavior
+
+Clearly distinguish:
+
+* Production implementation
+* Demo implementation
+* Mock data
+* Local-only persistence
+* Simulated AI
+* Simulated integrations
+* Placeholder pages
+* In-memory state
+* Browser-only storage
+* Backend-backed workflows
+
+---
+
+# Part 1 — Application Inventory
+
+Inspect the entire Sunrise OS codebase.
+
+Create a complete inventory of:
+
+* Pages
+* Routes or screen identifiers
+* Sidebar destinations
+* Dashboard variants
+* Modal workflows
+* Clinical forms
+* Administrative forms
+* Reports
+* Analytics
+* AI features
+* API routes
+* Stores
+* Contexts
+* Hooks
+* Data models
+* Mock-data modules
+* External integrations
+* Browser-storage usage
+* Feature flags
+* Role definitions
+* Permission definitions
+* Audit mechanisms
+* Test files
+* Build scripts
+* Environment configuration
+
+For every page or major feature, identify:
+
+* Name
+* File path
+* Route or screen identifier
+* Intended user
+* Required permission
+* Data source
+* Backend-backed, mock-backed, or mixed
+* Primary actions
+* Whether actions work
+* Error handling
+* Empty states
+* Mobile support
+* Accessibility status
+* Audit behavior
+* Known limitations
+
+---
+
+# Part 2 — Product Domain Audit
+
+Audit each domain below.
+
+For every capability, record:
+
+* Present: Yes, Partial, No, or Unknown
+* Maturity score: 0–5
+* Production, demo, mock, or simulated
+* Relevant files
+* Relevant screens
+* Relevant APIs
+* Relevant permissions
+* Relevant audit events
+* Evidence
+* Gap
+* Risk level
+* Recommended next task
+
+## Domain A — CRM, Referrals, and Admissions
+
+Evaluate:
+
+* Inquiry intake
+* Lead management
+* Referral-source management
+* Call tracking
+* Outreach tracking
+* Marketing attribution
+* Admissions pipeline
+* Pre-admission screening
+* Clinical appropriateness screening
+* Financial appropriateness screening
+* Eligibility verification
+* Verification of benefits
+* Waitlist management
+* Bed-availability integration
+* Admission scheduling
+* Admission conversion tracking
+* Lost-lead reasons
+* Referral-source analytics
+* Alumni re-engagement
+* Duplicate-lead prevention
+* Lead-to-patient conversion
+* Multi-facility admissions
+
+## Domain B — Intake, Registration, and Consent
+
+Evaluate:
+
+* Patient demographics
+* Emergency contacts
+* Guarantors
+* Insurance information
+* Identity verification
+* Electronic consent
+* Financial agreements
+* Release-of-information management
+* Consent expiration
+* Consent revocation
+* Part 2 consent controls
+* Guardian workflows
+* Minor-patient workflows
+* E-signatures
+* Required-document validation
+* Duplicate-patient detection
+* Admission packet completion
+* Document upload
+* Document categorization
+* Document version history
+
+## Domain C — Census, Beds, and Facility Operations
+
+Evaluate:
+
+* Real-time census
+* Bed board
+* Room assignment
+* Bed assignment
+* Bed status
+* Expected admissions
+* Expected discharges
+* Transfers
+* Internal transfers
+* Level-of-care changes
+* Passes and leaves
+* Occupancy calculations
+* Occupancy forecasting
+* Multi-program census
+* Multi-facility census
+* Staffing implications
+* Patient-location history
+* Discharge status
+* AMA status
+* Incident visibility
+* Operational alerts
+
+## Domain D — Clinical Documentation
+
+Evaluate:
+
+* Biopsychosocial assessment
+* ASAM assessment
+* Psychiatric evaluation
+* Medical evaluation
+* Nursing assessment
+* Suicide-risk assessment
+* Violence-risk assessment
+* Withdrawal-risk assessment
+* Mental-status examination
+* Treatment planning
+* Treatment-plan review
+* Individual progress notes
+* Group notes
+* Family notes
+* Case-management notes
+* Nursing notes
+* Physician notes
+* Discharge planning
+* Discharge summary
+* Aftercare plan
+* Continuing-care plan
+* Co-signatures
+* Supervisory review
+* Late entries
+* Corrections
+* Amendments
+* Addenda
+* Version history
+* Note locking
+* Required-field logic
+* Treatment-plan linkage
+* Medical-necessity support
+* Clinical decision support
+* Patient quotations
+* Clinical templates
+* Custom templates
+* Format support such as BIRP, DAP, SOAP, and GIRP
+
+## Domain E — Medication, Withdrawal, and Medical Workflows
+
+Evaluate:
+
+* Medication reconciliation
+* Medication orders
+* Medication administration record
+* Electronic MAR
+* PRN medication
+* Controlled medications
+* Medication inventory
+* Medication count sheets
+* Medication refusal
+* Medication error reporting
+* Allergies
+* Interaction alerts
+* E-prescribing
+* Pharmacy integration
+* CIWA-Ar
+* COWS
+* Vital signs
+* Withdrawal monitoring
+* Withdrawal escalation
+* Medical-provider notification
+* Lab orders
+* Lab results
+* Drug-screen orders
+* Drug-screen collection
+* Drug-screen results
+* Positive-result workflow
+* Provider acknowledgment
+* Nurse acknowledgment
+* Standing orders
+
+## Domain F — Scheduling and Patient Engagement
+
+Evaluate:
+
+* Staff calendar
+* Patient calendar
+* Group calendar
+* Recurring appointments
+* Group scheduling
+* Room scheduling
+* Resource scheduling
+* Staff-availability checks
+* Schedule conflicts
+* Patient attendance
+* Group attendance
+* No-show tracking
+* Appointment reminders
+* Telehealth
+* Patient portal
+* Secure messaging
+* Patient forms
+* Family access
+* Guarantor access
+* Patient payments
+* Mobile accessibility
+* Mobile staff workflows
+* Mobile patient workflows
+
+## Domain G — Utilization Review and Authorization
+
+Evaluate:
+
+* Initial authorization
+* Concurrent review
+* Continued-stay review
+* Authorization status
+* Authorization dates
+* Authorized units
+* Used units
+* Remaining units
+* Expiration alerts
+* Payer communication
+* Reviewer assignment
+* Work queues
+* Decision history
+* Denials
+* Appeals
+* Peer-to-peer review
+* Authorization documentation
+* Clinical-document linkage
+* Treatment-plan linkage
+* Level-of-care support
+* Authorization-to-claim linkage
+* Revenue-at-risk calculations
+* Multi-payer support
+* Electronic prior-authorization readiness
+* FHIR-based payer integration readiness
+
+## Domain H — Revenue-Cycle Management
+
+Evaluate:
+
+* Eligibility
+* Verification of benefits
+* Charge capture
+* Service-to-charge reconciliation
+* Attendance-to-charge reconciliation
+* Claim creation
+* Claim validation
+* Claim edits
+* Clearinghouse integration
+* Claim submission
+* Claim-status tracking
+* ERA posting
+* EOB posting
+* Payment posting
+* Contractual adjustments
+* Denial management
+* Appeal management
+* Patient responsibility
+* Statements
+* Collections
+* Payment plans
+* Days in accounts receivable
+* Clean-claim rate
+* Expected reimbursement
+* Actual reimbursement
+* Underpayment detection
+* Revenue forecasting
+* Facility-level financial reporting
+* Program-level financial reporting
+* Authorization-related revenue risk
+
+## Domain I — Workforce and Compliance
+
+Evaluate:
+
+* Staff directory
+* Staff roles
+* Credentials
+* License tracking
+* Credential expiration
+* Training tracking
+* Competency tracking
+* Background checks
+* Staff documents
+* Supervision requirements
+* Staff scheduling
+* Incident management
+* Corrective actions
+* Policy acknowledgment
+* Compliance work queues
+* Survey-readiness dashboards
+* CARF support
+* Joint Commission support
+* State-regulatory support
+* Payer-compliance support
+* Segregation of duties
+* Audit trails
+* Access reviews
+* Terminated-user controls
+* Temporary access
+* Break-glass access
+
+## Domain J — Outcomes and Population Analytics
+
+Evaluate:
+
+* Measurement-based care
+* Standardized instruments
+* Baseline scores
+* Follow-up scores
+* Change over time
+* Completion rates
+* AMA rates
+* Readmissions
+* Length of stay
+* Successful discharge
+* Continuing-care engagement
+* Post-discharge follow-up
+* MOUD utilization
+* Risk stratification
+* Population cohorts
+* Facility comparisons
+* Program comparisons
+* Clinician comparisons
+* Referral-source performance
+* Payer performance
+* Quality-measure reporting
+* Exportable reports
+* Executive dashboards
+* Equity and disparity analysis
+* Custom report builder
+
+## Domain K — AI and Clinical Intelligence
+
+Evaluate every AI feature individually.
+
+For each AI feature, identify:
+
+* Feature name
+* Purpose
+* User roles
+* Inputs
+* Data sources
+* Output
+* Rule-based, local template, simulated, or external model
+* Version
+* Human-review requirement
+* Insert behavior
+* Save behavior
+* Signing behavior
+* Audit events
+* Error behavior
+* Safety restrictions
+* Known limitations
+* Potential hallucination risk
+* Bias risk
+* Privacy risk
+* Clinical risk
+* Production readiness
+
+Evaluate:
+
+* Progress-note drafting
+* Clarity review
+* Medical-necessity review
+* Consistency review
+* Clinical Documentation Review pipeline
+* Treatment-plan support
+* Risk summaries
+* Clinical question answering
+* Executive summaries
+* Operational intelligence
+* Revenue intelligence
+* Population intelligence
+* Predictive risk
+* AI review queues
+* AI output versioning
+* Model registry
+* Model monitoring
+* Human override
+* AI governance
+
+## Domain L — Platform, Security, and Interoperability
+
+Evaluate:
+
+* Multi-organization architecture
+* Multi-facility architecture
+* Data segregation
+* Role-based access
+* Patient-level access
+* Facility-level access
+* Attribute-based access
+* SSO
+* MFA
+* Session expiration
+* Password controls
+* Encryption in transit
+* Encryption at rest
+* Backup
+* Restore testing
+* Disaster recovery
+* Uptime monitoring
+* Error monitoring
+* Incident response
+* Vulnerability management
+* Dependency scanning
+* Penetration testing
+* Secure software-development lifecycle
+* Audit-log immutability
+* Audit-log retention
+* Data retention
+* Data deletion
+* Data export
+* Patient-record export
+* FHIR support
+* USCDI alignment
+* C-CDA support
+* HL7 support
+* Clearinghouse integration
+* Pharmacy integration
+* Laboratory integration
+* Identity-provider integration
+* Public API
+* Webhooks
+* Integration authentication
+* API rate limits
+* Integration failure handling
+* Business associate agreement readiness
+* Vendor-risk documentation
+* Part 2 controls
+* HIPAA controls
+
+---
+
+# Part 3 — Role and Permission Audit
+
+Test every configured role.
+
+Create a matrix containing:
+
+* Role
+* Screen
+* View permission
+* Create permission
+* Edit permission
+* Delete permission
+* Sign permission
+* Co-sign permission
+* Export permission
+* AI permission
+* Patient-access restriction
+* Facility restriction
+* Read-only behavior
+* Hidden-action behavior
+* Direct-route protection
+* Result
+
+Test at minimum:
+
+* System administrator
+* Organization administrator
+* Facility administrator
+* Admissions employee
+* Counselor
+* Therapist
+* Clinical supervisor
+* Nurse
+* Prescriber
+* Medical director
+* Utilization-review employee
+* Billing employee
+* Compliance employee
+* Human-resources employee
+* Business-development employee
+* Read-only user
+
+Do not test only whether navigation is hidden.
+
+Also test whether unauthorized users can reach screens or actions through:
+
+* Direct navigation
+* Existing state
+* Buttons
+* Notifications
+* Dashboard cards
+* Quick Actions
+* Recent Patients
+* Pinned Patients
+* Favorites
+* AI actions
+
+---
+
+# Part 4 — End-to-End Workflow Tests
+
+Perform and document these workflows using the running application.
+
+## Workflow 1 — Inquiry to Admission
+
+Test:
+
+Inquiry → referral source → screening → benefits → bed availability → admission decision → consent → admission → census
+
+## Workflow 2 — Clinical Episode
+
+Test:
+
+Admission → assessments → ASAM → treatment plan → progress note → group note → treatment-plan review → discharge plan
+
+## Workflow 3 — Withdrawal and Medical Safety
+
+Test:
+
+Admission → withdrawal assessment → CIWA or COWS → vitals → escalation → provider review → medication workflow → acknowledgment
+
+## Workflow 4 — Medication Administration
+
+Test:
+
+Medication reconciliation → order → MAR → administration → refusal or PRN → documentation → provider review
+
+## Workflow 5 — Authorization and Continued Stay
+
+Test:
+
+Initial authorization → units → continued-stay review → expiration alert → clinical documentation → payer decision → updated authorization
+
+## Workflow 6 — Revenue Cycle
+
+Test:
+
+Documented service → attendance → charge → claim → edit → submission → status → payment or denial → appeal
+
+## Workflow 7 — AMA Risk
+
+Test:
+
+Risk identification → alert → assigned staff → intervention → documentation → outcome → discharge status
+
+## Workflow 8 — Discharge and Continuing Care
+
+Test:
+
+Discharge planning → medication reconciliation → final documentation → aftercare → referrals → discharge → follow-up → outcomes
+
+## Workflow 9 — Staff Credential Expiration
+
+Test:
+
+Credential nearing expiration → notification → supervisor review → staff action → compliance resolution
+
+## Workflow 10 — AI-Assisted Progress Note
+
+Test:
+
+Create note → AI review → findings → field navigation → revision → clinician review → save draft → sign or co-sign
+
+For every workflow, document:
+
+* Persona
+* Starting state
+* Steps
+* Screens used
+* Data created
+* Expected result
+* Actual result
+* Dead ends
+* Duplicate entry
+* Permission failures
+* Missing actions
+* Error handling
+* Audit evidence
+* Final maturity score
+
+---
+
+# Part 5 — Exception and Failure Testing
+
+Test at minimum:
+
+* Missing consent
+* Revoked consent
+* Missing insurance
+* Expired authorization
+* No authorized units remaining
+* Duplicate patient
+* Wrong patient selected
+* Patient transfer
+* Level-of-care change
+* AMA discharge
+* Severe withdrawal score
+* Missing vital signs
+* Positive drug screen
+* Medication refusal
+* Medication error
+* Missing signature
+* Missing co-signature
+* Corrected note
+* Amended note
+* Claim denial
+* Credential expiration
+* Permission removal
+* Facility-access removal
+* Browser refresh
+* Local-storage corruption
+* API unavailable
+* Network unavailable
+* AI unavailable
+* AI malformed output
+* Empty data
+* Large data set
+* Mobile viewport
+* 200% zoom
+* Keyboard-only operation
+
+For each exception, record:
+
+* Expected behavior
+* Actual behavior
+* Safety risk
+* Data-loss risk
+* Clinical risk
+* Financial risk
+* Workaround
+* Recommended fix
+
+---
+
+# Part 6 — Integration Inventory
+
+Create an inventory of every integration that is:
+
+* Fully implemented
+* Partially implemented
+* Simulated
+* Planned
+* Missing
+
+Include:
+
+* Clearinghouses
+* Eligibility services
+* VOB services
+* Payers
+* Pharmacies
+* E-prescribing
+* Laboratories
+* Drug-testing laboratories
+* Telehealth
+* Payment processors
+* Email
+* SMS
+* Identity providers
+* FHIR
+* HL7
+* C-CDA
+* Public APIs
+* Webhooks
+* Accounting systems
+* Data warehouses
+* State reporting
+* Prescription-drug monitoring
+* E-signature providers
+
+For each integration, document:
+
+* Vendor or standard
+* Files
+* Endpoints
+* Authentication
+* Data exchanged
+* Error handling
+* Retry handling
+* Audit behavior
+* Production or simulated
+* Missing prerequisites
+
+---
+
+# Part 7 — Security, Privacy, and Compliance Gap Review
+
+This is not a legal certification.
+
+Identify technical evidence and gaps related to:
+
+* HIPAA
+* 42 CFR Part 2
+* Minimum necessary access
+* Consent-based disclosure
+* Consent revocation
+* Role-based access
+* Multi-facility segregation
+* Audit logging
+* Immutable audit history
+* Data encryption
+* Session security
+* Authentication
+* MFA
+* Password policy
+* Data backup
+* Disaster recovery
+* Data retention
+* Secure export
+* Breach response
+* Vendor management
+* AI governance
+* Sensitive-data logging
+* Browser-storage exposure
+* LocalStorage use
+* In-memory audit events
+* Mock clinical data
+* Production secrets
+* Dependency risk
+* Vulnerability scanning
+
+Do not claim compliance.
+
+Use these result labels:
+
+* Evidence Present
+* Partial Evidence
+* No Evidence Found
+* Requires Legal or Security Validation
+
+---
+
+# Part 8 — Production Readiness Review
+
+Assess:
+
+* Application architecture
+* Database architecture
+* Environment separation
+* Secrets management
+* CI/CD
+* Automated testing
+* Unit tests
+* Integration tests
+* End-to-end tests
+* Accessibility tests
+* Performance tests
+* Load tests
+* Dependency monitoring
+* Error monitoring
+* Uptime monitoring
+* Backup
+* Restore
+* Disaster recovery
+* Logging
+* Audit persistence
+* Data migration
+* Data import
+* Data export
+* Customer configuration
+* Multi-tenant isolation
+* Scalability
+* Support tooling
+* Release management
+* Rollback
+* Feature flags
+* Documentation
+* Training readiness
+
+Record whether each capability is:
+
+* Production-ready
+* Partially ready
+* Demo-only
+* Missing
+* Unable to determine
+
+---
+
+# Part 9 — Usability and Accessibility Review
+
+Evaluate at:
+
+* 1280×720
+* 1440×900
+* 1920×1080
+* Tablet viewport
+* Mobile viewport
+* 200% browser zoom
+
+Test:
+
+* Navigation
+* Dashboard
+* Patient List
+* Patient Detail
+* Clinical forms
+* Medication workflows
+* Authorization workflows
+* Billing workflows
+* Notifications
+* AI panels
+* Tables
+* Dialogs
+* Dropdowns
+* Tooltips
+* Sidebars
+* Search
+* Error states
+* Empty states
+
+Accessibility checks:
+
+* Keyboard operation
+* Focus order
+* Focus visibility
+* Dialog focus traps
+* Focus restoration
+* Accessible labels
+* Status announcements
+* Error announcements
+* Color contrast
+* Color-independent meaning
+* Reduced-motion support
+* Table semantics
+* Form labels
+* Heading order
+* 200% zoom
+* Mobile touch targets
+
+---
+
+# Part 10 — Competitive Capability Matrix
+
+Create a matrix comparing Sunrise OS against these market capability categories:
+
+* CRM
+* Admissions
+* EMR
+* Clinical documentation
+* ASAM
+* Treatment planning
+* Medication management
+* Withdrawal management
+* Scheduling
+* Telehealth
+* Patient portal
+* Utilization review
+* Revenue cycle
+* Outcomes
+* Compliance
+* Workforce
+* Multi-facility operations
+* Analytics
+* AI documentation
+* AI operational intelligence
+* Interoperability
+* Implementation readiness
+
+Use comparison labels:
+
+* Below Expected Market Baseline
+* At Expected Market Baseline
+* Above Expected Market Baseline
+* Potential Differentiator
+* Unable to Determine
+
+Do not claim a competitor lacks a feature unless evidence is available in the project documentation.
+
+This section should primarily compare Sunrise OS against the expected capability baseline of a modern behavioral-health operating platform.
+
+---
+
+# Required Output Files
+
+Create all of these files:
+
+## 1. `00-executive-summary.md`
+
+Include:
+
+* Overall readiness score
+* Strongest product domains
+* Weakest product domains
+* Critical blockers
+* Major production risks
+* Competitive-parity gaps
+* Potential differentiators
+* Recommended product strategy
+* Merge recommendation
+* Launch recommendation
+
+## 2. `01-application-inventory.csv`
+
+One row per page, workflow, API, major component, integration, or AI capability.
+
+## 3. `02-competitive-requirements-matrix.csv`
+
+Use columns:
+
+* Domain
+* Capability
+* Priority
+* Present
+* Maturity Score
+* Production Status
+* Relevant Screen
+* Relevant File
+* API or Data Source
+* Permission Evidence
+* Audit Evidence
+* Test Evidence
+* Integration Evidence
+* Screenshot
+* Gap
+* Risk
+* Recommended Next Task
+
+Target at least **500 rows**.
+
+Do not create filler rows.
+
+Every row must represent a distinct capability or requirement.
+
+## 4. `03-role-permission-matrix.csv`
+
+One row per role and capability combination.
+
+## 5. `04-workflow-test-results.md`
+
+Include all 10 end-to-end workflows.
+
+## 6. `05-exception-test-results.md`
+
+Include all tested failures and edge cases.
+
+## 7. `06-integration-inventory.csv`
+
+One row per integration or integration category.
+
+## 8. `07-security-compliance-gap-register.md`
+
+Include:
+
+* Evidence
+* Gap
+* Severity
+* Risk
+* Required validation
+* Recommended remediation
+
+## 9. `08-ai-governance-audit.md`
+
+Include one section per AI feature.
+
+## 10. `09-production-readiness.md`
+
+Include architecture, testing, deployment, monitoring, scaling, recovery, and support readiness.
+
+## 11. `10-accessibility-usability-audit.md`
+
+Include all viewport and keyboard results.
+
+## 12. `11-prioritized-backlog.csv`
+
+Use columns:
+
+* ID
+* Domain
+* Gap
+* Evidence
+* Priority
+* Classification
+* Risk
+* User Impact
+* Business Impact
+* Recommended Task
+* Dependencies
+* Estimated Complexity
+
+Classifications:
+
+* Launch Blocker
+* Clinical Safety
+* Compliance or Security
+* Revenue Risk
+* Competitive Parity
+* Enterprise Readiness
+* Usability
+* Differentiation
+* Technical Debt
+
+## 13. `12-evidence-index.md`
+
+Link every major audit claim to:
+
+* File
+* Screenshot
+* Route
+* Test
+* API
+* Permission
+* Audit record
+
+## 14. `13-audit-manifest.json`
+
+Include:
+
+* Audit date
+* Branch
+* Commit
+* Build command
+* Build result
+* Test commands
+* Test results
+* Number of files inspected
+* Number of screens reviewed
+* Number of workflows tested
+* Number of requirements scored
+* Number of screenshots
+* Known audit limitations
+
+## 15. `14-open-questions.md`
+
+Include everything that cannot be confirmed from the codebase or application.
+
+Examples:
+
+* External vendor contracts
+* Real production integrations
+* Hosting architecture
+* Security certifications
+* Legal review
+* Customer validation
+* Support staffing
+* Implementation process
+* Pricing
+* Real payer testing
+* Real pharmacy testing
+* Real clearinghouse testing
+
+Do not guess.
+
+---
+
+# Screenshot Requirements
+
+Capture evidence for every major domain.
+
+At minimum include:
+
+* Dashboard
+* Sidebar
+* Admissions
+* Census and Bed Board
+* Patient List
+* Patient Detail
+* ASAM
+* Treatment Plans
+* Progress Notes
+* Group Notes
+* Medication Administration
+* Withdrawal Monitoring
+* Drug Screens
+* Calendar
+* Authorization
+* Revenue Cycle
+* Population Analytics
+* AI Assistant
+* Staff Management
+* Roles and Permissions
+* Organization Settings
+* Mobile view
+* Error state
+* Empty state
+* Read-only role
+* Unauthorized role
+* Clinical Documentation Review
+* Notification Panel
+* Quick Actions
+
+Name screenshots descriptively.
+
+Do not modify code or seed data solely to create favorable screenshots.
+
+Temporary test state is acceptable only when:
+
+* Clearly documented
+* Reverted afterward
+* Not committed as application behavior
+
+---
+
+# Build and Test Requirements
+
+Run all available checks.
+
+At minimum:
+
+* TypeScript
+* Vitest
+* Production build
+
+Also inspect `package.json` for other scripts.
+
+Record exact commands and results.
+
+Do not describe a check as passing unless the command completed successfully.
+
+If no test exists for a major workflow, record:
+
+**No automated test coverage found.**
+
+Do not treat successful compilation as proof that a workflow works.
+
+---
+
+# Final Audit Rules
+
+Be critical and conservative.
+
+Do not inflate scores.
+
+Do not hide missing backend behavior behind polished UI.
+
+Do not treat browser-only persistence as enterprise persistence.
+
+Do not treat in-memory audit events as durable audit history.
+
+Do not treat simulated AI delay as a production AI service.
+
+Do not treat mock data as production integration.
+
+Do not treat a hidden navigation item as complete authorization protection.
+
+Do not treat a build passing as proof of clinical safety.
+
+Clearly identify anything that cannot be determined.
+
+---
+
+# Completion
+
+When the audit is complete:
+
+1. Commit the audit package to:
+
+`audit/full-competitive-readiness`
+
+2. Create:
+
+`artifacts/sunrise-os/product-audit/sunrise-os-competitive-readiness-audit.zip`
+
+The ZIP must contain all audit files and screenshots.
+
+3. Do not merge into `main`.
+
+4. Stop and provide:
+
+* Commit hash
+* ZIP path
+* File list
+* Number of requirements evaluated
+* Number of screenshots
+* Number of workflow tests
+* TypeScript result
+* Vitest result
+* Production build result
+* Top 10 blockers
+* Top 10 differentiators
+* Known limitations
+
+Do not begin fixing identified gaps.
+
+Wait for review.
