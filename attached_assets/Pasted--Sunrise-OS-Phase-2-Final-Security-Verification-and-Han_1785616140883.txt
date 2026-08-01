@@ -1,0 +1,1203 @@
+# Sunrise OS — Phase 2 Final Security Verification and Handoff
+
+Complete one verification and corrective work package on:
+
+`readiness/p0-authentication-authorization`
+
+Do not begin Phase 3.
+
+Do not add:
+
+* Clinical-note persistence
+* Treatment plans
+* ASAM data
+* Medication workflows
+* Drug-testing workflows
+* Patient photographs
+* Billing
+* Authorizations
+* Unrelated UI features
+
+Do not merge into `main`.
+
+## Objective
+
+Prove that the final Phase 2 authentication and authorization implementation is:
+
+* Reproducible
+* Server-enforced
+* Session-safe
+* Tenant-safe
+* Facility-safe
+* Patient-access-safe
+* CSRF-protected
+* Properly rate-limited
+* Persistently audited
+* Connected to the real frontend
+* Deployable without development-only identity mechanisms
+
+The prior task required several review corrections.
+
+The final handoff must prove that those corrections are present in the final branch, tested together, and not dependent on mocks or development-only behavior.
+
+---
+
+# 1. Record the Final Branch and Commit History
+
+Run:
+
+```bash
+git branch --show-current
+git status --short
+git log --oneline --decorate -30
+git rev-parse HEAD
+git merge-base --is-ancestor HEAD main
+```
+
+Provide:
+
+* Branch
+* Phase 1A base commit
+* Initial Phase 2 commit
+* Every security-correction commit
+* Final HEAD
+* Confirmation that the branch is not merged into `main`
+* Confirmation that the working tree is clean before packaging
+
+Identify the commits that corrected:
+
+* Login being blocked by authentication middleware
+* Missing cookie parsing
+* CSRF token generation
+* CSRF token refresh after login
+* Absolute session timeout
+* Organization-wide authorization
+* Organization-wide patient listing
+* Logout CSRF handling
+* Any rate-limit or CORS defects
+
+---
+
+# 2. Inventory Every Phase 2 File
+
+Create a complete inventory of all files added, modified, or deleted.
+
+For each file include:
+
+* Path
+* Purpose
+* Production behavior
+* Security relevance
+* Test-only status
+* Documentation-only status
+
+At minimum identify files for:
+
+* Migrations
+* Authentication schema
+* Session schema
+* Role assignments
+* Facility assignments
+* Patient assignments
+* Password hashing
+* Session creation
+* Session resolution
+* Session revocation
+* Authentication middleware
+* Authorization service
+* Permission definitions
+* Login API
+* Logout API
+* Session API
+* CSRF API
+* User-administration API
+* Audit events
+* Rate limiting
+* CORS
+* Security headers
+* Frontend login
+* Frontend session context
+* API client
+* Route guards
+* Test seeds
+* Tests
+* Documentation
+
+Remove unrelated generated or attached files from the branch if they were accidentally committed.
+
+Do not include the separate patient-photo specification as Phase 2 implementation.
+
+---
+
+# 3. Prove Versioned Migrations From a Clean Database
+
+Use a disposable isolated PostgreSQL database or schema.
+
+Do not use the main development schema for the proof.
+
+Run only checked-in migration commands.
+
+Do not manually execute DDL.
+
+Required sequence:
+
+1. Create clean isolated target.
+2. Confirm no Phase 2 authentication tables exist.
+3. Apply Phase 1A migrations.
+4. Apply Phase 2 migrations.
+5. Confirm all authentication and authorization tables exist.
+6. Confirm all indexes exist.
+7. Confirm all foreign keys exist.
+8. Confirm all unique constraints exist.
+9. Confirm all check constraints exist.
+10. Confirm migration journal entries exist.
+11. Run migrations again.
+12. Confirm no pending migrations.
+13. Run authentication seed against the clean target.
+14. Run database tests against the clean target.
+15. Destroy the isolated target.
+
+Provide:
+
+* Migration filenames
+* Migration order
+* Exact migration command
+* Clean application result
+* Reapplication result
+* Seed result
+* Confirmation that no manual SQL was required
+
+If migrations fail on a clean target, fix them and repeat the complete proof.
+
+---
+
+# 4. Verify the Authentication Schema
+
+Provide a schema table for every Phase 2 table.
+
+At minimum include the implemented equivalents of:
+
+* User identities
+* User sessions
+* Role assignments
+* Facility assignments
+* Patient-access assignments
+* Authentication audit events
+* Password-reset tokens, if implemented
+* Login-attempt or lockout state, if separate
+
+For every column document:
+
+* Type
+* Nullable
+* Default
+* Primary key
+* Foreign key
+* Unique constraint
+* Index
+* Check constraint
+* Retention relevance
+* Security relevance
+
+Required database protections:
+
+* Session belongs to the correct user and organization.
+* Role assignment belongs to the correct user organization.
+* Facility assignment belongs to the role’s organization.
+* Patient assignment belongs to the same organization and facility.
+* Expired assignments cannot be active.
+* Revoked sessions cannot be active.
+* Disabled users cannot retain valid authorization.
+* External authentication references follow the documented uniqueness rule.
+* Session-token hashes—not raw session tokens—are stored when opaque sessions are used.
+* Reset-token hashes—not raw tokens—are stored when password reset exists.
+
+Add direct PostgreSQL-backed tests for each protection.
+
+---
+
+# 5. Verify Password Security
+
+Document the exact Argon2 configuration.
+
+Provide:
+
+* Algorithm
+* Version
+* Memory cost
+* Time cost
+* Parallelism
+* Salt handling
+* Hash output format
+* Rehash policy
+* Maximum password input length
+* Password-strength policy
+* Password-reset status
+* Breached-password screening status
+
+Required behavior:
+
+* Argon2id is used.
+* Plaintext passwords are never stored.
+* Passwords are never logged.
+* Hashes are never returned through APIs.
+* Invalid credentials use a generic response.
+* Unknown users and incorrect passwords produce indistinguishable public responses.
+* Disabled users cannot authenticate.
+* Locked users cannot authenticate.
+* Password verification timing is reasonably protected against account enumeration.
+* Test passwords are not production defaults.
+* Production startup does not seed known passwords automatically.
+
+Verify that the native Argon2 dependency builds in the actual deployment environment.
+
+Document deployment prerequisites.
+
+If Argon2 build approval requires a manual development action, prove that the production build and deployment process handles it reproducibly.
+
+---
+
+# 6. Verify the Session Store
+
+Determine what session store is used.
+
+The Express default `MemoryStore` is not acceptable for production.
+
+Required production behavior:
+
+* Session data is stored in PostgreSQL, Redis, or another approved durable server-side session store.
+* Restarting one API process does not log out all users unless that is an explicit emergency policy.
+* Multiple API instances can resolve the same session.
+* Expired sessions are cleaned up.
+* Revoked sessions remain revoked.
+* Raw session identifiers are not stored unnecessarily.
+* Store failures fail closed.
+* Session records have retention and cleanup rules.
+
+If the current implementation uses `MemoryStore`:
+
+* Replace it before approval.
+* Add a production-capable session-store adapter.
+* Keep a lightweight memory adapter only for tests if useful.
+* Production must fail startup if the durable store is unavailable.
+
+Test:
+
+1. Login creates a durable session.
+2. API restart preserves a valid session.
+3. Logout revokes it.
+4. Revoked session remains invalid after restart.
+5. Idle expiration works.
+6. Absolute expiration works.
+7. Disabled-user session becomes invalid.
+8. Session-version change invalidates required sessions.
+9. Concurrent sessions follow policy.
+10. Session-store outage fails safely.
+
+---
+
+# 7. Verify Cookie Security
+
+Run the API under production configuration.
+
+Document the final authentication cookie:
+
+* Name
+* HttpOnly
+* Secure
+* SameSite
+* Path
+* Domain
+* Max-Age or Expires
+* Signed or opaque behavior
+* Rotation behavior
+
+Required behavior:
+
+* HttpOnly is true.
+* Secure is true in production.
+* Cookie is not available to browser JavaScript.
+* Cookie path is no broader than necessary.
+* Session ID does not appear in URL.
+* Session ID does not appear in localStorage.
+* Session ID does not appear in sessionStorage.
+* Session ID is rotated after login.
+* Session ID is rotated after privilege changes where required.
+* Logout clears the cookie.
+* Expired sessions cannot be restored by replaying an old cookie.
+* Production proxy trust is explicitly configured so Secure cookies behave correctly behind TLS termination.
+
+Inspect `Set-Cookie` headers from actual production-mode API responses.
+
+Provide sanitized headers without token values.
+
+---
+
+# 8. Verify CSRF Protection End to End
+
+The review process previously found:
+
+* CSRF token endpoint did not generate a token.
+* Cookie parsing was missing.
+* Pre-login CSRF token became invalid after login session regeneration.
+* Logout did not initially include the refreshed token.
+
+Prove the final flow.
+
+Required sequence:
+
+1. Open production login page.
+2. Request CSRF token.
+3. Submit login with valid CSRF token.
+4. Confirm login regenerates the session.
+5. Request a new CSRF token bound to the authenticated session.
+6. Use the refreshed token for logout.
+7. Confirm logout succeeds.
+8. Replay old pre-login token after login.
+9. Confirm it fails.
+10. Submit logout with no token.
+11. Confirm it fails.
+12. Submit logout with invalid token.
+13. Confirm it fails.
+14. Confirm safe GET routes do not require CSRF.
+15. Confirm state-changing administrative routes require CSRF.
+16. Confirm CSRF errors do not expose secrets.
+
+Also verify:
+
+* CSRF cookie settings
+* Token header name
+* Origin validation
+* SameSite interaction
+* CORS interaction
+* Multiple-tab behavior
+* Session-expiration behavior
+
+Add automated integration tests covering the entire sequence.
+
+---
+
+# 9. Verify Authentication Middleware Ordering
+
+Document the exact middleware order.
+
+At minimum explain placement of:
+
+* Proxy trust
+* Request ID
+* Security headers
+* CORS
+* Cookie parser
+* Body parser
+* Session middleware
+* CSRF middleware
+* Rate limiting
+* Authentication resolution
+* Public authentication routes
+* Health routes
+* Protected API routes
+* Error handler
+
+Required behavior:
+
+* Login is reachable without an existing authenticated session.
+* CSRF token route is reachable as designed.
+* Liveness is public.
+* Readiness is public or appropriately restricted according to policy.
+* Protected patient APIs require authentication.
+* Administrative APIs require authentication and permission.
+* Error middleware produces safe structured errors.
+* Invalid input does not bypass authentication unexpectedly.
+* Body parsing limits are appropriate for current routes.
+
+Do not change the global body limit for the future patient-photo feature during this phase.
+
+Document that multipart photo uploads will require a separately scoped route and parser later.
+
+---
+
+# 10. Verify Rate Limiting
+
+Document:
+
+* Rate-limit implementation
+* Storage backend
+* Login threshold
+* Time window
+* Lockout or delay behavior
+* Password-reset threshold
+* Administrative-route limits
+* Unauthorized-access threshold
+* Proxy/IP trust requirements
+
+Required production behavior:
+
+* Rate limiting is server-side.
+* It does not rely on browser storage.
+* It works across multiple API instances.
+* It does not use an in-memory-only counter in production.
+* It does not reveal account existence.
+* It records suspicious activity.
+* It has configurable thresholds.
+* It does not permanently lock an account through trivial abuse.
+
+If rate-limit storage is in memory, replace it with a production-capable shared store or clearly block production enablement.
+
+Test:
+
+* Repeated invalid login
+* Repeated unknown-user login
+* Valid login after threshold window
+* Multiple usernames from one source
+* One username from multiple sources
+* Rate-limit store outage
+* Correct proxy IP extraction
+
+---
+
+# 11. Verify CORS, CSRF, and Frontend Origin
+
+Document the allowed origins for:
+
+* Local development
+* Replit preview
+* Test
+* Production
+
+Required behavior:
+
+* No wildcard origin with credentials.
+* Unknown origins are rejected.
+* Credentials are allowed only for approved origins.
+* Preflight works for approved frontend.
+* Cookies are sent only under the intended origin model.
+* Sensitive API responses use private or no-store cache controls.
+* CSRF protection matches the origin architecture.
+* API errors remain readable by the approved frontend.
+* The frontend API base resolves correctly in every environment.
+
+Add tests for:
+
+1. Approved origin.
+2. Disallowed origin.
+3. Missing Origin behavior.
+4. Credentialed request.
+5. Preflight.
+6. CSRF-protected request from approved origin.
+7. CSRF-protected request from disallowed origin.
+
+---
+
+# 12. Verify Security Headers
+
+Report actual production response headers for:
+
+* Login page
+* Session endpoint
+* Patient List API
+* Patient Detail API
+* Health endpoint
+
+Inspect:
+
+* Content Security Policy
+* Frame protections
+* `X-Content-Type-Options`
+* Referrer Policy
+* Permissions Policy
+* HSTS where TLS termination allows
+* Cache-Control
+* Pragma where used
+* Cross-origin resource policies where applicable
+
+Requirements:
+
+* Authenticated patient responses are not stored in shared caches.
+* Session responses use no-store.
+* CSP does not require unsafe broad allowances without documentation.
+* Framing is restricted.
+* MIME sniffing is disabled.
+* Referrer leakage is minimized.
+
+Do not claim HSTS is active if it is only planned at an external proxy.
+
+---
+
+# 13. Verify the Central Authorization Service
+
+Provide the actual authorization decision contract.
+
+Verify that authorization is:
+
+* Server-side
+* Deny-by-default
+* Organization-aware
+* Facility-aware
+* Role-aware
+* Permission-aware
+* Patient-aware
+* Assignment-aware
+* Expiration-aware
+* Revocation-aware
+
+Test every reason code.
+
+Required test cases:
+
+1. Unauthenticated user denied.
+2. Disabled user denied.
+3. Missing permission denied.
+4. Wrong organization denied.
+5. Wrong facility denied.
+6. Missing required patient assignment denied.
+7. Expired patient assignment denied.
+8. Revoked patient assignment denied.
+9. Expired role assignment denied.
+10. Revoked role assignment denied.
+11. Valid facility-limited role allowed within facility.
+12. Facility-limited role denied outside facility.
+13. Valid organization-wide role allowed across authorized organization facilities.
+14. Organization-wide role still denied across organizations.
+15. Browser-supplied organization ignored.
+16. Browser-supplied facility ignored.
+17. Browser-supplied role ignored.
+18. Browser-supplied permission ignored.
+
+Document the final correction for the `orgWide` behavior.
+
+---
+
+# 14. Verify Patient List Query Scope
+
+The final review found an organization-wide patient-list issue.
+
+Prove the corrected query behavior.
+
+Required cases:
+
+## Facility-limited identity
+
+* Returns only assigned facilities.
+* Does not return other facilities.
+* Browser query parameters cannot broaden the result.
+
+## Multiple-facility identity
+
+* Returns only the union of authorized facilities.
+* Does not return all organization patients unless policy allows it.
+
+## Organization-wide identity
+
+* Returns all authorized organization patients.
+* Does not require one specific facility ID.
+* Does not cross into another organization.
+
+## Patient-assignment-limited identity
+
+* Returns only explicitly assigned patients when the role policy requires assignment.
+
+## Read-only identity
+
+* Returns permitted records.
+* Does not gain unsupported write actions.
+
+Use real PostgreSQL data and real API requests.
+
+Do not rely only on unit tests of the authorization helper.
+
+---
+
+# 15. Verify Protected Patient APIs
+
+Test the real final endpoints:
+
+```text
+GET /api/v1/patients
+GET /api/v1/patients/:id
+GET /api/v1/patients/:id/episode
+```
+
+For every endpoint verify:
+
+* No identity → 401
+* Invalid session → 401
+* Revoked session → 401
+* Missing permission → 403 or opaque 404
+* Wrong organization → opaque 404
+* Wrong facility → opaque 404
+* Valid identity → 200
+* Invalid ID → safe 400 according to middleware order
+* Missing record → 404
+* Database failure → 503
+* Safe response schema
+* Safe error schema
+* No raw SQL
+* No stack trace
+* No session token
+* No password data
+* No unauthorized role or facility metadata
+
+Patient List must not return records and then rely on frontend filtering.
+
+---
+
+# 16. Verify User Administration Safety
+
+Test:
+
+* User creation
+* Role assignment
+* Facility assignment
+* Patient assignment
+* User disablement
+* User reactivation
+* Session revocation
+* Assignment expiration
+* Assignment revocation
+
+Required protections:
+
+* Organization administrator cannot administer another organization.
+* Facility administrator cannot grant organization-wide access unless explicitly authorized.
+* User cannot self-escalate.
+* Administrator cannot assign permissions outside their administrative authority.
+* Disabled users lose active access.
+* Role removal invalidates or refreshes authorization promptly.
+* Facility removal invalidates access promptly.
+* Patient assignment removal invalidates access promptly.
+* Every administrative action is audited.
+* CSRF is required.
+* Rate limits or abuse protections apply where appropriate.
+
+If the full administrative API was not implemented, state exactly what exists and classify missing functions as deferred.
+
+Do not claim unsupported administration functions are complete.
+
+---
+
+# 17. Verify Authentication Audit Persistence
+
+Identify the audit table and repository.
+
+Required events:
+
+* Login success
+* Login failure
+* Account lock
+* Account unlock
+* Session creation
+* Logout
+* Session expiration
+* Session revocation
+* User disablement
+* User reactivation
+* Role assignment
+* Role revocation
+* Facility assignment
+* Facility revocation
+* Patient assignment
+* Patient assignment revocation
+* Authorization denial
+* Administrative session revocation
+
+Required properties:
+
+* Persisted in PostgreSQL
+* Append-only through ordinary application APIs
+* Timestamp
+* Organization
+* User where known
+* Session where appropriate
+* Event type
+* Outcome
+* Reason code
+* Target user for administrative events
+* No password
+* No password hash
+* No raw token
+* No CSRF token
+* No session cookie
+* No patient clinical narrative
+
+Test that audit failure follows documented policy.
+
+At minimum, security-sensitive write operations must not silently succeed without their required audit record.
+
+Document whether ordinary patient-record views are audited now or deferred to Phase 3.
+
+---
+
+# 18. Verify Demo and Production Isolation
+
+## Demo mode
+
+* Staff picker remains available.
+* Only fictitious identities exist.
+* Only fictitious patient data exists.
+* Demo banner is visible.
+* No production session cookie is created.
+* Demo session cannot call production patient APIs.
+* Demo browser state cannot authenticate production requests.
+
+## Production mode
+
+* Staff picker is absent.
+* Real login is required.
+* Demo headers are ignored.
+* Mock patients are unavailable.
+* Demo cookies are ignored.
+* Demo storage cannot populate production identity.
+* Invalid configuration blocks the app.
+* Production does not silently fall back to demo mode.
+
+Test switching from demo to production in the same browser profile.
+
+Clear or namespace state so the prior demo identity cannot appear as an authenticated production user.
+
+---
+
+# 19. Prove Real Frontend-to-API Connectivity
+
+The final proof must use:
+
+* Real frontend
+* Real API server
+* Real session cookie
+* Real PostgreSQL seed records
+* Real authorization service
+
+Do not use:
+
+* Playwright `route()` interception
+* Mock Service Worker
+* Hardcoded frontend responses
+* Mock repositories
+* Development identity headers in production
+* Static Patient List fixtures
+
+Required runtime sequence:
+
+1. Open production login.
+2. Authenticate using a fictitious seeded production-test user.
+3. Receive secure session cookie.
+4. Load session endpoint.
+5. Load Patient List from real API.
+6. Open Patient Detail from real API.
+7. Load active episode from real API.
+8. Refresh Patient Detail.
+9. Confirm the session and data remain valid.
+10. Logout.
+11. Confirm patient APIs return 401 afterward.
+
+Record:
+
+* Frontend URL
+* API URL
+* Environment
+* Data mode
+* User role
+* Organization
+* Facility scope
+* Network request paths
+* Response status codes
+* Confirmation that no route interception was used
+
+Do not expose credentials or cookie values.
+
+---
+
+# 20. Run the Full Test Suite
+
+The activity log reports 46 Phase 2 tests, but the final handoff must run every relevant existing and new test.
+
+Run:
+
+* Database migration tests
+* Phase 1A database tests
+* Phase 2 authentication tests
+* Session tests
+* Password tests
+* CSRF tests
+* Cookie tests
+* Rate-limit tests
+* Authorization tests
+* Tenant-isolation tests
+* Facility-isolation tests
+* Patient-access tests
+* API tests
+* Audit tests
+* CORS tests
+* Security-header tests
+* Frontend session tests
+* Login component tests
+* Route-guard tests
+* Demo/production separation tests
+* Real API end-to-end tests where available
+
+Report exact commands and results separately for:
+
+* `@workspace/db`
+* `@workspace/api-server`
+* `@workspace/sunrise-os`
+* Entire workspace test command, if available
+
+Provide:
+
+* Test files
+* Tests
+* Passed
+* Failed
+* Skipped
+* Duration
+
+Do not describe 46 passing Phase 2 tests as the entire application test suite unless that is actually the full count.
+
+---
+
+# 21. Run TypeScript and Production Builds
+
+Run TypeScript for:
+
+* Database package
+* API server
+* Sunrise OS frontend
+* Entire workspace if supported
+
+Run production builds for:
+
+* Database package
+* API server
+* Sunrise OS frontend
+
+Use explicit production configuration.
+
+Document:
+
+* `NODE_ENV`
+* Data mode
+* API base
+* Frontend origin
+* Cookie configuration source
+* Session-store configuration presence
+
+Do not expose secret values.
+
+Do not use demo mode for the final production proof.
+
+Report pre-existing warnings separately from new warnings.
+
+---
+
+# 22. Manual Persona Verification
+
+Using fictitious test users, manually verify:
+
+* Organization administrator
+* Facility administrator
+* Clinician
+* Nurse
+* Billing user
+* Read-only user
+* Unrelated-facility user
+* Disabled user
+* Expired-role user
+* Patient-assignment-limited user
+
+For each persona record:
+
+* Login result
+* Patient List result
+* Patient Detail result
+* Active Episode result
+* Facility scope
+* Patient scope
+* Unauthorized navigation result
+* Logout result
+* Session-expiration behavior
+* Audit evidence
+
+Do not mark a persona verified based only on permission configuration or code inspection.
+
+---
+
+# 23. Capture Accurate Screenshots
+
+Capture:
+
+1. Production login
+2. Invalid login
+3. Real-API Patient List
+4. Real-API Patient Detail
+5. Real-API Active Episode
+6. Organization-wide administrator view
+7. Facility-limited user view
+8. Clinician view
+9. Billing restricted view
+10. Read-only view
+11. Unrelated-facility denial
+12. Disabled-account result
+13. Session-expired result
+14. Logout result
+15. Demo staff picker
+16. Demo banner
+17. Production with no demo UI
+18. User or session administration screen if implemented
+
+Every screenshot record must include:
+
+* Filename
+* Viewport
+* Environment
+* Data mode
+* Role
+* Organization scope
+* Facility scope
+* Real or mocked API
+* State
+* Related manual test
+
+The Patient List and Patient Detail evidence must explicitly state:
+
+**Real API — no route interception**
+
+Do not use login screens as evidence of an authenticated patient workflow.
+
+---
+
+# 24. Update Documentation
+
+Create or update:
+
+`docs/readiness/phase-2-authentication-authorization.md`
+
+It must accurately describe the final implementation.
+
+Also update:
+
+`docs/security/authentication-threat-model.md`
+
+Include final controls and residual risks for:
+
+* Brute force
+* Credential stuffing
+* Account enumeration
+* Session fixation
+* Session replay
+* Session theft
+* CSRF
+* XSS token theft
+* Header spoofing
+* Privilege escalation
+* Organization-wide overreach
+* Facility overreach
+* Patient-access bypass
+* Disabled-user access
+* Expired assignments
+* Stale session authorization
+* In-memory session loss
+* In-memory rate-limit bypass
+* CORS mistakes
+* Demo/production crossover
+* Audit failure
+* Argon2 deployment failure
+
+Do not describe a threat as resolved unless evidence demonstrates the control.
+
+---
+
+# 25. Create the Evidence Manifest
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-2/evidence-manifest.json`
+
+Include:
+
+* Branch
+* Commits
+* Final HEAD
+* Files changed
+* Migration files
+* Tables
+* Indexes
+* Constraints
+* Password configuration
+* Session-store technology
+* Cookie configuration
+* CSRF configuration
+* Rate-limit configuration
+* CORS configuration
+* Permission count
+* Role mappings
+* API routes
+* Audit events
+* Test commands
+* Test counts
+* TypeScript results
+* Build results
+* Manual persona results
+* Screenshot inventory
+* Real API connectivity evidence
+* Known limitations
+* Deferred work
+* Timestamp
+
+Validate the JSON.
+
+Do not include secrets.
+
+---
+
+# 26. Create the Correct Review Archive
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-2-authentication-authorization-review.zip`
+
+Include:
+
+* Versioned Phase 2 migrations
+* Migration metadata
+* Authentication schema
+* Session-store code
+* Password service
+* Authentication middleware
+* Authorization service
+* Permission definitions
+* Role mappings
+* Patient-access logic
+* Protected routes
+* CSRF implementation
+* Rate-limit implementation
+* CORS and security-header configuration
+* Audit repository
+* Frontend login and session code
+* Tests
+* Sanitized validation output
+* Manual persona results
+* Runtime screenshots
+* Architecture document
+* Threat model
+* Evidence manifest
+* File manifest with SHA-256 values
+
+Do not include:
+
+* Passwords
+* Password hashes from seeded or real users
+* Session tokens
+* Session cookies
+* CSRF tokens
+* Reset tokens
+* Private keys
+* Environment files
+* Database credentials
+* Real patient data
+* Dependency caches
+* Build caches
+* Old review ZIPs
+
+Verify:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-2-authentication-authorization-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-2-authentication-authorization-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-2-authentication-authorization-review.zip
+```
+
+Confirm:
+
+* ZIP opens.
+* Entry count is accurate.
+* ZIP size is reported.
+* SHA-256 is reported.
+* File-manifest hashes match.
+* No secret values appear.
+* No route-mocked screenshots are presented as real API evidence.
+
+---
+
+# Acceptance Criteria
+
+Phase 2 is ready for review only when:
+
+* Clean migrations succeed.
+* Migration reapplication succeeds.
+* Argon2id configuration is documented and tested.
+* Production session storage is durable and shared.
+* Production does not use Express MemoryStore.
+* Session cookies are secure.
+* Login rotates the session.
+* Logout revokes the session.
+* Idle expiration works.
+* Absolute expiration works.
+* CSRF works before and after login rotation.
+* State-changing routes reject missing or invalid CSRF tokens.
+* Rate limiting uses a production-capable shared store.
+* CORS is restricted.
+* Security headers are verified.
+* Authorization denies by default.
+* Organization-wide access works only inside the authorized organization.
+* Facility-limited access remains limited.
+* Patient assignments are enforced where required.
+* Browser-supplied identity and scope are ignored.
+* Protected patient APIs enforce permissions.
+* Authentication audit events persist.
+* Production frontend reaches the real API.
+* No final runtime evidence uses route interception.
+* Demo and production remain isolated.
+* Full tests pass.
+* TypeScript passes.
+* Production builds pass.
+* Manual persona tests are documented.
+* Review ZIP is complete and verified.
+
+---
+
+# Required Final Response
+
+Provide:
+
+1. Branch.
+2. Starting commit.
+3. Security-correction commits.
+4. Final HEAD.
+5. Files changed.
+6. Migration filenames.
+7. Clean migration result.
+8. Migration reapplication result.
+9. Password-hashing configuration.
+10. Session-store technology.
+11. Session persistence after restart result.
+12. Cookie configuration.
+13. CSRF end-to-end result.
+14. Rate-limit technology and result.
+15. CORS result.
+16. Security-header result.
+17. Authorization-service result.
+18. Organization-wide patient-query result.
+19. Facility-isolation result.
+20. Patient-access result.
+21. Production 401 result.
+22. Authentication audit result.
+23. Demo/production separation result.
+24. Real frontend-to-API result.
+25. Total test files.
+26. Total tests.
+27. Passed, failed, and skipped.
+28. TypeScript result.
+29. Production build results.
+30. Manual persona count.
+31. Screenshot count.
+32. Review ZIP path.
+33. ZIP size.
+34. ZIP SHA-256.
+35. ZIP entry count.
+36. Known limitations.
+37. Exact Phase 3 recommendation.
+
+Do not begin Phase 3.
+
+Do not merge into `main`.
+
+Stop after producing and verifying the final Phase 2 review archive.
