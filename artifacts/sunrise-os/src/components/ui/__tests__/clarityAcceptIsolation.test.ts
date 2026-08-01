@@ -201,6 +201,35 @@ describe('applyClarityAccept — per-section isolation (production helpers)', ()
 
 // ── applyClarityAcceptAll ─────────────────────────────────────────────────────
 
+// ── All-four-sections fixture ─────────────────────────────────────────────────
+// Each section contains at least one abbreviation so the clarity engine produces
+// a real suggestion in every field.  Used exclusively by the "reject one, accept
+// three" scenario below.
+//
+//   Behavior:     "pt."  → patient
+//   Intervention: "w/"   → with
+//   Response:     "c/o"  → reports
+//   Plan:         "w/"   → with  (makes Plan dirty unlike the baseline fixture)
+const ALL_FOUR_BIRP_VALUES: Record<string, string> = {
+  Behavior:
+    'pt. presented as anxious and tearful. Reports difficulty sleeping and endorses ' +
+    'passive suicidal ideation without intent or plan.',
+  Intervention:
+    'Provided supportive counseling w/ the client. Explored triggers for anxiety ' +
+    'and introduced diaphragmatic breathing technique.',
+  Response:
+    'Client c/o feeling overwhelmed but engaged with the breathing exercise. ' +
+    'Denied active suicidal ideation at close of session.',
+  Plan:
+    'Continue weekly individual sessions w/ focus on anxiety management. ' +
+    'Coordinate with psychiatry regarding medication review.',
+};
+
+function runAllFourReview(): ClarityReviewResult {
+  const inputs = buildClaritySectionInputs(BIRP_FIELDS, ALL_FOUR_BIRP_VALUES);
+  return runClarityReview(inputs, '10:00 AM');
+}
+
 describe('applyClarityAcceptAll — only supplied fields are updated', () => {
 
   // ── 8. Accept All updates exactly the supplied fields and no others ────────
@@ -252,6 +281,49 @@ describe('applyClarityAcceptAll — only supplied fields are updated', () => {
     expect(announcement).not.toContain('revisions');
     // suppress unused variable warning
     void section;
+  });
+
+  // ── 9. Reject Behavior, accept the remaining three ───────────────────────
+  // Simulates a clinician clicking "Keep Original" on the Behavior card and
+  // then pressing "Accept All" — only the three approved fields should change.
+  it('Accept All with Behavior rejected: Intervention, Response, Plan get suggestions; Behavior stays original', () => {
+    const review = runAllFourReview();
+
+    // Verify the engine actually produced suggestions for all four sections.
+    const behaviorSection     = getSection(review, 'behavior');
+    const interventionSection = getSection(review, 'intervention');
+    const responseSection     = getSection(review, 'response');
+    const planSection         = getSection(review, 'plan');
+
+    expect(behaviorSection?.hasChanges).toBe(true);
+    expect(interventionSection?.hasChanges).toBe(true);
+    expect(responseSection?.hasChanges).toBe(true);
+    expect(planSection?.hasChanges).toBe(true);
+
+    // Clinician rejects Behavior — it is excluded from the updates map.
+    const updates: Partial<Record<ProgressNoteFieldId, string>> = {
+      intervention: interventionSection!.suggestedText,
+      response:     responseSection!.suggestedText,
+      plan:         planSection!.suggestedText,
+    };
+
+    const { nextValues, announcement } = applyClarityAcceptAll(
+      updates,
+      ALL_FOUR_BIRP_VALUES,
+    );
+
+    // Rejected section: original text must be preserved exactly.
+    expect(nextValues['Behavior']).toBe(ALL_FOUR_BIRP_VALUES['Behavior']);
+    expect(nextValues['Behavior']).not.toBe(behaviorSection!.suggestedText);
+
+    // Accepted sections: each must hold its suggested text.
+    expect(nextValues['Intervention']).toBe(interventionSection!.suggestedText);
+    expect(nextValues['Response']).toBe(responseSection!.suggestedText);
+    expect(nextValues['Plan']).toBe(planSection!.suggestedText);
+
+    // Announcement must mention the correct count.
+    expect(announcement).not.toBeNull();
+    expect(announcement).toContain('3 section revisions inserted');
   });
 
 });
