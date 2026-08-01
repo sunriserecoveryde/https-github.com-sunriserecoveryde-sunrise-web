@@ -112,7 +112,10 @@ app.use(
 app.use(cookieParser());
 
 // ── 5. Body parsers ───────────────────────────────────────────────────────────
-// Enlarged limit for /api/v1/patients/* (base64-encoded photo uploads).
+// Enlarged limit for /api/v1/patients/* — reserved for future chart photograph
+// uploads (spec: attached_assets/Pasted--Sunrise-OS-Compliant-Patient-Chart-
+// Photograph-Capture-_1785608920909.txt; target branch feature/compliant-
+// patient-chart-photo; NOT part of Phase 2 scope).
 app.use(
   "/api/v1/patients",
   (req: Request, _res: Response, next: NextFunction) =>

@@ -75,23 +75,29 @@ router.get("/v1/patients", async (req: Request, res: Response) => {
   }
 
   try {
-    // Query patients only for the user's authorized facilities.
-    // The browser does NOT supply a facility filter — it comes from the session.
-    const facilityIds = auth.facilityIds;
+    let patients: Awaited<ReturnType<typeof listPatients>>;
 
-    // If the user has no authorized facilities, return empty list (not 403).
-    if (facilityIds.length === 0) {
-      setPatientCacheHeaders(res);
-      res.json([]);
-      return;
+    if (auth.orgWide) {
+      // Org-wide roles (facilityId=null assignments) can see the entire org census.
+      // listPatients(orgId, undefined) returns all patients in the org.
+      patients = await listPatients(auth.orgId);
+    } else {
+      // Facility-scoped users: query per assigned facility and merge.
+      // The browser does NOT supply a facility filter — it comes from the session.
+      const facilityIds = auth.facilityIds;
+
+      if (facilityIds.length === 0) {
+        // No authorized facilities and not org-wide — no patients to return.
+        setPatientCacheHeaders(res);
+        res.json([]);
+        return;
+      }
+
+      const patientArrays = await Promise.all(
+        facilityIds.map((fId) => listPatients(auth.orgId, fId)),
+      );
+      patients = patientArrays.flat();
     }
-
-    // Fetch patients for all authorized facilities.
-    // listPatients takes a single facilityId; we query per facility and merge.
-    const patientArrays = await Promise.all(
-      facilityIds.map((fId) => listPatients(auth.orgId, fId)),
-    );
-    const patients = patientArrays.flat();
 
     // Deduplicate by patient ID (edge case: multiple facility assignments).
     const seen = new Set<string>();
