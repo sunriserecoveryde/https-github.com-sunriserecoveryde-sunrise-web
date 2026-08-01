@@ -1,0 +1,454 @@
+The implementation is solid, but **do not merge yet**. The remaining weak point is that field destinations are inferred by searching finding text with regular expressions. That will become fragile as wording changes.
+
+Copy and paste this next:
+
+Complete one refinement task on the existing improvement branch:
+
+**Task: Replace text-based finding destination inference with structured field-target metadata**
+
+Do not begin permission changes, audit persistence, additional AI modules, scoring changes, or unrelated UI work during this task.
+
+Do not merge into `main`.
+
+## Current problem
+
+The Clinical Documentation Review currently determines field destinations using `inferFieldId()` and regular-expression matching against finding titles or explanation text.
+
+Examples include looking for words such as:
+
+* intervention
+* response
+* treatment goal
+* safety
+* risk
+* follow-up
+* level of care
+
+Although the current fallback prevents broken navigation, this approach is fragile.
+
+A wording change such as:
+
+* “Document what the clinician did”
+* “Describe how the patient reacted”
+* “Clarify next-session planning”
+
+could stop navigation from working even though the underlying finding still refers to a known field.
+
+## Objective
+
+Assign field destinations as structured metadata when findings are created.
+
+Do not infer navigation destinations later by parsing user-facing finding text.
+
+Each finding generator should explicitly provide:
+
+* `targetFieldId`, when a valid form destination exists
+* `fallbackTool`, when only detailed AI review is available
+* `recommendedAction`
+* `sourceFields`
+
+The rendered title and explanation may change without breaking navigation.
+
+---
+
+# 1. Remove Text-Based Field Inference
+
+Remove or retire `inferFieldId()` from the normal finding-generation path.
+
+Do not use regular expressions against:
+
+* Finding titles
+* Finding explanations
+* Recommended-action text
+* Missing-element labels
+* User-facing AI output
+
+to determine field navigation.
+
+A text-based inference helper may remain only as a temporary compatibility fallback for legacy findings, if necessary.
+
+If retained:
+
+* Clearly mark it as deprecated.
+* Do not use it for newly generated Clinical Documentation Review findings.
+* Document exactly which legacy result still requires it.
+
+Preferred result:
+
+No active review finding depends on text parsing for its destination.
+
+---
+
+# 2. Use the Existing Typed Field Identifiers
+
+Continue using the existing typed identifiers:
+
+```ts
+export type ProgressNoteFieldId =
+  | "behavior"
+  | "intervention"
+  | "response"
+  | "plan"
+  | "data"
+  | "assessment"
+  | "subjective"
+  | "objective"
+  | "goal"
+  | "patientSelect"
+  | "noteTypeSelect";
+```
+
+Only add another identifier if a real corresponding field currently exists in the Progress Notes form.
+
+Do not add identifiers for fields that do not exist.
+
+Do not create duplicate note fields.
+
+---
+
+# 3. Create Structured Finding Builders
+
+Create small typed helper functions or factory functions for constructing findings.
+
+Example pattern:
+
+```ts
+function createClinicalFinding(
+  finding: ClinicalReviewFinding
+): ClinicalReviewFinding {
+  return finding;
+}
+```
+
+More specific helpers may be used where helpful:
+
+```ts
+createMissingInterventionFinding()
+createMissingResponseFinding()
+createSafetyConflictFinding()
+createFollowUpPlanFinding()
+createGoalConnectionFinding()
+```
+
+Avoid an excessive number of one-line helper files.
+
+Keep the implementation maintainable.
+
+Each actionable finding should be created with its destination already known.
+
+Example:
+
+```ts
+{
+  id: "missing-intervention",
+  priority: "important",
+  category: "medical-necessity",
+  title: "Intervention is not documented",
+  explanation:
+    "The note does not clearly identify the clinical intervention provided.",
+  recommendedAction: "Add Intervention",
+  targetFieldId: "intervention",
+  sourceFields: ["Intervention"]
+}
+```
+
+The renderer should not need to interpret the title to know where to navigate.
+
+---
+
+# 4. Map Findings at Their Source
+
+Assign destinations where the review results are converted into consolidated findings.
+
+Use mappings such as:
+
+## Clarity findings
+
+A clarity issue should target the specific section where the issue occurred.
+
+Examples:
+
+* Behavior wording issue → `behavior`
+* Intervention wording issue → `intervention`
+* Patient Response wording issue → `response`
+* Plan wording issue → `plan`
+* SOAP Subjective issue → `subjective`
+* SOAP Objective issue → `objective`
+* Assessment wording issue → `assessment`
+* GIRP Goal wording issue → `goal`
+
+If the existing clarity result does not identify its source section, update its internal result metadata to include the section identifier.
+
+Do not parse the displayed revised text to determine the section.
+
+## Medical-necessity findings
+
+Use explicit mappings:
+
+* Intervention missing → `intervention`
+* Patient response missing → `response`
+* Follow-up planning missing → `plan`
+* Continued-service rationale missing → `plan`
+* Level-of-care support missing → `plan` unless a dedicated field currently exists
+* Treatment-goal connection missing → `goal` when GIRP is active
+* Safety statement missing → `assessment` when DAP or SOAP is active
+* Required patient missing → `patientSelect`
+* Required note type missing → `noteTypeSelect`
+
+When the current note format lacks the ideal field:
+
+* Select the safest relevant existing field, or
+* Omit `targetFieldId` and provide `fallbackTool`
+
+Do not point to a field that does not exist in the current format.
+
+## Consistency findings
+
+Structured consistency results should explicitly identify both source fields where possible.
+
+Example:
+
+```ts
+{
+  sourceFields: ["Assessment", "Structured craving score"],
+  targetFieldId: "assessment"
+}
+```
+
+If two editable note fields conflict, select the field most likely to require clinician clarification.
+
+Do not automatically change either field.
+
+## Completeness findings
+
+Completeness checks should be mapped from their underlying requirement definitions.
+
+Create a configuration map such as:
+
+```ts
+const DOCUMENTATION_REQUIREMENTS = {
+  intervention: {
+    targetFieldId: "intervention",
+    priority: "important"
+  },
+  response: {
+    targetFieldId: "response",
+    priority: "important"
+  },
+  plan: {
+    targetFieldId: "plan",
+    priority: "important"
+  }
+};
+```
+
+Adapt the exact structure to the current code.
+
+---
+
+# 5. Respect Note Format
+
+The destination must be valid for the current note format.
+
+Examples:
+
+## BIRP
+
+* Behavior
+* Intervention
+* Response
+* Plan
+
+## DAP
+
+* Data
+* Assessment
+* Plan
+
+## SOAP
+
+* Subjective
+* Objective
+* Assessment
+* Plan
+
+## GIRP
+
+* Goal
+* Intervention
+* Response
+* Plan
+
+Requirements:
+
+* Never navigate a SOAP note to `behavior`.
+* Never navigate a DAP note to `response` unless that field actually exists.
+* Never navigate a BIRP note to `objective`.
+* Validate `targetFieldId` against the active format before rendering the navigation action.
+
+If the preferred field is unavailable:
+
+1. Use an explicitly configured format-specific alternative, or
+2. Show a tool-detail action instead.
+
+Do not silently choose destinations through keyword matching.
+
+---
+
+# 6. Standardize Fallback Actions
+
+Findings without a valid form destination should use a specific fallback action.
+
+Examples:
+
+* Review Clarity Details
+* Review Consistency Details
+* Review Medical Necessity Details
+* Review Completeness Details
+
+The finding must specify the fallback tool as structured metadata:
+
+```ts
+fallbackTool:
+  | "clarity"
+  | "consistency"
+  | "medical-necessity"
+  | "completeness";
+```
+
+Do not derive the fallback tool from the finding title.
+
+Do not show a field-navigation action and fallback action simultaneously unless both provide distinct value.
+
+---
+
+# 7. Add Development-Time Validation
+
+Add a validation helper that checks consolidated findings before rendering.
+
+Validate:
+
+* Every finding has a unique ID.
+* Every priority is valid.
+* Every category is valid.
+* Every `targetFieldId` is valid for the active note format.
+* Every actionable finding has either:
+
+  * `targetFieldId`, or
+  * `fallbackTool`
+* No finding has an empty title.
+* No finding has an empty explanation.
+* No Critical or Important finding lacks a recommended clinician action.
+
+In development mode:
+
+* Log a concise warning for invalid finding metadata.
+* Do not log patient note content.
+* Do not display raw technical errors to clinicians.
+
+In production:
+
+* Safely omit a broken navigation action.
+* Continue displaying the finding text.
+* Do not crash the AI panel.
+
+---
+
+# 8. Preserve Existing User Experience
+
+Do not change:
+
+* Clinical Documentation Review pipeline order
+* Clinical Confidence panel
+* Documentation-completeness scoring
+* Draft-generation behavior
+* Priority labels
+* Field scrolling
+* Field focusing
+* Temporary highlighting
+* Screen-reader announcement
+* Reduced-motion behavior
+* Individual AI tools
+* Existing note editor
+* Note signing or submission behavior
+* Permissions
+* Audit-event behavior
+* Database schema
+* Seeded data
+
+The visible clinician-facing wording may remain unchanged unless a label needs clarification.
+
+---
+
+# 9. Accessibility
+
+Preserve:
+
+* Keyboard-accessible finding actions
+* Specific accessible labels
+* Focus movement to the target field
+* Polite screen-reader announcement
+* Visible target-field focus
+* Reduced-motion handling
+
+Because destinations are now structured, ensure the accessible action label is derived from the actual destination metadata.
+
+Example:
+
+```text
+Move to Intervention field
+```
+
+Do not generate an accessible destination label from arbitrary finding text.
+
+---
+
+# Acceptance Criteria
+
+The task is complete only when:
+
+* Newly generated review findings do not use text parsing to determine destinations.
+* Every destination is assigned as structured metadata.
+* Navigation continues to work if a finding title is reworded.
+* Clarity findings retain their source-section identity.
+* Medical-necessity findings use explicit requirement mappings.
+* Consistency findings identify relevant source fields.
+* Completeness findings use configured destinations.
+* Destinations are validated against the current note format.
+* Findings without valid destinations use structured fallback-tool actions.
+* Invalid finding metadata cannot crash the review panel.
+* Existing jump-to-field behavior still scrolls, focuses, highlights, and announces correctly.
+* Note content remains unchanged during navigation.
+* TypeScript passes.
+* Production build passes.
+* Existing tests pass, if configured.
+
+---
+
+# Required Deliverables
+
+Provide:
+
+1. List of files changed.
+2. Explanation of how `inferFieldId()` was removed, deprecated, or limited.
+3. Updated `ClinicalReviewFinding` interface.
+4. Table of structured finding types and destinations.
+5. Note-format destination matrix.
+6. Example showing that changing a finding title does not change its destination.
+7. Example of a finding with a field target.
+8. Example of a finding with a fallback tool.
+9. Explanation of development-time metadata validation.
+10. Confirmation that no patient note content is written to warnings or logs.
+11. Keyboard-navigation results.
+12. TypeScript result.
+13. Production build result.
+14. Test and lint status.
+15. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge into `main`.
+
+Do not begin another feature.
+
+Stop after completing this single task and wait for review.
