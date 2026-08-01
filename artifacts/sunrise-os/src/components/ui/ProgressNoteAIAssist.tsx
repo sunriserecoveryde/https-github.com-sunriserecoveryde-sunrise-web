@@ -65,6 +65,7 @@ import {
   type ClaritySectionResult,
   type ClarityReviewResult,
 } from './clarityConfig';
+import { filterAcceptAllUpdates } from './clarityAcceptHelpers';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1600,24 +1601,23 @@ export function ProgressNoteAIAssist({
   // Accept all remaining (not-yet-rejected) sections that have changes.
   function handleAcceptAllClaritySections() {
     if (!clarityResult) return;
-    const updates: Partial<Record<ProgressNoteFieldId, string>> = {};
-    const newAccepted = new Set(claritySectionAccepted);
-    const staleWarnings: ProgressNoteFieldId[] = [];
 
-    clarityResult.sections.forEach(s => {
-      if (!s.hasChanges) return;
-      if (claritySectionAccepted.has(s.fieldId)) return;
-      if (claritySectionRejected.has(s.fieldId)) return;
-      const currentText = values[s.fieldLabel] ?? '';
-      if (detectStaleSection(currentText, s.sourceSnapshot)) {
-        staleWarnings.push(s.fieldId);
-        return;
-      }
-      updates[s.fieldId] = s.suggestedText;
-      newAccepted.add(s.fieldId);
-    });
+    // Delegate filtering to the pure helper so the logic is testable
+    // independently of the React component. filterAcceptAllUpdates skips
+    // sections that have no changes, were already individually accepted or
+    // rejected, or whose field text was edited since the review was run.
+    const { updates, staleFieldIds } = filterAcceptAllUpdates(
+      clarityResult.sections,
+      values,
+      claritySectionAccepted,
+      claritySectionRejected,
+    );
 
     if (Object.keys(updates).length > 0) {
+      const newAccepted = new Set([
+        ...claritySectionAccepted,
+        ...(Object.keys(updates) as ProgressNoteFieldId[]),
+      ]);
       onAcceptAllClaritySections(updates);
       setClaritySectionAccepted(newAccepted);
       emit('All Clarity Revisions Accepted', `accepted:${Object.keys(updates).join(',')}`, true, {
@@ -1625,9 +1625,9 @@ export function ProgressNoteAIAssist({
       });
     }
 
-    // If any sections were stale, show the first one.
-    if (staleWarnings.length > 0) {
-      const staleSection = clarityResult.sections.find(s => s.fieldId === staleWarnings[0]);
+    // If any sections were stale, surface a warning for the first one.
+    if (staleFieldIds.length > 0) {
+      const staleSection = clarityResult.sections.find(s => s.fieldId === staleFieldIds[0]);
       if (staleSection) {
         setStalePending(staleSection);
         emit('Stale Clarity Revision Warning Displayed', 'warned', false, {

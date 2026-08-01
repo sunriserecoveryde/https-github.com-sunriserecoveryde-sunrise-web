@@ -22,6 +22,7 @@
  */
 
 import type { ProgressNoteFieldId } from './medicalNecessityConfig';
+import { detectStaleSection, type ClaritySectionResult } from './clarityConfig';
 
 // ─── FIELD_ID_TO_LABEL ────────────────────────────────────────────────────────
 // Maps every ProgressNoteFieldId that appears in a note section to the exact
@@ -92,6 +93,60 @@ export interface ClarityAcceptAllResult {
  * @param updates       — map of fieldId → revised text; contains only approved fields
  * @param currentValues — current textarea values keyed by field label
  */
+// ─── filterAcceptAllUpdates ───────────────────────────────────────────────────
+
+export interface AcceptAllFilterResult {
+  /** Sections that passed all filters and are safe to write to the note. */
+  updates: Partial<Record<ProgressNoteFieldId, string>>;
+  /**
+   * fieldIds of sections skipped because the field was edited after the review
+   * was run. The caller should surface a warning for each.
+   */
+  staleFieldIds: ProgressNoteFieldId[];
+}
+
+/**
+ * Filters a ClarityReviewResult's sections for the "Accept All" action.
+ *
+ * Skips sections that:
+ *   • have no changes (hasChanges: false)
+ *   • the clinician already individually accepted
+ *   • the clinician already individually rejected
+ *   • have been edited since the review was run (detectStaleSection)
+ *
+ * Returns the updates map (safe to pass directly to onAcceptAllClaritySections)
+ * and the list of stale fieldIds so the caller can show a warning for each one.
+ *
+ * This is the canonical extraction of the filtering logic from
+ * handleAcceptAllClaritySections in ProgressNoteAIAssist.tsx.
+ * Keep the two in sync.
+ */
+export function filterAcceptAllUpdates(
+  sections: ClaritySectionResult[],
+  currentValues: Record<string, string>,
+  alreadyAccepted: ReadonlySet<ProgressNoteFieldId>,
+  alreadyRejected: ReadonlySet<ProgressNoteFieldId>,
+): AcceptAllFilterResult {
+  const updates: Partial<Record<ProgressNoteFieldId, string>> = {};
+  const staleFieldIds: ProgressNoteFieldId[] = [];
+
+  sections.forEach(s => {
+    if (!s.hasChanges) return;
+    if (alreadyAccepted.has(s.fieldId)) return;
+    if (alreadyRejected.has(s.fieldId)) return;
+    const currentText = currentValues[s.fieldLabel] ?? '';
+    if (detectStaleSection(currentText, s.sourceSnapshot)) {
+      staleFieldIds.push(s.fieldId);
+      return;
+    }
+    updates[s.fieldId] = s.suggestedText;
+  });
+
+  return { updates, staleFieldIds };
+}
+
+// ─── applyClarityAcceptAll ────────────────────────────────────────────────────
+
 export function applyClarityAcceptAll(
   updates: Partial<Record<ProgressNoteFieldId, string>>,
   currentValues: Record<string, string>,
