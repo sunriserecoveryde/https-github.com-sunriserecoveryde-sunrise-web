@@ -1,35 +1,40 @@
 /**
- * Phase 1A — Patient List and Patient Detail API endpoints.
+ * Phase 2 — Patient List, Patient Detail, and Active Episode endpoints.
  *
- * All routes are scoped to the organisation and facility provided by the
- * dev-identity middleware (Phase 1A placeholder; replaced by real auth in
- * Phase 2).  Cross-organisation access is not possible because the orgId is
- * injected server-side, never trusted from query parameters or request body.
+ * Identity is resolved from the real session (req.auth) set by sessionAuthMiddleware.
+ * All three endpoints use the central authorizationService to enforce:
+ *   - Org scope (always from the session, never from the browser)
+ *   - Facility scope (from role assignments in sos_role_assignments)
+ *   - Patient access (facility-wide roles or explicit sos_patient_access row)
+ *
+ * Opaque 404 is returned for cross-org and cross-facility access to prevent
+ * leaking the existence of records the caller has no right to see.
  *
  * Routes:
- *   GET /api/v1/patients              – list patients (org + optional facility scope)
+ *   GET /api/v1/patients              – list patients for authorized facilities
  *   GET /api/v1/patients/:id          – single patient record
  *   GET /api/v1/patients/:id/episode  – active episode for one patient
  */
 
 import { Router, Request, Response } from "express";
 import { z } from "zod";
-import { listPatients, getPatient, getActiveEpisode, NotFoundError, DatabaseError } from "@workspace/db";
+import {
+  listPatients,
+  getPatient,
+  getActiveEpisode,
+  NotFoundError,
+  DatabaseError,
+} from "@workspace/db";
+import { authorize } from "../lib/authorizationService";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── helpers ───────────────────────────────────────────────────────────────────
 
 const uuidParam = z.string().uuid();
 
-function getIdentity(req: Request): { orgId: string; facilityId: string | undefined } {
-  if (!req.devIdentity) {
-    throw new Error("devIdentity middleware not registered");
-  }
-  return req.devIdentity;
-}
-
-function handleError(err: unknown, res: Response): void {
+function handleDbError(err: unknown, res: Response): void {
   if (err instanceof NotFoundError) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -38,18 +43,68 @@ function handleError(err: unknown, res: Response): void {
     res.status(503).json({ error: "Service temporarily unavailable" });
     return;
   }
+  logger.error({ err }, "patientsV1: unexpected error");
   res.status(500).json({ error: "Internal server error" });
+}
+
+// Private, no-store cache headers for all patient responses (spec §19).
+function setPatientCacheHeaders(res: Response): void {
+  res.set("Cache-Control", "private, no-store");
+  res.set("Pragma", "no-cache");
 }
 
 // ── GET /api/v1/patients ─────────────────────────────────────────────────────
 
 router.get("/v1/patients", async (req: Request, res: Response) => {
+  const auth = req.auth;
+  if (!auth) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  // Check list permission first (cheap — no DB call needed).
+  const decision = await authorize({
+    identity:   auth,
+    permission: "patient.list.view",
+    orgId:      auth.orgId,
+    ipAddress:  req.ip,
+  });
+  if (!decision.allowed) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
   try {
-    const { orgId, facilityId } = getIdentity(req);
-    const patients = await listPatients(orgId, facilityId);
-    res.json(patients);
+    // Query patients only for the user's authorized facilities.
+    // The browser does NOT supply a facility filter — it comes from the session.
+    const facilityIds = auth.facilityIds;
+
+    // If the user has no authorized facilities, return empty list (not 403).
+    if (facilityIds.length === 0) {
+      setPatientCacheHeaders(res);
+      res.json([]);
+      return;
+    }
+
+    // Fetch patients for all authorized facilities.
+    // listPatients takes a single facilityId; we query per facility and merge.
+    const patientArrays = await Promise.all(
+      facilityIds.map((fId) => listPatients(auth.orgId, fId)),
+    );
+    const patients = patientArrays.flat();
+
+    // Deduplicate by patient ID (edge case: multiple facility assignments).
+    const seen = new Set<string>();
+    const unique = patients.filter((p) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+
+    setPatientCacheHeaders(res);
+    res.json(unique);
   } catch (err) {
-    handleError(err, res);
+    handleDbError(err, res);
   }
 });
 
@@ -61,16 +116,44 @@ router.get("/v1/patients/:id", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Invalid patient id" });
     return;
   }
+
+  const auth = req.auth;
+  if (!auth) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  const patientId = parse.data;
+
   try {
-    const { orgId } = getIdentity(req);
-    const patient = await getPatient(parse.data, orgId);
+    // Fetch patient first to get facilityId for scope check.
+    // Returns 404 for cross-org (getPatient checks org_id).
+    const patient = await getPatient(patientId, auth.orgId);
+
+    // Authorize with facility and patient scope.
+    const decision = await authorize({
+      identity:   auth,
+      permission: "patient.chart.view",
+      orgId:      auth.orgId,
+      facilityId: patient.facilityId,
+      patientId,
+      ipAddress:  req.ip,
+    });
+
+    if (!decision.allowed) {
+      // Opaque 404 — do not reveal the patient exists but the caller cannot see it.
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+
+    setPatientCacheHeaders(res);
     res.json(patient);
   } catch (err) {
-    handleError(err, res);
+    handleDbError(err, res);
   }
 });
 
-// ── GET /api/v1/patients/:id/episode ────────────────────────────────────────
+// ── GET /api/v1/patients/:id/episode ─────────────────────────────────────────
 
 router.get("/v1/patients/:id/episode", async (req: Request, res: Response) => {
   const parse = uuidParam.safeParse(req.params.id);
@@ -78,18 +161,44 @@ router.get("/v1/patients/:id/episode", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Invalid patient id" });
     return;
   }
+
+  const auth = req.auth;
+  if (!auth) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  const patientId = parse.data;
+
   try {
-    const { orgId } = getIdentity(req);
-    // First verify the patient belongs to this org (returns 404 if not).
-    await getPatient(parse.data, orgId);
-    const episode = await getActiveEpisode(parse.data, orgId);
+    // Patient must exist in the org.
+    const patient = await getPatient(patientId, auth.orgId);
+
+    // Authorize episode access.
+    const decision = await authorize({
+      identity:   auth,
+      permission: "patient.episode.view",
+      orgId:      auth.orgId,
+      facilityId: patient.facilityId,
+      patientId,
+      ipAddress:  req.ip,
+    });
+
+    if (!decision.allowed) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+
+    const episode = await getActiveEpisode(patientId, auth.orgId);
     if (!episode) {
       res.status(404).json({ error: "No active episode found" });
       return;
     }
+
+    setPatientCacheHeaders(res);
     res.json(episode);
   } catch (err) {
-    handleError(err, res);
+    handleDbError(err, res);
   }
 });
 

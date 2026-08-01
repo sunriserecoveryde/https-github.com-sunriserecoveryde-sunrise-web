@@ -8,6 +8,13 @@
       "when": 1785588600061,
       "tag": "0000_perpetual_rafael_vega",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1753920000000,
+      "tag": "0002_authentication_authorization",
+      "breakpoints": true
     }
   ]
 }

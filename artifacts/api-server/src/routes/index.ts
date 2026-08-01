@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-// healthRouter is now mounted at root level in app.ts (unauthenticated, before requireIdentity).
+// healthRouter is mounted at root level in app.ts (unauthenticated, before session middleware).
 import censusRouter from "./census";
 import alertsRouter from "./alerts";
 import contactRouter from "./contact";
@@ -8,8 +8,13 @@ import growRouter from "./grow";
 import anthropicRouter from "./anthropic";
 import complianceRouter from "./compliance";
 import patientsV1Router from "./patientsV1";
+import authV1Router from "./authV1";
 
 const router: IRouter = Router();
+
+// Authentication routes (public — login, logout, csrf-token, password-reset).
+// Must be mounted before the patient routes so login works without a session.
+router.use(authV1Router);
 
 router.use(censusRouter);
 router.use(alertsRouter);

@@ -68,6 +68,8 @@ import { ClinicalForms } from './pages/ClinicalForms';
 import { ChartAuditTool } from './pages/ChartAuditTool';
 import { TourEngine } from './pages/TourEngine';
 import { LoginPage } from './pages/LoginPage';
+import { ProductionLogin } from './pages/ProductionLogin';
+import { DATA_MODE } from './lib/dataMode';
 import { AccessDenied } from './components/common/AccessDenied';
 import { ReadOnlyBanner } from './components/common/ReadOnlyBanner';
 import { RoleProvider } from './context/RoleContext';
@@ -363,8 +365,35 @@ function AppInner() {
 // ─── Auth gate: picks correct initial role from logged-in staff member ────────
 
 function AppWithAuth() {
-  const { isLoggedIn, currentStaff } = useAuth();
+  const { isLoggedIn, currentStaff, productionSession, loginWithSession, isCheckingSession } = useAuth();
+  const isProduction = DATA_MODE === 'production';
 
+  if (isProduction) {
+    // Show spinner while checking for an existing server session.
+    if (isCheckingSession) {
+      return (
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+          <div className="h-8 w-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
+
+    if (!isLoggedIn) {
+      return <ProductionLogin onSuccess={loginWithSession} />;
+    }
+
+    return (
+      <RoleProvider
+        key={productionSession?.userId ?? 'prod-guest'}
+        defaultRoleId={productionSession?.roleIds?.[0]}
+        serverPermissionCodes={(productionSession?.permissionCodes ?? []) as import('./lib/permissions').PermissionCode[]}
+      >
+        <AppInner />
+      </RoleProvider>
+    );
+  }
+
+  // Demo mode
   return (
     <RoleProvider
       key={currentStaff?.id ?? 'guest'}
