@@ -294,58 +294,6 @@ function simulateLatency(ms = 700): Promise<void> {
   return new Promise(res => setTimeout(res, ms));
 }
 
-// ─── Local clarity improvement engine ────────────────────────────────────────
-// SAFETY: MUST NOT add new facts, diagnoses, interventions, change quotations,
-// risk statements, or clinical judgments.
-function improveClarity(text: string): { revised: string; changes: string[] } {
-  const changes: string[] = [];
-  let out = text;
-
-  if (/\bpt\.\b/i.test(out)) {
-    out = out.replace(/\bpt\.\b/gi, 'patient');
-    changes.push('Replaced informal "pt." abbreviation with "patient" for formal documentation clarity.');
-  }
-  if (/\bc\/o\b/i.test(out)) {
-    out = out.replace(/\bc\/o\b/gi, 'reports');
-    changes.push('Replaced "c/o" with "reports" for readability in non-medical-record contexts.');
-  }
-  if (/\bw\//i.test(out)) {
-    out = out.replace(/\bw\//gi, 'with');
-    changes.push('Replaced shorthand "w/" with "with" for formal tone.');
-  }
-  if (/\bd\/t\b/i.test(out)) {
-    out = out.replace(/\bd\/t\b/gi, 'due to');
-    changes.push('Replaced "d/t" with "due to" for readability.');
-  }
-  if (/Denies SI\/HI\./i.test(out)) {
-    out = out.replace(/Denies SI\/HI\./gi, 'Denies suicidal ideation (SI) or homicidal ideation (HI).');
-    changes.push('Expanded "Denies SI/HI" to full form for documentation clarity; the abbreviation remains in parentheses for reference.');
-  }
-  if (/  +/.test(out)) {
-    out = out.replace(/  +/g, ' ');
-    changes.push('Removed extra whitespace.');
-  }
-  const fixedPunctuation = out.replace(/([a-z])\s{1,2}([A-Z])/g, (_, lower, upper) => `${lower}. ${upper}`);
-  if (fixedPunctuation !== out) {
-    out = fixedPunctuation;
-    changes.push('Added missing sentence-ending periods where a sentence ended without punctuation before a new sentence began.');
-  }
-  out = out.split('\n').map(l => l.trimEnd()).join('\n');
-  if (/\bwas given\b/i.test(out)) {
-    out = out.replace(/\bwas given\b/gi, 'received');
-    changes.push('Replaced passive "was given" with active "received" for stronger clinical documentation voice.');
-  }
-  if (/\bthere was no\b/i.test(out)) {
-    out = out.replace(/\bthere was no\b/gi, 'No');
-    changes.push('Simplified "there was no" to "No" for concise clinical phrasing.');
-  }
-  if (changes.length === 0) {
-    changes.push('No grammar or style issues identified. The note meets professional documentation standards.');
-  }
-
-  return { revised: out.trim(), changes };
-}
-
 // ─── Medical necessity evaluator ─────────────────────────────────────────────
 // Returns structured requirement results keyed by stable MedicalNecessityRequirementCode.
 // NEVER rewrites content or makes clinical judgments.
@@ -1587,7 +1535,9 @@ export function ProgressNoteAIAssist({
   function handleAcceptClaritySection(section: ClaritySectionResult) {
     if (!clarityResult) return;
 
-    const currentText = values[section.fieldId] ?? '';
+    // values is keyed by field label (e.g. "Behavior"), not fieldId (e.g. "behavior").
+    // section.fieldLabel is the exact label string used as the values key.
+    const currentText = values[section.fieldLabel] ?? '';
     if (detectStaleSection(currentText, section.sourceSnapshot)) {
       setStalePending(section);
       emit('Stale Clarity Revision Warning Displayed', 'warned', false, {
@@ -1639,7 +1589,7 @@ export function ProgressNoteAIAssist({
       if (!s.hasChanges) return;
       if (claritySectionAccepted.has(s.fieldId)) return;
       if (claritySectionRejected.has(s.fieldId)) return;
-      const currentText = values[s.fieldId] ?? '';
+      const currentText = values[s.fieldLabel] ?? '';
       if (detectStaleSection(currentText, s.sourceSnapshot)) {
         staleWarnings.push(s.fieldId);
         return;
