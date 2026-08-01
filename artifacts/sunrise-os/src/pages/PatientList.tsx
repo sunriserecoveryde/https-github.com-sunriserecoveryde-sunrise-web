@@ -161,8 +161,13 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
       .then(data => { setServerPatients(data.map(adaptServerPatient)); setServerLoading(false); })
       .catch(() => { setServerError('Unable to load patients from server.'); setServerLoading(false); });
   }, []);
-  // In demo mode: use local mock data. In production mode: use server records.
-  const activePatients = serverPatients ?? MOCK_PATIENTS;
+  // Strict data-mode separation:
+  // - demo mode     → always MOCK_PATIENTS (unchanged path, never touches API)
+  // - production mode → only server records; empty array while loading; stays empty on error
+  //   (production must NEVER silently display mock clinical data)
+  const activePatients = DATA_MODE === 'production'
+    ? (serverPatients ?? [])
+    : MOCK_PATIENTS;
 
 
   const [program, setProgram]       = useState<Program>('All');
@@ -253,8 +258,9 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
   }, [searchTerm, program, risk, clinician, admitStatus, sort]);
 
   const highRisk  = activePatients.filter(p => p.amaRisk === 'High').length;
-  const avgLos    = Math.round(activePatients.reduce((s, p) => s + p.los, 0) / activePatients.length);
-  const avgCraving= (activePatients.reduce((s, p) => s + p.craving, 0) / activePatients.length).toFixed(1);
+  const _n        = activePatients.length || 1; // guard against division-by-zero when census is empty
+  const avgLos    = Math.round(activePatients.reduce((s, p) => s + p.los, 0) / _n);
+  const avgCraving= (activePatients.reduce((s, p) => s + p.craving, 0) / _n).toFixed(1);
 
   const PROGRAMS: Program[] = ['All', 'Residential', 'PHP', 'IOP', 'Detox'];
   const RISKS: RiskLevel[]  = ['All', 'High', 'Med', 'Low'];
@@ -297,7 +303,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
                 ].map(r => (
                   <div key={r.label}>
                     <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className={`font-bold ${r.text}`}>{r.n}</span></div>
-                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: `${Math.round(r.n / activePatients.length * 100)}%` }} /></div>
+                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: activePatients.length ? `${Math.round(r.n / activePatients.length * 100)}%` : "0%" }} /></div>
                   </div>
                 ))}
               </div>
@@ -312,7 +318,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
                 ].map(r => (
                   <div key={r.label}>
                     <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className={`font-bold ${r.text}`}>{r.n}</span></div>
-                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: `${Math.round(r.n / activePatients.length * 100)}%` }} /></div>
+                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: activePatients.length ? `${Math.round(r.n / activePatients.length * 100)}%` : "0%" }} /></div>
                   </div>
                 ))}
               </div>
@@ -327,7 +333,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
                 ].map(r => (
                   <div key={r.label}>
                     <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className={`font-bold ${r.text}`}>{r.n}</span></div>
-                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: `${Math.round(r.n / activePatients.length * 100)}%` }} /></div>
+                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: activePatients.length ? `${Math.round(r.n / activePatients.length * 100)}%` : "0%" }} /></div>
                   </div>
                 ))}
               </div>

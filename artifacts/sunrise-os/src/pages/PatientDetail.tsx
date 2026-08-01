@@ -56,16 +56,39 @@ function adaptForDetail(sp: ServerPatientDetailRecord): Patient {
 export function PatientDetail({ patientId, navigate, readOnly }: { patientId: string | null; navigate: (s: Screen, id?: string) => void; readOnly?: boolean }) {
   // ── Production-mode server patient fetch (Phase 1A) ───────────────────────
   const [serverPatient, setServerPatient] = useState<Patient | null>(null);
+  // Explicit fetch-failure flag — no silent fallback to mock data in production mode.
+  const [serverPatientError, setServerPatientError] = useState(false);
   useEffect(() => {
     if (DATA_MODE !== 'production' || !patientId) return;
     setServerPatient(null);
+    setServerPatientError(false);
     fetch(`${API_BASE}/v1/patients/${patientId}`, { headers: DEV_HEADERS })
       .then(r => r.ok ? r.json() as Promise<ServerPatientDetailRecord> : Promise.reject(r.status))
       .then(data => setServerPatient(adaptForDetail(data)))
-      .catch(() => { /* fallback to mock on error */ });
+      .catch(() => {
+        // Production mode: surface the failure explicitly — never fall back to mock data.
+        setServerPatientError(true);
+      });
   }, [patientId]);
 
-  const patient = serverPatient ?? (MOCK_PATIENTS.find(p => p.id === patientId) || MOCK_PATIENTS[0]);
+  // ── Stub used only when in production mode and the server patient is not yet loaded.
+  // Keeps hook initializers valid. Real loading/error UI gate is below (after all hooks).
+  const _PROD_LOADING_STUB: Patient = {
+    id: patientId ?? '__loading__', mrn: '', firstName: '', lastName: '', dob: '',
+    age: 0, gender: '—', insurance: '—', program: 'Residential',
+    primaryDiagnosis: '—', coOccurring: [],
+    asam: { d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 },
+    recoveryScore: 0, amaRisk: 'Low', los: 0,
+    admitDate: new Date().toISOString().slice(0,10), expectedDischarge: '—',
+    counselor: '—', physician: '—', flags: [], lastUa: '—',
+    mood: 5, craving: 0, notes: [], goals: [], nextAppointment: '—',
+  };
+  // In demo mode: always use the matching mock patient (unchanged demo path).
+  // In production mode: use the server record; fall back to the empty stub ONLY to satisfy
+  //   hook initializers — the early-return guard below prevents this stub from rendering.
+  const patient: Patient = DATA_MODE === 'production'
+    ? (serverPatient ?? _PROD_LOADING_STUB)
+    : (MOCK_PATIENTS.find(p => p.id === patientId) || MOCK_PATIENTS[0]);
 
 
   // ── Pin / Unpin ────────────────────────────────────────────────────────────
@@ -133,6 +156,38 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   const [vitalsForm, setVitalsForm] = useState({ bp: '', hr: '', temp: '', o2: '', rr: '', pain: '' });
   const [localVitals, setLocalVitals] = useState(() => getPatientVitals(patient.id));
   const [chartActionSaved, setChartActionSaved] = useState<string | null>(null);
+
+  // ── Production-mode gate ─────────────────────────────────────────────────
+  // Must come AFTER all hooks (Rules of Hooks: no conditional hook calls).
+  // Prevents the full chart from rendering with stub/mock data in production.
+  if (DATA_MODE === 'production' && !serverPatient) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
+        {serverPatientError ? (
+          <>
+            <div className="text-4xl">⚠️</div>
+            <h2 className="text-lg font-semibold text-navy">Unable to load patient record</h2>
+            <p className="text-sm text-slate max-w-sm">
+              The server could not return this patient's data. This may be a temporary issue.
+              No mock or cached data is shown to prevent accidental display of the wrong record.
+            </p>
+            <button
+              onClick={() => navigate('PatientList')}
+              className="flex items-center gap-2 text-sm font-semibold text-sunrise-blue hover:underline"
+            >
+              ← Back to patient list
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="animate-spin text-3xl">⏳</div>
+            <p className="text-sm text-slate">Loading patient record from server…</p>
+          </>
+        )}
+      </div>
+    );
+  }
+
   const saveChartAction = (msg: string) => { setChartActionSaved(msg); setTimeout(() => setChartActionSaved(null), 2500); };
   function submitVitals() {
     if (!vitalsForm.bp || !vitalsForm.hr || !vitalsForm.temp) return;
