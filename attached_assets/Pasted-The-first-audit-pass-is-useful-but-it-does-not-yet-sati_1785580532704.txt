@@ -1,0 +1,537 @@
+The first audit pass is useful, but it does not yet satisfy the required audit package.
+
+Do not begin fixing Sunrise OS.
+
+Complete one **Audit Verification and Evidence Completion Pass** on the existing branch:
+
+`audit/full-competitive-readiness`
+
+Do not modify application behavior.
+
+## Current deficiencies to correct
+
+The current report states:
+
+* 253 competitive requirements were evaluated, but the requirement was at least 500 distinct, non-filler requirements.
+* No final ZIP path was provided.
+* No screenshot count or screenshot file inventory was provided.
+* No evidence was provided that the required screenshots were actually captured.
+* The conclusion that “the gap is entirely infrastructure” is too absolute and must be supported, narrowed, or revised.
+* The 9–12 month production estimate is not an audited fact and must be labeled as an assumption with dependencies.
+* Several workflow results may be code-inferred rather than manually completed in the running application.
+
+Complete the items below before declaring the audit finished.
+
+# 1. Expand the Competitive Requirements Matrix
+
+Expand:
+
+`02-competitive-requirements-matrix.csv`
+
+from 253 rows to at least **500 distinct capability rows**.
+
+Requirements:
+
+* Do not create filler rows.
+* Do not duplicate the same capability using slightly different wording.
+* Break broad capabilities into independently testable sub-capabilities.
+
+For example, do not use one row for “Audit Logging.”
+
+Separate it into:
+
+* Login events recorded
+* Failed-login events recorded
+* Patient-record access recorded
+* Document creation recorded
+* Document modification recorded
+* Document signing recorded
+* Document amendment recorded
+* Export events recorded
+* Permission changes recorded
+* Audit data persisted
+* Audit history immutable
+* Audit retention configurable
+* Audit export available
+* Audit access permissioned
+* Audit records contain user identity
+* Audit records contain timestamps
+* Audit records contain patient context where appropriate
+* Audit records exclude unnecessary sensitive content
+
+Apply this level of specificity across:
+
+* Admissions
+* Consent
+* Census
+* Clinical documentation
+* Medications
+* Withdrawal management
+* Scheduling
+* Utilization review
+* Revenue cycle
+* Workforce
+* Compliance
+* Analytics
+* AI
+* Security
+* Interoperability
+* Production operations
+
+Every new row must include:
+
+* Domain
+* Capability
+* Priority
+* Present
+* Maturity Score
+* Production Status
+* Evidence
+* Gap
+* Risk
+* Recommended Next Task
+
+# 2. Verify Evidence Integrity
+
+Review every row in:
+
+* `01-application-inventory.csv`
+* `02-competitive-requirements-matrix.csv`
+* `03-role-permission-matrix.csv`
+* `11-prioritized-backlog.csv`
+* `12-evidence-index.md`
+
+For every claim, confirm that the referenced:
+
+* File exists
+* Component exists
+* Route or screen exists
+* Permission exists
+* API exists
+* Test exists
+* Screenshot exists
+* Audit event exists
+
+Do not cite planned files or inferred functionality as implemented evidence.
+
+Where evidence cannot be confirmed, change the result to:
+
+* Unknown
+* No Evidence Found
+* Requires Manual Validation
+* Requires External Validation
+
+Do not guess.
+
+# 3. Distinguish Inspection Methods
+
+Add these columns to the requirements matrix:
+
+* Verification Method
+* Manual UI Tested
+* Code Inspected
+* Automated Test Present
+* Backend Verified
+* External Integration Verified
+
+Allowed Verification Method values:
+
+* Manual UI Test
+* Code Inspection
+* Automated Test
+* API Test
+* Database Verification
+* External Integration Test
+* Documentation Review
+* Unable to Verify
+
+Do not describe code inspection as a completed end-to-end workflow test.
+
+If a workflow was inferred from components rather than manually completed in the running application, label it clearly:
+
+**Code-inspected only — not manually completed.**
+
+# 4. Complete Manual Workflow Verification
+
+Re-run the 10 end-to-end workflows.
+
+For each step, record one of:
+
+* Manually completed successfully
+* Manually completed with limitation
+* Blocked
+* Code-inspected only
+* Not testable in current environment
+
+Do not award a workflow “partial pass” based solely on the existence of screens.
+
+Record:
+
+* Start screen
+* Actions selected
+* Resulting screen
+* Data change observed
+* Persistence observed after refresh
+* Permission behavior
+* Audit event observed
+* Error or limitation
+* Screenshot evidence
+
+Do not modify application code to make workflows pass.
+
+# 5. Capture the Required Screenshot Evidence
+
+Create:
+
+`artifacts/sunrise-os/product-audit/screenshots/`
+
+Capture and save screenshots for at least:
+
+1. Dashboard
+2. Sidebar expanded
+3. Sidebar compact
+4. Admissions
+5. Census and Bed Board
+6. Patient List
+7. Patient Detail
+8. ASAM Assessment
+9. Treatment Plan
+10. Progress Notes
+11. Group Notes
+12. Clinical Documentation Review
+13. Improve Clarity
+14. Medical Necessity
+15. Internal Consistency
+16. Medication Administration
+17. Withdrawal Monitoring
+18. Drug Screens
+19. Calendar
+20. Insurance Authorization
+21. Revenue Cycle
+22. Population Analytics
+23. AI Assistant
+24. Notification Panel
+25. Quick Actions
+26. Staff Management
+27. Roles and Permissions
+28. Organization Settings
+29. Read-only role
+30. Unauthorized role
+31. Empty state
+32. Error state
+33. Tablet viewport
+34. Mobile viewport
+35. 200% zoom or documented equivalent
+
+Requirements:
+
+* Use descriptive filenames.
+* Record the user role shown.
+* Record the viewport.
+* Record the related requirement or workflow.
+* Do not fabricate favorable data.
+* Document any temporary test state.
+* Revert temporary test state before committing.
+* Do not include credentials, secrets, or unnecessary sensitive information.
+
+Create:
+
+`15-screenshot-inventory.csv`
+
+Columns:
+
+* Screenshot
+* Screen
+* Role
+* Viewport
+* Workflow
+* Requirement IDs
+* State Shown
+* Temporary Test State Used
+* Notes
+
+# 6. Reassess the Top-Line Conclusions
+
+Review this conclusion:
+
+> “The UI/UX layer is genuinely competitive. The gap is entirely infrastructure.”
+
+Replace it unless evidence fully supports it.
+
+Use more precise classifications such as:
+
+* Strong visual maturity
+* Partial workflow maturity
+* Demo-level data persistence
+* Incomplete production infrastructure
+* Missing external integrations
+* Incomplete enterprise controls
+* Unknown real-world usability
+* Unknown buyer acceptance
+* Unknown clinical validation
+
+The final report must distinguish:
+
+1. Visual competitiveness
+2. Functional workflow completeness
+3. Clinical safety
+4. Billing completeness
+5. Enterprise readiness
+6. Production infrastructure
+7. Integration readiness
+8. Commercial readiness
+
+Do not reduce all weaknesses to infrastructure.
+
+# 7. Correct the Timeline Estimate
+
+The stated 9–12 month estimate must be labeled:
+
+**Preliminary planning assumption — not an engineering commitment.**
+
+Document its assumptions, including:
+
+* Team size
+* Team experience
+* Existing backend reuse
+* Hosting environment
+* Database choice
+* Authentication vendor
+* Integration vendors
+* Security requirements
+* Compliance review
+* Scope included
+* Scope excluded
+* Data migration
+* Customer implementation
+* Clinical validation
+* QA requirements
+* External certification or assessment
+
+Provide three scenarios:
+
+* Optimistic
+* Planning
+* Conservative
+
+Do not present any scenario as guaranteed.
+
+# 8. Verify AI Claims
+
+Review the statement:
+
+> “No hallucination risk.”
+
+Replace it.
+
+Even a rule-based system can generate:
+
+* Unsupported mappings
+* Incorrect summaries
+* Misclassification
+* Omitted context
+* Template errors
+* Unsafe confidence
+* Stale-output problems
+* Incorrect source-field interpretation
+
+Use language such as:
+
+**Lower open-ended generation risk than an unrestricted LLM, but not zero clinical or documentation risk.**
+
+For each AI feature, document:
+
+* Rule-based or model-based
+* Inputs
+* Output constraints
+* Failure modes
+* Unsupported-data risk
+* Stale-data risk
+* Misclassification risk
+* Human-review control
+* Audit persistence
+* Production readiness
+
+# 9. Validate Role and Permission Enforcement
+
+For a sample of at least five roles, test:
+
+* Navigation visibility
+* Direct screen access
+* Read-only access
+* Create action
+* Edit action
+* Sign action
+* Export action
+* AI access
+* Patient shortcut access
+* Notification action
+* Dashboard action
+
+Include at minimum:
+
+* Administrator
+* Clinician
+* Nurse
+* Billing user
+* Read-only or restricted user
+
+Clearly distinguish:
+
+* UI hiding
+* Client-side blocking
+* Server-side authorization
+
+If no server-side enforcement exists, state that directly.
+
+# 10. Validate the Audit Manifest
+
+Update:
+
+`13-audit-manifest.json`
+
+Include accurate counts for:
+
+* Files inspected
+* Pages inspected
+* API routes inspected
+* Roles inspected
+* Requirements scored
+* Manual UI tests
+* Code-inspection-only checks
+* Automated tests
+* Screenshots
+* Workflow tests
+* Exception tests
+* Integration checks
+* Unknown results
+* Evidence references
+* Audit files generated
+
+Include:
+
+* Branch
+* Commit
+* Audit start timestamp
+* Audit completion timestamp
+* TypeScript command and result
+* Vitest command and result
+* Production build command and result
+* Known limitations
+
+Do not report an activity count that cannot be supported by the audit files.
+
+# 11. Create an Independent Review Summary
+
+Create:
+
+`16-independent-review-handoff.md`
+
+Include:
+
+## What was manually verified
+
+## What was code-inspected only
+
+## What could not be verified
+
+## What requires production access
+
+## What requires legal review
+
+## What requires clinical review
+
+## What requires security review
+
+## What requires payer, pharmacy, laboratory, or clearinghouse testing
+
+## Claims with weak evidence
+
+## Claims most likely to be overstated
+
+## Ten highest-confidence findings
+
+## Ten lowest-confidence findings
+
+## Files an independent reviewer should inspect first
+
+This document is intended for an external reviewer who did not participate in building Sunrise OS.
+
+# 12. Create the Final ZIP
+
+Create:
+
+`artifacts/sunrise-os/product-audit/sunrise-os-competitive-readiness-audit.zip`
+
+The ZIP must include:
+
+* All audit Markdown files
+* All audit CSV files
+* The JSON manifest
+* Screenshot inventory
+* All screenshots
+* Independent review handoff
+* A file manifest with file sizes
+
+Also create:
+
+`17-zip-file-manifest.csv`
+
+Columns:
+
+* Relative Path
+* File Type
+* File Size
+* SHA-256
+* Purpose
+
+Verify the ZIP opens successfully.
+
+Verify every listed file is inside the ZIP.
+
+# 13. Final Validation
+
+Run:
+
+* TypeScript
+* Vitest
+* Production build
+
+Also validate:
+
+* CSV files open correctly.
+* CSV headers are consistent.
+* JSON is valid.
+* Markdown files are non-empty.
+* Screenshot files are readable.
+* Evidence references point to real files.
+* ZIP opens successfully.
+* Requirement matrix contains at least 500 distinct rows.
+* No application behavior was changed.
+
+# Required Final Response
+
+When complete, provide:
+
+1. New commit hash.
+2. Exact ZIP path.
+3. Total files in ZIP.
+4. Total ZIP size.
+5. Requirements evaluated.
+6. Manual UI tests performed.
+7. Code-inspection-only checks.
+8. Screenshots captured.
+9. Workflow tests manually completed.
+10. Workflow tests blocked.
+11. TypeScript result.
+12. Vitest result.
+13. Production build result.
+14. Top 10 highest-confidence findings.
+15. Top 10 findings requiring independent verification.
+16. Known audit limitations.
+
+Do not fix product gaps.
+
+Do not merge into `main`.
+
+Stop after the completed ZIP is created and verified.
