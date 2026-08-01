@@ -1,0 +1,13 @@
+
+> @workspace/sunrise-os@0.0.0 test /home/runner/workspace/artifacts/sunrise-os
+> vitest run --config vitest.config.ts
+
+
+ RUN  v4.1.10 /home/runner/workspace/artifacts/sunrise-os
+
+
+ Test Files  8 passed (8)
+      Tests  108 passed (108)
+   Start at  12:59:57
+   Duration  521ms (transform 524ms, setup 0ms, import 852ms, tests 82ms, environment 1ms)
+

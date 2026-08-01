@@ -1,0 +1,125 @@
+{
+  "generated": "2026-08-01",
+  "files": [
+    {
+      "path": "lib/db/drizzle/0000_perpetual_rafael_vega.sql",
+      "sha256": "8513aeb440e64f45852eb665f9ed2b3b009e1dbde3775558902038f2139e2ee8",
+      "exists": true
+    },
+    {
+      "path": "lib/db/drizzle/meta/0000_snapshot.json",
+      "sha256": "dc106750ef9a93971fc0e92c2784579cccc9403effab45165cc544e745693e3d",
+      "exists": true
+    },
+    {
+      "path": "lib/db/drizzle/meta/_journal.json",
+      "sha256": "b9529898bfd56abeb273fca64f90d9035541e89cb40275d8de9599053914c2a1",
+      "exists": true
+    },
+    {
+      "path": "lib/db/drizzle.config.ts",
+      "sha256": "1ed224b58cfb0aca724081493e778da11201f73d00bf0f4c04a97a0def493cc4",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/schema/sunrise-os.ts",
+      "sha256": "8d43c530bb3c1ffd29580385ee32083f270cef2b9bd3c6cc2d7af2d0ab5808cc",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/repositories/patientRepo.ts",
+      "sha256": "4aabdd5bf2cfa89062d5cc8304d0fa085381f48eedd20f0520ff579a56246bb7",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/repositories/episodeRepo.ts",
+      "sha256": "816083430fbab529292145ef82bdab7704d13499cffa510ed05b77322b463d60",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/repositories/errors.ts",
+      "sha256": "b8afb21ebd367c4a3cdb81ca3198521c10347824dbf3cf6b19ea7c037c4ea835",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/repositories/__tests__/constraints.test.ts",
+      "sha256": "2f5087c803343f975f0632ead865bc2a323d36ba0a72fc5f6acafd0e07adeab8",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/repositories/__tests__/authBoundary.test.ts",
+      "sha256": "e027f1b3085647a6f939e4fdbff54a178afb2bf8bfc393fac61b569981ef3171",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/repositories/__tests__/healthEndpoints.test.ts",
+      "sha256": "4c1ae2d3cf1b59c912da0f6dca0ce62b29c709857b8dd2f6fca008b26913d3c1",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/repositories/__tests__/browserStorage.test.ts",
+      "sha256": "e0c80cf8ed03790c373967ad1d92792265008c2979aa4130e7ed7b39c10e630e",
+      "exists": true
+    },
+    {
+      "path": "lib/db/src/repositories/__tests__/integration.test.ts",
+      "sha256": "a7d08639359306584c1bd5f8766a2346142a6ce77e246c7d0189de3aef9197dd",
+      "exists": true
+    },
+    {
+      "path": "artifacts/sunrise-os/src/lib/dataMode.ts",
+      "sha256": "7d950521011642712d8299c09479f695052454743cb6e0bed98fa3b82f736831",
+      "exists": true
+    },
+    {
+      "path": "artifacts/sunrise-os/src/lib/__tests__/dataMode.test.ts",
+      "sha256": "87815883e30922382133683cd399d1e3e64c3bb239ae0a19a4b566a2451b3553",
+      "exists": true
+    },
+    {
+      "path": "artifacts/sunrise-os/src/pages/PatientList.tsx",
+      "sha256": "3b01ea52270086c25c155a108f7d5b9c46a3458394cfc90f3bd08f662b1c1ec2",
+      "exists": true
+    },
+    {
+      "path": "artifacts/sunrise-os/src/pages/PatientDetail.tsx",
+      "sha256": "fce2d3c90e9331350621651203dd9874a0192527a432c8c49667d85b1e4ae853",
+      "exists": true
+    },
+    {
+      "path": "artifacts/sunrise-os/src/hooks/useSidebarPrefs.ts",
+      "sha256": "63e7551b3120803dd709f420f7a5a71f58b0c932fcc2725f23e4417831a8d893",
+      "exists": true
+    },
+    {
+      "path": "artifacts/sunrise-os/src/pages/UADrugTesting.tsx",
+      "sha256": "ae08977ae4b6bfd2acd52bed38e01d780f3b38384f24229d8303d5849a4787e3",
+      "exists": true
+    },
+    {
+      "path": "artifacts/api-server/src/middlewares/requireIdentity.ts",
+      "sha256": "5679507c3b0dc2da90daa57630e1c06c977f4e59d3ade7a912df06e27bf5e0c8",
+      "exists": true
+    },
+    {
+      "path": "artifacts/api-server/src/middlewares/devIdentity.ts",
+      "sha256": "358be59fca4e9e0107e0fa7ab698654e6393c2473286d467bebf483220f01e2a",
+      "exists": true
+    },
+    {
+      "path": "artifacts/api-server/src/routes/health.ts",
+      "sha256": "86baccf18e13df7794098a75b7f6a60dbaf188673e9233b0291a3b549dda04d8",
+      "exists": true
+    },
+    {
+      "path": "artifacts/api-server/src/routes/index.ts",
+      "sha256": "2ed761c07f750a6367be2f896521806834d84328ef5ce0c6e9591e8ed9fafd05",
+      "exists": true
+    },
+    {
+      "path": "artifacts/api-server/src/app.ts",
+      "sha256": "b9ed496c85f9a96804658da636ab1f1a467f742d6c93d60d2a5baec54332eeef",
+      "exists": true
+    }
+  ]
+}

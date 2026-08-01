@@ -10,7 +10,7 @@ import { Search, Plus, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle, TrendingU
 import { useRole } from '../context/RoleContext';
 import { useAuth } from '../context/AuthContext';
 import { useSidebarPrefs } from '../hooks/useSidebarPrefs';
-import { DATA_MODE, API_BASE, DEV_HEADERS } from '../lib/dataMode';
+import { DATA_MODE, DATA_MODE_ERROR, API_BASE, DEV_HEADERS } from '../lib/dataMode';
 import type { Patient } from '../data/mockPatients';
 
 // Latest COWS/CIWA scores per patient (from most recent vitals entry)
@@ -264,6 +264,24 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
 
   const PROGRAMS: Program[] = ['All', 'Residential', 'PHP', 'IOP', 'Detox'];
   const RISKS: RiskLevel[]  = ['All', 'High', 'Med', 'Low'];
+
+  // ── Fail-closed configuration gate ─────────────────────────────────────────
+  // If VITE_SUNRISE_DATA_MODE is set to an unrecognised value this screen BLOCKS
+  // rendering of all patient data so misconfiguration is immediately visible.
+  if (DATA_MODE_ERROR) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-8">
+        <AlertTriangle className="w-12 h-12 text-red-500" />
+        <h2 className="text-xl font-bold text-red-700">Configuration Error — Patient Data Unavailable</h2>
+        <p className="text-sm text-slate max-w-md">{DATA_MODE_ERROR}</p>
+        <p className="text-xs text-slate max-w-md">
+          Set the <code className="bg-gray-100 px-1 rounded">VITE_SUNRISE_DATA_MODE</code> environment
+          variable to <code className="bg-gray-100 px-1 rounded">"demo"</code> or{' '}
+          <code className="bg-gray-100 px-1 rounded">"production"</code> and rebuild.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

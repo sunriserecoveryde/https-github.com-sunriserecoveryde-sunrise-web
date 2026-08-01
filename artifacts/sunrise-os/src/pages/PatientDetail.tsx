@@ -19,7 +19,7 @@ import { Screen } from '../App';
 import { LockedButton } from '../components/common/LockedButton';
 import { useAuth } from '../context/AuthContext';
 import { useSidebarPrefs } from '../hooks/useSidebarPrefs';
-import { DATA_MODE, API_BASE, DEV_HEADERS } from '../lib/dataMode';
+import { DATA_MODE, DATA_MODE_ERROR, API_BASE, DEV_HEADERS } from '../lib/dataMode';
 import type { Patient } from '../data/mockPatients';
 
 
@@ -156,6 +156,22 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   const [vitalsForm, setVitalsForm] = useState({ bp: '', hr: '', temp: '', o2: '', rr: '', pain: '' });
   const [localVitals, setLocalVitals] = useState(() => getPatientVitals(patient.id));
   const [chartActionSaved, setChartActionSaved] = useState<string | null>(null);
+
+  // ── Configuration error gate ─────────────────────────────────────────────
+  // Must come AFTER all hooks (Rules of Hooks: no conditional hook calls).
+  // Blocks rendering entirely when VITE_SUNRISE_DATA_MODE is misconfigured.
+  if (DATA_MODE_ERROR) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
+        <div className="text-4xl">🔴</div>
+        <h2 className="text-xl font-bold text-red-700">Configuration Error</h2>
+        <p className="text-sm text-slate max-w-md">{DATA_MODE_ERROR}</p>
+        <p className="text-xs text-slate max-w-md">
+          Fix the <code className="bg-gray-100 px-1 rounded">VITE_SUNRISE_DATA_MODE</code> environment variable and rebuild.
+        </p>
+      </div>
+    );
+  }
 
   // ── Production-mode gate ─────────────────────────────────────────────────
   // Must come AFTER all hooks (Rules of Hooks: no conditional hook calls).

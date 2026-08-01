@@ -6,6 +6,8 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { notifySpamAlert } from "./lib/spamAlert";
 import { devIdentityMiddleware } from "./middlewares/devIdentity";
+import { requireIdentity } from "./middlewares/requireIdentity";
+import healthRouter from "./routes/health";
 
 const app: Express = express();
 
@@ -67,10 +69,23 @@ app.use("/api/subscribe", makeLimiter(10));
 app.use("/api/grow/register", makeLimiter(10));
 app.use("/api/grow/login", makeLimiter(20));
 
-// Dev-only identity adapter — no-op in production (Phase 2 replaces with real auth).
+// Dev-only identity adapter.
+// In development: reads X-Dev-Org-Id / X-Dev-Facility-Id headers (or seeds defaults).
+// In production:  NOT registered — req.devIdentity is never set.
 if (process.env.NODE_ENV !== "production") {
   app.use("/api/v1", devIdentityMiddleware);
 }
+
+// Identity guard — enforces 401 when no identity is attached.
+// In dev:  devIdentityMiddleware already ran → req.devIdentity is set → next().
+// In prod: devIdentityMiddleware never ran → req.devIdentity is undefined → 401.
+// Development headers (X-Dev-Org-Id etc.) are silently ignored in production
+// because the middleware that would read them is never registered.
+app.use("/api/v1", requireIdentity);
+
+// Health routes are mounted at the ROOT level — before requireIdentity — so
+// they are always reachable without authentication.  They expose no patient data.
+app.use(healthRouter);
 
 app.use("/api", router);
 

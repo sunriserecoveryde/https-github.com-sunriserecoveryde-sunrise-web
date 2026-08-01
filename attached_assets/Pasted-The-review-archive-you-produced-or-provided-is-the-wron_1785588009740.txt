@@ -1,0 +1,313 @@
+The review archive you produced or provided is the wrong archive.
+
+The uploaded file:
+
+`phase-1a-persistence-foundation-review.zip`
+
+has SHA-256:
+
+`67da6e19934639818980d270a9ec9160fc1a0344bc059fa81c8fc962a8a0c21f`
+
+It is the original pre-hardening Phase 1A package.
+
+It still contains:
+
+* `drizzle-kit push (no migration files)`
+* Unsafe data-mode fallback to demo
+* Production missing identity returning 500
+* Text database columns for dates
+* No composite tenant-integrity constraints
+* Patient IDs and display names persisted in browser storage
+* No liveness or readiness endpoints
+* Only 23 original integration tests
+* Only login and demo-banner screenshots
+* Final implementation commit `9a5049389a77ab9f4754c4d55ff750fb4554c88e`
+
+Do not begin Phase 2.
+
+Do not merge into `main`.
+
+Complete this single task:
+
+# Locate or Complete the Phase 1A Hardening Work
+
+Use the existing branch:
+
+`readiness/p0-persistence-foundation`
+
+## 1. Inspect the branch history
+
+Run and report:
+
+```bash
+git branch --show-current
+git status --short
+git log --oneline --decorate -20
+git rev-parse HEAD
+```
+
+Determine whether commits implementing the previously assigned Phase 1A Hardening task exist after:
+
+`9f601d8`
+
+The hardening task required:
+
+* Checked-in versioned Drizzle migrations
+* Fail-closed data-mode configuration
+* Correct demo-banner behavior
+* Production unauthenticated requests returning 401
+* Production ignoring development identity headers
+* Database-level tenant and facility integrity constraints
+* PostgreSQL date types and date-order constraints
+* Browser-storage privacy remediation
+* Liveness and readiness endpoints
+* API contract validation
+* Expanded tests
+* Correct production-backed screenshots
+
+## 2. Search for the expected hardening artifacts
+
+Search the working tree for:
+
+```bash
+find . -type f | grep -Ei "migration|hardening|openapi|health|readiness|browser-storage"
+grep -RIn "parseDataMode" .
+grep -RIn "/health/live" .
+grep -RIn "/health/ready" .
+grep -RIn "401" artifacts/api-server/src
+grep -RIn "foreignKey" lib/db/src
+grep -RIn "check(" lib/db/src
+grep -RIn "date(" lib/db/src/schema
+```
+
+Also inspect:
+
+* `frontend/dataMode.ts`
+* `api-server/middlewares/devIdentity.ts`
+* `api-server/app.ts`
+* `db/schema/sunrise-os.ts`
+* Migration directories
+* Test directories
+* Screenshot directories
+
+## 3. Choose the correct path
+
+### Case A — Hardening code already exists
+
+If the hardening changes exist on the branch:
+
+1. Do not reimplement them.
+2. Run all required tests and validation.
+3. Correct any failing or incomplete item.
+4. Commit any necessary corrections.
+5. Generate the correct archive:
+
+`artifacts/sunrise-os/readiness/phase-1a-hardening-review.zip`
+
+### Case B — Hardening code does not exist
+
+If no hardening implementation exists:
+
+1. State plainly that the previous hardening task was not implemented.
+2. Implement the complete previously assigned:
+
+   * **Phase 1A Hardening — migrations, fail-closed configuration, database integrity, and browser privacy**
+3. Do not merely regenerate the old archive.
+4. Do not claim completion based on documentation.
+5. Complete all acceptance criteria before generating the archive.
+
+---
+
+# Required Verification Before Packaging
+
+The archive must not be created until all of these are true.
+
+## Versioned migrations
+
+* Checked-in SQL migration files exist.
+* Migration journal or tracking metadata exists.
+* Clean test database can be built from migrations.
+* Reapplication reports no pending migration.
+* `drizzle-kit push` is not the documented production migration strategy.
+
+## Data-mode safety
+
+* Valid modes are explicitly parsed.
+* Production requires explicit production mode.
+* Missing production configuration fails closed.
+* Invalid production configuration fails closed.
+* Production cannot silently activate demo data.
+* Production cannot import or render mock patients.
+
+## Authentication boundary
+
+* No production identity returns 401.
+* Development headers are ignored in production.
+* Development middleware is not registered in production.
+* Database failure remains 503.
+* Invalid input remains 400.
+* Inaccessible patients use the documented opaque response.
+
+## Database integrity
+
+PostgreSQL must reject:
+
+* Patient organization/facility mismatch
+* Staff organization/user-identity mismatch
+* Episode organization/patient mismatch
+* Episode facility/patient mismatch
+* Invalid status values
+* Invalid date order
+* Duplicate MRN in the prohibited scope
+* Duplicate external authentication reference in the prohibited scope
+
+These must be direct database-backed tests, not only repository mocks.
+
+## Database types
+
+* Date of birth uses a date type.
+* Admission date uses a date type.
+* Discharge date uses a date type.
+* Event timestamps use timezone-aware timestamps.
+* Discharge-before-admission is rejected.
+* Allowed status values are validated.
+
+## Browser privacy
+
+Production mode must not persist in localStorage:
+
+* Patient names
+* MRNs
+* Patient objects
+* Diagnoses
+* Insurance details
+* Clinical notes
+* Medication details
+
+Inspect UA workflow storage and IndexedDB audio storage instead of assuming they are non-clinical.
+
+Create a complete browser-storage privacy inventory.
+
+## Health endpoints
+
+Implement and test:
+
+```text
+GET /health/live
+GET /health/ready
+```
+
+Readiness must verify:
+
+* Required configuration
+* Database connectivity
+
+Responses must not expose secrets.
+
+## Tests
+
+Run and report exact results for:
+
+* Migration tests
+* Database-constraint tests
+* Data-mode tests
+* Authentication-boundary tests
+* API tests
+* Health endpoint tests
+* Browser-storage tests
+* Tenant-isolation tests
+* Facility-isolation tests
+* TypeScript
+* Production build
+
+The final test total must be greater than the original 23 tests.
+
+## Screenshots
+
+Capture actual screenshots of:
+
+1. Production-backed Patient List
+2. Production-backed Patient Detail
+3. Production empty state
+4. Production API error state
+5. Production not-found state
+6. Demo indicator
+7. Production mode without demo indicator
+8. Invalid-configuration blocking state
+
+A login or staff-picker screen must not be labeled as a Patient List or Patient Detail screen.
+
+---
+
+# Create the Correct Review Package
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-1a-hardening-review.zip`
+
+Include:
+
+* Versioned migrations
+* Migration metadata
+* Updated schema
+* Data-mode parser
+* Authentication boundary
+* Health/readiness routes
+* API contracts
+* Browser-storage privacy inventory
+* Updated repositories and routes
+* All new test files
+* Sanitized test output
+* Accurate screenshots
+* Updated architecture documentation
+* Evidence manifest
+* File manifest with SHA-256 values
+
+Do not include:
+
+* The old `phase-1a-persistence-foundation-review.zip`
+* `.env` files
+* `DATABASE_URL`
+* Credentials
+* Secrets
+* Database dumps
+* Dependency caches
+* Build caches
+* Real patient data
+
+Verify:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-1a-hardening-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-1a-hardening-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-1a-hardening-review.zip
+```
+
+## Final response
+
+Provide:
+
+1. Whether the hardening code previously existed or had to be implemented.
+2. Branch name.
+3. Starting commit.
+4. Hardening commit or commits.
+5. Final HEAD.
+6. Correct ZIP path.
+7. ZIP SHA-256.
+8. ZIP size.
+9. ZIP entry count.
+10. Versioned migration filenames.
+11. Total test count and result.
+12. Database constraint-test result.
+13. Data-mode fail-closed result.
+14. Authentication-boundary result.
+15. Browser-storage privacy result.
+16. Health/readiness result.
+17. TypeScript result.
+18. Production build result.
+19. Screenshot count.
+20. Known limitations.
+
+Do not begin Phase 2.
+
+Stop after the correct hardening review ZIP has been generated and verified.

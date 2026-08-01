@@ -4,57 +4,52 @@
  *
  * Storage design
  * ──────────────
- *   Key    : "sunrise_sidebar_prefs_v1_<staffId>"
+ *   Key    : "sunrise_sidebar_prefs_v2_<staffId>"  (v2 = hardening schema change)
  *   Scope  : per browser, per device, per signed-in user (staffId in key).
- *            Two different staff members on the same browser will each have
- *            their own isolated preference object.
- *   Storage: localStorage — persists across page refreshes and browser
- *            restarts until the user explicitly clears browser data.
  *
- * Privacy guarantee
- * ─────────────────
- *   Only navigation-level fields are stored; NO clinical content is written:
- *     RecentPatient  → id, displayName, program, openedAt (epoch ms)
- *     PinnedPatient  → id, displayName, program, pinnedAt (epoch ms),
- *                      discharged? (boolean label only — no clinical detail)
- *     FavoriteModule → Screen ID string
+ * Privacy guarantee (Phase 1A Hardening)
+ * ───────────────────────────────────────
+ *   In production mode (DATA_MODE === "production"):
+ *     - Patient displayName is NOT stored in localStorage.
+ *     - Patient program is NOT stored in localStorage.
+ *     - Only patient ID + navigation timestamps are persisted.
+ *     - The sidebar renders "[Patient record]" instead of a name.
+ *
+ *   In demo mode (DATA_MODE === "demo"):
+ *     - displayName and program are stored for demo UX quality.
+ *     - These fields contain only fictitious mock data.
  *
  *   Diagnoses, medications, notes, insurance, and all other PHI/ePHI are
- *   never written here.  The schema MUST NOT be extended with clinical data.
+ *   NEVER stored in either mode.  The schema MUST NOT be extended with
+ *   clinical data.
  *
  * Cross-component sync
  * ────────────────────
- *   This file exports two surfaces:
- *     1. useSidebarPrefs(staffId) — React hook for the Sidebar component.
- *        Holds the canonical useState; writes go through update() which
- *        calls localStorage.setItem and then dispatches a custom
- *        "sunrise:prefs" event so any other listener can re-read.
- *     2. addRecentPatient(staffId, patient) — standalone function called
- *        from App.tsx navigateTo() so the entry is recorded the moment
- *        the user deliberately opens a record, before the Sidebar re-renders.
- *        It also dispatches "sunrise:prefs" so the hook re-reads.
+ *   useSidebarPrefs(staffId) — React hook (canonical state + writes).
+ *   addRecentPatient(staffId, patient) — standalone function from App.tsx.
  */
 
 import { useState, useCallback, useEffect } from "react";
 import { Screen } from "../App";
+import { DATA_MODE } from "../lib/dataMode";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 
-/** Minimum navigation-only fields stored for a recent-patient entry. */
+/** Stored shape for a recent-patient entry. */
 export interface RecentPatient {
   id: string;
-  displayName: string; // "First Last"
-  program: string;     // "Residential" | "PHP" | "IOP" | "OP"
-  openedAt: number;    // epoch ms — used for recency ordering
+  displayName: string; // stored in demo mode; empty string in production
+  program: string;     // stored in demo mode; empty string in production
+  openedAt: number;    // epoch ms
 }
 
-/** Minimum navigation-only fields stored for a pinned-patient entry. */
+/** Stored shape for a pinned-patient entry. */
 export interface PinnedPatient {
   id: string;
-  displayName: string;
-  program: string;
-  pinnedAt: number;        // epoch ms — stable ordering (insertion time)
-  discharged?: boolean;    // display label only; does NOT auto-remove the pin
+  displayName: string; // stored in demo mode; empty string in production
+  program: string;     // stored in demo mode; empty string in production
+  pinnedAt: number;
+  discharged?: boolean;
 }
 
 interface SidebarPrefs {
@@ -63,15 +58,44 @@ interface SidebarPrefs {
   favoriteModules: Screen[];
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────────
 
-const KEY_PREFIX        = "sunrise_sidebar_prefs_v1_";
+// Version bump from v1 → v2 ensures old pre-hardening entries with displayName
+// stored in production mode are not loaded.
+const KEY_PREFIX        = "sunrise_sidebar_prefs_v2_";
 export const MAX_RECENT          = 5;
 export const MAX_PINNED_VISIBLE  = 5;
 export const MAX_FAVORITES       = 6;
 const SYNC_EVENT        = "sunrise:prefs";
 
-// ── Storage helpers ───────────────────────────────────────────────────────────
+// ── Privacy helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Strip displayName and program from a patient entry when in production mode.
+ * In production, only the ID is safe to persist.
+ */
+function sanitiseForStorage<T extends { displayName: string; program: string }>(
+  entry: T,
+): T {
+  if (DATA_MODE === "production") {
+    return { ...entry, displayName: "", program: "" };
+  }
+  return entry;
+}
+
+/**
+ * Return the display label for a patient entry.
+ * In production mode, the stored displayName is intentionally empty;
+ * show a privacy-safe placeholder instead.
+ */
+export function patientDisplayLabel(entry: { id: string; displayName: string }): string {
+  if (DATA_MODE === "production" || !entry.displayName) {
+    return `[Patient record]`;
+  }
+  return entry.displayName;
+}
+
+// ── Storage helpers ────────────────────────────────────────────────────────────
 
 function storageKey(staffId: string): string {
   return `${KEY_PREFIX}${staffId}`;
@@ -95,66 +119,50 @@ function loadPrefs(staffId: string): SidebarPrefs {
 function writePrefs(staffId: string, prefs: SidebarPrefs): void {
   try {
     localStorage.setItem(storageKey(staffId), JSON.stringify(prefs));
-    // Notify other in-tab listeners (window.dispatchEvent, not storage event
-    // which only fires for cross-tab changes).
     window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: { staffId } }));
   } catch { /* storage full — ignore */ }
 }
 
-// ── Demo-user seed ────────────────────────────────────────────────────────────
-// Pre-populate realistic data for demo accounts so screenshots and tours show
-// a populated sidebar.  Only applied when no preferences have been saved yet
-// (i.e. first visit).  Seeded patients use display-safe demo data only.
+// ── Demo-user seed ─────────────────────────────────────────────────────────────
 
 const DEMO_STAFF_PREFIX = "demo_";
 
 function seedDemoPrefsIfNeeded(staffId: string): void {
   if (!staffId.startsWith(DEMO_STAFF_PREFIX)) return;
+  if (DATA_MODE !== "demo") return; // never seed in production
   const key = storageKey(staffId);
-  if (localStorage.getItem(key)) return;            // already has prefs
+  if (localStorage.getItem(key)) return;
   const now = Date.now();
   const seed: SidebarPrefs = {
     recentPatients: [
-      { id: "p1",     displayName: "Marcus Webb",     program: "Residential", openedAt: now - 1_200_000  },
-      { id: "p3",     displayName: "Devon Patel",     program: "Residential", openedAt: now - 3_600_000  },
-      { id: "p2",     displayName: "Angela Reyes",    program: "PHP",         openedAt: now - 7_200_000  },
-      { id: "p5",     displayName: "Jamal Foster",    program: "Residential", openedAt: now - 14_400_000 },
+      { id: "p1", displayName: "Marcus Webb",   program: "Residential", openedAt: now - 1_200_000  },
+      { id: "p3", displayName: "Devon Patel",   program: "Residential", openedAt: now - 3_600_000  },
+      { id: "p2", displayName: "Angela Reyes",  program: "PHP",         openedAt: now - 7_200_000  },
+      { id: "p5", displayName: "Jamal Foster",  program: "Residential", openedAt: now - 14_400_000 },
     ],
     pinnedPatients: [
-      { id: "p1",  displayName: "Marcus Webb",     program: "Residential", pinnedAt: now - 86_400_000 },
-      { id: "p3",  displayName: "Devon Patel",     program: "Residential", pinnedAt: now - 72_000_000 },
-      // Discharged patient pinned — shows the "Discharged" label per spec.
-      { id: "p6",  displayName: "Elena Vasquez",   program: "Residential", pinnedAt: now - 50_000_000, discharged: true },
+      { id: "p1", displayName: "Marcus Webb",   program: "Residential", pinnedAt: now - 86_400_000 },
+      { id: "p3", displayName: "Devon Patel",   program: "Residential", pinnedAt: now - 72_000_000 },
+      { id: "p6", displayName: "Elena Vasquez", program: "Residential", pinnedAt: now - 50_000_000, discharged: true },
     ],
-    favoriteModules: [
-      "ProgressNotes",
-      "TreatmentPlans",
-      "CensusBedBoard",
-      "RevenueCycle",
-    ] as Screen[],
+    favoriteModules: ["ProgressNotes", "TreatmentPlans", "CensusBedBoard", "RevenueCycle"] as Screen[],
   };
   writePrefs(staffId, seed);
 }
 
-// ── Standalone function (called from App.tsx navigateTo) ──────────────────────
-/**
- * Record a deliberately-opened patient record in the signed-in user's recent
- * list.  Must be called ONLY from an explicit navigation action (e.g. clicking
- * a patient row or opening PatientDetail from search results), NOT from
- * incidental appearances in lists, alerts, or reports.
- *
- * Stores only: id, displayName, program, openedAt — no clinical content.
- */
+// ── Standalone helper (called from App.tsx) ────────────────────────────────────
+
 export function addRecentPatient(staffId: string, patient: RecentPatient): void {
   const prefs   = loadPrefs(staffId);
   const without = prefs.recentPatients.filter(p => p.id !== patient.id);
   writePrefs(staffId, {
     ...prefs,
-    recentPatients: [patient, ...without].slice(0, MAX_RECENT),
+    recentPatients: [sanitiseForStorage(patient), ...without].slice(0, MAX_RECENT),
   });
 }
 
-// ── Hook ──────────────────────────────────────────────────────────────────────
+// ── Hook ───────────────────────────────────────────────────────────────────────
+
 export function useSidebarPrefs(staffId: string | null) {
   const [prefs, setPrefs] = useState<SidebarPrefs>(() => {
     if (!staffId) return { recentPatients: [], pinnedPatients: [], favoriteModules: [] };
@@ -162,7 +170,6 @@ export function useSidebarPrefs(staffId: string | null) {
     return loadPrefs(staffId);
   });
 
-  // Re-read from localStorage when another in-tab writer (App.tsx) mutates it.
   useEffect(() => {
     if (!staffId) return;
     const handler = (e: Event) => {
@@ -173,7 +180,6 @@ export function useSidebarPrefs(staffId: string | null) {
     return () => window.removeEventListener(SYNC_EVENT, handler);
   }, [staffId]);
 
-  // ── Generic updater ──────────────────────────────────────────────────────
   const update = useCallback(
     (fn: (prev: SidebarPrefs) => SidebarPrefs) => {
       if (!staffId) return;
@@ -186,22 +192,19 @@ export function useSidebarPrefs(staffId: string | null) {
     [staffId]
   );
 
-  // ── Recent patients ───────────────────────────────────────────────────────
+  // Recent patients
   const addRecent = useCallback(
     (patient: RecentPatient) =>
       update(prev => {
         const without = prev.recentPatients.filter(p => p.id !== patient.id);
-        return { ...prev, recentPatients: [patient, ...without].slice(0, MAX_RECENT) };
+        return { ...prev, recentPatients: [sanitiseForStorage(patient), ...without].slice(0, MAX_RECENT) };
       }),
     [update]
   );
 
   const removeRecent = useCallback(
     (patientId: string) =>
-      update(prev => ({
-        ...prev,
-        recentPatients: prev.recentPatients.filter(p => p.id !== patientId),
-      })),
+      update(prev => ({ ...prev, recentPatients: prev.recentPatients.filter(p => p.id !== patientId) })),
     [update]
   );
 
@@ -210,77 +213,57 @@ export function useSidebarPrefs(staffId: string | null) {
     [update]
   );
 
-  // ── Pinned patients ───────────────────────────────────────────────────────
+  // Pinned patients
   const pinPatient = useCallback(
     (patient: PinnedPatient) =>
       update(prev => {
         if (prev.pinnedPatients.some(p => p.id === patient.id)) return prev;
-        return { ...prev, pinnedPatients: [...prev.pinnedPatients, patient] };
+        return { ...prev, pinnedPatients: [...prev.pinnedPatients, sanitiseForStorage(patient)] };
       }),
     [update]
   );
 
   const unpinPatient = useCallback(
     (patientId: string) =>
-      update(prev => ({
-        ...prev,
-        pinnedPatients: prev.pinnedPatients.filter(p => p.id !== patientId),
-      })),
+      update(prev => ({ ...prev, pinnedPatients: prev.pinnedPatients.filter(p => p.id !== patientId) })),
     [update]
   );
 
-  /**
-   * Update the stored display name, program, and discharged flag for an
-   * already-pinned patient when a newer authoritative record is available
-   * (e.g. when PatientDetail mounts).  Spec §5.
-   * No-ops if the patient is not currently pinned or if nothing changed.
-   */
   const refreshPinnedPatient = useCallback(
     (patient: Pick<PinnedPatient, "id" | "displayName" | "program" | "discharged">) =>
       update(prev => {
         const idx = prev.pinnedPatients.findIndex(p => p.id === patient.id);
-        if (idx === -1) return prev; // not pinned — nothing to do
+        if (idx === -1) return prev;
         const existing = prev.pinnedPatients[idx];
+        const sanitised = sanitiseForStorage(patient);
         if (
-          existing.displayName === patient.displayName &&
-          existing.program     === patient.program &&
+          existing.displayName === sanitised.displayName &&
+          existing.program     === sanitised.program &&
           existing.discharged  === patient.discharged
-        ) return prev; // nothing changed — avoid a spurious write
+        ) return prev;
         const updated = [...prev.pinnedPatients];
-        updated[idx] = {
-          ...existing,
-          displayName: patient.displayName,
-          program:     patient.program,
-          discharged:  patient.discharged,
-        };
+        updated[idx] = { ...existing, displayName: sanitised.displayName, program: sanitised.program, discharged: patient.discharged };
         return { ...prev, pinnedPatients: updated };
       }),
     [update]
   );
 
-  // ── Favorite modules ──────────────────────────────────────────────────────
+  // Favorite modules
   const addFavorite = useCallback(
     (moduleId: Screen) =>
       update(prev => {
         if (prev.favoriteModules.includes(moduleId)) return prev;
-        return {
-          ...prev,
-          favoriteModules: [...prev.favoriteModules, moduleId].slice(0, MAX_FAVORITES),
-        };
+        return { ...prev, favoriteModules: [...prev.favoriteModules, moduleId].slice(0, MAX_FAVORITES) };
       }),
     [update]
   );
 
   const removeFavorite = useCallback(
     (moduleId: Screen) =>
-      update(prev => ({
-        ...prev,
-        favoriteModules: prev.favoriteModules.filter(m => m !== moduleId),
-      })),
+      update(prev => ({ ...prev, favoriteModules: prev.favoriteModules.filter(m => m !== moduleId) })),
     [update]
   );
 
-  /** True if the given patient ID is currently in the pinned list. */
   const isPinned = useCallback(
     (patientId: string) => prefs.pinnedPatients.some(p => p.id === patientId),
     [prefs.pinnedPatients]
@@ -288,17 +271,8 @@ export function useSidebarPrefs(staffId: string | null) {
 
   return {
     prefs,
-    // Recent
-    addRecent,
-    removeRecent,
-    clearRecent,
-    // Pinned
-    pinPatient,
-    unpinPatient,
-    refreshPinnedPatient,
-    isPinned,
-    // Favorites
-    addFavorite,
-    removeFavorite,
+    addRecent, removeRecent, clearRecent,
+    pinPatient, unpinPatient, refreshPinnedPatient, isPinned,
+    addFavorite, removeFavorite,
   };
 }

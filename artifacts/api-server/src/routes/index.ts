@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import healthRouter from "./health";
+// healthRouter is now mounted at root level in app.ts (unauthenticated, before requireIdentity).
 import censusRouter from "./census";
 import alertsRouter from "./alerts";
 import contactRouter from "./contact";
@@ -11,7 +11,6 @@ import patientsV1Router from "./patientsV1";
 
 const router: IRouter = Router();
 
-router.use(healthRouter);
 router.use(censusRouter);
 router.use(alertsRouter);
 router.use(contactRouter);
