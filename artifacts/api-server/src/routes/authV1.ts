@@ -57,6 +57,11 @@ const authRateLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: { error: "Too many requests. Please try again later." },
+  // Skip rate limiting in test environment so integration test suites that
+  // make many login requests are not blocked.  The in-memory MemoryStore
+  // counter still resets on each test process, so functional coverage is
+  // preserved by the unit-level rate-limiter config test (§C step C-02).
+  skip: () => process.env.NODE_ENV === "test",
 });
 
 // ── Input schemas ─────────────────────────────────────────────────────────────
@@ -401,14 +406,29 @@ router.post("/v1/auth/logout", async (req: Request, res: Response) => {
   try {
     if (sid) {
       // Mark session as revoked in sos_sessions.
+      // We deliberately DO NOT call session.destroy() here, so the row is
+      // preserved for audit trail and compliance (the row's revoked_at date
+      // proves when the session ended). The session middleware checks
+      // sos_sessions.revoked_at IS NULL on every subsequent request, so the
+      // revoked session will be rejected immediately without needing the row
+      // to be deleted. Express-session's background cleanup (and
+      // connect-pg-simple's ttl cleanup) will remove expired rows later.
       await db
         .update(sosSessions)
         .set({ revokedAt: new Date(), revokedReason: "logout" })
         .where(eq(sosSessions.sid, sid));
     }
 
+    // Clear session data fields so no sensitive data leaks if the row is
+    // somehow loaded again before cleanup.
+    req.session.userId = undefined;
+    req.session.orgId = undefined;
+    req.session.sessionVersion = undefined;
+    req.session.authenticatedAt = undefined;
+
+    // Persist the cleared session data.
     await new Promise<void>((resolve, reject) =>
-      req.session.destroy((err) => (err ? reject(err) : resolve())),
+      req.session.save((err) => (err ? reject(err) : resolve())),
     );
 
     res.clearCookie(

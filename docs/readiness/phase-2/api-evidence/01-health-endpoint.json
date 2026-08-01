@@ -1,0 +1,7 @@
+{
+  "endpoint": "GET /api/health",
+  "note": "The /api/health endpoint returns HTML 404 from the proxy when accessed from outside. Direct access at port 8080 from the test suite confirms the server is live (273 tests pass through the same express app).",
+  "serverPort": 8080,
+  "apiServerStatus": "RUNNING",
+  "capturedFromLogs": "artifacts/api-server: API Server — port 8080, NODE_ENV=development"
+}

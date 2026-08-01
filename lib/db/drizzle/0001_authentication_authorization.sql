@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0002: Authentication and Authorization
+-- Migration 0001: Authentication and Authorization
 -- Branch: readiness/p0-authentication-authorization
 --
 -- Adds five tables for production auth:
@@ -8,12 +8,15 @@
 --   sos_role_assignments  — DB-backed role ↔ user ↔ facility assignments
 --   sos_patient_access    — explicit patient-access assignments for restricted roles
 --   sos_auth_audit        — append-only authentication/authorization audit log
+--
+-- All CREATE TABLE/INDEX statements use IF NOT EXISTS so the migration is
+-- idempotent and can be re-applied safely when tables were pre-created.
 -- ============================================================================
 
 -- ── sos_user_accounts ────────────────────────────────────────────────────────
 -- Local-auth credential record for each Sunrise OS user.
 -- Links to sos_user_identity_refs via composite FK (org_id, user_identity_ref_id).
-CREATE TABLE sos_user_accounts (
+CREATE TABLE IF NOT EXISTS sos_user_accounts (
     id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id               UUID        NOT NULL REFERENCES sos_organizations(id) ON DELETE CASCADE,
     user_identity_ref_id UUID        NOT NULL,
@@ -41,22 +44,22 @@ CREATE TABLE sos_user_accounts (
 );
 
 -- Unique email per org
-CREATE UNIQUE INDEX idx_sos_user_accounts_org_email
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sos_user_accounts_org_email
     ON sos_user_accounts(org_id, email);
 
 -- Fast lookup by org
-CREATE INDEX idx_sos_user_accounts_org_id
+CREATE INDEX IF NOT EXISTS idx_sos_user_accounts_org_id
     ON sos_user_accounts(org_id);
 
 -- Composite unique: (org_id, id) for FK targets from role_assignments / patient_access
-CREATE UNIQUE INDEX idx_sos_user_accounts_org_id_id
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sos_user_accounts_org_id_id
     ON sos_user_accounts(org_id, id);
 
 -- ── sos_sessions ─────────────────────────────────────────────────────────────
 -- Server-side session store.  The first three columns (sid, sess, expire) are
 -- the schema expected by connect-pg-simple.  Additional columns add revocation
 -- tracking and compliance metadata.
-CREATE TABLE sos_sessions (
+CREATE TABLE IF NOT EXISTS sos_sessions (
     sid              TEXT        PRIMARY KEY,
     sess             JSONB       NOT NULL,
     expire           TIMESTAMPTZ NOT NULL,
@@ -70,13 +73,13 @@ CREATE TABLE sos_sessions (
     revoked_reason   TEXT
 );
 
-CREATE INDEX idx_sos_sessions_expire ON sos_sessions(expire);
-CREATE INDEX idx_sos_sessions_user_id ON sos_sessions(user_id) WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_sos_sessions_expire ON sos_sessions(expire);
+CREATE INDEX IF NOT EXISTS idx_sos_sessions_user_id ON sos_sessions(user_id) WHERE user_id IS NOT NULL;
 
 -- ── sos_role_assignments ──────────────────────────────────────────────────────
 -- Maps a user to a code-defined role, optionally scoped to a facility.
 -- NULL facility_id means an organization-wide assignment.
-CREATE TABLE sos_role_assignments (
+CREATE TABLE IF NOT EXISTS sos_role_assignments (
     id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id            UUID        NOT NULL REFERENCES sos_organizations(id) ON DELETE CASCADE,
     user_id           UUID        NOT NULL,
@@ -104,15 +107,15 @@ CREATE TABLE sos_role_assignments (
         DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE INDEX idx_sos_role_assignments_org_user
+CREATE INDEX IF NOT EXISTS idx_sos_role_assignments_org_user
     ON sos_role_assignments(org_id, user_id);
-CREATE INDEX idx_sos_role_assignments_facility
+CREATE INDEX IF NOT EXISTS idx_sos_role_assignments_facility
     ON sos_role_assignments(facility_id) WHERE facility_id IS NOT NULL;
 
 -- ── sos_patient_access ────────────────────────────────────────────────────────
 -- Explicit patient-access assignments.  Used for roles that require an individual
 -- assignment record rather than facility-wide access (e.g. restricted caseloads).
-CREATE TABLE sos_patient_access (
+CREATE TABLE IF NOT EXISTS sos_patient_access (
     id                 UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id             UUID        NOT NULL REFERENCES sos_organizations(id) ON DELETE CASCADE,
     facility_id        UUID        NOT NULL,
@@ -148,15 +151,15 @@ CREATE TABLE sos_patient_access (
         ON DELETE CASCADE
 );
 
-CREATE INDEX idx_sos_patient_access_patient
+CREATE INDEX IF NOT EXISTS idx_sos_patient_access_patient
     ON sos_patient_access(org_id, patient_id);
-CREATE INDEX idx_sos_patient_access_user
+CREATE INDEX IF NOT EXISTS idx_sos_patient_access_user
     ON sos_patient_access(org_id, user_id);
 
 -- ── sos_auth_audit ────────────────────────────────────────────────────────────
 -- Append-only authentication and authorization audit log.
 -- No UPDATE or DELETE — enforced by application convention; DB trigger planned Phase 3.
-CREATE TABLE sos_auth_audit (
+CREATE TABLE IF NOT EXISTS sos_auth_audit (
     id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id            UUID,
     user_id           UUID,
@@ -183,9 +186,9 @@ CREATE TABLE sos_auth_audit (
     ))
 );
 
-CREATE INDEX idx_sos_auth_audit_user_id
+CREATE INDEX IF NOT EXISTS idx_sos_auth_audit_user_id
     ON sos_auth_audit(user_id) WHERE user_id IS NOT NULL;
-CREATE INDEX idx_sos_auth_audit_org_id
+CREATE INDEX IF NOT EXISTS idx_sos_auth_audit_org_id
     ON sos_auth_audit(org_id) WHERE org_id IS NOT NULL;
-CREATE INDEX idx_sos_auth_audit_created_at
+CREATE INDEX IF NOT EXISTS idx_sos_auth_audit_created_at
     ON sos_auth_audit(created_at DESC);

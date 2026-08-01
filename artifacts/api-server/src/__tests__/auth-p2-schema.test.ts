@@ -47,7 +47,8 @@ async function getColumns(table: string): Promise<Map<string, { type: string; nu
   );
   const map = new Map<string, { type: string; nullable: string; default: string | null }>();
   for (const row of r.rows) {
-    map.set(row.column_name, { type: row.data_type, nullable: row.is_nullable, default: row.column_default });
+    const col = row as { column_name: string; data_type: string; is_nullable: string; column_default: string | null };
+    map.set(col.column_name, { type: col.data_type, nullable: col.is_nullable, default: col.column_default });
   }
   return map;
 }

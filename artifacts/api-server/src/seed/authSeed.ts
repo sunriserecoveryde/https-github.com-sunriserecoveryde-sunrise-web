@@ -206,9 +206,11 @@ async function seed() {
       .returning({ id: sosUserAccounts.id });
 
     // Create staff profile.
+    // IMPORTANT: sos_staff_profiles.user_id FK → sos_user_identity_refs(org_id, id),
+    // NOT sos_user_accounts.id.  Use identityRef.id here.
     await db.insert(sosStaffProfiles).values({
       orgId:            ORG_ID,
-      userId:           account.id,
+      userId:           identityRef.id,
       displayName:      u.displayName,
       professionalRole: u.roleId,
     });
@@ -259,7 +261,17 @@ async function seed() {
   console.log("  Set DEV_TEST_PASSWORD in your environment for reproducible seeding.");
 }
 
-seed().catch((err) => {
-  console.error("[auth-seed] Fatal:", err);
-  process.exit(1);
-});
+// Export so test files can call seed() directly from vitest (TS-transpiled context).
+export { seed as runAuthSeed };
+
+// Auto-run only when invoked as a standalone script (not when imported by tests).
+const isDirectScript =
+  process.argv[1]?.includes("authSeed") ||
+  process.env.SEED_AUTORUN === "1";
+
+if (isDirectScript) {
+  seed().catch((err) => {
+    console.error("[auth-seed] Fatal:", err);
+    process.exit(1);
+  });
+}

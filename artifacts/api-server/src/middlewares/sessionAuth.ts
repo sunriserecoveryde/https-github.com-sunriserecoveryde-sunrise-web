@@ -195,8 +195,11 @@ export async function sessionAuthMiddleware(
       return;
     }
 
-    if (!isProduction) {
+    if (!isProduction && process.env.DISABLE_AUTH_FALLBACK !== "true") {
       // Development/demo fallback: use synthetic dev identity.
+      // Set DISABLE_AUTH_FALLBACK=true to suppress this (used by integration tests
+      // that verify unauthenticated requests return 401 — the fallback would mask
+      // session destruction and clearCookie behaviour in the test environment).
       req.auth = makeDevIdentity();
       // Also set devIdentity for backward compat with any Phase 1A code.
       req.devIdentity = {

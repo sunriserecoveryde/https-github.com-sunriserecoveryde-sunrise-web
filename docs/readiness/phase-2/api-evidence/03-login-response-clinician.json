@@ -1,0 +1,21 @@
+{
+    "userId": "e29c41ae-dec5-4b9a-9f48-8ccd3ce94a0e",
+    "orgId": "00000000-0000-4000-a000-000000000001",
+    "displayName": "clinician@test.sunrise",
+    "roleIds": [
+        "certified_clinician"
+    ],
+    "permissionCodes": [
+        "patient.list.view",
+        "patient.chart.view",
+        "patient.demographics.view",
+        "patient.episode.view",
+        "patient.create",
+        "patient.update"
+    ],
+    "facilityIds": [
+        "00000000-0000-4000-a000-000000000002"
+    ],
+    "sessionExpiresAt": "2026-08-02T06:14:49.823Z",
+    "authenticationMethod": "password"
+}
