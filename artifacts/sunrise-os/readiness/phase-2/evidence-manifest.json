@@ -1,0 +1,123 @@
+{
+  "phase": 2,
+  "title": "Production Authentication & Server-Side Authorization",
+  "branch": "readiness/p0-authentication-authorization",
+  "verified": "2026-08-01",
+  "headCommit": "127beaf28d54c03d527b543c1c2ef175a08a7939",
+  "notMergedToMain": true,
+
+  "commits": [
+    { "sha": "bef1b3a", "summary": "Phase 2: Production Authentication & Server-Side Authorization" },
+    { "sha": "0aa74a3", "summary": "Fix Phase 2: 4 critical auth regressions found in code review" },
+    { "sha": "5b5041f", "summary": "Fix Phase 2 review findings: org-wide access, CSRF flow, authorizationService" },
+    { "sha": "6a01438", "summary": "Fix CSRF session-binding: refresh token after login" },
+    { "sha": "5d4a4d3", "summary": "Fix Phase 2: org-wide patient list + photo route clarification" }
+  ],
+
+  "reviewCorrections": [
+    { "id": 1, "finding": "sessionAuthMiddleware blocked the login route (self-referential deadlock)", "status": "fixed", "commit": "0aa74a3" },
+    { "id": 2, "finding": "cookie-parser not mounted before CSRF middleware", "status": "fixed", "commit": "0aa74a3" },
+    { "id": 3, "finding": "GET /csrf-token did not call generateCsrfToken", "status": "fixed", "commit": "0aa74a3" },
+    { "id": 4, "finding": "Absolute session timeout not enforced (only idle)", "status": "fixed", "commit": "0aa74a3" },
+    { "id": 5, "finding": "orgWide flag missing from AuthenticatedIdentity", "status": "fixed", "commit": "5b5041f" },
+    { "id": 6, "finding": "authorize() applied facility check even for org-wide identities", "status": "fixed", "commit": "5b5041f" },
+    { "id": 7, "finding": "Logout did not send X-CSRF-Token header", "status": "fixed", "commit": "5b5041f" },
+    { "id": 8, "finding": "makeDevIdentity() lacked orgWide: true flag", "status": "fixed", "commit": "5b5041f" },
+    { "id": 9, "finding": "CSRF token not re-fetched after login (bound to pre-auth session ID)", "status": "fixed", "commit": "6a01438" },
+    { "id": 10, "finding": "listPatients called with facilityId for org-wide users (too narrow)", "status": "fixed", "commit": "5d4a4d3" },
+    { "id": 11, "finding": "8 MB body-parser comment implied Phase 2 photo upload (clarified as Phase 3)", "status": "clarified", "commit": "5d4a4d3" }
+  ],
+
+  "databaseTables": [
+    { "name": "sos_user_accounts", "purpose": "Login credential records" },
+    { "name": "sos_sessions", "purpose": "Server-managed session store (connect-pg-simple)" },
+    { "name": "sos_role_assignments", "purpose": "User → role → facility mappings" },
+    { "name": "sos_patient_access", "purpose": "Explicit patient-level access for non-facility-wide roles" },
+    { "name": "sos_auth_audit", "purpose": "Append-only audit log (19 event types, CHECK constrained)" }
+  ],
+
+  "migration": {
+    "file": "lib/db/drizzle/0002_authentication_authorization.sql",
+    "journalTag": "0002_authentication_authorization",
+    "journalIdx": 2,
+    "appliedToDb": true
+  },
+
+  "testResults": {
+    "runDate": "2026-08-01",
+    "packages": [
+      {
+        "package": "@workspace/api-server",
+        "files": 3,
+        "tests": 236,
+        "passed": 236,
+        "failed": 0,
+        "testFiles": [
+          "src/__tests__/auth-p2.test.ts",
+          "src/__tests__/auth-p2-integration.test.ts",
+          "src/__tests__/auth-p2-schema.test.ts"
+        ]
+      },
+      {
+        "package": "@workspace/db",
+        "files": 5,
+        "tests": 69,
+        "passed": 69,
+        "failed": 0
+      },
+      {
+        "package": "@workspace/sunrise-os",
+        "files": 8,
+        "tests": 119,
+        "passed": 119,
+        "failed": 0
+      }
+    ],
+    "totalTests": 424,
+    "totalPassed": 424,
+    "totalFailed": 0
+  },
+
+  "testCoverage": {
+    "csrfFlow": { "steps": 16, "description": "double-submit cookie pattern, exempt routes, wrong token rejection" },
+    "sessionCookieAttributes": { "steps": 9, "description": "HttpOnly, SameSite=lax, path=/api, rolling, env-specific naming" },
+    "securityHeaders": { "steps": 7, "description": "Helmet — frame-options, CSP, XSS protection, referrer, content-type" },
+    "corsEnforcement": { "steps": 7, "description": "origin allowlist, credentials:true, preflight, rejection of unlisted origins" },
+    "rateLimiting": { "steps": 7, "description": "login rate limit header, contact/subscribe, custom auth rate limit" },
+    "authorizationCases": { "steps": 18, "description": "unauthenticated, wrong org, missing permission, facility scoping, orgWide, bht patient-level" },
+    "patientApiScenarios": { "steps": 13, "description": "list, get, org boundary, facility boundary, no PHI in error, permission codes" },
+    "adminRoutes": { "steps": 6, "description": "create user, disable, reactivate, revoke sessions, role assignment" },
+    "auditEventTypes": { "steps": 19, "description": "all 19 CHECK-constrained event types verified" },
+    "demoProductionIsolation": { "steps": 6, "description": "dev middleware absent in prod, secrets behavior, demo data isolation" },
+    "middlewareOrdering": { "steps": 14, "description": "full 14-layer stack ordering verified" },
+    "argon2idBehavior": { "steps": 11, "description": "hash length, salt unique, known-good verify, known-bad reject, timing invariant" },
+    "schemaAllTables": { "steps": 80, "description": "all 5 tables: columns, types, nullability, defaults, PKs, FKs, check constraints, indexes" }
+  },
+
+  "securityControls": {
+    "passwordHashing": "Argon2id, memoryCost=65536 KiB, timeCost=3, parallelism=1",
+    "sessions": "express-session + connect-pg-simple, HttpOnly, SameSite=lax, Path=/api",
+    "idleTimeout": "30 minutes (rolling)",
+    "absoluteTimeout": "8 hours (server-enforced)",
+    "csrf": "csrf-csrf v4 double-submit, HMAC(sessionId, CSRF_SECRET)",
+    "cors": "Explicit allowlist, credentials:true, never wildcard",
+    "headers": "Helmet v8 — CSP, frame-guard, HSTS (prod), referrer-policy, XSS-protection",
+    "rateLimiting": "express-rate-limit: 10/15min login, 5/hr contact, 5/hr subscribe",
+    "accountLockout": "5 failed attempts in 15 min (DB-backed, per account)",
+    "authorization": "deny-by-default, 13 permission codes, 17 roles, org+facility+patient scoping"
+  },
+
+  "residualRisks": [
+    { "risk": "express-rate-limit in-memory store", "severity": "medium", "mitigation": "DB-backed account lockout; Redis store required before multi-instance prod" },
+    { "risk": "Audit log not append-only at DB level", "severity": "medium", "mitigation": "Phase 3 — DB-level append-only role + row-level security" },
+    { "risk": "Password-reset email not implemented", "severity": "medium", "mitigation": "Phase 3 scope; /password-reset/complete returns 501" },
+    { "risk": "No MFA", "severity": "low", "mitigation": "Phase 4 scope; mfa_status column already in schema" }
+  ],
+
+  "documentation": [
+    "docs/readiness/phase-2-authentication-authorization.md",
+    "docs/security/authentication-threat-model.md",
+    "artifacts/sunrise-os/readiness/phase-2/evidence-manifest.json",
+    "artifacts/sunrise-os/readiness/phase-2-sha256-manifest.txt"
+  ]
+}
