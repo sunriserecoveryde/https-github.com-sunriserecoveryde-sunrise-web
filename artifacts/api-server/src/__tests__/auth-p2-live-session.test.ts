@@ -68,9 +68,10 @@ afterAll(async () => {
 /** Create a supertest agent and log in.  Returns agent + login response. */
 async function loginAs(email: string, password = TEST_PASSWORD) {
   const agent = request.agent(app);
+  // Phase 2B: login requires orgSlug for tenant-deterministic auth.
   const res = await agent
     .post("/api/v1/auth/login")
-    .send({ email, password });
+    .send({ orgSlug: "sunrise", email, password });
   return { agent, res };
 }
 
@@ -115,7 +116,7 @@ describe("§A CSRF — 17-step real authenticated session flow", { timeout: 30_0
   it("step-3+4: POST /auth/login with valid credentials → 200, session cookie set (session rotation confirmed)", async () => {
     const res = await csrfAgent
       .post("/api/v1/auth/login")
-      .send({ email: USERS.clinician, password: TEST_PASSWORD });
+      .send({ orgSlug: "sunrise", email: USERS.clinician, password: TEST_PASSWORD });
 
     expect(res.status).toBe(200);
     const body = res.body as { userId?: string; permissionCodes?: string[]; orgId?: string };
@@ -447,7 +448,7 @@ describe("§C Rate limiting — threshold and header evidence", { timeout: 30_00
   it("C-01: Failed login returns 401 (rate limit headers present or implicit)", async () => {
     const res = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: "nonexistent@ratelimit.test", password: "WrongPass1!" });
+      .send({ orgSlug: "sunrise", email: "nonexistent@ratelimit.test", password: "WrongPass1!" });
     expect(res.status).toBe(401);
     // Rate limit headers (X-RateLimit-Limit, Retry-After) may be present
     // depending on how many previous requests this IP has made.
@@ -491,7 +492,7 @@ describe("§C Rate limiting — threshold and header evidence", { timeout: 30_00
     // Attempt login with wrong password
     const res = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: USERS.clinician, password: "WrongPasswordForLockoutTest!" });
+      .send({ orgSlug: "sunrise", email: USERS.clinician, password: "WrongPasswordForLockoutTest!" });
     expect(res.status).toBe(401);
 
     // Check failed_login_count increased
@@ -513,10 +514,10 @@ describe("§C Rate limiting — threshold and header evidence", { timeout: 30_00
   it("C-04: Login response body is identical for bad email vs bad password (account enumeration prevention)", async () => {
     const badEmail = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: "doesnotexist@nosuchuser.test", password: "AnyPassword1!" });
+      .send({ orgSlug: "sunrise", email: "doesnotexist@nosuchuser.test", password: "AnyPassword1!" });
     const badPass = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: USERS.clinician, password: "WrongPassword999!" });
+      .send({ orgSlug: "sunrise", email: USERS.clinician, password: "WrongPassword999!" });
 
     expect(badEmail.status).toBe(401);
     expect(badPass.status).toBe(401);
@@ -574,7 +575,7 @@ describe("§D Audit persistence — sos_auth_audit writes verified in PostgreSQL
   it("D-02: Failed login → 'login_failure' audit row written with reason_code", async () => {
     const res = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: USERS.clinician, password: "WrongPasswordForAuditTest!" });
+      .send({ orgSlug: "sunrise", email: USERS.clinician, password: "WrongPasswordForAuditTest!" });
     expect(res.status).toBe(401);
 
     // Short delay to allow async audit write
@@ -746,7 +747,7 @@ describe("§E Authorization — real DB, real sessions, real API requests", { ti
   it("E-04 disabled: disabled account cannot log in → 401", async () => {
     const res = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: USERS.disabled, password: TEST_PASSWORD });
+      .send({ orgSlug: "sunrise", email: USERS.disabled, password: TEST_PASSWORD });
     expect(res.status).toBe(401);
     // Generic error — does not reveal that the account is disabled
     const body = res.body as { error?: string };
@@ -767,7 +768,7 @@ describe("§E Authorization — real DB, real sessions, real API requests", { ti
   it("E-05 expired-role: account is active but role expired → login may succeed, GET /patients → unauthorized", async () => {
     const loginRes = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: USERS.expiredRole, password: TEST_PASSWORD });
+      .send({ orgSlug: "sunrise", email: USERS.expiredRole, password: TEST_PASSWORD });
     // Login may succeed (account is active) — permissionCodes may or may not be populated
     // depending on whether login filters by expires_at
     console.log("[E] E-05 | expired-role | login status=" + loginRes.status + " | permCodes=" + JSON.stringify((loginRes.body as { permissionCodes?: unknown }).permissionCodes));
@@ -775,7 +776,7 @@ describe("§E Authorization — real DB, real sessions, real API requests", { ti
     if (loginRes.status === 200) {
       // If login succeeded, create agent and try to access patients
       const agent = request.agent(app);
-      await agent.post("/api/v1/auth/login").send({ email: USERS.expiredRole, password: TEST_PASSWORD });
+      await agent.post("/api/v1/auth/login").send({ orgSlug: "sunrise", email: USERS.expiredRole, password: TEST_PASSWORD });
 
       const patientsRes = await agent.get("/api/v1/patients");
       // Either 401 (no valid session identity) or 403 (no permissions)

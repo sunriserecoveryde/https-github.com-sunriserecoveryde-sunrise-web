@@ -175,11 +175,13 @@ describe("CSRF — double-submit cookie pattern (16 steps)", () => {
   // Step 8: POST /api/v1/auth/login is exempt from CSRF (rate-limited, not CSRF-protected)
   it("step-08: POST /auth/login is CSRF-exempt (public route)", async () => {
     // Login without CSRF token should NOT be rejected by CSRF middleware.
-    // It will fail with 401 (bad credentials) not 403 (CSRF).
+    // Phase 2B: without orgSlug → 400 (validation error, not CSRF).
+    // With orgSlug but bad credentials → 401.
+    // Either way the response must NOT be 403 (CSRF block).
     const res = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: "nonexistent@test.example", password: "BadPassword1!" });
-    expect(res.status).toBe(401);
+      .send({ orgSlug: "sunrise", email: "nonexistent@test.example", password: "BadPassword1!" });
+    expect([400, 401]).toContain(res.status);
     expect(res.status).not.toBe(403);
   });
 
@@ -269,9 +271,11 @@ describe("CSRF — double-submit cookie pattern (16 steps)", () => {
     const res = await request(app)
       .post("/api/v1/auth/password-reset/request")
       .send({ email: "nobody@example.com" });
-    // 200 (even for unknown email — account enumeration prevention) — NOT 403
-    expect(res.status).toBe(200);
+    // Phase 2B: password-reset is disabled → 503.
+    // The key assertion: NOT 403 (which would mean CSRF blocked it).
+    // 503 proves the route handler was reached → route is CSRF-exempt.
     expect(res.status).not.toBe(403);
+    expect([200, 503]).toContain(res.status);
   });
 
   // Step 15: POST /auth/password-reset/complete is a Phase 3 stub.
@@ -559,17 +563,38 @@ const FAC_1 = "00000000-0000-4000-a000-000000000002"; // matches DEV_SEED_FACILI
 const FAC_2 = "00000000-0000-4000-a000-000000000099";
 const PT_1  = "00000000-0000-4000-a000-000000000050";
 
+import { buildScopedGrant } from "../lib/authorizationService";
+
+function makeGrantsForTest(roleIds: string[], facilityIds: string[], orgId: string, orgWide: boolean) {
+  if (orgWide) {
+    return roleIds.map((roleId) =>
+      buildScopedGrant({ id: `test-${roleId}-org`, roleId, orgId, facilityId: null, effectiveAt: null, expiresAt: null }),
+    );
+  }
+  return roleIds.flatMap((roleId) =>
+    (facilityIds.length > 0 ? facilityIds : [FAC_1]).map((fId) =>
+      buildScopedGrant({ id: `test-${roleId}-${fId}`, roleId, orgId, facilityId: fId, effectiveAt: null, expiresAt: null }),
+    ),
+  );
+}
+
 function makeId(overrides?: Partial<AuthenticatedIdentity>): AuthenticatedIdentity {
+  const roleIds     = overrides?.roleIds     ?? ["certified_clinician"];
+  const facilityIds = overrides?.facilityIds ?? [FAC_1];
+  const orgWide     = overrides?.orgWide     ?? false;
+  const orgId       = overrides?.orgId       ?? ORG_A;
+  const grants      = overrides?.grants      ?? makeGrantsForTest(roleIds, facilityIds, orgId, orgWide);
   return {
     userId:               "00000000-0000-4000-a000-000000000020",
     staffProfileId:       null,
-    orgId:                ORG_A,
+    orgId,
     sessionId:            "00000000-0000-4000-a000-000000000030",
-    roleIds:              ["certified_clinician"],
-    permissionCodes:      ["patient.list.view", "patient.chart.view", "patient.episode.view",
+    grants,
+    roleIds,
+    permissionCodes:      overrides?.permissionCodes ?? ["patient.list.view", "patient.chart.view", "patient.episode.view",
                            "patient.demographics.view", "patient.create", "patient.update"],
-    facilityIds:          [FAC_1],
-    orgWide:              false,
+    facilityIds,
+    orgWide,
     authenticationMethod: "password",
     authenticatedAt:      new Date().toISOString(),
     sessionVersion:       0,
@@ -586,11 +611,15 @@ describe("authorization service — 18 test cases (all reason codes)", () => {
   });
 
   // 2. Org mismatch (cross-org)
-  it("auth-02: identity.orgId ≠ request orgId → facility-out-of-scope (cross-org denial)", async () => {
+  // With the scoped-grant model, all grants are org-scoped.
+  // Requesting a different orgId means no grant passes the org check → permission-missing.
+  it("auth-02: identity.orgId ≠ request orgId → all grants skipped → permission-missing", async () => {
     const id = makeId({ orgId: ORG_A });
     const r = await authorize({ identity: id, permission: "patient.list.view", orgId: ORG_B });
     expect(r.allowed).toBe(false);
-    expect(r.reasonCode).toBe("facility-out-of-scope");
+    // Grants are scoped to ORG_A; request is for ORG_B — all grants skipped.
+    // Best denial reason is permission-missing (no grant for org-B found).
+    expect(r.reasonCode).toBe("permission-missing");
   });
 
   // 3. Permission missing from identity
@@ -627,8 +656,8 @@ describe("authorization service — 18 test cases (all reason codes)", () => {
   });
 
   // 7. Empty permissionCodes → denied
-  it("auth-07: empty permissionCodes → permission-missing", async () => {
-    const id = makeId({ permissionCodes: [] });
+  it("auth-07: no grants → permission-missing", async () => {
+    const id = makeId({ permissionCodes: [], grants: [] });
     const r = await authorize({ identity: id, permission: "patient.list.view", orgId: ORG_A });
     expect(r.allowed).toBe(false);
     expect(r.reasonCode).toBe("permission-missing");
@@ -686,7 +715,7 @@ describe("authorization service — 18 test cases (all reason codes)", () => {
 
   // 13. AuthorizationDecision shape
   it("auth-13: AuthorizationDecision has allowed:boolean and reasonCode:string", async () => {
-    const r = await authorize({ identity: makeId({ permissionCodes: [] }), permission: "patient.list.view", orgId: ORG_A });
+    const r = await authorize({ identity: makeId({ permissionCodes: [], grants: [] }), permission: "patient.list.view", orgId: ORG_A });
     expect(typeof r.allowed).toBe("boolean");
     expect(typeof r.reasonCode).toBe("string");
   });
@@ -709,7 +738,7 @@ describe("authorization service — 18 test cases (all reason codes)", () => {
 
   // 16. business_development role has no permissions
   it("auth-16: business_development role grants no permissions", async () => {
-    const id = makeId({ roleIds: ["business_development"], permissionCodes: [] });
+    const id = makeId({ roleIds: ["business_development"], permissionCodes: [], grants: makeGrantsForTest(["business_development"], [FAC_1], ORG_A, false) });
     const r = await authorize({ identity: id, permission: "patient.list.view", orgId: ORG_A });
     expect(r.allowed).toBe(false);
     expect(r.reasonCode).toBe("permission-missing");
@@ -717,7 +746,7 @@ describe("authorization service — 18 test cases (all reason codes)", () => {
 
   // 17. human_resources role has no permissions
   it("auth-17: human_resources role grants no patient permissions", async () => {
-    const id = makeId({ roleIds: ["human_resources"], permissionCodes: [] });
+    const id = makeId({ roleIds: ["human_resources"], permissionCodes: [], grants: makeGrantsForTest(["human_resources"], [FAC_1], ORG_A, false) });
     const r = await authorize({ identity: id, permission: "patient.list.view", orgId: ORG_A });
     expect(r.allowed).toBe(false);
     expect(r.reasonCode).toBe("permission-missing");

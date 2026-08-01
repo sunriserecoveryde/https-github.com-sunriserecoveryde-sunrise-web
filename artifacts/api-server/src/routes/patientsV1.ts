@@ -1,17 +1,19 @@
 /**
- * Phase 2 — Patient List, Patient Detail, and Active Episode endpoints.
+ * Phase 2B — Patient List, Patient Detail, and Active Episode endpoints.
  *
- * Identity is resolved from the real session (req.auth) set by sessionAuthMiddleware.
- * All three endpoints use the central authorizationService to enforce:
- *   - Org scope (always from the session, never from the browser)
- *   - Facility scope (from role assignments in sos_role_assignments)
- *   - Patient access (facility-wide roles or explicit sos_patient_access row)
+ * Key change from Phase 2: patient-list filtering uses scoped grants instead
+ * of the flat orgWide/facilityIds model.
  *
- * Opaque 404 is returned for cross-org and cross-facility access to prevent
- * leaking the existence of records the caller has no right to see.
+ * Rules:
+ *   - Org-wide clinical grant  → all patients in the org
+ *   - Facility-scoped clinical grant (facilityWide=true) → patients in that facility
+ *   - Caseload-limited grant (facilityWide=false) → explicitly assigned patients only
+ *   - Multiple valid grants → exact union of independently authorized records
+ *   - Frontend filter parameters are IGNORED — scope always comes from the session.
+ *   - No full facility census for caseload-limited users.
  *
  * Routes:
- *   GET /api/v1/patients              – list patients for authorized facilities
+ *   GET /api/v1/patients              – patient list for authorized grants
  *   GET /api/v1/patients/:id          – single patient record
  *   GET /api/v1/patients/:id/episode  – active episode for one patient
  */
@@ -20,12 +22,13 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import {
   listPatients,
+  listAssignedPatients,
   getPatient,
   getActiveEpisode,
   NotFoundError,
   DatabaseError,
 } from "@workspace/db";
-import { authorize } from "../lib/authorizationService";
+import { authorize, getAuthorizedFacilitiesForPermission } from "../lib/authorizationService";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -47,7 +50,6 @@ function handleDbError(err: unknown, res: Response): void {
   res.status(500).json({ error: "Internal server error" });
 }
 
-// Private, no-store cache headers for all patient responses (spec §19).
 function setPatientCacheHeaders(res: Response): void {
   res.set("Cache-Control", "private, no-store");
   res.set("Pragma", "no-cache");
@@ -63,49 +65,58 @@ router.get("/v1/patients", async (req: Request, res: Response) => {
   }
 
   // Check list permission first (cheap — no DB call needed).
-  const decision = await authorize({
-    identity:   auth,
-    permission: "patient.list.view",
-    orgId:      auth.orgId,
-    ipAddress:  req.ip,
-  });
-  if (!decision.allowed) {
+  const hasAnyListGrant = auth.grants.some((g) =>
+    g.permissions.includes("patient.list.view"),
+  );
+  if (!hasAnyListGrant) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
 
   try {
-    let patients: Awaited<ReturnType<typeof listPatients>>;
+    // Get all grants that authorize patient.list.view.
+    // Each grant is evaluated independently — a permission from one grant
+    // cannot inherit facility scope from another grant.
+    const authorizedScopes = getAuthorizedFacilitiesForPermission(
+      auth,
+      "patient.list.view",
+    );
 
-    if (auth.orgWide) {
-      // Org-wide roles (facilityId=null assignments) can see the entire org census.
-      // listPatients(orgId, undefined) returns all patients in the org.
-      patients = await listPatients(auth.orgId);
-    } else {
-      // Facility-scoped users: query per assigned facility and merge.
-      // The browser does NOT supply a facility filter — it comes from the session.
-      const facilityIds = auth.facilityIds;
-
-      if (facilityIds.length === 0) {
-        // No authorized facilities and not org-wide — no patients to return.
-        setPatientCacheHeaders(res);
-        res.json([]);
-        return;
-      }
-
-      const patientArrays = await Promise.all(
-        facilityIds.map((fId) => listPatients(auth.orgId, fId)),
-      );
-      patients = patientArrays.flat();
+    if (authorizedScopes.length === 0) {
+      setPatientCacheHeaders(res);
+      res.json([]);
+      return;
     }
 
-    // Deduplicate by patient ID (edge case: multiple facility assignments).
+    // Query patients per grant scope, then union results.
+    const patientSets = await Promise.all(
+      authorizedScopes.map(({ facilityId, orgWide, facilityWide }) => {
+        if (orgWide) {
+          // Org-wide grant: all patients in the org.
+          return listPatients(auth.orgId);
+        }
+        if (facilityWide && facilityId) {
+          // Facility-scoped grant with full facility access: all patients in facility.
+          return listPatients(auth.orgId, facilityId);
+        }
+        if (!facilityWide) {
+          // Caseload-limited (BHT, aftercare, billing): explicitly assigned patients only.
+          // No full facility census.
+          return listAssignedPatients(auth.orgId, auth.userId, facilityId ?? undefined);
+        }
+        return Promise.resolve([]);
+      }),
+    );
+
+    // Deduplicate by patient ID (multiple grants may cover overlapping patients).
     const seen = new Set<string>();
-    const unique = patients.filter((p) => {
-      if (seen.has(p.id)) return false;
-      seen.add(p.id);
-      return true;
-    });
+    const unique = patientSets
+      .flat()
+      .filter((p) => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      });
 
     setPatientCacheHeaders(res);
     res.json(unique);
@@ -132,11 +143,8 @@ router.get("/v1/patients/:id", async (req: Request, res: Response) => {
   const patientId = parse.data;
 
   try {
-    // Fetch patient first to get facilityId for scope check.
-    // Returns 404 for cross-org (getPatient checks org_id).
     const patient = await getPatient(patientId, auth.orgId);
 
-    // Authorize with facility and patient scope.
     const decision = await authorize({
       identity:   auth,
       permission: "patient.chart.view",
@@ -147,7 +155,7 @@ router.get("/v1/patients/:id", async (req: Request, res: Response) => {
     });
 
     if (!decision.allowed) {
-      // Opaque 404 — do not reveal the patient exists but the caller cannot see it.
+      // Opaque 404 — do not reveal that the patient exists in a different facility.
       res.status(404).json({ error: "Not found" });
       return;
     }
@@ -177,10 +185,8 @@ router.get("/v1/patients/:id/episode", async (req: Request, res: Response) => {
   const patientId = parse.data;
 
   try {
-    // Patient must exist in the org.
     const patient = await getPatient(patientId, auth.orgId);
 
-    // Authorize episode access.
     const decision = await authorize({
       identity:   auth,
       permission: "patient.episode.view",

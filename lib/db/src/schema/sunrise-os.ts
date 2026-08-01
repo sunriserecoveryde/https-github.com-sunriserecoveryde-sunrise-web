@@ -32,6 +32,13 @@ export const sosOrganizations = pgTable(
   {
     id:        uuid("id").primaryKey().defaultRandom(),
     name:      text("name").notNull(),
+    /**
+     * Tenant identifier for login — unique across all orgs.
+     * Added in Phase 2B migration 0002_authorization_correction.
+     * Used in the login form: (orgSlug + email + password) identifies exactly one account.
+     * Default "sunrise" is for demo/dev; production orgs receive a deliberate slug on creation.
+     */
+    slug:      text("slug").notNull().default("sunrise"),
     status:    text("status").notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -42,6 +49,7 @@ export const sosOrganizations = pgTable(
       "ck_sos_organizations_status",
       sql`${t.status} IN ('active', 'inactive', 'suspended')`,
     ),
+    uniqueSlug: uniqueIndex("idx_sos_organizations_slug").on(t.slug),
   }),
 );
 export type SosOrganization = typeof sosOrganizations.$inferSelect;

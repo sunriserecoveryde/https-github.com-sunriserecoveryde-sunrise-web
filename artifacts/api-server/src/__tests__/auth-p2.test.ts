@@ -98,16 +98,37 @@ const ORG_B  = "org-b-uuid";
 const FAC_1  = "fac-1-uuid";
 const FAC_2  = "fac-2-uuid";
 
+import { buildScopedGrant } from "../lib/authorizationService";
+
+function makeGrants(roleIds: string[], facilityIds: string[], orgId: string, orgWide: boolean) {
+  if (orgWide) {
+    return roleIds.map((roleId) =>
+      buildScopedGrant({ id: `test-${roleId}-org`, roleId, orgId, facilityId: null, effectiveAt: null, expiresAt: null }),
+    );
+  }
+  return roleIds.flatMap((roleId) =>
+    facilityIds.map((fId) =>
+      buildScopedGrant({ id: `test-${roleId}-${fId}`, roleId, orgId, facilityId: fId, effectiveAt: null, expiresAt: null }),
+    ),
+  );
+}
+
 function makeIdentity(overrides?: Partial<AuthenticatedIdentity>): AuthenticatedIdentity {
+  const roleIds     = overrides?.roleIds     ?? ["certified_clinician"];
+  const facilityIds = overrides?.facilityIds ?? [FAC_1];
+  const orgWide     = overrides?.orgWide     ?? false;
+  const orgId       = overrides?.orgId       ?? ORG_A;
+  const grants      = overrides?.grants      ?? makeGrants(roleIds, facilityIds, orgId, orgWide);
   return {
     userId:              "user-uuid",
     staffProfileId:      null,
-    orgId:               ORG_A,
+    orgId,
     sessionId:           "session-uuid",
-    roleIds:             ["certified_clinician"],
-    permissionCodes:     ["patient.list.view", "patient.chart.view", "patient.episode.view"],
-    facilityIds:         [FAC_1],
-    orgWide:             false,
+    grants,
+    roleIds,
+    permissionCodes:     overrides?.permissionCodes ?? ["patient.list.view", "patient.chart.view", "patient.episode.view"],
+    facilityIds,
+    orgWide,
     authenticationMethod: "password",
     authenticatedAt:     new Date().toISOString(),
     sessionVersion:      0,
@@ -148,8 +169,8 @@ describe("authorizationService", () => {
     expect(result.allowed).toBe(false);
   });
 
-  it("authorize denies when permission code absent from identity", async () => {
-    const id = makeIdentity({ permissionCodes: [] });
+  it("authorize denies when no grant has the required permission", async () => {
+    const id = makeIdentity({ permissionCodes: [], grants: [] });
     const req: AuthorizationRequest = {
       identity:   id,
       permission: "patient.list.view",
@@ -160,14 +181,14 @@ describe("authorizationService", () => {
   });
 
   it("AuthorizationDecision has allowed and reasonCode fields", async () => {
-    const id = makeIdentity({ permissionCodes: [] });
+    const id = makeIdentity({ permissionCodes: [], grants: [] });
     const result = await authorize({ identity: id, permission: "patient.list.view", orgId: ORG_A });
     expect(typeof result.allowed).toBe("boolean");
     expect(typeof result.reasonCode).toBe("string");
   });
 
   it("denied result has allowed=false and a defined reasonCode", async () => {
-    const id = makeIdentity({ permissionCodes: [] });
+    const id = makeIdentity({ permissionCodes: [], grants: [] });
     const result = await authorize({ identity: id, permission: "patient.list.view", orgId: ORG_A });
     expect(result.allowed).toBe(false);
     expect(result.reasonCode).toBeTruthy();

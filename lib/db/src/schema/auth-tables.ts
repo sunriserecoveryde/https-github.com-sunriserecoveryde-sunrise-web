@@ -1,12 +1,15 @@
 /**
  * Phase 2 authentication and authorization tables.
  *
- * Five new tables added by migration 0002_authentication_authorization.sql:
+ * Five core tables added by migration 0001_authentication_authorization:
  *   sos_user_accounts    — local-auth credentials, lockout, session versioning
  *   sos_sessions         — server-side session store (connect-pg-simple compatible)
  *   sos_role_assignments — DB-backed role ↔ user ↔ facility assignments
  *   sos_patient_access   — explicit patient-access assignments
  *   sos_auth_audit       — append-only authentication/authorization audit log
+ *
+ * Phase 2B additions (migration 0002_authorization_correction):
+ *   sos_rate_limit_windows — shared PostgreSQL-backed rate-limit counter store
  */
 
 import {
@@ -87,13 +90,15 @@ export const sosSessions = pgTable(
     userAgentSummary:  text("user_agent_summary"),
     revokedAt:         timestamp("revoked_at", { withTimezone: true }),
     revokedReason:     text("revoked_reason"),
+    createdAt:         timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
-    idxExpire:  index("idx_sos_sessions_expire").on(t.expire),
-    idxUserId:  index("idx_sos_sessions_user_id").on(t.userId),
+    idxExpire:   index("idx_sos_sessions_expire").on(t.expire),
+    idxUserId:   index("idx_sos_sessions_user_id").on(t.userId),
   }),
 );
 export type SosSession = typeof sosSessions.$inferSelect;
+export type InsertSosSession = typeof sosSessions.$inferInsert;
 
 // ── sos_role_assignments ────────────────────────────────────────────────────
 export const sosRoleAssignments = pgTable(
@@ -114,9 +119,8 @@ export const sosRoleAssignments = pgTable(
     createdByUserId: uuid("created_by_user_id"),
   },
   (t) => ({
-    idxOrgUser:   index("idx_sos_role_assignments_org_user").on(t.orgId, t.userId),
-    idxFacility:  index("idx_sos_role_assignments_facility").on(t.facilityId),
-    ckStatus:     check(
+    idxOrgUser:  index("idx_sos_role_assignments_org_user").on(t.orgId, t.userId),
+    ckStatus:    check(
       "ck_sos_role_assignments_status",
       sql`${t.status} IN ('active', 'revoked', 'expired')`,
     ),
@@ -125,38 +129,40 @@ export const sosRoleAssignments = pgTable(
       foreignColumns: [sosUserAccounts.orgId, sosUserAccounts.id],
       name: "fk_sos_role_assignments_org_user",
     }).onDelete("cascade"),
+    fkOrgFacility: foreignKey({
+      columns: [t.orgId, t.facilityId],
+      foreignColumns: [sosFacilities.orgId, sosFacilities.id],
+      name: "fk_sos_role_assignments_org_facility",
+    }).onDelete("restrict"),
   }),
 );
 export type SosRoleAssignment = typeof sosRoleAssignments.$inferSelect;
 export type InsertSosRoleAssignment = typeof sosRoleAssignments.$inferInsert;
 
-// ── sos_patient_access ──────────────────────────────────────────────────────
+// ── sos_patient_access ─────────────────────────────────────────────────────
+// Explicit per-patient access grants for roles that are not facility-wide.
+// Facility consistency enforced by trigger (0002 migration).
 export const sosPatientAccess = pgTable(
   "sos_patient_access",
   {
     id:               uuid("id").primaryKey().defaultRandom(),
-    orgId:            uuid("org_id").notNull()
-                        .references(() => sosOrganizations.id, { onDelete: "cascade" }),
-    facilityId:       uuid("facility_id").notNull(),
+    orgId:            uuid("org_id").notNull(),
+    facilityId:       uuid("facility_id"),
     patientId:        uuid("patient_id").notNull(),
     userId:           uuid("user_id").notNull(),
-    relationshipType: text("relationship_type").notNull().default("caseload_member"),
-    effectiveAt:      timestamp("effective_at", { withTimezone: true }).defaultNow().notNull(),
-    expiresAt:        timestamp("expires_at", { withTimezone: true }),
+    roleAssignmentId: uuid("role_assignment_id"),  // which grant authorized this access
     status:           text("status").notNull().default("active"),
-    createdByUserId:  uuid("created_by_user_id"),
+    grantedByUserId:  uuid("granted_by_user_id"),
+    grantedAt:        timestamp("granted_at", { withTimezone: true }).defaultNow().notNull(),
+    expiresAt:        timestamp("expires_at", { withTimezone: true }),
     createdAt:        timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
-    idxPatient: index("idx_sos_patient_access_patient").on(t.orgId, t.patientId),
-    idxUser:    index("idx_sos_patient_access_user").on(t.orgId, t.userId),
-    ckStatus:   check(
+    idxOrgUser:    index("idx_sos_patient_access_org_user").on(t.orgId, t.userId),
+    idxPatient:    index("idx_sos_patient_access_patient").on(t.patientId),
+    ckStatus:      check(
       "ck_sos_patient_access_status",
-      sql`${t.status} IN ('active', 'revoked', 'expired')`,
-    ),
-    ckRelationship: check(
-      "ck_sos_patient_access_relationship",
-      sql`${t.relationshipType} IN ('primary_counselor', 'caseload_member', 'covering_staff', 'observer', 'authorized_reviewer')`,
+      sql`${t.status} IN ('active', 'revoked')`,
     ),
     fkOrgFacility: foreignKey({
       columns: [t.orgId, t.facilityId],
@@ -179,7 +185,8 @@ export type SosPatientAccess = typeof sosPatientAccess.$inferSelect;
 export type InsertSosPatientAccess = typeof sosPatientAccess.$inferInsert;
 
 // ── sos_auth_audit ──────────────────────────────────────────────────────────
-// Append-only audit log. Application convention: no UPDATE or DELETE.
+// Append-only audit log.
+// UPDATE and DELETE are blocked by database triggers (0002 migration).
 export const sosAuthAudit = pgTable(
   "sos_auth_audit",
   {
@@ -209,3 +216,22 @@ export const sosAuthAudit = pgTable(
 );
 export type SosAuthAudit = typeof sosAuthAudit.$inferSelect;
 export type InsertSosAuthAudit = typeof sosAuthAudit.$inferInsert;
+
+// ── sos_rate_limit_windows ─────────────────────────────────────────────────
+// PostgreSQL-backed rate limit counter store.
+// Survives API restart. Shared across multiple API instances.
+// Keyed by (endpoint:ip), windowed by window_end timestamp.
+// Pruned periodically by the application.
+export const sosRateLimitWindows = pgTable(
+  "sos_rate_limit_windows",
+  {
+    key:       text("key").notNull(),
+    windowEnd: timestamp("window_end", { withTimezone: true }).notNull(),
+    count:     integer("count").notNull().default(1),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    idxWindowEnd: index("idx_sos_rate_limit_window_end").on(t.windowEnd),
+  }),
+);
+export type SosRateLimitWindow = typeof sosRateLimitWindows.$inferSelect;

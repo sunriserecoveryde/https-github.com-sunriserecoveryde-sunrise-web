@@ -1,0 +1,382 @@
+Tell Replit to **stop generating evidence packages and fix the actual authorization design first**.
+
+Do not begin Phase 3 and do not merge into `main`.
+
+Create a new branch from the current Phase 2 HEAD:
+
+`readiness/p0-phase-2b-authorization-correction`
+
+The current Phase 2 package is rejected because it has real authorization defects, not merely missing documentation.
+
+The current verified HEAD is:
+
+`127beaf28d54c03d527b543c1c2ef175a08a7939`
+
+The existing SHA manifest covers only 18 files and does not resolve the security findings.
+
+Complete one scoped task:
+
+# Phase 2B — Authorization Correction
+
+## 1. Replace flattened permissions and scopes
+
+The current identity model separately unions:
+
+* Permissions
+* Roles
+* Facility IDs
+* Organization-wide status
+
+This allows permission from one role to inherit scope from another role.
+
+Replace it with scoped authorization grants.
+
+Each grant must keep these values together:
+
+* Role assignment ID
+* Role
+* Permissions granted by that role
+* Organization
+* Facility or organization scope
+* Whether patient assignment is required
+* Effective date
+* Expiration date
+* Revocation status
+
+Authorization must be evaluated through one complete grant.
+
+A permission from one assignment must never inherit organization or facility scope from another assignment.
+
+## 2. Fix Patient List access
+
+Patient List must return only records authorized by the user’s effective grants.
+
+Required behavior:
+
+* Organization-scoped clinical grant: authorized organization patients only
+* Facility-scoped clinical grant: assigned facility patients only
+* Patient-assignment-limited grant: explicitly assigned patients only
+* Multiple valid grants: exact union of independently authorized records
+* No frontend-only filtering
+* No full facility census for caseload-limited users
+
+Add database-backed tests for BHT, aftercare, clinician, billing, multi-facility, and mixed-role users.
+
+## 3. Add mixed-role exploit tests
+
+Test these exact cases:
+
+1. Organization-wide security administrator plus Facility A BHT
+   Must not gain organization-wide patient access.
+
+2. Organization-wide HR plus Facility A clinician
+   Clinical access must remain limited to Facility A.
+
+3. Facility A billing plus Facility B BHT
+   Billing scope must not bypass BHT patient-assignment restrictions.
+
+4. Facility A clinician plus Facility B billing
+   Clinical access must remain limited to Facility A.
+
+5. Organization-wide role without patient permissions
+   Must not list or view patients.
+
+6. Expired or revoked broad role plus active restricted role
+   Expired or revoked scope must contribute nothing.
+
+7. Unknown role
+   Must grant no permissions or scope.
+
+## 4. Prevent role-assignment privilege escalation
+
+The role-management API must not accept arbitrary role strings or arbitrary organization-wide assignments.
+
+Add a central role-grant policy.
+
+Enforce:
+
+* Requested role exists
+* Requested scope is allowed for that role
+* Administrator is allowed to grant that role
+* Facility administrator cannot grant organization-wide roles
+* Administrator cannot grant a role above their authority
+* User cannot elevate themselves
+* User cannot create another account and grant it higher authority
+* High-privilege roles require protected organization-level approval
+* Target user and facility belong to the same organization
+* Role expiration is validated
+
+Add tests proving self-escalation and unauthorized grants fail.
+
+## 5. Make login tenant-deterministic
+
+Email is unique only within an organization, but login currently searches globally.
+
+Add a unique organization slug or another approved tenant identifier.
+
+Production login should use:
+
+* Organization slug
+* Email
+* Password
+
+Requirements:
+
+* Organization plus normalized email identifies exactly one account
+* Duplicate email addresses across organizations work safely
+* Public login failures remain generic
+* No global `.limit(1)` email lookup
+* Password-reset tenant selection follows the same rule
+
+## 6. Add database integrity
+
+Add versioned migrations enforcing:
+
+* Patient-access organization matches patient organization
+* Patient-access facility matches patient facility
+* Patient-access user belongs to the organization
+* Facility belongs to the organization
+* Session user and organization relationships are protected
+* Invalid cross-facility patient-access rows are rejected by PostgreSQL
+
+Use checked-in migrations only.
+
+Do not use direct manual DDL as the final migration process.
+
+## 7. Replace process-local rate limiting
+
+The production login rate limiter must use a shared store:
+
+* PostgreSQL, or
+* Redis, or
+* Another approved shared service
+
+It must:
+
+* Survive API restart
+* Work across multiple API instances
+* Protect login and password-reset routes
+* Use generic responses
+* Have configurable thresholds
+* Fail according to a documented safe policy
+
+Add restart and shared-counter tests.
+
+## 8. Make security writes transactional and audited
+
+User creation, role assignment, role revocation, user disablement, reactivation, and session revocation must be transactional.
+
+Required security change and required audit event must succeed together.
+
+Do not swallow required audit failures.
+
+Make authentication audit records append-only at the database level using restricted database permissions, triggers, or another enforceable control.
+
+Add tests proving ordinary application operations cannot update or delete audit records.
+
+## 9. Disable incomplete password reset
+
+If password-reset completion is still unimplemented:
+
+* Disable the production request route
+* Do not generate unusable tokens
+* Do not present password reset as available
+
+Alternatively, complete the full single-use, expiring, hashed-token workflow.
+
+Do not leave a half-enabled reset process.
+
+## 10. Add real behavioral security tests
+
+Remove critical tests that pass only through:
+
+* `designInvariant`
+* Documentation strings
+* Constant `toBeTruthy()` assertions
+* Broad arrays of acceptable HTTP statuses
+* Hard-coded middleware-order arrays
+* Audit-event name enumeration without persisted records
+
+Run real production-mode HTTP tests using:
+
+* Real PostgreSQL
+* Real seeded user
+* Cookie-preserving HTTP agent
+* Real CSRF middleware
+* Real session store
+* Real authorization middleware
+
+Required flow:
+
+1. Request pre-login CSRF token
+2. Login with real seeded credentials
+3. Confirm session rotation
+4. Confirm old CSRF token fails
+5. Request authenticated CSRF token
+6. Load session endpoint
+7. Load authorized Patient List
+8. Open authorized Patient Detail
+9. Confirm unauthorized patient access fails
+10. Logout with authenticated CSRF token
+11. Confirm session is revoked
+12. Confirm patient APIs return 401
+13. Restart API
+14. Confirm revoked session remains invalid
+
+Do not use development identity headers.
+
+## 11. Prove clean migrations
+
+Create a disposable empty PostgreSQL database.
+
+Using only checked-in migrations:
+
+1. Apply Phase 1A migration
+2. Apply Phase 2 migration
+3. Apply Phase 2B migration
+4. Verify all tables, indexes, foreign keys, checks, and journal entries
+5. Reapply migrations
+6. Confirm no pending migrations
+7. Seed fictitious users and patients
+8. Run database and API tests
+9. Destroy the disposable database
+
+No manual DDL or manual journal insertion is permitted.
+
+## 12. Prove real frontend-to-API connectivity
+
+Use the real Sunrise OS frontend, real API server, real secure session cookie, and real PostgreSQL records.
+
+Do not use Playwright route interception or mocked API responses.
+
+Required browser flow:
+
+1. Production login using organization slug
+2. Real API authentication
+3. Session endpoint
+4. Real Patient List
+5. Real Patient Detail
+6. Real active episode
+7. Browser refresh
+8. Logout
+9. Protected API returns 401
+
+Capture network and screenshot evidence without exposing passwords, cookies, or tokens.
+
+## 13. Manual persona verification
+
+Manually verify:
+
+* Organization administrator
+* Facility administrator
+* Clinician
+* Nurse
+* Billing
+* Read-only/BHT
+* Patient-assignment-limited
+* Multi-facility
+* Mixed-role
+* Unrelated-facility
+* Disabled
+* Expired-role
+
+For every persona provide:
+
+* Active scoped grants
+* Patient List result
+* Expected patient count
+* Patient Detail result
+* Denied route result
+* Logout result
+* Audit result
+
+## 14. Final validation
+
+Run and report:
+
+* Clean migration tests
+* Constraint tests
+* Scoped-grant tests
+* Mixed-role exploit tests
+* Patient-list filtering tests
+* Role-grant tests
+* Tenant-aware login tests
+* Shared rate-limit tests
+* Session restart tests
+* Real CSRF HTTP tests
+* Audit persistence tests
+* CORS tests
+* API tests
+* Frontend tests
+* Real-browser end-to-end tests
+* TypeScript for all packages
+* Production builds
+
+Report behavioral security tests separately from static or documentation checks.
+
+## 15. Final review package
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-2b-authorization-correction-review.zip`
+
+Include:
+
+* All Phase 1A, Phase 2, and Phase 2B migrations needed for reproduction
+* Scoped-grant authorization code
+* Role-grant policy
+* Patient-list filtering
+* Tenant-aware login
+* Shared rate-limit implementation
+* Transactional administration code
+* Append-only audit controls
+* Tests
+* Sanitized logs
+* Clean migration proof
+* API restart proof
+* Rate-limit restart proof
+* Real browser evidence
+* Persona results
+* Screenshots
+* Updated documentation
+* Evidence manifest
+* Complete SHA-256 manifest
+
+The SHA manifest must cover every archive entry except itself.
+
+Do not include duplicate convenience copies, passwords, hashes, tokens, cookies, secrets, environment files, database dumps, real patient data, caches, or previous ZIP files.
+
+Do not begin Phase 3.
+
+Do not merge into `main`.
+
+Stop after the Phase 2B review ZIP is complete and verified.
+
+In the final response provide:
+
+* Branch
+* Starting commit
+* Correction commits
+* Final HEAD
+* Scoped-grant design
+* Mixed-role results
+* Patient-list filtering results
+* Self-escalation results
+* Tenant-aware login results
+* Shared rate-limit result
+* Audit append-only result
+* Transactional-write result
+* Clean migration result
+* Real CSRF result
+* Session-restart result
+* Real frontend-to-API result
+* Test counts
+* TypeScript result
+* Build result
+* Persona count
+* Screenshot count
+* ZIP path
+* ZIP size
+* ZIP SHA-256
+* ZIP entry count
+* Known limitations

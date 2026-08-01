@@ -11,3 +11,4 @@
 - [AI Note Engine + Wet Signatures](ai-note-engine.md) — template-based BIRP/DAP/SOAP/GIRP generator; SignatureModal/SignedBadge/WetSignatureCanvas; 5 pages wired; format union type must stay in sync
 - [ClinicalForms admissions screening rewrite](clinical-forms-rewrite.md) — tab layout, medication exclusion thresholds, BPS credential gate, JSX &amp; entity pitfall
 - [Phase 1A Hardening](phase-1a-hardening.md) — migrations, DB constraints, auth boundary, health endpoints, browser privacy; ZIP SHA ade475c9
+- [Phase 2 Hardening](phase-2-hardening.md) — migration idx gap, connect-pg-simple revocation, DISABLE_AUTH_FALLBACK guard, rate limiter skip, staff profile FK, seed export pattern

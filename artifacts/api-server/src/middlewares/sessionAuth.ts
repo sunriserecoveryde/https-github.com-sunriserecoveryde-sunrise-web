@@ -1,8 +1,10 @@
 /**
- * sessionAuth — Phase 2 session-based identity middleware.
+ * sessionAuth — Phase 2B session-based identity middleware.
  *
- * Replaces the Phase 1A devIdentityMiddleware + requireIdentity combo for
- * /api/v1/* routes.
+ * Key change vs Phase 2: resolveIdentityFromSession now builds ScopedGrant[]
+ * from each role assignment row independently. Authorization is evaluated
+ * through one complete grant — a permission from one assignment never
+ * inherits scope from another.
  *
  * Behaviour:
  *
@@ -10,14 +12,13 @@
  *   • Reads req.session.userId (set by express-session after login).
  *   • Loads user, status, session_version, and role assignments from DB.
  *   • Validates: user active, session not revoked/expired, session_version matches.
- *   • Attaches req.auth (AuthenticatedIdentity).
- *   • Returns 401 for any failure — does NOT reveal the failure reason to the client.
+ *   • Builds ScopedGrant[] from assignments.
+ *   • Attaches req.auth (AuthenticatedIdentity with grants).
+ *   • Returns 401 for any failure — does NOT reveal the failure reason.
  *
  * Development (NODE_ENV !== 'production'):
- *   • If a real session exists and is valid → uses it (req.auth set).
- *   • Otherwise → falls back to devIdentityMiddleware behaviour for demo mode.
- *     In this case req.auth is set to a synthetic dev identity using the
- *     DEV_SEED_ORG_ID / DEV_SEED_FACILITY_ID constants with a synthetic role.
+ *   • If a real session exists and is valid → uses it.
+ *   • Otherwise → falls back to synthetic dev identity (unless DISABLE_AUTH_FALLBACK=true).
  *
  * This middleware must run AFTER express-session has been registered (in app.ts).
  */
@@ -25,13 +26,18 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "@workspace/db";
 import { sosUserAccounts, sosSessions, sosRoleAssignments } from "@workspace/db";
-import { and, eq, gt, isNull, or, inArray } from "drizzle-orm";
-import { getPermissionsForRole, type PermissionCode } from "../lib/permissionPolicy";
-import type { AuthenticatedIdentity } from "../lib/authorizationService";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
+import {
+  getPermissionsForRole,
+  isRoleFacilityWide,
+  type PermissionCode,
+} from "../lib/permissionPolicy";
+import type { AuthenticatedIdentity, ScopedGrant } from "../lib/authorizationService";
+import { buildScopedGrant } from "../lib/authorizationService";
 import { logger } from "../lib/logger";
 import { DEV_SEED_ORG_ID, DEV_SEED_FACILITY_ID } from "./devIdentity";
 
-// Augment Express.Request with the Phase 2 auth shape.
+// Augment Express.Request with the Phase 2B auth shape.
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
@@ -51,7 +57,7 @@ declare module "express-session" {
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Identity resolution ───────────────────────────────────────────────────────
 
 async function resolveIdentityFromSession(
   req: Request,
@@ -59,25 +65,20 @@ async function resolveIdentityFromSession(
   const { userId, orgId, sessionVersion: sessionVer, authenticatedAt } = req.session ?? {};
   if (!userId || !orgId) return null;
 
-  const now = new Date();
-
-  // ── Absolute session timeout (8 hours from authentication time) ───────────
-  // The idle timeout is enforced by express-session's maxAge/rolling settings.
-  // The absolute timeout is enforced here — the session cookie may still be
-  // "fresh" from a recent idle-timeout reset, but we revoke after 8 hours.
+  // ── Absolute session timeout ───────────────────────────────────────────────
   if (authenticatedAt) {
     const ABSOLUTE_TIMEOUT_MS = parseInt(
       process.env.SESSION_ABSOLUTE_TIMEOUT_MS ?? "28800000",
       10,
     );
     if (Date.now() - new Date(authenticatedAt).getTime() > ABSOLUTE_TIMEOUT_MS) {
-      logger.info({ userId }, "sessionAuthMiddleware: absolute session timeout exceeded — destroying session");
+      logger.info({ userId }, "sessionAuthMiddleware: absolute session timeout — destroying session");
       req.session.destroy(() => {});
       return null;
     }
   }
 
-  // Load user account — validate status and session version.
+  // ── Load user account ──────────────────────────────────────────────────────
   const [user] = await db
     .select({
       id:             sosUserAccounts.id,
@@ -96,23 +97,29 @@ async function resolveIdentityFromSession(
 
   if (!user) return null;
   if (user.status !== "active") return null;
-  // Session version must match — any password reset or admin revocation bumps this.
   if (sessionVer !== undefined && user.sessionVersion !== sessionVer) return null;
 
-  // Check session row is not revoked.
+  // ── Validate session row (not revoked) ────────────────────────────────────
   const [sessionRow] = await db
-    .select({ revokedAt: sosSessions.revokedAt })
+    .select({ sid: sosSessions.sid, revokedAt: sosSessions.revokedAt })
     .from(sosSessions)
     .where(eq(sosSessions.sid, req.sessionID))
     .limit(1);
 
-  if (sessionRow?.revokedAt) return null;
+  if (!sessionRow) return null;
+  if (sessionRow.revokedAt !== null) return null;
 
-  // Load active, non-expired role assignments.
+  // ── Load active role assignments ──────────────────────────────────────────
+  const now = new Date();
   const assignments = await db
     .select({
-      roleId:     sosRoleAssignments.roleId,
-      facilityId: sosRoleAssignments.facilityId,
+      id:          sosRoleAssignments.id,
+      orgId:       sosRoleAssignments.orgId,
+      userId:      sosRoleAssignments.userId,
+      roleId:      sosRoleAssignments.roleId,
+      facilityId:  sosRoleAssignments.facilityId,
+      effectiveAt: sosRoleAssignments.effectiveAt,
+      expiresAt:   sosRoleAssignments.expiresAt,
     })
     .from(sosRoleAssignments)
     .where(
@@ -129,12 +136,26 @@ async function resolveIdentityFromSession(
 
   if (assignments.length === 0) return null;
 
+  // ── Build scoped grants (Phase 2B) ────────────────────────────────────────
+  // Each grant is independent. Permission from one grant NEVER inherits
+  // facility scope from another grant.
+  const grants: ScopedGrant[] = assignments.map((a) =>
+    buildScopedGrant({
+      id:          a.id,
+      roleId:      a.roleId,
+      orgId:       a.orgId,
+      facilityId:  a.facilityId ?? null,
+      effectiveAt: a.effectiveAt,
+      expiresAt:   a.expiresAt,
+    }),
+  );
+
+  // ── Flat summaries (backward compat — for session response & audit) ────────
+  // These MUST NOT be used for authorization decisions. Use grants[].
   const roleIds = [...new Set(assignments.map((a) => a.roleId))];
   const permissionCodes: PermissionCode[] = [
     ...new Set(roleIds.flatMap((r) => getPermissionsForRole(r))),
   ];
-  // Org-wide: any assignment with facilityId = null grants org-wide access.
-  // Scoped: collect explicit facilityIds from scoped (non-null) assignments.
   const orgWide = assignments.some((a) => a.facilityId === null);
   const facilityIds = [
     ...new Set(
@@ -146,9 +167,10 @@ async function resolveIdentityFromSession(
 
   return {
     userId:               user.id,
-    staffProfileId:       null, // populated on login in Phase 3
+    staffProfileId:       null,
     orgId:                user.orgId,
     sessionId:            req.sessionID,
+    grants,
     roleIds,
     permissionCodes,
     facilityIds,
@@ -159,16 +181,31 @@ async function resolveIdentityFromSession(
   };
 }
 
+// ── Dev identity (demo mode only) ─────────────────────────────────────────────
+
 function makeDevIdentity(): AuthenticatedIdentity {
+  const devGrant: ScopedGrant = {
+    roleAssignmentId: "dev-assignment",
+    roleId:           "clinical_supervisor",
+    permissions:      getPermissionsForRole("clinical_supervisor"),
+    orgId:            DEV_SEED_ORG_ID,
+    facilityId:       DEV_SEED_FACILITY_ID,
+    orgWide:          false,
+    facilityWide:     isRoleFacilityWide("clinical_supervisor"),
+    requiresPatientAssignment: false,
+    effectiveAt:      null,
+    expiresAt:        null,
+  };
   return {
     userId:               "00000000-0000-4000-a000-000000000020",
     staffProfileId:       null,
     orgId:                DEV_SEED_ORG_ID,
     sessionId:            "dev-session",
+    grants:               [devGrant],
     roleIds:              ["clinical_supervisor"],
     permissionCodes:      getPermissionsForRole("clinical_supervisor"),
     facilityIds:          [DEV_SEED_FACILITY_ID],
-    orgWide:              true, // dev identity gets full org access
+    orgWide:              false,
     authenticationMethod: "dev-identity",
     authenticatedAt:      new Date().toISOString(),
     sessionVersion:       0,
@@ -177,53 +214,43 @@ function makeDevIdentity(): AuthenticatedIdentity {
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
-export async function sessionAuthMiddleware(
+const isProduction = process.env.NODE_ENV === "production";
+
+export function sessionAuthMiddleware(
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<void> {
-  const isProduction = process.env.NODE_ENV === "production";
+): void {
+  resolveIdentityFromSession(req)
+    .then((identity) => {
+      if (identity) {
+        req.session.touch();
+        req.auth = identity;
+        next();
+        return;
+      }
 
-  try {
-    const identity = await resolveIdentityFromSession(req);
+      if (!isProduction && process.env.DISABLE_AUTH_FALLBACK !== "true") {
+        req.auth = makeDevIdentity();
+        req.devIdentity = {
+          orgId:      DEV_SEED_ORG_ID,
+          facilityId: DEV_SEED_FACILITY_ID,
+        };
+        next();
+        return;
+      }
 
-    if (identity) {
-      // Real session — update idle timeout by touching the session.
-      req.session.touch();
-      req.auth = identity;
       next();
-      return;
-    }
-
-    if (!isProduction && process.env.DISABLE_AUTH_FALLBACK !== "true") {
-      // Development/demo fallback: use synthetic dev identity.
-      // Set DISABLE_AUTH_FALLBACK=true to suppress this (used by integration tests
-      // that verify unauthenticated requests return 401 — the fallback would mask
-      // session destruction and clearCookie behaviour in the test environment).
-      req.auth = makeDevIdentity();
-      // Also set devIdentity for backward compat with any Phase 1A code.
-      req.devIdentity = {
-        orgId:      DEV_SEED_ORG_ID,
-        facilityId: DEV_SEED_FACILITY_ID,
-      };
-      next();
-      return;
-    }
-
-    // No valid session — leave req.auth undefined.
-    // Public routes (login, csrf-token, password-reset) work without auth.
-    // Protected routes must call requireAuth() or requirePermission() explicitly.
-    next();
-  } catch (err) {
-    logger.error({ err }, "sessionAuthMiddleware: DB error resolving identity");
-    res.status(503).json({ error: "Service temporarily unavailable" });
-  }
+    })
+    .catch((err) => {
+      logger.error({ err }, "sessionAuthMiddleware: DB error resolving identity");
+      res.status(503).json({ error: "Service temporarily unavailable" });
+    });
 }
 
 /**
  * requireAuth — must be called AFTER sessionAuthMiddleware.
- * Returns 401 if req.auth is not set (should not happen if sessionAuthMiddleware
- * is wired correctly, but defensive guard).
+ * Returns 401 if req.auth is not set.
  */
 export function requireAuth(
   req: Request,

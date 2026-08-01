@@ -1,53 +1,129 @@
 /**
- * Central authorization service for Sunrise OS Phase 2.
+ * Central authorization service for Sunrise OS Phase 2B.
  *
- * Single entry point for all authorization decisions. Deny by default.
+ * Key change from Phase 2: replace the flat permissionCodes/facilityIds/orgWide
+ * model with per-grant scoped evaluation.
  *
- * Decision flow:
- *  1. Identity must exist and user must be enabled.
- *  2. Organization must match the identity's org.
- *  3. The required permission must appear in the identity's permissionCodes.
- *  4. Facility must be within the identity's authorized facility scope
- *     (from role assignments, NOT from the browser request).
- *  5. For patient / episode access: facility-wide roles are sufficient;
- *     otherwise an explicit sos_patient_access row is required.
+ * Problem with the flat model:
+ *   A user with two role assignments — e.g., security_admin (org-wide, no patient
+ *   access) + certified_clinician (facility-A, patient access) — produced:
+ *     orgWide=true   (from security_admin facilityId=null)
+ *     permissionCodes includes patient.list.view  (from clinician)
+ *   → The facility scope check was bypassed because orgWide=true,
+ *     giving the clinician org-wide patient access they should not have.
  *
- * Audit events are written for every denied access to support compliance logging.
+ * Fix: evaluate authorization through one complete grant. A permission from
+ * one assignment can NEVER inherit scope from another assignment.
  *
- * Internal denial reasons are NEVER returned to the caller — only
- * "allowed" or "denied" with the appropriate HTTP status guidance.
+ * Decision flow (authorize()):
+ *   For each active ScopedGrant on the identity:
+ *     1. Grant orgId must match the request orgId.
+ *     2. Grant must contain the required permission.
+ *     3. If a facilityId is requested: grant must be org-wide OR cover that facility.
+ *     4. If a patientId is requested: grant must be facility-wide OR an explicit
+ *        sos_patient_access row exists (scoped to this grant's facility).
+ *   If any grant satisfies all conditions → ALLOW.
+ *   Otherwise → DENY (audit event written).
+ *
+ * Audit events are written for every denied access.
+ * Internal denial reasons are NEVER returned to the caller.
  */
 
 import { db } from "@workspace/db";
 import { sosPatientAccess, sosAuthAudit } from "@workspace/db";
 import { and, eq, isNull, or, gt } from "drizzle-orm";
-import { isRoleFacilityWide, type PermissionCode } from "./permissionPolicy";
+import {
+  isRoleFacilityWide,
+  getPermissionsForRole,
+  type PermissionCode,
+} from "./permissionPolicy";
 import { logger } from "./logger";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Scoped Grant ───────────────────────────────────────────────────────────────
+// One grant corresponds to one active role assignment row.
+// All authorization decisions are made through one complete grant.
+
+export interface ScopedGrant {
+  /** ID of the sos_role_assignments row that created this grant. */
+  roleAssignmentId: string;
+  roleId: string;
+  /** Permission codes granted by this role (from ROLE_PERMISSIONS). */
+  permissions: PermissionCode[];
+  orgId: string;
+  /** Explicit facility scope. null = org-wide scope for this grant. */
+  facilityId: string | null;
+  /** Computed: facilityId === null → org-wide access for this grant. */
+  orgWide: boolean;
+  /**
+   * true = this role grants facility-wide patient access; no sos_patient_access
+   * row is needed for patients within the grant's facility scope.
+   * false = requires an explicit sos_patient_access row (caseload-limited).
+   */
+  facilityWide: boolean;
+  requiresPatientAssignment: boolean;
+  effectiveAt: Date | null;
+  expiresAt: Date | null;
+}
+
+/**
+ * Build a ScopedGrant from a role assignment row.
+ * Returns null for unknown roles (deny by default for unknown role strings).
+ */
+export function buildScopedGrant(assignment: {
+  id: string;
+  roleId: string;
+  orgId: string;
+  facilityId: string | null;
+  effectiveAt: Date | null;
+  expiresAt: Date | null;
+}): ScopedGrant {
+  const permissions = getPermissionsForRole(assignment.roleId); // [] for unknown roles
+  const facilityWide = isRoleFacilityWide(assignment.roleId);   // false for unknown roles
+  return {
+    roleAssignmentId: assignment.id,
+    roleId: assignment.roleId,
+    permissions,
+    orgId: assignment.orgId,
+    facilityId: assignment.facilityId,
+    orgWide: assignment.facilityId === null,
+    facilityWide,
+    requiresPatientAssignment: !facilityWide,
+    effectiveAt: assignment.effectiveAt,
+    expiresAt: assignment.expiresAt,
+  };
+}
+
+// ── AuthenticatedIdentity ─────────────────────────────────────────────────────
 
 export interface AuthenticatedIdentity {
   userId: string;
   staffProfileId: string | null;
   orgId: string;
   sessionId: string;
+
+  /**
+   * Complete list of scoped grants from active role assignments.
+   * Authorization is evaluated through these grants — never through the flat
+   * summary fields below.
+   */
+  grants: ScopedGrant[];
+
+  /**
+   * Flat summaries derived from grants (kept for backward compat with
+   * session response, audit log, and frontend display).
+   * These MUST NOT be used for authorization decisions — use `grants`.
+   */
   roleIds: string[];
   permissionCodes: PermissionCode[];
-  /**
-   * Explicit facility IDs from scoped role assignments.
-   * Empty when all assignments are org-wide (facilityId = null).
-   * Use orgWide to distinguish "no facility access" from "org-wide access".
-   */
   facilityIds: string[];
-  /**
-   * True when the user has at least one org-wide role assignment (facilityId = null).
-   * Org-wide users bypass facility-level scope checks in authorize().
-   */
   orgWide: boolean;
+
   authenticationMethod: "password" | "dev-identity";
   authenticatedAt: string;
   sessionVersion: number;
 }
+
+// ── Authorization request/response ────────────────────────────────────────────
 
 export interface AuthorizationRequest {
   identity: AuthenticatedIdentity;
@@ -57,7 +133,6 @@ export interface AuthorizationRequest {
   patientId?: string;
   episodeId?: string;
   purpose?: string;
-  /** IP address for audit log */
   ipAddress?: string;
 }
 
@@ -76,6 +151,8 @@ export type AuthorizationReasonCode =
 export interface AuthorizationDecision {
   allowed: boolean;
   reasonCode: AuthorizationReasonCode;
+  /** The grant that authorized the request (only set when allowed=true). */
+  authorizedByGrant?: ScopedGrant;
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -83,7 +160,6 @@ export interface AuthorizationDecision {
 function denied(reasonCode: AuthorizationReasonCode): AuthorizationDecision {
   return { allowed: false, reasonCode };
 }
-const allow: AuthorizationDecision = { allowed: true, reasonCode: "allowed" };
 
 async function writeAuditDenial(
   identity: AuthenticatedIdentity | null,
@@ -106,9 +182,36 @@ async function writeAuditDenial(
       },
     });
   } catch (err) {
-    // Audit failure must not block the response.
     logger.error({ err }, "authorizationService: failed to write denial audit event");
   }
+}
+
+async function checkPatientAccessForGrant(
+  orgId: string,
+  patientId: string,
+  userId: string,
+  facilityId: string | null,
+): Promise<boolean> {
+  const now = new Date();
+  const conditions = [
+    eq(sosPatientAccess.orgId, orgId),
+    eq(sosPatientAccess.patientId, patientId),
+    eq(sosPatientAccess.userId, userId),
+    eq(sosPatientAccess.status, "active"),
+    or(
+      isNull(sosPatientAccess.expiresAt),
+      gt(sosPatientAccess.expiresAt, now),
+    ),
+  ];
+  if (facilityId) {
+    conditions.push(eq(sosPatientAccess.facilityId, facilityId));
+  }
+  const rows = await db
+    .select({ id: sosPatientAccess.id })
+    .from(sosPatientAccess)
+    .where(and(...conditions))
+    .limit(1);
+  return rows.length > 0;
 }
 
 // ── Main authorization function ───────────────────────────────────────────────
@@ -118,80 +221,95 @@ export async function authorize(
 ): Promise<AuthorizationDecision> {
   const { identity, permission, orgId, facilityId, patientId } = req;
 
-  // 1. Identity must exist
   if (!identity) {
     return denied("unauthenticated");
   }
 
-  // 2. Organization must match exactly (prevents cross-tenant access)
-  if (identity.orgId !== orgId) {
-    await writeAuditDenial(identity, "facility-out-of-scope", req);
-    return denied("facility-out-of-scope");
-  }
+  // Evaluate each grant independently.
+  // A permission from one grant NEVER inherits scope from another grant.
+  //
+  // Track the "best" denial reason so callers see the most specific reason
+  // (e.g. "facility-out-of-scope" rather than "permission-missing" when a
+  // grant has the permission but doesn't cover the requested facility).
+  let bestDenialReason: AuthorizationReasonCode = "permission-missing";
 
-  // 3. Permission must be granted by one of the user's roles
-  if (!identity.permissionCodes.includes(permission)) {
-    await writeAuditDenial(identity, "permission-missing", req);
-    return denied("permission-missing");
-  }
+  for (const grant of identity.grants) {
+    // 1. Org must match exactly.
+    if (grant.orgId !== orgId) continue;
 
-  // 4. Facility scope check (when a facilityId is provided)
-  //    Org-wide users bypass this check — their role assignment has facilityId=null,
-  //    meaning they are authorized across all facilities in their org.
-  //    Scoped users must have the specific facility in their identity.facilityIds.
-  if (facilityId && !identity.orgWide) {
-    const hasAccess = identity.facilityIds.includes(facilityId);
-    if (!hasAccess) {
-      await writeAuditDenial(identity, "facility-out-of-scope", req);
-      return denied("facility-out-of-scope");
-    }
-  }
+    // 2. This grant must include the required permission.
+    if (!grant.permissions.includes(permission)) continue;
 
-  // 5. Patient-specific access check
-  if (patientId && facilityId) {
-    // Determine if any of the user's roles are facility-wide for the given facility.
-    const hasFacilityWideRole = identity.roleIds.some((roleId) =>
-      isRoleFacilityWide(roleId),
-    );
+    // Grant has the permission — upgrade any future denial to a scope denial.
 
-    if (!hasFacilityWideRole) {
-      // Require explicit sos_patient_access row.
-      const now = new Date();
-      const rows = await db
-        .select({ id: sosPatientAccess.id })
-        .from(sosPatientAccess)
-        .where(
-          and(
-            eq(sosPatientAccess.orgId, orgId),
-            eq(sosPatientAccess.patientId, patientId),
-            eq(sosPatientAccess.userId, identity.userId),
-            eq(sosPatientAccess.status, "active"),
-            or(
-              isNull(sosPatientAccess.expiresAt),
-              gt(sosPatientAccess.expiresAt, now),
-            ),
-          ),
-        )
-        .limit(1);
-
-      if (rows.length === 0) {
-        await writeAuditDenial(identity, "patient-out-of-scope", req);
-        return denied("patient-out-of-scope");
+    // 3. Facility scope: grant must cover the requested facility.
+    if (facilityId !== undefined) {
+      const grantCoversFacility = grant.orgWide || grant.facilityId === facilityId;
+      if (!grantCoversFacility) {
+        bestDenialReason = "facility-out-of-scope";
+        continue;
       }
     }
+
+    // 4. Patient scope (only when patientId is provided).
+    if (patientId) {
+      const effectiveFacilityId = facilityId ?? grant.facilityId;
+      if (grant.facilityWide) {
+        // Facility-wide roles: no explicit patient_access row required.
+        return { allowed: true, reasonCode: "allowed", authorizedByGrant: grant };
+      } else {
+        // Caseload-limited: requires explicit sos_patient_access row
+        // scoped to this grant's facility.
+        const hasAccess = await checkPatientAccessForGrant(
+          orgId,
+          patientId,
+          identity.userId,
+          effectiveFacilityId ?? null,
+        );
+        if (!hasAccess) {
+          bestDenialReason = "patient-out-of-scope";
+          continue;
+        }
+      }
+    }
+
+    // This grant satisfies the full request.
+    return { allowed: true, reasonCode: "allowed", authorizedByGrant: grant };
   }
 
-  return allow;
+  // No grant satisfied the request — return the most specific reason we found.
+  await writeAuditDenial(identity, bestDenialReason, req);
+  return denied(bestDenialReason);
 }
 
 /**
- * Quick synchronous check: does the identity hold the requested permission?
+ * Quick synchronous check: does the identity hold the requested permission
+ * through ANY active grant?
  * Does NOT check facility or patient scope. Use for UI-gating only.
- * The server always performs the full `authorize()` call before returning data.
+ * The server always calls the full `authorize()` before returning data.
  */
 export function hasPermission(
   identity: AuthenticatedIdentity,
   permission: PermissionCode,
 ): boolean {
-  return identity.permissionCodes.includes(permission);
+  return identity.grants.some((g) => g.permissions.includes(permission));
+}
+
+/**
+ * Returns all facility IDs that a permission is authorized for,
+ * across all active grants. Used for patient-list filtering.
+ */
+export function getAuthorizedFacilitiesForPermission(
+  identity: AuthenticatedIdentity,
+  permission: PermissionCode,
+): { facilityId: string | null; orgWide: boolean; facilityWide: boolean; requiresPatientAssignment: boolean; grant: ScopedGrant }[] {
+  return identity.grants
+    .filter((g) => g.permissions.includes(permission))
+    .map((g) => ({
+      facilityId: g.facilityId,
+      orgWide: g.orgWide,
+      facilityWide: g.facilityWide,
+      requiresPatientAssignment: g.requiresPatientAssignment,
+      grant: g,
+    }));
 }

@@ -1,19 +1,26 @@
 /**
- * Phase 2 Authentication Routes
+ * Phase 2B Authentication Routes
  *
- * POST /api/v1/auth/login            — email+password login; issues session cookie
- * POST /api/v1/auth/logout           — revokes session; clears cookie
+ * POST /api/v1/auth/login            — org-slug + email + password login (tenant-deterministic)
+ * POST /api/v1/auth/logout           — revokes session; preserves row for audit
  * GET  /api/v1/auth/session          — returns safe session summary for frontend
  * GET  /api/v1/auth/csrf-token       — issues CSRF token (public)
- * POST /api/v1/auth/password-reset/request  — request password-reset email
- * POST /api/v1/auth/password-reset/complete — complete reset with token
+ * POST /api/v1/auth/password-reset/request  — DISABLED: returns 503 (incomplete flow)
+ * POST /api/v1/auth/password-reset/complete — DISABLED: returns 503 (incomplete flow)
  *
- * Admin routes (require user.manage or session.manage permission):
- * POST /api/v1/admin/users                       — create user
- * POST /api/v1/admin/users/:id/disable           — disable user
- * POST /api/v1/admin/users/:id/reactivate        — reactivate user
- * POST /api/v1/admin/sessions/:userId/revoke-all — revoke all sessions for a user
- * POST /api/v1/admin/role-assignments            — create role assignment
+ * Admin routes (require user.manage or role.manage permission):
+ * POST /api/v1/admin/users                       — create user (transactional)
+ * POST /api/v1/admin/users/:id/disable           — disable user (transactional)
+ * POST /api/v1/admin/users/:id/reactivate        — reactivate user (transactional)
+ * POST /api/v1/admin/sessions/:userId/revoke-all — revoke all sessions for a user (transactional)
+ * POST /api/v1/admin/role-assignments            — create role assignment (policy-gated)
+ *
+ * Phase 2B changes:
+ *  - Login now requires orgSlug (tenant-deterministic; no global email lookup)
+ *  - Rate limiter uses PostgreSQL-backed PgRateLimitStore (shared, restart-safe)
+ *  - All admin writes are transactional (change + audit succeed together)
+ *  - Password reset is disabled (returns 503 with explanation)
+ *  - Role assignment creation is gated by roleGrantPolicy
  */
 
 import { Router, Request, Response } from "express";
@@ -22,6 +29,7 @@ import { createHash, randomBytes } from "crypto";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import {
+  sosOrganizations,
   sosUserAccounts,
   sosUserIdentityRefs,
   sosStaffProfiles,
@@ -29,12 +37,16 @@ import {
   sosRoleAssignments,
   sosAuthAudit,
 } from "@workspace/db";
-import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { rateLimit } from "express-rate-limit";
-import { getPermissionsForRole, type PermissionCode } from "../lib/permissionPolicy";
+import { PgRateLimitStore } from "../lib/pgRateLimiter";
+import { getPermissionsForRole, isRoleFacilityWide, isKnownRole } from "../lib/permissionPolicy";
+import { buildScopedGrant } from "../lib/authorizationService";
+import { evaluateRoleGrant } from "../lib/roleGrantPolicy";
 import { logger } from "../lib/logger";
-import type { AuthenticatedIdentity } from "../lib/authorizationService";
+import type { AuthenticatedIdentity, ScopedGrant } from "../lib/authorizationService";
 import { hasPermission } from "../lib/authorizationService";
+import type { PermissionCode } from "../lib/permissionPolicy";
 
 const router = Router();
 
@@ -46,45 +58,52 @@ const ARGON2_OPTIONS: argon2.HashOptions = {
   parallelism: 1,
 };
 
-// ── Session idle / absolute timeout (ms) ────────────────────────────────────
-const IDLE_TIMEOUT_MS     = parseInt(process.env.SESSION_IDLE_TIMEOUT_MS  ?? "1800000", 10); // 30 min
-const ABSOLUTE_TIMEOUT_MS = parseInt(process.env.SESSION_ABSOLUTE_TIMEOUT_MS ?? "28800000", 10); // 8 hr
+// ── Session timeout (ms) ──────────────────────────────────────────────────────
+const ABSOLUTE_TIMEOUT_MS = parseInt(process.env.SESSION_ABSOLUTE_TIMEOUT_MS ?? "28800000", 10);
 
-// ── Rate limiter for auth endpoints ──────────────────────────────────────────
+// ── Rate limiter — PostgreSQL-backed (Phase 2B) ───────────────────────────────
+// Survives API restarts. Shared across multiple API instances.
+// Fail-open: DB unavailability allows the request (see pgRateLimiter.ts).
+// Falls back to no-op in test env to avoid polluting the test DB with rate counters.
+const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+const pgStore = process.env.NODE_ENV !== "test"
+  ? (() => {
+      const s = new PgRateLimitStore(WINDOW_MS);
+      s.init();
+      return s;
+    })()
+  : undefined;
+
 const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 minutes
+  windowMs: WINDOW_MS,
   limit: 10,
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: { error: "Too many requests. Please try again later." },
-  // Skip rate limiting in test environment so integration test suites that
-  // make many login requests are not blocked.  The in-memory MemoryStore
-  // counter still resets on each test process, so functional coverage is
-  // preserved by the unit-level rate-limiter config test (§C step C-02).
-  skip: () => process.env.NODE_ENV === "test",
+  store: pgStore,                               // PostgreSQL store (undefined = MemoryStore in test)
+  skip: () => process.env.NODE_ENV === "test",  // still skip in test to avoid counter noise
 });
 
 // ── Input schemas ─────────────────────────────────────────────────────────────
+
+/**
+ * Phase 2B login: requires orgSlug for tenant-deterministic lookup.
+ * orgSlug + email identifies exactly one account (no global email scan).
+ * Falls back to SUNRISE_DEFAULT_ORG_SLUG env var when orgSlug is omitted (dev/demo).
+ */
 const loginSchema = z.object({
+  orgSlug:  z.string().min(1).max(64).toLowerCase().optional(),
   email:    z.string().email().toLowerCase(),
   password: z.string().min(1).max(256),
 });
 
-const resetRequestSchema = z.object({
-  email: z.string().email().toLowerCase(),
-});
-
-const resetCompleteSchema = z.object({
-  token:       z.string().min(1),
-  newPassword: z.string().min(12).max(256),
-});
-
 const createUserSchema = z.object({
-  orgId:            z.string().uuid(),
-  email:            z.string().email().toLowerCase(),
-  password:         z.string().min(12).max(256),
-  roleId:           z.string().min(1),
-  facilityId:       z.string().uuid().optional(),
+  orgId:      z.string().uuid(),
+  email:      z.string().email().toLowerCase(),
+  password:   z.string().min(12).max(256),
+  roleId:     z.string().min(1),
+  facilityId: z.string().uuid().optional(),
 });
 
 const roleAssignmentSchema = z.object({
@@ -102,51 +121,95 @@ function hashToken(token: string): string {
 }
 
 function getIpAddress(req: Request): string {
-  return (req.ip ?? req.socket.remoteAddress ?? "unknown").replace(/^::ffff:/, "");
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string") return forwarded.split(",")[0].trim();
+  return req.socket.remoteAddress ?? "unknown";
 }
 
 function getUserAgentSummary(req: Request): string {
   const ua = req.headers["user-agent"] ?? "";
-  // Store at most 200 chars — no need for full UA string in audit log.
-  return ua.slice(0, 200);
+  return ua.slice(0, 128);
 }
 
-async function writeAuditEvent(opts: {
-  orgId?: string | null;
-  userId?: string | null;
-  sessionId?: string | null;
-  eventType: string;
-  outcome: "success" | "failure" | "error";
-  reasonCode?: string;
-  targetUserId?: string | null;
-  ipAddress?: string;
-  userAgentSummary?: string;
-  metadata?: Record<string, unknown>;
-}): Promise<void> {
+interface AuditEventInput {
+  orgId?:           string | null;
+  userId?:          string | null;
+  sessionId?:       string | null;
+  eventType:        string;
+  outcome:          "success" | "failure" | "error";
+  reasonCode?:      string | null;
+  targetUserId?:    string | null;
+  ipAddress?:       string | null;
+  userAgentSummary?: string | null;
+  metadata?:        Record<string, unknown> | null;
+}
+
+async function writeAuditEvent(input: AuditEventInput): Promise<void> {
   try {
     await db.insert(sosAuthAudit).values({
-      orgId:            opts.orgId ?? null,
-      userId:           opts.userId ?? null,
-      sessionId:        opts.sessionId ?? null,
-      eventType:        opts.eventType,
-      outcome:          opts.outcome,
-      reasonCode:       opts.reasonCode ?? null,
-      targetUserId:     opts.targetUserId ?? null,
-      ipAddress:        opts.ipAddress ?? null,
-      userAgentSummary: opts.userAgentSummary ?? null,
-      metadata:         opts.metadata ?? null,
+      orgId:            input.orgId ?? null,
+      userId:           input.userId ?? null,
+      sessionId:        input.sessionId ?? null,
+      eventType:        input.eventType,
+      outcome:          input.outcome,
+      reasonCode:       input.reasonCode ?? null,
+      targetUserId:     input.targetUserId ?? null,
+      ipAddress:        input.ipAddress ?? null,
+      userAgentSummary: input.userAgentSummary ?? null,
+      metadata:         input.metadata ?? null,
     });
   } catch (err) {
-    logger.error({ err }, "authV1: failed to write audit event");
+    logger.error({ err }, "authV1: failed to write audit event (non-fatal)");
   }
+}
+
+async function writeAuditEventTx(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  input: AuditEventInput,
+): Promise<void> {
+  await tx.insert(sosAuthAudit).values({
+    orgId:            input.orgId ?? null,
+    userId:           input.userId ?? null,
+    sessionId:        input.sessionId ?? null,
+    eventType:        input.eventType,
+    outcome:          input.outcome,
+    reasonCode:       input.reasonCode ?? null,
+    targetUserId:     input.targetUserId ?? null,
+    ipAddress:        input.ipAddress ?? null,
+    userAgentSummary: input.userAgentSummary ?? null,
+    metadata:         input.metadata ?? null,
+  });
+}
+
+/**
+ * requirePermission — middleware factory that checks for a specific permission.
+ * Must be used AFTER sessionAuthMiddleware.
+ */
+function requirePermission(permission: PermissionCode) {
+  return (req: Request, res: Response, next: ReturnType<typeof Function>): void => {
+    const auth = req.auth;
+    if (!auth) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    if (!hasPermission(auth, permission)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    (next as () => void)();
+  };
 }
 
 async function getRoleAssignments(userId: string, orgId: string) {
   const now = new Date();
   return db
     .select({
-      roleId:     sosRoleAssignments.roleId,
-      facilityId: sosRoleAssignments.facilityId,
+      id:          sosRoleAssignments.id,
+      roleId:      sosRoleAssignments.roleId,
+      facilityId:  sosRoleAssignments.facilityId,
+      orgId:       sosRoleAssignments.orgId,
+      effectiveAt: sosRoleAssignments.effectiveAt,
+      expiresAt:   sosRoleAssignments.expiresAt,
     })
     .from(sosRoleAssignments)
     .where(
@@ -163,6 +226,7 @@ async function getRoleAssignments(userId: string, orgId: string) {
 }
 
 // ── POST /api/v1/auth/login ───────────────────────────────────────────────────
+// Phase 2B: tenant-deterministic — looks up by (org_slug, email), not email alone.
 
 router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Response) => {
   const ip  = getIpAddress(req);
@@ -174,31 +238,48 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
     res.status(400).json({ error: GENERIC_ERROR });
     return;
   }
+
+  // Resolve org slug: from request body, or from SUNRISE_DEFAULT_ORG_SLUG env var.
+  const orgSlug = parse.data.orgSlug
+    ?? process.env.SUNRISE_DEFAULT_ORG_SLUG
+    ?? null;
+
+  if (!orgSlug) {
+    res.status(400).json({ error: "Organization is required." });
+    return;
+  }
+
   const { email, password } = parse.data;
 
   try {
-    // Load user by email (no org context yet — email unique within org; need org for multi-tenant).
-    // For single-org dev: look up by email alone.  In multi-org Phase 3 the login form would
-    // include an org selector or subdomain.  For now we look up by email across all orgs.
+    // ── Tenant-deterministic lookup ─────────────────────────────────────────
+    // Join sos_organizations + sos_user_accounts on (slug, email).
+    // This is a single indexed query: idx_sos_organizations_slug + idx_sos_user_accounts_org_email.
+    // No global email scan — duplicate emails across organizations are safe.
     const [user] = await db
       .select({
-        id:              sosUserAccounts.id,
-        orgId:           sosUserAccounts.orgId,
-        email:           sosUserAccounts.email,
-        passwordHash:    sosUserAccounts.passwordHash,
-        status:          sosUserAccounts.status,
+        id:               sosUserAccounts.id,
+        orgId:            sosUserAccounts.orgId,
+        email:            sosUserAccounts.email,
+        passwordHash:     sosUserAccounts.passwordHash,
+        status:           sosUserAccounts.status,
         failedLoginCount: sosUserAccounts.failedLoginCount,
-        lockedUntil:     sosUserAccounts.lockedUntil,
-        sessionVersion:  sosUserAccounts.sessionVersion,
+        lockedUntil:      sosUserAccounts.lockedUntil,
+        sessionVersion:   sosUserAccounts.sessionVersion,
       })
       .from(sosUserAccounts)
+      .innerJoin(
+        sosOrganizations,
+        and(
+          eq(sosOrganizations.id, sosUserAccounts.orgId),
+          eq(sosOrganizations.slug, orgSlug),
+        ),
+      )
       .where(eq(sosUserAccounts.email, email))
       .limit(1);
 
-    // ── Generic failure path — identical timing and response for all failure modes
-    // to prevent user-enumeration via timing or error messages.
-
-    // Always perform a dummy verify so timing is constant even for unknown emails.
+    // ── Constant-time failure path ───────────────────────────────────────────
+    // Always verify a hash to prevent timing-based user enumeration.
     const dummyHash = "$argon2id$v=19$m=65536,t=3,p=1$dummysaltdummysalt$dummyhashvalue";
 
     if (!user || !user.passwordHash) {
@@ -214,8 +295,9 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
       return;
     }
 
-    // Check lockout BEFORE verifying password (constant-time anyway).
     const now = new Date();
+
+    // ── Account lockout check ─────────────────────────────────────────────────
     if (user.lockedUntil && user.lockedUntil > now) {
       await argon2.verify(user.passwordHash, password).catch(() => {});
       await writeAuditEvent({
@@ -227,19 +309,19 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
         ipAddress: ip,
         userAgentSummary: ua,
       });
-      // Return generic message — do not reveal lock status to attacker.
       res.status(401).json({ error: GENERIC_ERROR });
       return;
     }
 
-    if (user.status === "disabled") {
+    // ── Status check ──────────────────────────────────────────────────────────
+    if (user.status !== "active") {
       await argon2.verify(user.passwordHash, password).catch(() => {});
       await writeAuditEvent({
         orgId:  user.orgId,
         userId: user.id,
         eventType: "login_failure",
         outcome:   "failure",
-        reasonCode: "user_disabled",
+        reasonCode: user.status === "disabled" ? "user_disabled" : "user_inactive",
         ipAddress: ip,
         userAgentSummary: ua,
       });
@@ -247,7 +329,7 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
       return;
     }
 
-    // Verify password.
+    // ── Password verification ─────────────────────────────────────────────────
     let passwordOk = false;
     try {
       passwordOk = await argon2.verify(user.passwordHash, password, ARGON2_OPTIONS);
@@ -265,11 +347,7 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
 
       await db
         .update(sosUserAccounts)
-        .set({
-          failedLoginCount: newCount,
-          lockedUntil:      lockedUntilVal,
-          updatedAt:        now,
-        })
+        .set({ failedLoginCount: newCount, lockedUntil: lockedUntilVal, updatedAt: now })
         .where(eq(sosUserAccounts.id, user.id));
 
       if (lockedUntilVal) {
@@ -312,19 +390,18 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
       return;
     }
 
-    // ── Session rotation — destroy old session, create new ───────────────────
+    // ── Session rotation ──────────────────────────────────────────────────────
     await new Promise<void>((resolve, reject) =>
       req.session.regenerate((err) => (err ? reject(err) : resolve())),
     );
 
     const absoluteExpires = new Date(now.getTime() + ABSOLUTE_TIMEOUT_MS);
 
-    req.session.userId         = user.id;
-    req.session.orgId          = user.orgId;
-    req.session.sessionVersion = user.sessionVersion;
+    req.session.userId          = user.id;
+    req.session.orgId           = user.orgId;
+    req.session.sessionVersion  = user.sessionVersion;
     req.session.authenticatedAt = now.toISOString();
 
-    // Persist session.
     await new Promise<void>((resolve, reject) =>
       req.session.save((err) => (err ? reject(err) : resolve())),
     );
@@ -332,42 +409,27 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
     // Update sos_sessions compliance columns.
     await db
       .update(sosSessions)
-      .set({
-        userId:           user.id,
-        orgId:            user.orgId,
-        sessionVersion:   user.sessionVersion,
-        ipAddress:        ip,
-        userAgentSummary: ua,
-      })
+      .set({ userId: user.id, orgId: user.orgId, sessionVersion: user.sessionVersion, ipAddress: ip, userAgentSummary: ua })
       .where(eq(sosSessions.sid, req.sessionID));
 
     await writeAuditEvent({
-      orgId:    user.orgId,
-      userId:   user.id,
-      sessionId: req.sessionID,
-      eventType: "login_success",
-      outcome:   "success",
-      ipAddress: ip,
-      userAgentSummary: ua,
+      orgId: user.orgId, userId: user.id, sessionId: req.sessionID,
+      eventType: "login_success", outcome: "success",
+      ipAddress: ip, userAgentSummary: ua,
     });
     await writeAuditEvent({
-      orgId:    user.orgId,
-      userId:   user.id,
-      sessionId: req.sessionID,
-      eventType: "session_created",
-      outcome:   "success",
-      ipAddress: ip,
-      userAgentSummary: ua,
+      orgId: user.orgId, userId: user.id, sessionId: req.sessionID,
+      eventType: "session_created", outcome: "success",
+      ipAddress: ip, userAgentSummary: ua,
     });
 
-    // Build safe session summary for the response.
+    // Build safe session summary for response.
     const roleIds = [...new Set(assignments.map((a) => a.roleId))];
     const permissionCodes = [...new Set(roleIds.flatMap(getPermissionsForRole))];
     const facilityIds = [
       ...new Set(assignments.map((a) => a.facilityId).filter((f): f is string => f !== null)),
     ];
 
-    // Look up display name from staff profile.
     const [staffProfile] = await db
       .select({ displayName: sosStaffProfiles.displayName })
       .from(sosStaffProfiles)
@@ -398,35 +460,25 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
 // ── POST /api/v1/auth/logout ──────────────────────────────────────────────────
 
 router.post("/v1/auth/logout", async (req: Request, res: Response) => {
-  const ip = getIpAddress(req);
-  const userId  = req.session?.userId ?? null;
-  const orgId   = req.session?.orgId ?? null;
-  const sid     = req.sessionID;
+  const ip     = getIpAddress(req);
+  const userId = req.session?.userId ?? null;
+  const orgId  = req.session?.orgId ?? null;
+  const sid    = req.sessionID;
 
   try {
     if (sid) {
-      // Mark session as revoked in sos_sessions.
-      // We deliberately DO NOT call session.destroy() here, so the row is
-      // preserved for audit trail and compliance (the row's revoked_at date
-      // proves when the session ended). The session middleware checks
-      // sos_sessions.revoked_at IS NULL on every subsequent request, so the
-      // revoked session will be rejected immediately without needing the row
-      // to be deleted. Express-session's background cleanup (and
-      // connect-pg-simple's ttl cleanup) will remove expired rows later.
+      // Mark session revoked — do NOT destroy the row (preserved for audit trail).
       await db
         .update(sosSessions)
         .set({ revokedAt: new Date(), revokedReason: "logout" })
         .where(eq(sosSessions.sid, sid));
     }
 
-    // Clear session data fields so no sensitive data leaks if the row is
-    // somehow loaded again before cleanup.
-    req.session.userId = undefined;
-    req.session.orgId = undefined;
+    req.session.userId         = undefined;
+    req.session.orgId          = undefined;
     req.session.sessionVersion = undefined;
     req.session.authenticatedAt = undefined;
 
-    // Persist the cleared session data.
     await new Promise<void>((resolve, reject) =>
       req.session.save((err) => (err ? reject(err) : resolve())),
     );
@@ -437,11 +489,8 @@ router.post("/v1/auth/logout", async (req: Request, res: Response) => {
     );
 
     await writeAuditEvent({
-      orgId,
-      userId,
-      sessionId: sid,
-      eventType: "logout",
-      outcome:   "success",
+      orgId, userId, sessionId: sid,
+      eventType: "logout", outcome: "success",
       ipAddress: ip,
     });
 
@@ -462,7 +511,6 @@ router.get("/v1/auth/session", async (req: Request, res: Response) => {
   }
 
   try {
-    // Look up display name.
     const [staffProfile] = await db
       .select({ displayName: sosStaffProfiles.displayName })
       .from(sosStaffProfiles)
@@ -474,18 +522,15 @@ router.get("/v1/auth/session", async (req: Request, res: Response) => {
       )
       .limit(1);
 
-    // Compute session expiry from the session store record.
     const [sessionRow] = await db
       .select({ expire: sosSessions.expire })
       .from(sosSessions)
       .where(eq(sosSessions.sid, req.sessionID))
       .limit(1);
 
-    const ABSOLUTE_TIMEOUT_MS = parseInt(process.env.SESSION_ABSOLUTE_TIMEOUT_MS ?? "28800000", 10);
     const sessionExpiresAt = sessionRow?.expire?.toISOString()
       ?? new Date(Date.now() + ABSOLUTE_TIMEOUT_MS).toISOString();
 
-    // NEVER include: password hash, session token, internal token hash.
     res.json({
       userId:              auth.userId,
       orgId:               auth.orgId,
@@ -503,13 +548,8 @@ router.get("/v1/auth/session", async (req: Request, res: Response) => {
 });
 
 // ── GET /api/v1/auth/csrf-token ───────────────────────────────────────────────
-// Returns a CSRF token in a readable (non-HttpOnly) cookie for the frontend.
-// The frontend reads this cookie and sends the value as X-CSRF-Token.
 
 router.get("/v1/auth/csrf-token", (req: Request, res: Response) => {
-  // Generate a CSRF token and set it in the _csrf cookie (readable by JS,
-  // non-HttpOnly per double-submit pattern).  The frontend reads the cookie
-  // value and sends it as X-CSRF-Token on state-changing requests.
   const generateToken = req.app.get("csrfGenerateToken") as
     | ((req: Request, res: Response, options?: { overwrite?: boolean; validateOnReuse?: boolean }) => string)
     | undefined;
@@ -523,98 +563,36 @@ router.get("/v1/auth/csrf-token", (req: Request, res: Response) => {
   res.json({ csrfToken: token });
 });
 
-// ── POST /api/v1/auth/password-reset/request ─────────────────────────────────
+// ── POST /api/v1/auth/password-reset/request — DISABLED ──────────────────────
+// Password reset is disabled until Phase 3 email infrastructure is complete.
+// Do not generate or store unusable tokens. Do not pretend the feature works.
 
 router.post(
   "/v1/auth/password-reset/request",
-  authRateLimiter,
-  async (req: Request, res: Response) => {
-    const parse = resetRequestSchema.safeParse(req.body);
-    if (!parse.success) {
-      // Return the same response whether or not the account exists.
-      res.json({ ok: true });
-      return;
-    }
-    const { email } = parse.data;
-    const ip = getIpAddress(req);
-
-    try {
-      const [user] = await db
-        .select({ id: sosUserAccounts.id, orgId: sosUserAccounts.orgId })
-        .from(sosUserAccounts)
-        .where(eq(sosUserAccounts.email, email))
-        .limit(1);
-
-      if (user) {
-        // Generate single-use reset token — store only its hash.
-        const rawToken  = randomBytes(32).toString("hex");
-        const tokenHash = hashToken(rawToken);
-        const expiresAt = new Date(Date.now() + 30 * 60_000); // 30 min
-
-        await db
-          .update(sosUserAccounts)
-          .set({
-            // Store token hash in metadata (future: dedicated password_reset_tokens table).
-            // For Phase 2 demo: log only — no email infrastructure.
-            updatedAt: new Date(),
-          })
-          .where(eq(sosUserAccounts.id, user.id));
-
-        // In production this would trigger an email.  For Phase 2 dev:
-        logger.info(
-          { userId: user.id, tokenHash, expiresAt },
-          "[DEV] Password reset token generated (would be emailed in production)",
-        );
-
-        await writeAuditEvent({
-          orgId: user.orgId, userId: user.id,
-          eventType: "password_reset_requested", outcome: "success",
-          ipAddress: ip,
-        });
-      }
-
-      // Always return 200 — do not reveal whether account exists.
-      res.json({ ok: true });
-    } catch (err) {
-      logger.error({ err }, "authV1 POST /password-reset/request error");
-      res.json({ ok: true }); // never reveal errors on this endpoint
-    }
+  (_req: Request, res: Response) => {
+    res.status(503).json({
+      error: "Password reset is not available.",
+      detail: "This feature requires email infrastructure that will be added in Phase 3. " +
+              "Contact your organization administrator to reset your password.",
+    });
   },
 );
 
-// ── POST /api/v1/auth/password-reset/complete ─────────────────────────────────
+// ── POST /api/v1/auth/password-reset/complete — DISABLED ─────────────────────
 
 router.post(
   "/v1/auth/password-reset/complete",
-  authRateLimiter,
-  async (req: Request, res: Response) => {
-    const parse = resetCompleteSchema.safeParse(req.body);
-    if (!parse.success) {
-      res.status(400).json({ error: "Invalid request" });
-      return;
-    }
-    // Phase 2 stub: full implementation requires a password_reset_tokens table.
-    // Return 501 with a clear message.
-    res.status(501).json({
-      error: "Password reset completion requires Phase 3 email infrastructure.",
+  (_req: Request, res: Response) => {
+    res.status(503).json({
+      error: "Password reset is not available.",
+      detail: "This feature requires email infrastructure that will be added in Phase 3.",
     });
   },
 );
 
 // ── Admin routes ──────────────────────────────────────────────────────────────
-// These require user.manage or session.manage permission.
 
-function requirePermission(permission: PermissionCode) {
-  return (req: Request, res: Response, next: () => void) => {
-    if (!req.auth || !hasPermission(req.auth, permission)) {
-      res.status(403).json({ error: "Forbidden" });
-      return;
-    }
-    next();
-  };
-}
-
-// POST /api/v1/admin/users — create a test/development user
+// POST /api/v1/admin/users — create user (TRANSACTIONAL: user + audit succeed together)
 router.post(
   "/v1/admin/users",
   requirePermission("user.manage"),
@@ -625,62 +603,62 @@ router.post(
       return;
     }
 
-    const { orgId, email, password, roleId, facilityId } = parse.data;
     const adminAuth = req.auth!;
+    const { orgId, email, password, roleId, facilityId } = parse.data;
+    const ip = getIpAddress(req);
 
-    // Admin must belong to the same org.
     if (adminAuth.orgId !== orgId) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
 
+    if (!isKnownRole(roleId)) {
+      res.status(400).json({ error: `Unknown role: ${roleId}` });
+      return;
+    }
+
     try {
       const passwordHash = await argon2.hash(password, ARGON2_OPTIONS);
-      const now = new Date();
 
-      // Create identity ref.
-      const [identityRef] = await db
-        .insert(sosUserIdentityRefs)
-        .values({ orgId })
-        .returning();
+      // Transactional: user creation + audit write must both succeed.
+      const result = await db.transaction(async (tx) => {
+        const [identityRef] = await tx
+          .insert(sosUserIdentityRefs)
+          .values({ orgId })
+          .returning({ id: sosUserIdentityRefs.id });
 
-      // Create user account.
-      const [newUser] = await db
-        .insert(sosUserAccounts)
-        .values({
-          orgId,
-          userIdentityRefId: identityRef.id,
-          email,
-          passwordHash,
-          status: "active",
-          passwordChangedAt: now,
-        })
-        .returning({ id: sosUserAccounts.id });
+        const [account] = await tx
+          .insert(sosUserAccounts)
+          .values({
+            orgId,
+            userIdentityRefId: identityRef.id,
+            email,
+            passwordHash,
+            status: "active",
+          })
+          .returning({ id: sosUserAccounts.id });
 
-      // Create role assignment.
-      await db.insert(sosRoleAssignments).values({
-        orgId,
-        userId:          newUser.id,
-        roleId,
-        facilityId:      facilityId ?? null,
-        status:          "active",
-        createdByUserId: adminAuth.userId,
+        if (facilityId) {
+          await tx.insert(sosRoleAssignments).values({
+            orgId, userId: account.id, roleId, facilityId, status: "active",
+            createdByUserId: adminAuth.userId,
+          });
+        }
+
+        await writeAuditEventTx(tx, {
+          orgId, userId: adminAuth.userId,
+          eventType: "user_created", outcome: "success",
+          targetUserId: account.id, ipAddress: ip,
+          metadata: { email, roleId, facilityId: facilityId ?? null },
+        });
+
+        return { userId: account.id };
       });
 
-      await writeAuditEvent({
-        orgId,
-        userId:       adminAuth.userId,
-        eventType:    "role_assignment_created",
-        outcome:      "success",
-        targetUserId: newUser.id,
-        ipAddress:    getIpAddress(req),
-      });
-
-      res.status(201).json({ userId: newUser.id, email, orgId });
+      res.status(201).json(result);
     } catch (err: unknown) {
-      const msg = (err as Error).message ?? "";
-      if (msg.includes("idx_sos_user_accounts_org_email")) {
-        res.status(409).json({ error: "Email already registered in this organisation" });
+      if (err instanceof Error && err.message.includes("unique")) {
+        res.status(409).json({ error: "A user with that email already exists in this organization." });
         return;
       }
       logger.error({ err }, "authV1 POST /admin/users error");
@@ -689,148 +667,149 @@ router.post(
   },
 );
 
-// POST /api/v1/admin/users/:id/disable
+// POST /api/v1/admin/users/:id/disable (TRANSACTIONAL)
 router.post(
   "/v1/admin/users/:id/disable",
   requirePermission("user.manage"),
   async (req: Request, res: Response) => {
+    const targetUserId = req.params.id as string;
     const adminAuth = req.auth!;
-    const userId = String(req.params.id);
     const ip = getIpAddress(req);
 
+    if (adminAuth.userId === targetUserId) {
+      res.status(400).json({ error: "Cannot disable your own account." });
+      return;
+    }
+
     try {
-      const [user] = await db
-        .select({ orgId: sosUserAccounts.orgId })
-        .from(sosUserAccounts)
-        .where(eq(sosUserAccounts.id, userId))
-        .limit(1);
+      await db.transaction(async (tx) => {
+        const [user] = await tx
+          .select({ id: sosUserAccounts.id, orgId: sosUserAccounts.orgId })
+          .from(sosUserAccounts)
+          .where(and(
+            eq(sosUserAccounts.id, targetUserId),
+            eq(sosUserAccounts.orgId, adminAuth.orgId),
+          ))
+          .limit(1);
 
-      if (!user || user.orgId !== adminAuth.orgId) {
-        res.status(404).json({ error: "Not found" });
-        return;
-      }
+        if (!user) throw new Error("not_found");
 
-      const now = new Date();
+        await tx
+          .update(sosUserAccounts)
+          .set({ status: "disabled", disabledAt: new Date(), updatedAt: new Date(), sessionVersion: sql`session_version + 1` })
+          .where(eq(sosUserAccounts.id, targetUserId));
 
-      // Two-step: read current version, then update with version+1 to invalidate sessions.
-      const [current] = await db
-        .select({ sessionVersion: sosUserAccounts.sessionVersion })
-        .from(sosUserAccounts)
-        .where(eq(sosUserAccounts.id, userId))
-        .limit(1);
+        // Revoke all active sessions.
+        await tx
+          .update(sosSessions)
+          .set({ revokedAt: new Date(), revokedReason: "user_disabled" })
+          .where(and(eq(sosSessions.userId, targetUserId), isNull(sosSessions.revokedAt)));
 
-      await db
-        .update(sosUserAccounts)
-        .set({
-          status:         "disabled",
-          disabledAt:     now,
-          updatedAt:      now,
-          sessionVersion: (current?.sessionVersion ?? 0) + 1,
-        })
-        .where(eq(sosUserAccounts.id, userId));
-
-      // Mark sessions as revoked.
-      await db
-        .update(sosSessions)
-        .set({ revokedAt: now, revokedReason: "user_disabled" })
-        .where(and(eq(sosSessions.userId, userId), isNull(sosSessions.revokedAt)));
-
-      await writeAuditEvent({
-        orgId: adminAuth.orgId, userId: adminAuth.userId,
-        eventType: "user_disabled", outcome: "success",
-        targetUserId: userId, ipAddress: ip,
+        await writeAuditEventTx(tx, {
+          orgId: adminAuth.orgId, userId: adminAuth.userId,
+          eventType: "user_disabled", outcome: "success",
+          targetUserId, ipAddress: ip,
+        });
       });
 
       res.json({ ok: true });
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "not_found") {
+        res.status(404).json({ error: "User not found." });
+        return;
+      }
       logger.error({ err }, "authV1 POST /admin/users/:id/disable error");
       res.status(503).json({ error: "Service temporarily unavailable" });
     }
   },
 );
 
-// POST /api/v1/admin/users/:id/reactivate
+// POST /api/v1/admin/users/:id/reactivate (TRANSACTIONAL)
 router.post(
   "/v1/admin/users/:id/reactivate",
   requirePermission("user.manage"),
   async (req: Request, res: Response) => {
+    const targetUserId = req.params.id as string;
     const adminAuth = req.auth!;
-    const userId = String(req.params.id);
     const ip = getIpAddress(req);
 
     try {
-      const [user] = await db
-        .select({ orgId: sosUserAccounts.orgId })
-        .from(sosUserAccounts)
-        .where(eq(sosUserAccounts.id, userId))
-        .limit(1);
+      await db.transaction(async (tx) => {
+        const [user] = await tx
+          .select({ id: sosUserAccounts.id, orgId: sosUserAccounts.orgId })
+          .from(sosUserAccounts)
+          .where(and(
+            eq(sosUserAccounts.id, targetUserId),
+            eq(sosUserAccounts.orgId, adminAuth.orgId),
+          ))
+          .limit(1);
 
-      if (!user || user.orgId !== adminAuth.orgId) {
-        res.status(404).json({ error: "Not found" });
-        return;
-      }
+        if (!user) throw new Error("not_found");
 
-      const now = new Date();
-      await db
-        .update(sosUserAccounts)
-        .set({ status: "active", disabledAt: null, failedLoginCount: 0, lockedUntil: null, updatedAt: now })
-        .where(eq(sosUserAccounts.id, userId));
+        await tx
+          .update(sosUserAccounts)
+          .set({
+            status: "active", disabledAt: null,
+            failedLoginCount: 0, lockedUntil: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(sosUserAccounts.id, targetUserId));
 
-      await writeAuditEvent({
-        orgId: adminAuth.orgId, userId: adminAuth.userId,
-        eventType: "user_reactivated", outcome: "success",
-        targetUserId: userId, ipAddress: ip,
+        await writeAuditEventTx(tx, {
+          orgId: adminAuth.orgId, userId: adminAuth.userId,
+          eventType: "user_reactivated", outcome: "success",
+          targetUserId, ipAddress: ip,
+        });
       });
 
       res.json({ ok: true });
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "not_found") {
+        res.status(404).json({ error: "User not found." });
+        return;
+      }
       logger.error({ err }, "authV1 POST /admin/users/:id/reactivate error");
       res.status(503).json({ error: "Service temporarily unavailable" });
     }
   },
 );
 
-// POST /api/v1/admin/sessions/:userId/revoke-all
+// POST /api/v1/admin/sessions/:userId/revoke-all (TRANSACTIONAL)
 router.post(
   "/v1/admin/sessions/:userId/revoke-all",
   requirePermission("session.manage"),
   async (req: Request, res: Response) => {
+    const targetUserId = req.params.userId as string;
     const adminAuth = req.auth!;
-    const userId = String(req.params.userId);
     const ip = getIpAddress(req);
 
     try {
-      const [user] = await db
-        .select({ orgId: sosUserAccounts.orgId, sessionVersion: sosUserAccounts.sessionVersion })
-        .from(sosUserAccounts)
-        .where(eq(sosUserAccounts.id, userId))
-        .limit(1);
+      let count = 0;
+      await db.transaction(async (tx) => {
+        const result = await tx
+          .update(sosSessions)
+          .set({ revokedAt: new Date(), revokedReason: "admin_revoke_all" })
+          .where(and(eq(sosSessions.userId, targetUserId), isNull(sosSessions.revokedAt)));
 
-      if (!user || user.orgId !== adminAuth.orgId) {
-        res.status(404).json({ error: "Not found" });
-        return;
-      }
+        // Bump session version so any cached session objects are invalidated.
+        await tx
+          .update(sosUserAccounts)
+          .set({ sessionVersion: sql`session_version + 1` })
+          .where(and(
+            eq(sosUserAccounts.id, targetUserId),
+            eq(sosUserAccounts.orgId, adminAuth.orgId),
+          ));
 
-      const now = new Date();
-      // Bump session_version to invalidate all existing sessions.
-      await db
-        .update(sosUserAccounts)
-        .set({ sessionVersion: (user.sessionVersion ?? 0) + 1, updatedAt: now })
-        .where(eq(sosUserAccounts.id, userId));
+        await writeAuditEventTx(tx, {
+          orgId: adminAuth.orgId, userId: adminAuth.userId,
+          eventType: "sessions_revoked_all", outcome: "success",
+          targetUserId, ipAddress: ip,
+        });
 
-      // Revoke session rows.
-      await db
-        .update(sosSessions)
-        .set({ revokedAt: now, revokedReason: "admin_revocation" })
-        .where(and(eq(sosSessions.userId, userId), isNull(sosSessions.revokedAt)));
-
-      await writeAuditEvent({
-        orgId: adminAuth.orgId, userId: adminAuth.userId,
-        eventType: "admin_session_revocation", outcome: "success",
-        targetUserId: userId, ipAddress: ip,
+        count = result.rowCount ?? 0;
       });
 
-      res.json({ ok: true });
+      res.json({ ok: true, revokedCount: count });
     } catch (err) {
       logger.error({ err }, "authV1 POST /admin/sessions/:userId/revoke-all error");
       res.status(503).json({ error: "Service temporarily unavailable" });
@@ -838,7 +817,7 @@ router.post(
   },
 );
 
-// POST /api/v1/admin/role-assignments
+// POST /api/v1/admin/role-assignments — create role assignment (policy-gated + transactional)
 router.post(
   "/v1/admin/role-assignments",
   requirePermission("role.manage"),
@@ -851,34 +830,62 @@ router.post(
 
     const adminAuth = req.auth!;
     const { orgId, userId, roleId, facilityId, expiresAt } = parse.data;
+    const ip = getIpAddress(req);
 
     if (adminAuth.orgId !== orgId) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
 
-    try {
-      const [assignment] = await db
-        .insert(sosRoleAssignments)
-        .values({
-          orgId,
-          userId,
-          roleId,
-          facilityId: facilityId ?? null,
-          status: "active",
-          expiresAt: expiresAt ? new Date(expiresAt) : null,
-          createdByUserId: adminAuth.userId,
-        })
-        .returning({ id: sosRoleAssignments.id });
+    // ── Role-grant policy enforcement ────────────────────────────────────────
+    const policyDecision = evaluateRoleGrant({
+      adminIdentity: adminAuth,
+      targetOrgId:   orgId,
+      targetUserId:  userId,
+      roleId,
+      facilityId:    facilityId ?? null,
+      expiresAt:     expiresAt ? new Date(expiresAt) : null,
+    });
 
+    if (!policyDecision.allowed) {
       await writeAuditEvent({
         orgId, userId: adminAuth.userId,
-        eventType: "role_assignment_created", outcome: "success",
-        targetUserId: userId, ipAddress: getIpAddress(req),
-        metadata: { roleId, facilityId: facilityId ?? null },
+        eventType: "role_grant_denied", outcome: "failure",
+        targetUserId: userId, ipAddress: ip,
+        metadata: { roleId, facilityId: facilityId ?? null, reason: policyDecision.reason },
+      });
+      res.status(403).json({
+        error: "Role grant denied by policy.",
+        reason: policyDecision.reason,
+        detail: policyDecision.detail,
+      });
+      return;
+    }
+
+    try {
+      const assignmentId = await db.transaction(async (tx) => {
+        const [assignment] = await tx
+          .insert(sosRoleAssignments)
+          .values({
+            orgId, userId, roleId,
+            facilityId: facilityId ?? null,
+            status: "active",
+            expiresAt: expiresAt ? new Date(expiresAt) : null,
+            createdByUserId: adminAuth.userId,
+          })
+          .returning({ id: sosRoleAssignments.id });
+
+        await writeAuditEventTx(tx, {
+          orgId, userId: adminAuth.userId,
+          eventType: "role_assignment_created", outcome: "success",
+          targetUserId: userId, ipAddress: ip,
+          metadata: { roleId, facilityId: facilityId ?? null },
+        });
+
+        return assignment.id;
       });
 
-      res.status(201).json({ assignmentId: assignment.id });
+      res.status(201).json({ assignmentId });
     } catch (err) {
       logger.error({ err }, "authV1 POST /admin/role-assignments error");
       res.status(503).json({ error: "Service temporarily unavailable" });

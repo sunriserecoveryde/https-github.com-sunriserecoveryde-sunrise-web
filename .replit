@@ -27,3 +27,4 @@ channel = "stable-25_05"
 [userenv.shared]
 AI_INTEGRATIONS_ANTHROPIC_BASE_URL = "https://api.anthropic.com"
 EXPO_PUBLIC_API_BASE_URL = "https://d10de6c9-978b-4185-af0e-c2e0074368e5-00-19u2n8ydf8g7s-ehoh960x.spock.replit.dev/api"
+DEV_TEST_PASSWORD = "Sunrise2026!Test"
