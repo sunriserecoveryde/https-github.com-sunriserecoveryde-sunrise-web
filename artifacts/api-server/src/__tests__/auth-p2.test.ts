@@ -25,11 +25,15 @@ import {
 } from "../lib/permissionPolicy";
 
 describe("permissionPolicy", () => {
-  it("exports the 13 canonical PermissionCode values", () => {
-    expect(PERMISSION_CODES).toHaveLength(13);
+  it("exports the 19 canonical PermissionCode values", () => {
+    // Phase 3 added 6 clinical_note.* permission codes (create, view, edit_own_draft,
+    // sign_own, void, audit_view). Original 13 + 6 = 19.
+    expect(PERMISSION_CODES).toHaveLength(19);
     expect(PERMISSION_CODES).toContain("patient.list.view");
     expect(PERMISSION_CODES).toContain("organization.admin");
     expect(PERMISSION_CODES).toContain("audit.authentication.view");
+    expect(PERMISSION_CODES).toContain("clinical_note.create");
+    expect(PERMISSION_CODES).toContain("clinical_note.void");
   });
 
   it("every role in ROLE_PERMISSIONS has at least one permission", () => {

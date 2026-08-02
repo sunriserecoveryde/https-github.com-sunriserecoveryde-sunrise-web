@@ -46,10 +46,11 @@ CREATE TABLE IF NOT EXISTS sos_clinical_notes (
     CONSTRAINT ck_sos_clinical_notes_version
         CHECK (version > 0),
 
-    -- Signed fields required iff status = 'signed'.
+    -- Signed fields required when status = 'signed'.
+    -- When status = 'voided' the signed_at/signed_by_user_id columns are preserved as-is.
     CONSTRAINT ck_sos_clinical_notes_signed_consistency
         CHECK (
-            (status = 'signed') = (signed_at IS NOT NULL AND signed_by_user_id IS NOT NULL)
+            status != 'signed' OR (signed_at IS NOT NULL AND signed_by_user_id IS NOT NULL)
         ),
 
     -- Void fields required iff status = 'voided'.
