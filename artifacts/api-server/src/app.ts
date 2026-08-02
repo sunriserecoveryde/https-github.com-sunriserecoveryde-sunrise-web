@@ -221,6 +221,23 @@ app.use("/api/v1", (req: Request, res: Response, next: NextFunction) => {
   doubleCsrfProtection(req, res, next);
 });
 
+// ── 8a. CSRF error handler ────────────────────────────────────────────────────
+// csrf-csrf throws a ForbiddenError (status 403) when the token is missing or
+// mismatched. Without this handler Express falls through to its default HTML
+// error page which leaks the full stack trace. Return a clean, generic JSON 403.
+app.use("/api/v1", (err: unknown, req: Request, res: Response, next: NextFunction) => {
+  if (
+    err !== null &&
+    typeof err === "object" &&
+    "status" in err &&
+    (err as { status: unknown }).status === 403
+  ) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  next(err);
+});
+
 // ── 9. Session auth middleware on /api/v1/* ───────────────────────────────────
 // In development: falls back to synthetic dev identity when no real session exists.
 // In production: returns 401 for unauthenticated requests.
