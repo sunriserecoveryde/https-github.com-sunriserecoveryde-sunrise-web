@@ -216,18 +216,19 @@ describe("§11.6 sos_rate_limit_windows table structure", () => {
 // ── §11.7 Migration journal integrity ────────────────────────────────────────
 
 describe("§11.7 Migration journal", () => {
-  it("journal file has 5 entries (0000–0004)", () => {
+  it("journal file has 6 entries (0000–0005)", () => {
     const journalPath = path.join(MIGRATION_DIR, "meta/_journal.json");
     expect(fs.existsSync(journalPath)).toBe(true);
     const journal = JSON.parse(fs.readFileSync(journalPath, "utf8")) as {
       entries: { idx: number; tag: string }[];
     };
-    expect(journal.entries).toHaveLength(5); // Phase 2D added entry idx=4
+    expect(journal.entries).toHaveLength(6); // Phase 2E added entry idx=5
     expect(journal.entries[0].idx).toBe(0);
     expect(journal.entries[1].idx).toBe(1);
     expect(journal.entries[2].idx).toBe(2);
     expect(journal.entries[3].idx).toBe(3);
     expect(journal.entries[4].idx).toBe(4);
+    expect(journal.entries[5].idx).toBe(5);
   });
 
   it("all migration SQL files exist", () => {
@@ -238,6 +239,7 @@ describe("§11.7 Migration journal", () => {
       "0002_authorization_correction.sql",
       "0003_phase_2c_closure.sql",
       "0004_phase_2d_final_closure.sql",
+      "0005_rate_limit_window_cleared_event.sql",
     ];
     for (const file of files) {
       expect(fs.existsSync(path.join(MIGRATION_DIR, file))).toBe(true);

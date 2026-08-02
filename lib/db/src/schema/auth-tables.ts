@@ -237,7 +237,8 @@ export const sosAuthAudit = pgTable(
         'authorization_denied',
         'admin_session_revocation', 'sessions_revoked_all',
         'user_disabled', 'user_reactivated',
-        'user_created', 'role_grant_denied', 'csrf_violation'
+        'user_created', 'role_grant_denied', 'csrf_violation',
+        'rate_limit_window_cleared'
       ]::text[])`,
     ),
     ckOutcome:    check(

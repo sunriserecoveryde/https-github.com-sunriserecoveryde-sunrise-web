@@ -9,11 +9,12 @@
  * POST /api/v1/auth/password-reset/complete — DISABLED: returns 503 (incomplete flow)
  *
  * Admin routes (require user.manage or role.manage permission):
- * POST /api/v1/admin/users                       — create user (transactional)
- * POST /api/v1/admin/users/:id/disable           — disable user (transactional)
- * POST /api/v1/admin/users/:id/reactivate        — reactivate user (transactional)
- * POST /api/v1/admin/sessions/:userId/revoke-all — revoke all sessions for a user (transactional)
- * POST /api/v1/admin/role-assignments            — create role assignment (policy-gated)
+ * POST   /api/v1/admin/users                           — create user (transactional)
+ * POST   /api/v1/admin/users/:id/disable               — disable user (transactional)
+ * POST   /api/v1/admin/users/:id/reactivate            — reactivate user (transactional)
+ * POST   /api/v1/admin/sessions/:userId/revoke-all     — revoke all sessions for a user (transactional)
+ * POST   /api/v1/admin/role-assignments                — create role assignment (policy-gated)
+ * DELETE /api/v1/admin/rate-limit/windows/:key         — clear a specific IP's rate-limit window (user.manage)
  *
  * Phase 2B changes:
  *  - Login now requires orgSlug (tenant-deterministic; no global email lookup)
@@ -1069,6 +1070,63 @@ router.post(
         return;
       }
       logger.error({ err }, "authV1 POST /admin/sessions/:userId/revoke-all error");
+      res.status(503).json({ error: "Service temporarily unavailable" });
+    }
+  },
+);
+
+// DELETE /api/v1/admin/rate-limit/windows/:key — clear a specific IP's rate-limit window
+//
+// Allows admins to release a blocked IP without needing direct database access.
+// Use case: a clinic behind a shared NAT where one staff member's burst of failed
+// logins fills the window for everyone.
+//
+// :key is the rate-limit store key (typically the IP address as recorded by the
+// store, e.g. "::1" or "192.168.0.1"). URL-encode colons when calling from curl:
+//   DELETE /api/v1/admin/rate-limit/windows/::1   → key = "::1"
+//   DELETE /api/v1/admin/rate-limit/windows/%3A%3A1 also works
+//
+// The action is written to sos_auth_audit so there is a record of who cleared
+// which key and when.
+router.delete(
+  "/v1/admin/rate-limit/windows/:key",
+  requirePermission("user.manage"),
+  async (req: Request, res: Response) => {
+    const adminAuth = req.auth!;
+    const key       = req.params.key as string;
+    const ip        = getIpAddress(req);
+
+    if (!key || key.trim() === "") {
+      res.status(400).json({ error: "Rate-limit key is required." });
+      return;
+    }
+
+    // pgStore is undefined when running in test mode without RL_INTEGRATION.
+    // Return 503 rather than silently doing nothing so callers know the store
+    // is not configured.
+    if (!pgStore) {
+      res.status(503).json({ error: "Rate-limit store is not configured in this environment." });
+      return;
+    }
+
+    try {
+      // adminResetKey() throws on DB error (unlike resetKey() which fails-open).
+      // This guarantees we only write a success audit event when the window was
+      // actually cleared — a silent failure must never produce a success record.
+      await pgStore.adminResetKey(key);
+
+      await writeAuditEvent({
+        orgId:    adminAuth.orgId,
+        userId:   adminAuth.userId,
+        eventType: "rate_limit_window_cleared",
+        outcome:   "success",
+        ipAddress: ip,
+        metadata: { clearedKey: key },
+      });
+
+      res.json({ ok: true, key });
+    } catch (err) {
+      logger.error({ err }, "authV1 DELETE /admin/rate-limit/windows/:key error");
       res.status(503).json({ error: "Service temporarily unavailable" });
     }
   },

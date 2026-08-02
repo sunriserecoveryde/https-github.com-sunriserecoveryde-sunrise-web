@@ -99,6 +99,22 @@ export class PgRateLimitStore implements Store {
     }
   }
 
+  /**
+   * Admin-only strict variant of resetKey.
+   *
+   * Unlike resetKey() (which is called by the express-rate-limit framework and
+   * must fail-open), this method re-throws on DB error so the caller can detect
+   * the failure and return an appropriate error response.  Use this from admin
+   * routes where a silent failure would produce a false-success audit event.
+   */
+  async adminResetKey(key: string): Promise<void> {
+    await pool.query(
+      `DELETE FROM sos_rate_limit_windows WHERE key = $1`,
+      [key],
+    );
+    // Errors propagate to the caller — no catch, no swallow.
+  }
+
   async resetAll(): Promise<void> {
     try {
       await pool.query(`DELETE FROM sos_rate_limit_windows`);

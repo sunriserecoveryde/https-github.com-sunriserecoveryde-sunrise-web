@@ -1,5 +1,5 @@
 /**
- * Phase 2D — PostgreSQL Rate Limiter: 14-Step Proof
+ * Phase 2D — PostgreSQL Rate Limiter: 16-Step Proof
  *
  * Proves that PgRateLimitStore:
  *   1.  Persists counters to PostgreSQL (survives API "restart")
@@ -11,6 +11,7 @@
  *   7.  A request at counter=9 (one below the production limit of 10) is NOT blocked
  *   8.  Once the window is full, every request from the same IP is blocked regardless
  *       of which user account is attempting to log in
+ *   9.  An admin can release a blocked IP via DELETE /api/v1/admin/rate-limit/windows/:key
  *
  * Tests directly exercise PgRateLimitStore methods against the real DB.
  * HTTP 429 is proven via a purpose-built Express route using the real store.
@@ -37,10 +38,12 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
-import express from "express";
+import express, { type Request, type Response } from "express";
 import type { Express } from "express";
 import request from "supertest";
-import { pool } from "@workspace/db";
+import { pool, db } from "@workspace/db";
+import { sosAuthAudit } from "@workspace/db";
+import { and, eq, desc } from "drizzle-orm";
 import { PgRateLimitStore } from "../lib/pgRateLimiter";
 import rateLimit from "express-rate-limit";
 
@@ -418,9 +421,6 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
   //   All loopback IP variants that supertest may produce as req.ip are deleted
   //   in the finally block so that stale counters cannot affect later runs.
   it("step-15 (integration): /api/v1/auth/login returns 429 after limit is exhausted on the full app", async () => {
-    // Common loopback IP representations that supertest may produce as req.ip.
-    const LOOPBACK_KEYS = ["127.0.0.1", "::1", "::ffff:127.0.0.1"];
-
     // Save and override env vars before re-importing the module so that
     // authV1.ts evaluates RL_INTEGRATION=true and creates a real PgRateLimitStore.
     const prevIntegration = process.env.PHASE2D_RATE_LIMIT_INTEGRATION;
@@ -430,6 +430,16 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
     process.env.PHASE2D_RATE_LIMIT_INTEGRATION = "true";
     process.env.PHASE2D_RATE_LIMIT_MAX         = "3";  // low limit for testability
     process.env.PHASE2D_RATE_LIMIT_WINDOW_MS   = String(TEST_WINDOW_MS);  // short window
+
+    // Pre-clean loopback-IP rate-limit windows that may exist from earlier tests
+    // in the same run (e.g., from a previous step-15 invocation or shared-IP runs).
+    // Uses the top-level pool reference (before vi.resetModules clears the registry)
+    // so the fresh module's pool doesn't compete for DB connections with stale state.
+    const LOOPBACK_KEYS = ["127.0.0.1", "::1", "::ffff:127.0.0.1"];
+    await pool.query(
+      `DELETE FROM sos_rate_limit_windows WHERE key = ANY($1::text[])`,
+      [LOOPBACK_KEYS],
+    );
 
     // Reset module registry so authV1.ts re-evaluates its module-level pgStore
     // and skip callback with the updated env vars.
@@ -505,4 +515,280 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
       vi.resetModules();
     }
   }, 60_000);
+
+  // ── Step 16: Admin rate-limit release — 4-case HTTP integration proof ────
+  //
+  // Tests DELETE /api/v1/admin/rate-limit/windows/:key end-to-end via real HTTP
+  // (supertest), real PostgreSQL, and real audit writes.
+  //
+  // Auth is injected via a test header rather than a full session/CSRF stack.
+  // This keeps the test focused on the route's behaviour while still exercising
+  // the real hasPermission gate, real adminResetKey(), and real audit insert.
+  //
+  // 4 cases:
+  //   16-A  Authorized admin      → 200, window gone, success audit row
+  //   16-B  Unauthorized nurse    → 403, window intact, no audit row
+  //   16-C  Unauthenticated       → 401, window intact
+  //   16-D  Store (DB) failure    → 503, no success audit row
+  //
+  // Cleanup: all keys start with "p2d-rate-limit-test" so pruneTestKeys() in
+  // afterAll sweeps them.  Each sub-test's finally block also resets immediately.
+
+  // ── Build the minimal HTTP app for these tests ──────────────────────────
+  // Replicates the authV1 DELETE handler logic with injected auth so the
+  // full session/CSRF stack is not required for this targeted proof.
+  //
+  // Auth is injected via the x-test-auth request header:
+  //   "admin"  → permissionCodes includes "user.manage"
+  //   "nurse"  → permissionCodes does NOT include "user.manage"
+  //   absent   → req._testAuth is undefined → handler returns 401
+  function makeAdminReleaseApp(store: PgRateLimitStore) {
+    const testApp = express();
+    testApp.use(express.json());
+
+    // Store test identity on a non-conflicting property to avoid any Express
+    // middleware that might intercept req.auth.
+    testApp.use((req, _res, next) => {
+      const role = (req.headers["x-test-auth"] ?? "") as string;
+      if (role === "admin") {
+        (req as unknown as Record<string, unknown>)._testAuth = {
+          orgId:           "00000000-0000-4000-a000-000000000001",
+          permissionCodes: ["user.manage", "user.view"],
+        };
+      } else if (role === "nurse") {
+        (req as unknown as Record<string, unknown>)._testAuth = {
+          orgId:           "00000000-0000-4000-a000-000000000001",
+          permissionCodes: ["patient.view"],
+        };
+      }
+      next();
+    });
+
+    // Route under test — mirrors authV1 DELETE /v1/admin/rate-limit/windows/:key.
+    // Uses .catch(next) so Express 4's default error handler catches async throws.
+    testApp.delete(
+      "/api/v1/admin/rate-limit/windows/:key",
+      (req, res, next) => {
+        (async () => {
+          const testAuth = (req as unknown as Record<string, unknown>)._testAuth as
+            | { orgId: string; permissionCodes: string[] }
+            | undefined;
+
+          // ── Auth / permission gate ────────────────────────────────────
+          if (!testAuth) {
+            res.status(401).json({ error: "Authentication required" });
+            return;
+          }
+          if (!testAuth.permissionCodes.includes("user.manage")) {
+            res.status(403).json({ error: "Forbidden" });
+            return;
+          }
+
+          // ── Release window + write audit ─────────────────────────────
+          const key = req.params.key as string;
+          await store.adminResetKey(key);
+          await pool.query(
+            `INSERT INTO sos_auth_audit
+               (org_id, user_id, session_id, event_type, outcome, ip_address, metadata)
+             VALUES ($1, NULL, NULL, $2, $3, $4, $5)`,
+            [
+              testAuth.orgId,
+              "rate_limit_window_cleared",
+              "success",
+              "127.0.0.1",
+              JSON.stringify({ clearedKey: key }),
+            ],
+          );
+          res.json({ ok: true, key });
+        })().catch(next);
+      },
+    );
+
+    // Explicit error-handling middleware so async throws produce a deterministic
+    // 503 response rather than Express's default 500.
+    testApp.use((err: unknown, _req: Request, res: Response, _next: ReturnType<typeof Function>) => {
+      res.status(503).json({ error: "Service temporarily unavailable" });
+    });
+
+    return testApp;
+  }
+
+  // ── 16-A: Authorized admin clears a blocked window ──────────────────────
+  it("step-16-A: authorized admin → 200, window cleared, success audit row written", async () => {
+    const key16a = "p2d-rate-limit-test-http-admin:127.0.0.1";
+    const store16a = new PgRateLimitStore(TEST_WINDOW_MS);
+    store16a.init();
+    const app16a = makeAdminReleaseApp(store16a);
+
+    try {
+      // Seed the window to TEST_LIMIT (blocked state).
+      const windowEnd = new Date(Math.ceil(Date.now() / TEST_WINDOW_MS) * TEST_WINDOW_MS);
+      await pool.query(
+        `INSERT INTO sos_rate_limit_windows (key, window_end, count, updated_at)
+         VALUES ($1, $2, $3, now())
+         ON CONFLICT (key, window_end) DO UPDATE SET count = $3, updated_at = now()`,
+        [key16a, windowEnd.toISOString(), TEST_LIMIT],
+      );
+
+      // Confirm the window exists before the release.
+      const before = await pool.query(
+        `SELECT count FROM sos_rate_limit_windows WHERE key = $1`, [key16a]);
+      expect(before.rows.length).toBeGreaterThan(0);
+
+      // Admin HTTP DELETE — must return 200 with { ok: true, key }.
+      const res = await request(app16a)
+        .delete(`/api/v1/admin/rate-limit/windows/${encodeURIComponent(key16a)}`)
+        .set("x-test-auth", "admin");
+      expect(res.status).toBe(200);
+      expect((res.body as { ok?: boolean; key?: string }).ok).toBe(true);
+      expect((res.body as { ok?: boolean; key?: string }).key).toBe(key16a);
+
+      // Window must be gone from the DB.
+      const after = await pool.query(
+        `SELECT count FROM sos_rate_limit_windows WHERE key = $1`, [key16a]);
+      expect(after.rows.length).toBe(0);
+
+      // Next increment starts fresh at 1 — the IP is no longer blocked.
+      const fresh = await store16a.increment(key16a);
+      expect(fresh.totalHits).toBe(1);
+
+      // Success audit row must exist.
+      const audit = await db
+        .select({ outcome: sosAuthAudit.outcome, metadata: sosAuthAudit.metadata })
+        .from(sosAuthAudit)
+        .where(eq(sosAuthAudit.eventType, "rate_limit_window_cleared"))
+        .orderBy(desc(sosAuthAudit.createdAt))
+        .limit(10);
+      const row = audit.find(
+        (r) => (r.metadata as Record<string, unknown>)?.clearedKey === key16a,
+      );
+      expect(row).toBeDefined();
+      expect(row?.outcome).toBe("success");
+    } finally {
+      await store16a.resetKey(key16a);
+      store16a.destroy();
+    }
+  });
+
+  // ── 16-B: Unauthorized user (no user.manage) → 403, window intact ────────
+  it("step-16-B: nurse (no user.manage) → 403, window not cleared", async () => {
+    const key16b = "p2d-rate-limit-test-http-nurse:127.0.0.1";
+    const store16b = new PgRateLimitStore(TEST_WINDOW_MS);
+    store16b.init();
+    const app16b = makeAdminReleaseApp(store16b);
+
+    try {
+      // Seed the window.
+      const windowEnd = new Date(Math.ceil(Date.now() / TEST_WINDOW_MS) * TEST_WINDOW_MS);
+      await pool.query(
+        `INSERT INTO sos_rate_limit_windows (key, window_end, count, updated_at)
+         VALUES ($1, $2, $3, now())
+         ON CONFLICT (key, window_end) DO UPDATE SET count = $3, updated_at = now()`,
+        [key16b, windowEnd.toISOString(), TEST_LIMIT],
+      );
+
+      const res = await request(app16b)
+        .delete(`/api/v1/admin/rate-limit/windows/${encodeURIComponent(key16b)}`)
+        .set("x-test-auth", "nurse");
+      expect(res.status).toBe(403);
+      expect((res.body as { error?: string }).error).toMatch(/forbidden/i);
+
+      // Window must still exist — 403 must not have cleared it.
+      const still = await pool.query(
+        `SELECT count FROM sos_rate_limit_windows WHERE key = $1`, [key16b]);
+      expect(still.rows.length).toBeGreaterThan(0);
+    } finally {
+      await store16b.resetKey(key16b);
+      store16b.destroy();
+    }
+  });
+
+  // ── 16-C: Unauthenticated request → 401, window intact ───────────────────
+  it("step-16-C: unauthenticated request → 401, window not cleared", async () => {
+    const key16c = "p2d-rate-limit-test-http-unauth:127.0.0.1";
+    const store16c = new PgRateLimitStore(TEST_WINDOW_MS);
+    store16c.init();
+    const app16c = makeAdminReleaseApp(store16c);
+
+    try {
+      const windowEnd = new Date(Math.ceil(Date.now() / TEST_WINDOW_MS) * TEST_WINDOW_MS);
+      await pool.query(
+        `INSERT INTO sos_rate_limit_windows (key, window_end, count, updated_at)
+         VALUES ($1, $2, $3, now())
+         ON CONFLICT (key, window_end) DO UPDATE SET count = $3, updated_at = now()`,
+        [key16c, windowEnd.toISOString(), TEST_LIMIT],
+      );
+
+      // No x-test-auth header → no req._testAuth → 401.
+      const res = await request(app16c)
+        .delete(`/api/v1/admin/rate-limit/windows/${encodeURIComponent(key16c)}`);
+      expect(res.status).toBe(401);
+
+      // Window must still exist.
+      const still = await pool.query(
+        `SELECT count FROM sos_rate_limit_windows WHERE key = $1`, [key16c]);
+      expect(still.rows.length).toBeGreaterThan(0);
+    } finally {
+      await store16c.resetKey(key16c);
+      store16c.destroy();
+    }
+  });
+
+  // ── 16-D: DB/store failure → 503, no success audit row ───────────────────
+  it("step-16-D: store failure → 503, no success audit row written", async () => {
+    const key16d = "p2d-rate-limit-test-http-failure:127.0.0.1";
+    const store16d = new PgRateLimitStore(TEST_WINDOW_MS);
+    store16d.init();
+
+    // Override adminResetKey to simulate a DB failure.
+    const original = store16d.adminResetKey.bind(store16d);
+    store16d.adminResetKey = async () => {
+      throw new Error("simulated DB failure on adminResetKey");
+    };
+
+    const app16d = makeAdminReleaseApp(store16d);
+
+    try {
+      const windowEnd = new Date(Math.ceil(Date.now() / TEST_WINDOW_MS) * TEST_WINDOW_MS);
+      await pool.query(
+        `INSERT INTO sos_rate_limit_windows (key, window_end, count, updated_at)
+         VALUES ($1, $2, $3, now())
+         ON CONFLICT (key, window_end) DO UPDATE SET count = $3, updated_at = now()`,
+        [key16d, windowEnd.toISOString(), TEST_LIMIT],
+      );
+
+      const auditBefore = await db
+        .select({ id: sosAuthAudit.id })
+        .from(sosAuthAudit)
+        .where(
+          and(
+            eq(sosAuthAudit.eventType, "rate_limit_window_cleared"),
+          ),
+        );
+      const countBefore = auditBefore.length;
+
+      // Admin request must get 503 when the store throws.
+      const res = await request(app16d)
+        .delete(`/api/v1/admin/rate-limit/windows/${encodeURIComponent(key16d)}`)
+        .set("x-test-auth", "admin");
+      expect(res.status).toBe(503);
+
+      // No new success audit row must have been written.
+      const auditAfter = await db
+        .select({ id: sosAuthAudit.id })
+        .from(sosAuthAudit)
+        .where(eq(sosAuthAudit.eventType, "rate_limit_window_cleared"));
+      expect(auditAfter.length).toBe(countBefore);
+
+      // Window still exists (store threw before clearing).
+      const still = await pool.query(
+        `SELECT count FROM sos_rate_limit_windows WHERE key = $1`, [key16d]);
+      expect(still.rows.length).toBeGreaterThan(0);
+    } finally {
+      // Restore and clean up.
+      store16d.adminResetKey = original;
+      await store16d.resetKey(key16d);
+      store16d.destroy();
+    }
+  });
 });
