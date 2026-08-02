@@ -1,18 +1,29 @@
 # Phase 3 — Decision Summary
 
-**Date:** 2026-08-02  
-**Branch:** `planning/phase-3-scope`  
-**Prepared by:** Replit Agent  
-**Requires human approval before implementation begins.**
+**Date:** 2026-08-02
+**Branch:** `planning/phase-3-scope`
+**Prepared by:** Replit Agent
+**Status: APPROVED — Implementation authorized.**
 
 ---
 
-## Existing Approved Phase 3 Roadmap Scope Found
+## Engineering Sequence vs. Product-Audit Sequence
 
-**Yes — but at a different abstraction level than the current implementation.**
+### Engineering label
+**Implementation Phase 3 — Clinical Documentation Foundation**
 
-The repository contains a product audit (`artifacts/sunrise-os/product-audit/
-00-executive-summary.md`) that defines the following phase sequence:
+### Product-audit sequence
+This engineering phase intentionally completes part of the product audit's
+**Clinical Workflow Completion** phase. It occurs before the product audit's
+**Integrations** phase because foundational clinical documentation must exist
+before external integrations (eligibility, clearinghouse, e-prescribing, FHIR)
+can be meaningfully added.
+
+---
+
+## Roadmap Context
+
+The repository contains a product audit that defines the following phase sequence:
 
 | Phase | Name | Scope |
 |-------|------|-------|
@@ -23,19 +34,36 @@ The repository contains a product audit (`artifacts/sunrise-os/product-audit/
 
 The **Replit implementation phases** do not map 1:1 to the product audit phases.
 The Replit system completed authentication and authorization (primarily product
-audit Phase 1 items). The product audit's Phase 2 (Clinical Workflow
-Completion) — starting with "Note signing with backend persistence" — has not
-yet been implemented in the Replit system.
+audit Phase 1 items). The product audit's Clinical Workflow Completion
+(starting with "Note signing with backend persistence") has not yet been
+implemented.
 
-Applying the product audit's Phase 3 (Integrations) at this point would skip
-Clinical Workflow Completion entirely and build external integrations on top of
-a system that has no clinical note storage. Integrations such as eligibility
-verification and clearinghouse claims submission depend on clinical notes,
-diagnoses, and treatment plans existing in the database.
+This engineering phase (Implementation Phase 3) implements the first foundational
+slice of Clinical Workflow Completion before moving to external integrations.
+The product audit roadmap is not discarded — it is being sequenced so
+foundational clinical workflows exist before external integrations are added.
 
 ---
 
-## Proposed Phase 3 Name
+## Explicitly Not Begun in This Phase
+
+The following product-audit phases are deferred until after this phase:
+
+- Eligibility integrations
+- Clearinghouse integrations
+- Electronic prescribing
+- FHIR integrations
+- Claims processing
+- Medication administration records
+- Treatment plans
+- Group notes
+- ASAM assessments
+- Discharge summaries
+- AI-generated clinical content
+
+---
+
+## Phase Name
 
 **Clinical Documentation Foundation**
 
@@ -45,10 +73,10 @@ diagnoses, and treatment plans existing in the database.
 
 | Role | Workflow |
 |------|---------|
-| `clinician` | Create, edit, and sign individual progress notes |
-| `nurse` | Create and sign nursing notes |
-| `supervisor` | View and void notes for supervised staff |
-| `admin` | View any note within their organization |
+| `certified_clinician` / `mh_therapist` | Create, edit, and sign individual progress notes |
+| `nursing` | Create and sign nursing notes |
+| `clinical_supervisor` | View any note in their facility; void signed notes with reason |
+| `cmo` | View any note org-wide; void signed notes with reason |
 
 ---
 
@@ -61,25 +89,110 @@ access, and visible to authorized staff.
 
 ---
 
-## Why It Should Be Next
+## Approved Product Decisions
 
-1. **Foundation dependency:** Eligibility verification (product roadmap Phase 3)
-   requires clinical notes and treatment plans to exist before it is useful.
-   You cannot submit a claim or verify a benefit without a clinical encounter
-   record.
+### Decision 1 — Note types
+
+The initial allowlist is limited to:
+- `progress_note`
+- `nursing_note`
+
+Note types are not coupled directly to billing codes.
+No billing claim or service-code generation is included.
+Future note types require reviewed code and a migration to be added.
+
+### Decision 2 — Draft ownership
+
+A draft note may be edited only by its original author.
+Supervisors and administrators may view drafts when their scoped permissions
+authorize access, but they may not edit another author's draft.
+No draft reassignment is included.
+
+### Decision 3 — Signing
+
+Signing requires:
+- A currently authenticated session
+- Valid CSRF protection
+- Permission to sign the note (`clinical_note.sign_own`)
+- Continued authorization for the organization, facility, patient, and episode
+- Confirmation that the user is the note author
+- Current note version matching the submitted version
+
+MFA is not required in this phase.
+Signing without MFA does not, by itself, satisfy every regulatory or
+organizational signature policy.
+
+Recorded at signature: signer identity, signature timestamp, final version,
+organization, facility, patient, episode (where applicable).
+
+### Decision 4 — Signed-note immutability
+
+A signed note is immutable. After signature:
+- Text cannot be edited
+- Author cannot change
+- Patient cannot change
+- Episode cannot change
+- Facility cannot change
+- Note type cannot change
+- Signed timestamp cannot change
+
+Amendments, late entries, addenda, corrections, and co-signatures are not
+implemented in this phase.
+
+### Decision 5 — Void behavior
+
+A signed note may be voided only by a separately authorized supervisor or
+administrator holding the `clinical_note.void` permission.
+
+Voiding requires:
+- `clinical_note.void` permission
+- Scoped patient access
+- A required reason
+- Audit event written inside the same transaction as the void
+
+Voiding does not delete or overwrite the original note.
+The original content remains available to appropriately authorized audit and
+supervisory users.
+
+The original author may not void their own signed note unless they
+independently possess `clinical_note.void` (i.e., they also hold a supervisor
+or CMO role assignment).
+
+### Decision 6 — Storage and encryption posture
+
+Clinical note content uses the existing PostgreSQL storage architecture.
+Field-level encryption is not implemented in this phase.
+
+Documented clearly:
+- Clinical note content contains sensitive health information
+- Database access must be restricted
+- Transport encryption is required
+- Backups must be protected
+- Production key-management and field-level encryption remain a separate
+  security decision
+- This implementation is not, by itself, a declaration of HIPAA compliance
+
+Real patient information must not appear in tests, seeds, screenshots, logs,
+or review archives.
+
+---
+
+## Why Clinical Documentation Foundation Before Integrations
+
+1. **Foundation dependency:** Eligibility verification and clearinghouse claims
+   require clinical notes and treatment plans to exist before they are useful.
+   You cannot submit a claim without a clinical encounter record.
 
 2. **Current state:** The Progress Notes, Chart Review, and Co-sign Queue
-   screens all exist in the UI but render mock data. Real clinical staff cannot
-   use the system for documentation.
+   screens all render mock data. Real clinical staff cannot document care.
 
 3. **Security infrastructure is ready:** Phase 2 delivered scoped patient
-   access, exact FK binding, audit trails, and server-enforced permissions. The
-   authorization model is ready to protect clinical PHI.
+   access, exact FK binding, audit trails, and server-enforced permissions.
+   The authorization model is ready to protect clinical PHI.
 
-4. **Smallest complete vertical slice:** A single note type (individual
-   progress note) with create/read/edit/sign/view covers the full stack from
-   migration to UI without requiring billing codes, integrations, or external
-   systems.
+4. **Smallest complete vertical slice:** Two note types (progress, nursing)
+   with create/read/edit/sign/view covers the full stack without requiring
+   billing codes, integrations, or external systems.
 
 5. **Deferred complexity:** Co-signatures, amendments, late entries, and AI
    generation are explicitly out of scope and can be delivered independently.
@@ -93,22 +206,10 @@ All of the following are in place from Phase 1 and Phase 2:
 - PostgreSQL with org/facility/patient schema
 - Authenticated sessions with session versioning
 - Scoped role assignments and patient-access grants
-- Server-side permission enforcement middleware
+- Server-side permission enforcement (`authorize()`)
 - CSRF protection
 - Append-only audit log with outbox worker
 - Patient List and Patient Detail API (scoped)
-
----
-
-## Main Risks
-
-| Risk | Severity | Notes |
-|------|----------|-------|
-| PHI stored as plaintext | Medium | No field-level encryption; acceptable for development; must be addressed before production |
-| No MFA at note signing | Medium | Signing is a legal act; MFA at sign time is best practice; deferred |
-| Product roadmap conflict | High | Requires human decision — see below |
-| `note_type` allowlist must align with billing codes | Medium | Wrong note type = claim denial; clinical/billing review needed before finalizing the allowlist |
-| Time-zone handling for `service_date` | Low | Stored as DATE (no TZ ambiguity); facility time zone used for display |
 
 ---
 
@@ -119,7 +220,6 @@ All of the following are in place from Phase 1 and Phase 2:
 | Item | Count |
 |------|-------|
 | New tables | 1 (`sos_clinical_notes`) |
-| Modified tables | 0 |
 | New migrations | 1 (`0006_clinical_documentation_foundation.sql`) |
 | New check constraints | 5 |
 | New triggers | 1 |
@@ -130,7 +230,6 @@ All of the following are in place from Phase 1 and Phase 2:
 | Item | Count |
 |------|-------|
 | New endpoints | 6 |
-| Modified endpoints | 0 |
 | New permission codes | 6 |
 | New audit event types | 6 |
 
@@ -138,25 +237,19 @@ All of the following are in place from Phase 1 and Phase 2:
 
 | Item | Count |
 |------|-------|
-| Primary new UI surface | Progress Notes tab in PatientDetail (wired) |
-| Secondary update | ProgressNotes standalone screen (read list) |
-| New major components | NoteForm, NoteDetail, NoteListItem, SignConfirmModal, ConflictBanner |
+| Primary new UI surface | Progress Notes tab in PatientDetail (wired to real API) |
+| New components | NoteTimeline, NoteEditor, NoteReadOnlyView, VoidModal, ConflictBanner |
 
 ### Testing
 
 | Category | Estimate |
 |----------|---------|
-| Automated tests (new) | 116–130 |
+| Automated tests (new) | 80–100 |
 | Existing tests (must pass) | 444 |
-| Total minimum | 560–574 |
-| Browser scenarios | 3 |
-| Human personas | 3 (clinician, supervisor, admin) |
 
 ---
 
 ## Explicit Exclusions
-
-The following are explicitly excluded from Phase 3 and must not be bundled in:
 
 - Co-signatures
 - Amendments to signed notes
@@ -171,27 +264,22 @@ The following are explicitly excluded from Phase 3 and must not be bundled in:
 - Clearinghouse integration
 - FHIR R4
 - AI-generated clinical content
-- Wet/digital signatures (PDF, DocuSign)
-- Complex SOAP/BIRP/DAP structured templates
-- Password reset email delivery
-- MFA enrollment
-- CSP hardening
-- Field-level encryption
+- Rich template designers
+- Drag-and-drop form builders
+- Billing integration
 
 ---
 
-## Decisions Required from the Human Reviewer
+## Permission Codes Approved
 
-Before implementation begins, the following must be decided:
-
-| # | Decision | Why it matters |
-|---|----------|---------------|
-| 1 | **Confirm Phase 3 = Clinical Documentation Foundation** (not Integrations as stated in product audit Phase 3) | The product audit calls Phase 3 "Integrations." The Replit implementation hasn't yet built clinical documentation. Which takes priority? |
-| 2 | **Confirm `note_type` allowlist** | `individual_progress / group_progress / nursing / physician / case_management / peer_support` — align with billing team before coding |
-| 3 | **PHI plaintext storage acceptable for Phase 3** | No field-level encryption planned; confirm this is acceptable for development-stage data |
-| 4 | **MFA requirement at signing** | Best practice says signing should require MFA; is this deferred to a later phase? |
-| 5 | **Void policy for signed notes** | Supervisor/admin can void signed notes with a reason — is this the correct policy, or should voiding require a compliance approval step? |
-| 6 | **Content format: plain text only** | Phase 3 stores plain text content; SOAP/BIRP/DAP structured templates are deferred — confirm this is acceptable |
+| Code | Roles |
+|------|-------|
+| `clinical_note.create` | clinical_supervisor, certified_clinician, mh_therapist, cmo, prescriber, nursing |
+| `clinical_note.view` | clinical_supervisor, certified_clinician, mh_therapist, cmo, prescriber, nursing, bht |
+| `clinical_note.edit_own_draft` | clinical_supervisor, certified_clinician, mh_therapist, cmo, nursing |
+| `clinical_note.sign_own` | clinical_supervisor, certified_clinician, mh_therapist, cmo, prescriber, nursing |
+| `clinical_note.void` | clinical_supervisor, cmo |
+| `clinical_note.audit_view` | clinical_supervisor, cmo, security_admin |
 
 ---
 
@@ -210,12 +298,8 @@ Before implementation begins, the following must be decided:
 ---
 
 ```text
-PHASE 3 SCOPE REQUIRES PRODUCT DECISION
+PHASE 3 SCOPE APPROVED
+Implementation Phase 3 — Clinical Documentation Foundation
+Completes part of the product-audit Clinical Workflow Completion phase.
+Intentionally precedes the product-audit Integrations phase.
 ```
-
-The proposed scope (Clinical Documentation Foundation) is a well-defined,
-implementable vertical slice that follows logically from Phase 2 and prepares
-the system for the integrations the product roadmap names as Phase 3. However,
-the product audit explicitly identifies Phase 3 as Integrations. A human
-reviewer must confirm whether to proceed with Clinical Documentation Foundation
-or to re-sequence the roadmap before implementation begins.
