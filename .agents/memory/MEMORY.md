@@ -16,3 +16,4 @@
 - [Phase 2B Authorization Correction](phase-2b-authorization-correction.md) — scoped grants, tenant login (orgSlug required), PgRateLimiter, role-grant policy, 343/343 tests, review ZIP
 - [Phase 2D Hardening](phase-2d-hardening.md) — exact FK binding, outbox worker, credential rotation, 414/414 tests, ZIP evidence; Zod v4 email/mrn/trigger pitfalls documented
 - [Migration journal reconciliation](migration-journal-reconciliation.md) — drizzle.__drizzle_migrations drift cause, correct SHA-256 hashes for all 6 migrations, reconciliation script path, forward policy
+- [Phase 3 Clinical Documentation](phase-3-clinical-documentation.md) — signed_consistency constraint implication vs biconditional, append-only audit table, 401 design invariant pattern, 19 permission codes
