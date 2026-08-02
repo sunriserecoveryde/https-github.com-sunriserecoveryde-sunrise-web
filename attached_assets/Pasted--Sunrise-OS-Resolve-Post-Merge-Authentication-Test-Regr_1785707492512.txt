@@ -1,0 +1,302 @@
+# Sunrise OS — Resolve Post-Merge Authentication Test Regression
+
+Continue on the current post-merge verification work.
+
+Do not begin Phase 3.
+
+Do not weaken authentication controls.
+
+Do not restore permanent development-identity behavior as a substitute for authenticated tests.
+
+## Decision
+
+Apply both corrections:
+
+1. Remove `DISABLE_AUTH_FALLBACK=true` from the shared Replit environment.
+2. Update the eight legacy patient API tests to authenticate through the real Phase 2 login flow.
+
+The environment variable was intended only for an isolated session-invalidation verification. It must not remain globally configured.
+
+The legacy tests must also stop depending on implicit development identity injection.
+
+---
+
+# 1. Remove the shared environment contamination
+
+Remove:
+
+```text
+DISABLE_AUTH_FALLBACK=true
+```
+
+from any shared or persistent Replit environment used by:
+
+* The normal development server
+* The full automated test suite
+* Production builds
+* Post-merge verification
+* General smoke tests
+
+Do not remove support for the environment variable from the application code if it remains useful for isolated security tests.
+
+Instead, set it only on the exact command or child process that needs it, for example:
+
+```bash
+DISABLE_AUTH_FALLBACK=true <targeted-command>
+```
+
+The variable must not leak into later test processes.
+
+Document:
+
+* Where the shared value was removed
+* Which isolated test still uses it
+* How process-level cleanup is guaranteed
+
+Do not print unrelated secret values.
+
+---
+
+# 2. Update the eight legacy patient API tests
+
+Update these failing scenarios in:
+
+`auth-p2-integration.test.ts`
+
+* `patient-02`
+* `patient-03`
+* `patient-04`
+* `patient-06`
+* `patient-08`
+* `patient-09`
+* `patient-11`
+* `patient-12`
+
+They must no longer depend on `devIdentityMiddleware` injecting an identity.
+
+For each applicable test, use the real authentication sequence:
+
+1. Create a cookie-preserving Supertest agent.
+2. Request the pre-login CSRF token.
+3. Preserve the CSRF/session cookie.
+4. Log in using a fictitious seeded persona and `PHASE2D_TEST_PASSWORD`.
+5. Request a fresh authenticated CSRF token when required.
+6. Call the patient API using the authenticated session.
+7. Assert the exact expected response.
+8. Log out where test isolation requires it.
+
+Use the minimum-authority persona appropriate to each scenario.
+
+Do not:
+
+* Add development identity headers
+* Mock authentication middleware
+* Disable CSRF
+* Use a hard-coded password
+* Add password fallbacks
+* Change expected authorization failures into successes
+* Accept either 200 or 403 where one result is required
+* Skip the tests when the secret is configured
+
+The test must fail clearly when `PHASE2D_TEST_PASSWORD` is unavailable.
+
+---
+
+# 3. Preserve explicit development-identity tests separately
+
+If development identity behavior still needs coverage, create or retain a narrowly scoped test that explicitly verifies:
+
+* It is available only outside production
+* It is disabled when `DISABLE_AUTH_FALLBACK=true`
+* It cannot override a real authenticated session
+* It cannot be enabled through a request header
+* It does not run in production configuration
+
+Do not make patient API integration tests depend on this fallback.
+
+---
+
+# 4. Prevent environment leakage between tests
+
+Review the test setup for mutations of:
+
+```text
+process.env.DISABLE_AUTH_FALLBACK
+NODE_ENV
+PHASE2D_TEST_PASSWORD
+```
+
+Requirements:
+
+* Save the original value before mutation.
+* Restore or delete it in `afterEach` or `afterAll`.
+* Reset imported modules when environment-dependent initialization happens at module load.
+* Close Supertest agents, servers, database pools, and workers.
+* Do not let one test file change another test file’s environment.
+
+Add a regression test proving:
+
+1. A targeted process with `DISABLE_AUTH_FALLBACK=true` disables fallback.
+2. A subsequent normal process does not inherit that setting.
+3. Real-login patient tests continue to pass independently of fallback state.
+
+---
+
+# 5. Rerun the affected test file
+
+First run only:
+
+```text
+auth-p2-integration.test.ts
+```
+
+Report:
+
+* Tests discovered
+* Passed
+* Failed
+* Skipped
+* The eight formerly failing scenario results
+* Real login used: yes
+* Real CSRF used: yes
+* Real session cookie used: yes
+* Development identity used: no
+
+Required result:
+
+* All eight formerly failing tests pass
+* Zero failed tests
+* Zero skipped required tests
+
+---
+
+# 6. Rerun the complete merged suite
+
+After the targeted file passes, run the complete test suite from merged `main`.
+
+Use:
+
+* Real PostgreSQL
+* `PHASE2D_TEST_PASSWORD`
+* No globally persistent `DISABLE_AUTH_FALLBACK`
+* Production-compatible auth behavior
+
+Report accurately:
+
+* Tests discovered
+* Passed
+* Failed
+* Skipped
+* Real PostgreSQL tests
+* Real HTTP tests
+* Browser/manual tests
+
+Required result:
+
+* Zero failures
+* Zero skipped required security tests
+
+Do not report the post-merge state as verified until the complete suite passes.
+
+---
+
+# 7. Rerun the production smoke test
+
+Verify:
+
+1. Login page loads.
+2. Pre-login CSRF succeeds.
+3. Real login succeeds.
+4. Session endpoint succeeds.
+5. Authorized Patient List loads.
+6. Patient Detail authorization works.
+7. Unauthorized access is denied.
+8. Refresh preserves the session.
+9. Logout succeeds.
+10. Protected API returns 401 afterward.
+
+Confirm that removing the shared environment variable did not introduce a production behavior change.
+
+---
+
+# 8. Update the post-merge verification report
+
+Update:
+
+`artifacts/sunrise-os/readiness/post-merge/phase-2-post-merge-verification.md`
+
+Include:
+
+* Original failure count: 8
+* Root cause
+* Shared-environment correction
+* Legacy-test authentication correction
+* Targeted rerun result
+* Complete-suite result
+* Smoke-test result
+* Remaining limitations
+
+The final result may state:
+
+```text
+PHASE 2 MERGE VERIFIED
+```
+
+only when:
+
+* The eight tests use real authentication
+* The targeted file passes
+* The complete suite passes
+* Required tests have zero skips
+* Production smoke testing passes
+
+Otherwise state:
+
+```text
+PHASE 2 MERGE REGRESSION FOUND
+```
+
+---
+
+# 9. Commit the correction
+
+Commit only the necessary test and verification changes.
+
+Suggested commit message:
+
+```text
+Fix post-merge patient API tests to use real authentication
+```
+
+Do not add feature work.
+
+Do not begin Phase 3 implementation.
+
+## Required final response
+
+Provide:
+
+1. Branch
+2. Starting HEAD
+3. Correction commit
+4. Final HEAD
+5. Shared `DISABLE_AUTH_FALLBACK` removed: yes/no
+6. Remaining scoped uses of the variable
+7. Eight legacy tests converted to real authentication: yes/no
+8. Targeted test-file result
+9. Tests discovered
+10. Tests passed
+11. Tests failed
+12. Tests skipped
+13. Real-login result
+14. CSRF result
+15. Session-cookie result
+16. Development-identity use in the eight tests
+17. Complete-suite result
+18. Production smoke-test result
+19. Updated verification-report path
+20. Final verification status
+
+Do not begin Phase 3.
+
+Stop after reporting whether the merged Phase 2 state is verified.
