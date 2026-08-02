@@ -104,7 +104,11 @@ const pgStore = (process.env.NODE_ENV !== "test" || RL_INTEGRATION)
 
 const authRateLimiter = rateLimit({
   windowMs: WINDOW_MS,
+  // express-rate-limit v8 reads 'max' from passedOptions before spreading the
+  // full options object; 'limit' is the canonical v8 option name but 'max' is
+  // what the config initializer seeds from.  Set both to be unambiguous.
   limit:    RATE_LIMIT_MAX,
+  max:      RATE_LIMIT_MAX,
   standardHeaders: "draft-8",
   legacyHeaders:   false,
   message: { error: "Too many requests. Please try again later." },
