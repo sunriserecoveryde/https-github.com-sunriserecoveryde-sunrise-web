@@ -1,0 +1,693 @@
+# Sunrise OS — Migration History Reconciliation and Phase 3 Planning
+
+Phase 2 has been merged and post-merge verification reports:
+
+`PHASE 2 MERGE VERIFIED`
+
+Current verified commit:
+
+`49ecdb1`
+
+Do not begin Phase 3 implementation yet.
+
+Do not add new product functionality during this task.
+
+Complete these two parts in order:
+
+1. Reconcile the migration history of the existing development database.
+2. Produce a reviewable Phase 3 scope and implementation plan.
+
+---
+
+# Part 1 — Reconcile Migration History
+
+## 1. Create a dedicated reconciliation branch
+
+Create:
+
+`maintenance/post-phase-2-migration-reconciliation`
+
+Branch from the current verified `main` HEAD.
+
+Record:
+
+```bash
+git checkout main
+git pull --ff-only
+git status --short
+git rev-parse HEAD
+git checkout -b maintenance/post-phase-2-migration-reconciliation
+```
+
+Report:
+
+* Starting `main` HEAD
+* New branch
+* Working-tree status
+
+Do not modify Phase 2 application behavior.
+
+---
+
+## 2. Inspect the actual migration state
+
+The post-merge test run found that the existing development database migration journal did not reflect all migrations that had already been applied.
+
+Inspect:
+
+* Every checked-in migration file
+* Drizzle migration journal
+* Drizzle snapshots and metadata
+* Actual migration records in the development database
+* Actual schema objects in PostgreSQL
+
+Expected checked-in migration sequence should include the current files, including:
+
+```text
+0000_perpetual_rafael_vega.sql
+0001_authentication_authorization.sql
+0002_authorization_correction.sql
+0003_phase_2c_closure.sql
+0004_phase_2d_final_closure.sql
+0005_<current_rate_limit_audit_correction>.sql
+```
+
+Use the repository’s actual `0005` filename.
+
+Create a comparison table with:
+
+* Migration index
+* Migration filename
+* File exists
+* Journal entry exists
+* Schema changes present
+* Applied normally
+* Previously applied out of band
+* Required action
+
+Do not assume that a schema object existing means the migration journal is correct.
+
+---
+
+## 3. Do not replay destructive migrations blindly
+
+Do not rerun old migrations against the existing database merely to make the journal look complete.
+
+Do not:
+
+* Drop production or development data
+* Recreate existing tables unnecessarily
+* Run migrations that would duplicate schema objects
+* Insert migration-journal records without verification
+* Rewrite old committed migrations
+* Delete historical journal entries
+
+Determine the exact schema state first.
+
+---
+
+## 4. Define a safe reconciliation procedure
+
+Create:
+
+`docs/readiness/post-phase-2-migration-reconciliation.md`
+
+Document:
+
+* Why the journal drift occurred
+* Which migrations were applied normally
+* Which migrations were applied manually or out of band
+* Which schema objects prove each migration’s effects are present
+* Whether the current database matches a clean migration result
+* How the journal will be reconciled safely
+* Rollback or recovery procedure
+* Backup requirement
+* Verification queries
+* Risks
+
+The reconciliation must not rely on guesswork.
+
+---
+
+## 5. Reconcile only after verification
+
+Before modifying migration records:
+
+1. Create a backup or disposable clone of the current development database.
+2. Test the reconciliation procedure on the clone.
+3. Run the normal migration command afterward.
+4. Confirm it reports no pending historical migrations.
+5. Run the complete test suite.
+6. Compare the reconciled clone’s schema to a fresh clean-migration database.
+7. Confirm no application data was changed unexpectedly.
+
+Only after the clone passes may the same reconciliation be applied to the normal development database.
+
+When adding missing journal records is necessary, use a dedicated, reviewed reconciliation script that:
+
+* Verifies the expected schema fingerprint first
+* Verifies the exact migration checksum
+* Refuses to run when required schema objects are absent
+* Refuses to run when conflicting objects exist
+* Inserts only the missing verified history records
+* Is idempotent
+* Produces sanitized output
+
+Do not use an unconditional SQL insert.
+
+---
+
+## 6. Prove clean migrations still work
+
+Create a fresh empty PostgreSQL database.
+
+Using only the normal migration runner:
+
+1. Apply every checked-in migration.
+2. Verify all expected schema objects.
+3. Verify all journal entries.
+4. Run migrations again.
+5. Confirm no pending migrations.
+6. Seed fictitious data.
+7. Run the complete test suite.
+8. Destroy the database.
+
+This proof is separate from reconciling the existing database.
+
+Save results to:
+
+`artifacts/sunrise-os/readiness/post-phase-2/migration-reconciliation-proof.md`
+
+---
+
+## 7. Run regression validation
+
+After reconciliation, run:
+
+* Full TypeScript validation
+* Database package build
+* API production build
+* Sunrise OS production build
+* Full test suite
+* Production-mode authentication smoke test
+* Patient List and Patient Detail smoke tests
+* Rate-limit audit-event test
+
+Required result:
+
+* Zero failures
+* Zero required skips
+* No schema drift
+* No pending migrations
+
+---
+
+## 8. Commit the reconciliation work
+
+Commit only:
+
+* Reconciliation documentation
+* Safe reconciliation script, when required
+* Migration verification artifacts
+* Necessary migration metadata correction
+
+Do not include new product features.
+
+Suggested commit message:
+
+```text
+Reconcile post-Phase-2 migration history
+```
+
+Do not merge automatically.
+
+Provide the commit for human review.
+
+---
+
+# Part 2 — Produce the Phase 3 Plan
+
+Begin Part 2 only when migration reconciliation verification passes.
+
+Create a planning branch from the verified `main` HEAD or from the approved reconciliation result:
+
+`planning/phase-3-scope`
+
+Do not implement Phase 3 features on this branch.
+
+---
+
+## 9. Review the existing roadmap and product artifacts
+
+Search the repository for:
+
+```text
+Phase 3
+phase-3
+roadmap
+product roadmap
+next phase
+planned
+backlog
+deferred
+TODO
+clinical workflow
+```
+
+Review:
+
+* Existing roadmap documents
+* Current database schema
+* Current API routes
+* Current frontend routes
+* Current permissions and roles
+* Current patient workflows
+* Existing placeholder UI
+* Deferred requirements
+* Readiness documents
+* Prior Phase 1 and Phase 2 decisions
+
+Determine whether an already-approved Phase 3 scope exists.
+
+Do not invent an existing decision when no repository artifact supports it.
+
+---
+
+## 10. Produce a current-state inventory
+
+Create:
+
+`docs/readiness/phase-3-current-state-inventory.md`
+
+Include:
+
+### Existing platform capabilities
+
+* Persistence
+* Organizations and facilities
+* Staff identities
+* Authentication
+* Sessions
+* Authorization
+* Scoped grants
+* Patient access
+* Patient List
+* Patient Detail
+* Episode data
+* Audit events
+* Rate limiting
+* Administrative controls
+* Demo versus production modes
+
+### Existing database entities
+
+List the current tables and their responsibility.
+
+### Existing API endpoints
+
+List the currently implemented routes.
+
+### Existing frontend screens
+
+List the current routes and major UI states.
+
+### Deferred or placeholder functionality
+
+Identify anything shown in the UI or mentioned in code that is not yet a complete workflow.
+
+### Technical debt relevant to Phase 3
+
+Include only issues that materially affect the next vertical slice.
+
+---
+
+## 11. Select one Phase 3 vertical slice
+
+When the repository already defines Phase 3, use that approved scope.
+
+When no approved scope exists, recommend exactly one smallest coherent vertical slice.
+
+Evaluate candidates using:
+
+* Clinical or operational value
+* Dependency readiness
+* Security risk
+* Compliance risk
+* Data-model complexity
+* Authorization complexity
+* Audit requirements
+* Browser-test feasibility
+* Ability to deliver and review independently
+
+Do not combine unrelated capabilities.
+
+Examples of separate major capabilities that must not be bundled together:
+
+* Clinical notes
+* Treatment plans
+* Medication management
+* Scheduling
+* Billing and claims
+* Drug testing
+* Document management
+* Messaging
+* Electronic prescribing
+* Analytics
+
+Select one.
+
+---
+
+## 12. Recommended default when no roadmap decision exists
+
+When no repository artifact identifies a different approved Phase 3 scope, evaluate this as the preferred candidate:
+
+## Phase 3 — Clinical Documentation Foundation
+
+The smallest proposed slice should be a basic patient clinical-note workflow, not a complete treatment-plan or medication system.
+
+Potential scope:
+
+* Create a draft clinical note for an authorized patient
+* Save draft
+* View note
+* Edit own draft
+* Sign note
+* Prevent editing after signature
+* Display note history
+* Enforce organization, facility, patient, and assignment scope
+* Apply minimum-necessary field projections
+* Audit create, view, edit, and sign actions
+
+Explicitly exclude:
+
+* Co-signatures
+* Amendments
+* Late entries
+* Treatment plans
+* Group notes
+* Medication records
+* E-prescribing
+* Claims
+* Complex templates
+* AI-generated clinical content
+* External document exchange
+
+Do not accept this default automatically when an existing roadmap says otherwise.
+
+---
+
+## 13. Create the Phase 3 proposed scope
+
+Create:
+
+`docs/readiness/phase-3-proposed-scope.md`
+
+Include:
+
+### A. Phase name
+
+### B. Problem statement
+
+Identify the concrete staff workflow being enabled.
+
+### C. Primary users
+
+List the exact roles.
+
+### D. Current dependencies
+
+Identify the Phase 1 and Phase 2 components required.
+
+### E. In-scope workflow
+
+Describe the end-to-end vertical slice.
+
+### F. Out-of-scope items
+
+Be explicit.
+
+### G. Proposed database model
+
+For every proposed table include:
+
+* Table purpose
+* Primary key
+* Organization key
+* Facility key
+* Patient key
+* Episode key where applicable
+* Author
+* Status
+* Created timestamp
+* Updated timestamp
+* Signed timestamp
+* Version or concurrency field
+* Required constraints
+* Foreign keys
+* Indexes
+* Soft-delete policy
+* Retention implications
+
+Do not write the migration yet.
+
+### H. Authorization matrix
+
+For every operation define:
+
+* Permission code
+* Allowed roles
+* Organization scope
+* Facility scope
+* Patient-assignment requirement
+* Ownership requirement
+* Draft versus signed behavior
+* Minimum-necessary fields
+* Denial behavior
+* Audit event
+
+### I. API proposal
+
+For every endpoint include:
+
+* HTTP method
+* Route
+* Request schema
+* Response schema
+* Permission
+* Validation
+* Scope
+* Audit event
+* Error responses
+* Concurrency behavior
+
+### J. Frontend proposal
+
+Include:
+
+* Entry point
+* Patient context
+* List or timeline view
+* Draft form
+* Read-only signed view
+* Loading state
+* Empty state
+* Validation state
+* Save failure
+* Permission denial
+* Concurrent-edit conflict
+* Demo-mode behavior
+
+### K. Audit-event inventory
+
+List every required audit event.
+
+### L. Testing strategy
+
+Include:
+
+* Unit tests
+* PostgreSQL integration tests
+* Migration tests
+* Real HTTP tests
+* Authorization tests
+* Cross-organization tests
+* Cross-facility tests
+* Patient-assignment tests
+* Ownership tests
+* Draft/signature-state tests
+* Concurrency tests
+* Field-projection tests
+* Browser tests
+* Human persona verification
+
+### M. Migration strategy
+
+Describe how the schema would be introduced and tested from an empty database.
+
+### N. Acceptance criteria
+
+Use objective pass/fail statements.
+
+### O. Risks and decisions
+
+Identify questions requiring clinical, compliance, legal, security, or product approval.
+
+---
+
+## 14. Add behavioral-health documentation safeguards
+
+When the selected Phase 3 slice involves clinical documentation, the plan must explicitly address:
+
+* Signed-record immutability
+* Corrections and amendments being out of scope unless approved
+* Author identity
+* Signature timestamp
+* Organization and facility ownership
+* Patient and episode linkage
+* Least-privilege access
+* Minimum-necessary list responses
+* Audit of viewing sensitive documentation
+* Concurrent editing
+* Time-zone handling
+* Draft recovery
+* Server-side validation
+* No client-only authorization
+* No AI-generated clinical assertions
+* No real patient information in fixtures or screenshots
+
+Do not claim regulatory compliance solely because these controls exist.
+
+---
+
+## 15. Estimate implementation size
+
+Provide a reasoned estimate for:
+
+* New tables
+* Modified tables
+* New permissions
+* New API endpoints
+* New repositories or services
+* New frontend routes
+* New major UI components
+* Migration count
+* Automated test count
+* Browser scenarios
+* Human personas
+
+Use ranges where uncertainty exists.
+
+Do not estimate calendar duration unless specifically requested later.
+
+---
+
+## 16. Produce the Replit implementation prompt
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-3/phase-3-implementation-prompt.md`
+
+This must be a complete prompt for a future implementation task.
+
+Include:
+
+* Starting commit
+* Proposed branch name
+* Objective
+* In-scope items
+* Out-of-scope items
+* Database requirements
+* Authorization requirements
+* API requirements
+* Frontend requirements
+* Audit requirements
+* Migration requirements
+* Test requirements
+* Browser evidence
+* Review-package requirements
+* Required final response
+* Instruction not to merge automatically
+
+Do not execute this implementation prompt.
+
+---
+
+## 17. Produce the Phase 3 decision memo
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-3/phase-3-decision-summary.md`
+
+Include:
+
+* Whether an approved roadmap scope was found
+* Proposed Phase 3 name
+* Primary user
+* Main workflow
+* Why it should be next
+* Major dependencies
+* Main risks
+* Database-change estimate
+* Endpoint estimate
+* Frontend-screen estimate
+* Testing estimate
+* Explicit exclusions
+* Decisions required from the human reviewer
+
+End with exactly one:
+
+```text
+PHASE 3 SCOPE READY FOR HUMAN APPROVAL
+```
+
+or:
+
+```text
+PHASE 3 SCOPE REQUIRES PRODUCT DECISION
+```
+
+---
+
+# Required Final Response
+
+Provide:
+
+1. Verified `main` HEAD
+2. Reconciliation branch
+3. Migration files found
+4. Journal entries found
+5. Out-of-band migrations identified
+6. Reconciliation method
+7. Clone verification result
+8. Development-database reconciliation result
+9. Fresh clean-migration result
+10. Migration reapplication result
+11. Complete test result
+12. TypeScript result
+13. Production-build result
+14. Reconciliation commit
+15. Phase 3 planning branch
+16. Existing approved Phase 3 scope found: yes/no
+17. Proposed Phase 3 name
+18. Primary users
+19. Main workflow
+20. In-scope summary
+21. Out-of-scope summary
+22. New-table estimate
+23. API-endpoint estimate
+24. Frontend-screen estimate
+25. Automated-test estimate
+26. Browser-scenario estimate
+27. Main risks
+28. Current-state inventory path
+29. Proposed-scope path
+30. Implementation-prompt path
+31. Decision-summary path
+32. Final Phase 3 planning recommendation
+
+Do not implement Phase 3.
+
+Do not merge either branch automatically.
+
+Stop after producing the migration-reconciliation evidence and the Phase 3 planning package.
