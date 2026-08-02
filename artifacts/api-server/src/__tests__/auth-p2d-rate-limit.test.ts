@@ -36,8 +36,9 @@
  *      timers that would keep the test process alive after the suite finishes.
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import express from "express";
+import type { Express } from "express";
 import request from "supertest";
 import { pool } from "@workspace/db";
 import { PgRateLimitStore } from "../lib/pgRateLimiter";
@@ -396,4 +397,112 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
       testStore.destroy();
     }
   });
+
+  // ── Step 15: Full-app integration — /api/v1/auth/login enforces rate limits ──
+  //
+  // Steps 1-14 prove PgRateLimitStore works correctly with a purpose-built
+  // Express mini-app.  This step proves the real production login route
+  // (/api/v1/auth/login) is wired to PgRateLimitStore — i.e. that the
+  // skip: () => ... condition and the pgStore conditional in authV1.ts both
+  // behave correctly when PHASE2D_RATE_LIMIT_INTEGRATION=true.
+  //
+  // CSRF handling: the full app applies CSRF protection at the /api/v1 level,
+  // before the route-level authRateLimiter runs.  This test uses supertest's
+  // request.agent() to preserve cookies, fetches a real CSRF token via
+  // GET /api/v1/auth/csrf-token, and sends it as X-CSRF-Token on each login
+  // attempt.  Each bad-credential attempt returns 401 (credentials rejected),
+  // but the rate-limit counter is incremented.  After exhausting the window the
+  // next request returns 429.
+  //
+  // Cleanup contract:
+  //   All loopback IP variants that supertest may produce as req.ip are deleted
+  //   in the finally block so that stale counters cannot affect later runs.
+  it("step-15 (integration): /api/v1/auth/login returns 429 after limit is exhausted on the full app", async () => {
+    // Common loopback IP representations that supertest may produce as req.ip.
+    const LOOPBACK_KEYS = ["127.0.0.1", "::1", "::ffff:127.0.0.1"];
+
+    // Save and override env vars before re-importing the module so that
+    // authV1.ts evaluates RL_INTEGRATION=true and creates a real PgRateLimitStore.
+    const prevIntegration = process.env.PHASE2D_RATE_LIMIT_INTEGRATION;
+    const prevMax         = process.env.PHASE2D_RATE_LIMIT_MAX;
+    const prevWindow      = process.env.PHASE2D_RATE_LIMIT_WINDOW_MS;
+
+    process.env.PHASE2D_RATE_LIMIT_INTEGRATION = "true";
+    process.env.PHASE2D_RATE_LIMIT_MAX         = "3";  // low limit for testability
+    process.env.PHASE2D_RATE_LIMIT_WINDOW_MS   = String(TEST_WINDOW_MS);  // short window
+
+    // Reset module registry so authV1.ts re-evaluates its module-level pgStore
+    // and skip callback with the updated env vars.
+    vi.resetModules();
+
+    let freshApp: Express | undefined;
+
+    try {
+      // Dynamic import after resetModules → fresh authV1.ts with RL_INTEGRATION=true,
+      // which means: pgStore is a real PgRateLimitStore, skip() returns false.
+      const appModule = await import("../app");
+      freshApp = appModule.default as Express;
+
+      const RATE_LIMIT_MAX = 3;
+
+      // Use an agent so the _csrf cookie set by GET /csrf-token is automatically
+      // sent back on subsequent POST requests.
+      const agent = request.agent(freshApp);
+
+      // Fetch a CSRF token — this sets the _csrf double-submit cookie on the agent.
+      const csrfRes = await agent.get("/api/v1/auth/csrf-token");
+      const csrfToken = (csrfRes.body as { csrfToken?: string }).csrfToken ?? "";
+      expect(typeof csrfToken).toBe("string");
+      expect(csrfToken.length).toBeGreaterThan(0);
+
+      // Exhaust the window with bad-credential login attempts.
+      // Each attempt passes CSRF (→ authRateLimiter runs → increments counter)
+      // and is ultimately rejected by the credential check (→ 401).
+      for (let i = 0; i < RATE_LIMIT_MAX; i++) {
+        const r = await agent
+          .post("/api/v1/auth/login")
+          .set("X-CSRF-Token", csrfToken)
+          .send({ orgSlug: "sunrise", email: `rl-step15-tester${i}@example.com`, password: "definitelyWrong!" });
+        // Must not be 429 yet — rate limit not exhausted.
+        expect(r.status).not.toBe(429);
+      }
+
+      // The next request must be rate-limited: counter now exceeds RATE_LIMIT_MAX.
+      const res = await agent
+        .post("/api/v1/auth/login")
+        .set("X-CSRF-Token", csrfToken)
+        .send({ orgSlug: "sunrise", email: "rl-step15-tester@example.com", password: "definitelyWrong!" });
+
+      expect(res.status).toBe(429);
+      expect((res.body as { error?: string }).error).toMatch(/too many/i);
+    } finally {
+      // Restore env vars.
+      if (prevIntegration === undefined) {
+        delete process.env.PHASE2D_RATE_LIMIT_INTEGRATION;
+      } else {
+        process.env.PHASE2D_RATE_LIMIT_INTEGRATION = prevIntegration;
+      }
+      if (prevMax === undefined) {
+        delete process.env.PHASE2D_RATE_LIMIT_MAX;
+      } else {
+        process.env.PHASE2D_RATE_LIMIT_MAX = prevMax;
+      }
+      if (prevWindow === undefined) {
+        delete process.env.PHASE2D_RATE_LIMIT_WINDOW_MS;
+      } else {
+        process.env.PHASE2D_RATE_LIMIT_WINDOW_MS = prevWindow;
+      }
+
+      // Sweep all loopback-IP rate-limit rows created by this test so that
+      // subsequent runs cannot inherit a stale full window.
+      await pool.query(
+        `DELETE FROM sos_rate_limit_windows WHERE key = ANY($1::text[])`,
+        [LOOPBACK_KEYS],
+      );
+
+      // Reset modules so subsequent dynamic imports get fresh module instances
+      // unaffected by this test's env overrides.
+      vi.resetModules();
+    }
+  }, 60_000);
 });
