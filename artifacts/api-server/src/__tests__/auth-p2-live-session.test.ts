@@ -69,6 +69,8 @@ beforeAll(async () => {
 }, 120_000); // 2 min timeout for Argon2id hashing × 9 users
 
 afterAll(async () => {
+  // Restore DISABLE_AUTH_FALLBACK — set in beforeAll for this file only.
+  delete process.env.DISABLE_AUTH_FALLBACK;
   // Do not end the shared pool — it is used by the app and other test files.
 });
 

@@ -61,6 +61,7 @@ const USERS = {
   revokedRole:  "revoked-role@test.sunrise",
 };
 
+const _savedDisableAuthFallback_p2c = process.env.DISABLE_AUTH_FALLBACK;
 process.env.DISABLE_AUTH_FALLBACK = "true";
 
 beforeAll(async () => {
@@ -70,6 +71,12 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
+  // Restore DISABLE_AUTH_FALLBACK to its value before this module was loaded.
+  if (_savedDisableAuthFallback_p2c === undefined) {
+    delete process.env.DISABLE_AUTH_FALLBACK;
+  } else {
+    process.env.DISABLE_AUTH_FALLBACK = _savedDisableAuthFallback_p2c;
+  }
   await dbPool.end().catch(() => {});
 });
 

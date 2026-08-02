@@ -38,6 +38,7 @@ const TEST_PASSWORD: string = (() => {
   return p;
 })();
 
+const _savedDisableAuthFallback_p2d = process.env.DISABLE_AUTH_FALLBACK;
 process.env.DISABLE_AUTH_FALLBACK = "true";
 
 // ── Stable test fixture IDs (clearly synthetic) ───────────────────────────────
@@ -161,6 +162,12 @@ describe("Phase 2D — 18-Step Exact Assignment Binding", { timeout: 240_000 }, 
 
   afterAll(async () => {
     await cleanFixtures().catch(() => {});
+    // Restore DISABLE_AUTH_FALLBACK to its value before this module was loaded.
+    if (_savedDisableAuthFallback_p2d === undefined) {
+      delete process.env.DISABLE_AUTH_FALLBACK;
+    } else {
+      process.env.DISABLE_AUTH_FALLBACK = _savedDisableAuthFallback_p2d;
+    }
     await pool.end().catch(() => {});
   });
 
