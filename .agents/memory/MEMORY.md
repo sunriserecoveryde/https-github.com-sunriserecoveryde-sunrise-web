@@ -15,3 +15,4 @@
 - [Phase 2C Security Closure](phase-2c-security-closure.md) — exact FK binding in patient access, admin scope on all mutating routes, Drizzle cause.code error detection, event_type constraint
 - [Phase 2B Authorization Correction](phase-2b-authorization-correction.md) — scoped grants, tenant login (orgSlug required), PgRateLimiter, role-grant policy, 343/343 tests, review ZIP
 - [Phase 2D Hardening](phase-2d-hardening.md) — exact FK binding, outbox worker, credential rotation, 414/414 tests, ZIP evidence; Zod v4 email/mrn/trigger pitfalls documented
+- [Migration journal reconciliation](migration-journal-reconciliation.md) — drizzle.__drizzle_migrations drift cause, correct SHA-256 hashes for all 6 migrations, reconciliation script path, forward policy
