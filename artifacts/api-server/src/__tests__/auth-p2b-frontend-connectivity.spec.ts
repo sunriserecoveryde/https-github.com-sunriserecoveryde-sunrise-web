@@ -8,7 +8,7 @@
  * Requires:
  *   PLAYWRIGHT_BASE_URL   — base URL of the Sunrise OS frontend (default: http://localhost:80/sunrise-os)
  *   API_BASE_URL          — base URL of the API server (default: http://localhost:8080)
- *   DEV_TEST_PASSWORD     — test user password
+ *   PHASE2D_TEST_PASSWORD — test user password (required; no fallback)
  *
  * Run: pnpm --filter @workspace/api-server exec playwright test auth-p2b-frontend-connectivity
  */

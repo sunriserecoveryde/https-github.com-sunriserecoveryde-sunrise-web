@@ -562,11 +562,13 @@ describe("§6 Exact role-assignment binding (negative cases)", { timeout: 30_000
     );
     const assignmentAId = (rowA as { id: string }).id;
 
-    // Assignment B — what the patient_access row will reference (revoked, ≠ A).
+    // Assignment B — what the patient_access row will reference.
+    // Phase 2D trigger requires B to be active at INSERT time; we revoke it afterwards
+    // so the scenario is: access row bound to B, B is now revoked, user presents grant A (A≠B).
     const [rowB] = await sql(
       `INSERT INTO sos_role_assignments
          (id, org_id, user_id, role_id, facility_id, status, effective_at, created_at)
-       VALUES (gen_random_uuid(), $1, $2, 'bht', $3, 'revoked', now()-interval'30 days', now())
+       VALUES (gen_random_uuid(), $1, $2, 'bht', $3, 'active', now()-interval'30 days', now())
        RETURNING id`,
       [ORG_ID, clinicanUserId, FACILITY_ID],
     );
@@ -586,11 +588,17 @@ describe("§6 Exact role-assignment binding (negative cases)", { timeout: 30_000
       [clinicanUserId, patientId, ORG_ID],
     );
     // Access row explicitly bound to B (not to A).
+    // Trigger fires at INSERT; B is active at this point → OK.
     await sql(
       `INSERT INTO sos_patient_access
          (id, org_id, user_id, patient_id, facility_id, status, role_assignment_id, created_at)
        VALUES (gen_random_uuid(), $1, $2, $3, $4, 'active', $5, now())`,
       [ORG_ID, clinicanUserId, patientId, FACILITY_ID, assignmentBId],
+    );
+    // Now revoke B — the access row still references it; presenting A (A≠B) should be denied.
+    await sql(
+      "UPDATE sos_role_assignments SET status='revoked' WHERE id=$1",
+      [assignmentBId],
     );
 
     // Construct identity presenting grant A.  bht is facilityWide=false so the

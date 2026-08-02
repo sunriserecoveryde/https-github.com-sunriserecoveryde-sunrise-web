@@ -245,8 +245,8 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
     // We simulate a DB error by using a mock pool that rejects queries.
     const { pool: realPool } = await import("@workspace/db");
     const originalQuery = realPool.query.bind(realPool);
-    // @ts-expect-error: overriding pool.query for failure simulation
-    realPool.query = async (_text: unknown, _values?: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (realPool as any).query = async (_text: unknown, _values?: unknown) => {
       throw new Error("simulated DB unavailability");
     };
 
@@ -257,8 +257,8 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
       expect(result.totalHits).toBe(0);
       failOpenStore.destroy();
     } finally {
-      // @ts-expect-error: restore
-      realPool.query = originalQuery;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (realPool as any).query = originalQuery;
     }
   });
 });

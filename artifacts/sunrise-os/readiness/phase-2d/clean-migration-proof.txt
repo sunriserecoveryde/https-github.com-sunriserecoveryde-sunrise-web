@@ -1,0 +1,56 @@
+Phase 2D Clean Migration Proof
+================================
+Date: 2026-08-02
+Branch: readiness/p0-phase-2d-final-closure
+Database: phase2d_proof_db (fresh, isolated)
+
+Migrations applied (in order):
+  0000_perpetual_rafael_vega.sql
+  0001_authentication_authorization.sql
+  0002_authorization_correction.sql
+  0003_phase_2c_closure.sql
+  0004_phase_2d_final_closure.sql
+
+Result: ALL 5 MIGRATIONS APPLIED SUCCESSFULLY — zero ERROR lines
+
+Tables confirmed (13 sos_* tables):
+  sos_audit_outbox
+  sos_auth_audit
+  sos_episodes_of_care
+  sos_facilities
+  sos_organizations
+  sos_patient_access
+  sos_patients
+  sos_rate_limit_windows
+  sos_role_assignments
+  sos_sessions
+  sos_staff_profiles
+  sos_user_accounts
+  sos_user_identity_refs
+
+Phase 2D constraints on sos_patient_access:
+  ck_active_access_requires_assignment   — CHECK: active rows must have a non-NULL role_assignment_id
+  ck_sos_patient_access_relationship     — CHECK: access scope valid values
+  ck_sos_patient_access_status           — CHECK: status valid values
+  fk_sos_patient_access_org_facility     — FK → sos_facilities
+  fk_sos_patient_access_org_patient      — FK → sos_patients
+  fk_sos_patient_access_org_user         — FK → sos_user_accounts
+  fk_sos_patient_access_role_assignment  — FK (RESTRICT) → sos_role_assignments
+  sos_patient_access_org_id_fkey         — FK → sos_organizations
+
+Phase 2D triggers on sos_patient_access:
+  sos_patient_access_assignment_integrity_check  — BEFORE INSERT OR UPDATE: cross-column user/org/facility integrity
+  sos_patient_access_facility_check             — BEFORE INSERT OR UPDATE: facility consistency
+
+Phase 2D column on sos_audit_outbox:
+  failed_permanently | NOT NULL | default: false
+
+Test results (against live phase2d_proof_db schema):
+  414 tests run | 414 passed | 0 failed | 22 skipped
+
+Migration SHA-256 checksums:
+  d469974922cc3fc74bbd81e20697f39d9732ae09456fc01871f6c210e4138c1c  0000_perpetual_rafael_vega.sql
+  86b492875afcbdfe10daf7867f66fb31930148fe42c10fd33527c7809d34508d  0001_authentication_authorization.sql
+  8b64783c95ef5bace0826342cac4e007252c7faac029de5914de88f20b83050d  0002_authorization_correction.sql
+  2ad2d880dfe87b3b331459a50b8ddf8ec3c9dd7c76bf26edd297ea887d9af3a6  0003_phase_2c_closure.sql
+  4584ae4def09750eb69fe431348e16b59e6a873c55a71147c7c8020db65240d4  0004_phase_2d_final_closure.sql

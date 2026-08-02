@@ -152,7 +152,7 @@ describe("§10 Tenant-deterministic login & security behaviours", () => {
     // §7: Must send both _csrf cookie AND session cookie so CSRF HMAC matches.
     const csrfRes = await request(app).get("/api/v1/auth/csrf-token");
     const csrfToken = csrfRes.body?.csrfToken as string;
-    const rawCookies = csrfRes.headers["set-cookie"] as string[] | undefined ?? [];
+    const rawCookies = (csrfRes.headers["set-cookie"] as unknown as string[] | undefined) ?? [];
     const csrfCookieVal = (rawCookies.find((c) => c.startsWith("_csrf=")) ?? "").split(";")[0];
     const sessCookieVal  = (rawCookies.find((c) => c.startsWith("sos_dev_session=") || c.startsWith("sos_session=")) ?? "").split(";")[0];
     const allCookies = [csrfCookieVal, sessCookieVal].filter(Boolean).join("; ");
@@ -173,7 +173,7 @@ describe("§10 Tenant-deterministic login & security behaviours", () => {
     // §7: Both _csrf and session cookies required.
     const csrfRes = await request(app).get("/api/v1/auth/csrf-token");
     const csrfToken = csrfRes.body?.csrfToken as string;
-    const rawCookies = csrfRes.headers["set-cookie"] as string[] | undefined ?? [];
+    const rawCookies = (csrfRes.headers["set-cookie"] as unknown as string[] | undefined) ?? [];
     const csrfCookieVal = (rawCookies.find((c) => c.startsWith("_csrf=")) ?? "").split(";")[0];
     const sessCookieVal  = (rawCookies.find((c) => c.startsWith("sos_dev_session=") || c.startsWith("sos_session=")) ?? "").split(";")[0];
     const allCookies = [csrfCookieVal, sessCookieVal].filter(Boolean).join("; ");
@@ -193,7 +193,7 @@ describe("§10 Tenant-deterministic login & security behaviours", () => {
     // §7: Both _csrf and session cookies required.
     const csrfRes = await request(app).get("/api/v1/auth/csrf-token");
     const csrfToken = csrfRes.body?.csrfToken as string;
-    const rawCookies = csrfRes.headers["set-cookie"] as string[] | undefined ?? [];
+    const rawCookies = (csrfRes.headers["set-cookie"] as unknown as string[] | undefined) ?? [];
     const csrfCookieVal = (rawCookies.find((c) => c.startsWith("_csrf=")) ?? "").split(";")[0];
     const sessCookieVal  = (rawCookies.find((c) => c.startsWith("sos_dev_session=") || c.startsWith("sos_session=")) ?? "").split(";")[0];
     const allCookies = [csrfCookieVal, sessCookieVal].filter(Boolean).join("; ");
