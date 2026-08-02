@@ -124,6 +124,61 @@ describe("§7 CSRF on login", () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
+// §7b — CSRF rejection body — no stack trace leak
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("§7b CSRF rejection body — no stack trace leak", () => {
+  it("7b-A: missing CSRF token → 403 JSON body with no stack or node_modules text", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ orgSlug: "sunrise", email: USERS.clinician, password: TEST_PASSWORD });
+
+    expect(res.status).toBe(403);
+
+    // Must be JSON, not HTML.
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+
+    // Body must contain only a generic error — no internal stack details.
+    const body = res.body as Record<string, unknown>;
+    expect(body.error).toBe("Forbidden");
+    expect(body).not.toHaveProperty("stack");
+
+    // Raw text must contain no stack-trace markers.
+    const raw = JSON.stringify(body);
+    expect(raw).not.toContain("node_modules");
+    expect(raw).not.toContain("at Object.");
+    expect(raw).not.toContain("at Function.");
+
+    console.log("[2C §7b-A] CSRF 403 body is clean JSON | content-type=json | no stack | PASS");
+  });
+
+  it("7b-B: wrong CSRF token value → 403 JSON body with no stack or node_modules text", async () => {
+    const agent = request.agent(app);
+    await agent.get("/api/v1/auth/csrf-token");
+    const res = await agent
+      .post("/api/v1/auth/login")
+      .set("X-CSRF-Token", "definitely-invalid-csrf-token-value")
+      .send({ orgSlug: "sunrise", email: USERS.clinician, password: TEST_PASSWORD });
+
+    expect(res.status).toBe(403);
+
+    // Must be JSON, not HTML.
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+
+    const body = res.body as Record<string, unknown>;
+    expect(body.error).toBe("Forbidden");
+    expect(body).not.toHaveProperty("stack");
+
+    const raw = JSON.stringify(body);
+    expect(raw).not.toContain("node_modules");
+    expect(raw).not.toContain("at Object.");
+    expect(raw).not.toContain("at Function.");
+
+    console.log("[2C §7b-B] wrong CSRF token 403 body is clean JSON | no stack | PASS");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
 // §5 — effectiveAt guard
 // ══════════════════════════════════════════════════════════════════════════════
 
