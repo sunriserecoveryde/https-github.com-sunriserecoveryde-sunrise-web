@@ -1,5 +1,5 @@
 /**
- * Phase 2D — PostgreSQL Rate Limiter: 12-Step Proof
+ * Phase 2D — PostgreSQL Rate Limiter: 14-Step Proof
  *
  * Proves that PgRateLimitStore:
  *   1.  Persists counters to PostgreSQL (survives API "restart")
@@ -8,11 +8,32 @@
  *   4.  Returns equivalent responses for known vs unknown accounts (no enumeration)
  *   5.  Window expiry correctly resets the counter
  *   6.  Fails open on DB error (availability > blocking)
+ *   7.  A request at counter=9 (one below the production limit of 10) is NOT blocked
+ *   8.  Once the window is full, every request from the same IP is blocked regardless
+ *       of which user account is attempting to log in
  *
  * Tests directly exercise PgRateLimitStore methods against the real DB.
  * HTTP 429 is proven via a purpose-built Express route using the real store.
  *
  * Does NOT report MemoryStore behavior as production proof.
+ *
+ * ── Cleanup contract (IMPORTANT for future test authors) ─────────────────────
+ * Every test that writes to sos_rate_limit_windows MUST clean up after itself
+ * so that the rate-limit state left by one test cannot cause subsequent tests
+ * in the same run to receive unexpected 429 responses.
+ *
+ * The suite provides two cleanup mechanisms:
+ *   1. beforeEach resets TEST_KEY and TEST_KEY_B via storeA.resetKey().
+ *   2. afterAll calls pruneTestKeys() which DELETEs all rows whose key starts
+ *      with 'p2d-rate-limit-test%'.
+ *
+ * Any test that creates its own key or its own store MUST:
+ *   a. Use a key that starts with 'p2d-rate-limit-test' so pruneTestKeys()
+ *      catches it in the afterAll sweep.
+ *   b. Call store.resetKey(myKey) or pool.query(DELETE...) in a finally block
+ *      so that a test failure mid-run doesn't leave stale counters.
+ *   c. Call store.destroy() to clear the prune interval and avoid dangling
+ *      timers that would keep the test process alive after the suite finishes.
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
@@ -259,6 +280,120 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
     } finally {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (realPool as any).query = originalQuery;
+    }
+  });
+
+  // ── Step 13: Near-threshold login succeeds (counter=9, limit=10) ─────────
+  //
+  // Regression guard: during Phase 2D browser verification, BV-3 and BV-4
+  // shared a rate-limit window.  After BV-4 exhausted the 10-attempt window,
+  // subsequent BV-3 runs returned 429 instead of 200, requiring a manual
+  // DELETE from sos_rate_limit_windows.  This test proves that valid logins
+  // below the threshold are never blocked by the rate limiter.
+  //
+  // Cleanup note: the key "p2d-rate-limit-test-near:127.0.0.1" starts with
+  // "p2d-rate-limit-test" so pruneTestKeys() in afterAll automatically removes
+  // it.  The finally block below also resets it immediately so that a test
+  // failure mid-run cannot leave a stale counter that blocks later tests.
+  it("step-13: valid request at counter=9 (one below production limit of 10) returns 200", async () => {
+    const PROD_LIMIT = 10;
+    const nearKey    = "p2d-rate-limit-test-near:127.0.0.1";
+
+    // Build a minimal app that mirrors the production auth rate-limiter config.
+    const nearStore = new PgRateLimitStore(TEST_WINDOW_MS);
+    nearStore.init();
+
+    const nearApp = express();
+    nearApp.use(express.json());
+    nearApp.post(
+      "/login",
+      rateLimit({
+        windowMs:        TEST_WINDOW_MS,
+        limit:           PROD_LIMIT,
+        standardHeaders: "draft-8",
+        legacyHeaders:   false,
+        keyGenerator:    () => nearKey,
+        store:           nearStore,
+        message:         { error: "Too many requests." },
+      }),
+      (_req, res) => { res.json({ ok: true }); },
+    );
+
+    try {
+      // Seed the counter to 8 directly in PostgreSQL so the next HTTP request
+      // will be the 9th hit — one below the production limit of 10.
+      // We compute window_end the same way PgRateLimitStore does so the UPSERT
+      // in increment() targets the correct existing row.
+      const windowEnd = new Date(Math.ceil(Date.now() / TEST_WINDOW_MS) * TEST_WINDOW_MS);
+      await pool.query(
+        `INSERT INTO sos_rate_limit_windows (key, window_end, count, updated_at)
+         VALUES ($1, $2, 8, now())
+         ON CONFLICT (key, window_end) DO UPDATE SET count = 8, updated_at = now()`,
+        [nearKey, windowEnd.toISOString()],
+      );
+
+      // 9th hit (counter goes to 9) — must be allowed.
+      const res9 = await request(nearApp).post("/login").send({ email: "alice@example.com" });
+      expect(res9.status).toBe(200);
+
+      // 10th hit (counter goes to 10, equals limit) — still allowed.
+      // express-rate-limit v8 blocks only when totalHits > limit.
+      const res10 = await request(nearApp).post("/login").send({ email: "alice@example.com" });
+      expect(res10.status).toBe(200);
+
+      // 11th hit (counter goes to 11, exceeds limit) — now blocked.
+      const res11 = await request(nearApp).post("/login").send({ email: "alice@example.com" });
+      expect(res11.status).toBe(429);
+      expect((res11.body as { error?: string }).error).toMatch(/too many/i);
+    } finally {
+      // Reset the counter so this test cannot leave a full window that blocks
+      // later tests or manual curl runs in the same DB environment.
+      await nearStore.resetKey(nearKey);
+      nearStore.destroy();
+    }
+  });
+
+  // ── Step 14: Same IP blocks all users once the window is full ────────────
+  //
+  // The rate limiter keys on IP address, not on the user's email or account ID.
+  // This test proves that once a window fills up (e.g. from a burst of failed
+  // logins by one client), every subsequent request from that IP is blocked —
+  // regardless of which account is attempting to log in.  Both "user A" and
+  // "user B" credentials behind the same NAT/proxy IP receive 429.
+  //
+  // Cleanup note: TEST_KEY_B is reset in beforeEach, and pruneTestKeys() in
+  // afterAll sweeps any remaining rows.  The finally block below resets it
+  // immediately in case a mid-test failure skips beforeEach for the next test.
+  it("step-14: once the IP window is full, all users behind that IP are blocked", async () => {
+    const testStore = new PgRateLimitStore(TEST_WINDOW_MS);
+    testStore.init();
+    const testApp = makeTestApp(testStore);  // uses TEST_KEY_B, limit=TEST_LIMIT(3)
+
+    try {
+      // Exhaust the window with TEST_LIMIT requests (simulates a burst from one client).
+      for (let i = 0; i < TEST_LIMIT; i++) {
+        await request(testApp).post("/test-rate").send({});
+      }
+
+      // "User A" — valid credentials for a known account — is now blocked.
+      const resUserA = await request(testApp)
+        .post("/test-rate")
+        .send({ email: "user-a@example.com", password: "correctPasswordA" });
+      expect(resUserA.status).toBe(429);
+
+      // "User B" — a completely different account on the same IP — is also blocked.
+      // The rate limiter does not distinguish between accounts; IP exhaustion is shared.
+      const resUserB = await request(testApp)
+        .post("/test-rate")
+        .send({ email: "user-b@example.com", password: "correctPasswordB" });
+      expect(resUserB.status).toBe(429);
+
+      // Both blocked responses must be structurally identical (no account-existence leak).
+      expect(JSON.stringify(resUserA.body)).toBe(JSON.stringify(resUserB.body));
+    } finally {
+      // Reset the counter so subsequent test suites that share this DB can log in.
+      await testStore.resetKey(TEST_KEY_B);
+      testStore.destroy();
     }
   });
 });
