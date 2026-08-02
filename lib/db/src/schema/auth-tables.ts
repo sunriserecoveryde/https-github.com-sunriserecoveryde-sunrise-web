@@ -17,6 +17,7 @@ import {
   text,
   uuid,
   integer,
+  boolean,
   timestamp,
   index,
   uniqueIndex,
@@ -150,19 +151,27 @@ export const sosPatientAccess = pgTable(
     facilityId:       uuid("facility_id"),
     patientId:        uuid("patient_id").notNull(),
     userId:           uuid("user_id").notNull(),
-    roleAssignmentId: uuid("role_assignment_id"),  // §6: FK → sos_role_assignments.id
-    status:           text("status").notNull().default("active"),
-    grantedByUserId:  uuid("granted_by_user_id"),
-    grantedAt:        timestamp("granted_at", { withTimezone: true }).defaultNow().notNull(),
-    expiresAt:        timestamp("expires_at", { withTimezone: true }),
-    createdAt:        timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    roleAssignmentId:  uuid("role_assignment_id"),  // §6: FK → sos_role_assignments.id; NOT NULL for active rows (CHECK)
+    status:            text("status").notNull().default("active"),
+    grantedByUserId:   uuid("granted_by_user_id"),
+    grantedAt:         timestamp("granted_at", { withTimezone: true }).defaultNow().notNull(),
+    expiresAt:         timestamp("expires_at", { withTimezone: true }),
+    createdAt:         timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    // §2D: populated during backfill to record why a row was revoked/quarantined.
+    quarantinedReason: text("quarantined_reason"),
   },
   (t) => ({
     idxOrgUser:    index("idx_sos_patient_access_org_user").on(t.orgId, t.userId),
     idxPatient:    index("idx_sos_patient_access_patient").on(t.patientId),
+    idxRoleAssignment: index("idx_sos_patient_access_role_assignment").on(t.roleAssignmentId),
     ckStatus:      check(
       "ck_sos_patient_access_status",
       sql`${t.status} IN ('active', 'revoked')`,
+    ),
+    // §2D: active access rows must reference an exact role assignment.
+    ckActiveRequiresAssignment: check(
+      "ck_active_access_requires_assignment",
+      sql`${t.status} != 'active' OR ${t.roleAssignmentId} IS NOT NULL`,
     ),
     fkOrgFacility: foreignKey({
       columns: [t.orgId, t.facilityId],
@@ -179,13 +188,13 @@ export const sosPatientAccess = pgTable(
       foreignColumns: [sosUserAccounts.orgId, sosUserAccounts.id],
       name: "fk_sos_patient_access_org_user",
     }).onDelete("cascade"),
-    // §6: Patient access tied to the specific role assignment — revoked assignments
-    // automatically lose access (ON DELETE SET NULL allows legacy rows without FK).
+    // §2D: ON DELETE RESTRICT — role assignments must be explicitly revoked before
+    // deleting; prevents silent null-out of access rows (replaced SET NULL from 2C).
     fkRoleAssignment: foreignKey({
       columns: [t.roleAssignmentId],
       foreignColumns: [sosRoleAssignments.id],
       name: "fk_sos_patient_access_role_assignment",
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
   }),
 );
 export type SosPatientAccess = typeof sosPatientAccess.$inferSelect;
@@ -262,14 +271,17 @@ export const sosAuditOutbox = pgTable(
     ipAddress:        text("ip_address"),
     userAgentSummary: text("user_agent_summary"),
     metadata:         jsonb("metadata"),
-    attempts:         integer("attempts").notNull().default(0),
-    errorDetail:      text("error_detail"),
-    processedAt:      timestamp("processed_at", { withTimezone: true }),
-    createdAt:        timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    attempts:          integer("attempts").notNull().default(0),
+    errorDetail:       text("error_detail"),
+    processedAt:       timestamp("processed_at", { withTimezone: true }),
+    // §7: Phase 2D — marks rows that have exhausted retry attempts for manual review.
+    failedPermanently: boolean("failed_permanently").notNull().default(false),
+    createdAt:         timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
     idxCreatedAt: index("idx_sos_audit_outbox_created_at").on(t.createdAt),
     idxProcessed: index("idx_sos_audit_outbox_processed_at").on(t.processedAt),
+    idxPending:   index("idx_sos_audit_outbox_pending").on(t.createdAt),
   }),
 );
 export type SosAuditOutbox = typeof sosAuditOutbox.$inferSelect;

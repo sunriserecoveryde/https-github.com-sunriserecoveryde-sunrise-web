@@ -31,7 +31,17 @@ import {
   type AuthenticatedIdentity,
 } from "../lib/authorizationService";
 
-const TEST_PASSWORD = process.env.DEV_TEST_PASSWORD ?? "Sunrise2026!Test";
+const TEST_PASSWORD: string = (() => {
+  const p = process.env.PHASE2D_TEST_PASSWORD;
+  if (!p) {
+    throw new Error(
+      "PHASE2D_TEST_PASSWORD env var is required for Phase 2C/2D integration tests.\n" +
+      "Set it to the fictitious test account password before running this suite.\n" +
+      "Do not use a real or production credential.",
+    );
+  }
+  return p;
+})();
 const ORG_ID        = "00000000-0000-4000-a000-000000000001";
 const FACILITY_ID   = "00000000-0000-4000-a000-000000000002";
 
@@ -54,9 +64,8 @@ const USERS = {
 process.env.DISABLE_AUTH_FALLBACK = "true";
 
 beforeAll(async () => {
-  if (!process.env.DEV_TEST_PASSWORD) {
-    process.env.DEV_TEST_PASSWORD = TEST_PASSWORD;
-  }
+  // PHASE2D_TEST_PASSWORD must be set in the environment before running.
+  // TEST_PASSWORD (above) already throws if it is absent.
   await seed();
 }, 180_000);
 

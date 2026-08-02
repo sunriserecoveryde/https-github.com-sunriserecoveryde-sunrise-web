@@ -17,7 +17,16 @@ import { test, expect, type Page } from "@playwright/test";
 
 const FRONTEND_URL  = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:80/sunrise-os";
 const API_URL       = process.env.API_BASE_URL         ?? "http://localhost:8080";
-const TEST_PASSWORD = process.env.DEV_TEST_PASSWORD    ?? "Sunrise2026!Test";
+const TEST_PASSWORD: string = (() => {
+  const p = process.env.PHASE2D_TEST_PASSWORD;
+  if (!p) {
+    throw new Error(
+      "PHASE2D_TEST_PASSWORD env var is required for Phase 2B browser connectivity tests.\n" +
+      "Set it to the fictitious test account password. Do not use a production credential.",
+    );
+  }
+  return p;
+})();
 const ORG_SLUG      = "sunrise";
 const CLINICIAN     = "clinician@test.sunrise";
 

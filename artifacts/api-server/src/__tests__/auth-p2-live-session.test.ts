@@ -7,8 +7,8 @@
  *
  * No mocks, no development-identity headers, no route interception.
  *
- * Requires seeded test users — DEV_TEST_PASSWORD must be set in the
- * environment (defaults to "Sunrise2026!Test" for reproducibility).
+ * Requires seeded test users — PHASE2D_TEST_PASSWORD must be set in the
+ * environment (no fallback; test fails clearly if absent).
  *
  * Covers:
  *  §A  CSRF — 17-step real authenticated session flow
@@ -25,7 +25,16 @@ import { pool as dbPool } from "@workspace/db";
 import { runAuthSeed } from "../seed/authSeed";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const TEST_PASSWORD  = process.env.DEV_TEST_PASSWORD ?? "Sunrise2026!Test";
+const TEST_PASSWORD: string = (() => {
+  const p = process.env.PHASE2D_TEST_PASSWORD;
+  if (!p) {
+    throw new Error(
+      "PHASE2D_TEST_PASSWORD env var is required for Phase 2 live-session tests.\n" +
+      "Set it to the fictitious test account password. Do not use a production credential.",
+    );
+  }
+  return p;
+})();
 const ORG_ID         = "00000000-0000-4000-a000-000000000001";
 const FACILITY_ID    = "00000000-0000-4000-a000-000000000002";
 const FACILITY_2_ID  = "00000000-0000-4000-a000-000000000003";

@@ -29,6 +29,13 @@
       "when": 1754179200000,
       "tag": "0003_phase_2c_closure",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1754265600000,
+      "tag": "0004_phase_2d_final_closure",
+      "breakpoints": true
     }
   ]
 }

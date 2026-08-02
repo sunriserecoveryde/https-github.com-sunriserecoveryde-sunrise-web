@@ -236,12 +236,16 @@ export async function seed(): Promise<void> {
     throw new Error("seed() must never run in production");
   }
 
-  const rawPassword = process.env.DEV_TEST_PASSWORD;
+  const rawPassword = process.env.PHASE2D_TEST_PASSWORD;
   if (!rawPassword) {
-    throw new Error("DEV_TEST_PASSWORD env var is required to run authSeed");
+    throw new Error(
+      "PHASE2D_TEST_PASSWORD env var is required to run authSeed.\n" +
+      "This credential is used exclusively for fictitious test accounts.\n" +
+      "Do not use any real or production credential.",
+    );
   }
 
-  console.log("[authSeed] Hashing passwords (this takes ~30s for 12 users)...");
+  console.log("[authSeed] Hashing passwords for fictitious test accounts...");
   const passwordHash = await argon2.hash(rawPassword, ARGON2_OPTIONS);
 
   // Ensure org slug is set.

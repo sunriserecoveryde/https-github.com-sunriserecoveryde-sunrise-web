@@ -22,14 +22,21 @@ import app from "../app";
 import { pool as dbPool } from "@workspace/db";
 import { seed } from "../seed/authSeed";
 
-const TEST_PASSWORD = process.env.DEV_TEST_PASSWORD ?? "Sunrise2026!Test";
+const TEST_PASSWORD: string = (() => {
+  const p = process.env.PHASE2D_TEST_PASSWORD;
+  if (!p) {
+    throw new Error(
+      "PHASE2D_TEST_PASSWORD env var is required for Phase 2C browser tests.\n" +
+      "Set it to the fictitious test account password. Do not use a production credential.",
+    );
+  }
+  return p;
+})();
 
 process.env.DISABLE_AUTH_FALLBACK = "true";
 
 beforeAll(async () => {
-  if (!process.env.DEV_TEST_PASSWORD) {
-    process.env.DEV_TEST_PASSWORD = TEST_PASSWORD;
-  }
+  // PHASE2D_TEST_PASSWORD must be set in the environment.
   await seed();
 }, 180_000);
 

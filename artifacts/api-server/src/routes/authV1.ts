@@ -75,13 +75,26 @@ const DUMMY_HASH_PROMISE: Promise<string> = argon2
 // ── Session timeout (ms) ──────────────────────────────────────────────────────
 const ABSOLUTE_TIMEOUT_MS = parseInt(process.env.SESSION_ABSOLUTE_TIMEOUT_MS ?? "28800000", 10);
 
-// ── Rate limiter — PostgreSQL-backed (Phase 2B) ───────────────────────────────
+// ── Rate limiter — PostgreSQL-backed (Phase 2B / Phase 2D) ───────────────────
 // Survives API restarts. Shared across multiple API instances.
 // Fail-open: DB unavailability allows the request (see pgRateLimiter.ts).
-// Falls back to no-op in test env to avoid polluting the test DB with rate counters.
-const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+//
+// Phase 2D: set PHASE2D_RATE_LIMIT_INTEGRATION=true to enable the real
+// PgRateLimitStore even in test mode (used by auth-p2d-rate-limit.test.ts).
+// Set PHASE2D_RATE_LIMIT_WINDOW_MS to override the window (test: short window).
+// Set PHASE2D_RATE_LIMIT_MAX to override the limit (test: low threshold).
 
-const pgStore = process.env.NODE_ENV !== "test"
+const WINDOW_MS = parseInt(
+  process.env.PHASE2D_RATE_LIMIT_WINDOW_MS ?? "900000",  // 15 min default
+  10,
+);
+const RATE_LIMIT_MAX = parseInt(
+  process.env.PHASE2D_RATE_LIMIT_MAX ?? "10",
+  10,
+);
+const RL_INTEGRATION = process.env.PHASE2D_RATE_LIMIT_INTEGRATION === "true";
+
+const pgStore = (process.env.NODE_ENV !== "test" || RL_INTEGRATION)
   ? (() => {
       const s = new PgRateLimitStore(WINDOW_MS);
       s.init();
@@ -91,12 +104,12 @@ const pgStore = process.env.NODE_ENV !== "test"
 
 const authRateLimiter = rateLimit({
   windowMs: WINDOW_MS,
-  limit: 10,
+  limit:    RATE_LIMIT_MAX,
   standardHeaders: "draft-8",
-  legacyHeaders: false,
+  legacyHeaders:   false,
   message: { error: "Too many requests. Please try again later." },
-  store: pgStore,                               // PostgreSQL store (undefined = MemoryStore in test)
-  skip: () => process.env.NODE_ENV === "test",  // still skip in test to avoid counter noise
+  store:   pgStore,  // PostgreSQL store (undefined = MemoryStore when not in RL_INTEGRATION mode)
+  skip:    () => process.env.NODE_ENV === "test" && !RL_INTEGRATION,
 });
 
 // ── Input schemas ─────────────────────────────────────────────────────────────

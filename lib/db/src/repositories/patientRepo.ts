@@ -194,23 +194,19 @@ export async function listAssignedPatients(
           ),
         );
 
-    // §6 exact-binding WHERE: when a presentingAssignmentId is given, rows whose
-    // FK ≠ presentingAssignmentId must be excluded.  The filter is:
-    //   - FK IS NULL  → allowed (pre-Phase-2C row, no assignment bound)
-    //   - FK IS NOT NULL AND FK = presentingAssignmentId AND JOIN matched → allowed
-    //   - FK IS NOT NULL AND FK ≠ presentingAssignmentId (no JOIN match) → denied
+    // §2D exact-binding WHERE: NULL role_assignment_id is no longer authorized.
+    // Every active access row must carry an exact assignment FK (Phase 2D migration).
+    //
+    // With presentingAssignmentId: only rows whose FK equals that specific assignment
+    //   AND whose LEFT JOIN confirmed the assignment is active.
+    // Without presentingAssignmentId: only rows whose LEFT JOIN to any active
+    //   assignment succeeded (null FK rows rejected).
     const assignmentBindingCondition = presentingAssignmentId
-      ? or(
-          isNull(sosPatientAccess.roleAssignmentId),
-          and(
-            eq(sosPatientAccess.roleAssignmentId, presentingAssignmentId),
-            isNotNull(sosRoleAssignments.id),
-          ),
-        )
-      : or(
-          isNull(sosPatientAccess.roleAssignmentId),
+      ? and(
+          eq(sosPatientAccess.roleAssignmentId, presentingAssignmentId),
           isNotNull(sosRoleAssignments.id),
-        );
+        )
+      : isNotNull(sosRoleAssignments.id);
 
     const accessRows = await db
       .select({ patientId: sosPatientAccess.patientId, raId: sosRoleAssignments.id })

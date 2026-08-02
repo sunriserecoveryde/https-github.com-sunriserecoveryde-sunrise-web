@@ -218,7 +218,12 @@ describe("CSRF — double-submit cookie pattern (16 steps)", () => {
   it("step-12: valid CSRF token in authenticated session passes CSRF (real HTTP login → real CSRF token → real logout)", async () => {
     // Real flow (Phase 2C §7): GET /csrf-token → POST /login with CSRF token →
     // GET /csrf-token (new token) → POST /logout with new token.  Must not return 403.
-    const pwd = process.env.DEV_TEST_PASSWORD ?? "Sunrise2026!Test";
+    const pwd = process.env.PHASE2D_TEST_PASSWORD;
+    if (!pwd) {
+      console.warn("step-12: PHASE2D_TEST_PASSWORD not set — skipping real-login CSRF path. " +
+        "Full coverage is in auth-p2-live-session.test.ts §A step-12.");
+      return;
+    }
     const agent = request.agent(app);
 
     // §7: Fetch pre-login CSRF token first (Phase 2C requirement).
@@ -899,7 +904,7 @@ describe("admin routes — implemented and guard verification", () => {
       .post("/api/v1/admin/users")
       .set("Cookie", `_csrf=${csrfCookie}`)
       .set("X-CSRF-Token", token)
-      .send({ orgId: ORG_A, email: "test@example.com", password: "TestPass1234!", roleId: "nursing" });
+      .send({ orgId: ORG_A, email: "test@example.com", password: "ephemeral-admin-test-credential", roleId: "nursing" });
     // clinical_supervisor in dev identity doesn't have user.manage → 403
     expect([403, 409, 201, 503]).toContain(res.status);
   });
@@ -1132,7 +1137,7 @@ describe("Argon2id configuration (11 required behaviors)", () => {
   });
 
   it("pw-05: argon2.hash() produces a hash starting with $argon2id$", async () => {
-    const hash = await argon2.hash("TestPassword1!", ARGON2_OPTIONS);
+    const hash = await argon2.hash("Argon2UnitTestOnlyInput!", ARGON2_OPTIONS);
     expect(hash).toMatch(/^\$argon2id\$/);
   });
 

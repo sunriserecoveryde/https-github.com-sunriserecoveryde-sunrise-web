@@ -313,6 +313,10 @@ async function checkPatientAccessForGrant(
     return rows.length > 0;
   }
 
+  // §2D: NULL role_assignment_id is no longer a valid backward-compat path.
+  // Every active access row must carry an exact assignment FK (enforced by the
+  // Phase 2D migration CHECK constraint and integrity trigger).
+  //
   // LEFT JOIN only on the SPECIFIC assignment.  If the access row FK points to a
   // different assignment, the join returns null and the WHERE rejects the row.
   const rows = await db
@@ -333,14 +337,12 @@ async function checkPatientAccessForGrant(
     .where(
       and(
         ...baseConditions,
-        // §6: Allow pre-Phase-2C rows (no FK), or rows whose FK exactly matches this
-        // assignment AND the LEFT JOIN confirmed the assignment is still active.
-        or(
-          isNull(sosPatientAccess.roleAssignmentId),
-          and(
-            eq(sosPatientAccess.roleAssignmentId, roleAssignmentId),
-            isNotNull(sosRoleAssignments.id),  // LEFT JOIN succeeded → assignment active
-          ),
+        // §2D: NULL FK rows no longer authorized.  Only rows whose FK exactly
+        // matches this assignment AND whose LEFT JOIN confirmed the assignment
+        // is active/effective are permitted.
+        and(
+          eq(sosPatientAccess.roleAssignmentId, roleAssignmentId),
+          isNotNull(sosRoleAssignments.id),  // LEFT JOIN succeeded → assignment active
         ),
       ),
     )

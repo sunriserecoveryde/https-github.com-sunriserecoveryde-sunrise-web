@@ -33,7 +33,7 @@
  *       audit-03  Audit rows are append-only (DELETE rejected)
  *
  * Requires:
- *   DEV_TEST_PASSWORD env var (defaults to "Sunrise2026!Test")
+ *   PHASE2D_TEST_PASSWORD env var (required; no fallback — test fails clearly if absent)
  *   Users seeded by authSeed (idempotent — run seed:auth before tests)
  */
 
@@ -55,7 +55,16 @@ afterAll(() => {
 });
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const TEST_PASSWORD = process.env.DEV_TEST_PASSWORD ?? "Sunrise2026!Test";
+const TEST_PASSWORD: string = (() => {
+  const p = process.env.PHASE2D_TEST_PASSWORD;
+  if (!p) {
+    throw new Error(
+      "PHASE2D_TEST_PASSWORD env var is required for Phase 2B live-session tests.\n" +
+      "Set it to the fictitious test account password. Do not use a production credential.",
+    );
+  }
+  return p;
+})();
 const ORG_SLUG      = "sunrise";
 const ORG_ID        = "00000000-0000-4000-a000-000000000001";
 const FACILITY_1    = "00000000-0000-4000-a000-000000000002";
@@ -239,7 +248,8 @@ describe("§10 Tenant-deterministic login & security behaviours", () => {
     // Without a CSRF token, the middleware returns 403 before reaching the handler.
     const res = await request(app)
       .post("/api/v1/auth/password-reset/complete")
-      .send({ token: "anything", password: "Sunrise2026!Test" });
+      // Password body is irrelevant — endpoint returns 403 before parsing it (CSRF guard fires first).
+      .send({ token: "anything", password: "irrelevant-csrf-test-value" });
     expect(res.status).toBe(403);
   });
 });
