@@ -1,0 +1,545 @@
+# Sunrise OS — Post-Merge Verification and Phase 3 Planning
+
+Phase 2 has been merged.
+
+Do not begin Phase 3 implementation yet.
+
+Complete two sequential tasks:
+
+1. Verify the merged `main` branch.
+2. Produce one reviewable Phase 3 implementation plan.
+
+Do not add new application features during this task.
+
+---
+
+# Part 1 — Verify the Phase 2 Merge
+
+## 1. Synchronize and record the merged state
+
+Run:
+
+```bash id="psm001"
+git checkout main
+git pull --ff-only
+git status --short
+git rev-parse HEAD
+git log --oneline --decorate -30
+```
+
+Record:
+
+* Final Phase 2D branch commit
+* Merge commit
+* Current `main` HEAD
+* Working-tree status
+* Whether the merge was a merge commit, squash merge, or fast-forward
+
+The working tree must be clean before continuing.
+
+---
+
+## 2. Confirm all required Phase 2 files reached `main`
+
+Verify that `main` contains:
+
+* All migrations from `0000` through `0004`
+* Complete migration journal and metadata
+* Scoped-grant authorization
+* Exact role-assignment patient-access binding
+* Field-level patient response projections
+* Administrative authorization policy
+* Tenant-aware login
+* CSRF-protected authentication
+* PostgreSQL rate limiter
+* Durable audit-outbox worker
+* Append-only audit protections
+* Phase 2D tests
+* Phase 2 evidence documentation
+
+Report any file or commit that was omitted during the merge.
+
+Do not recreate missing files silently.
+
+---
+
+## 3. Run clean migrations from merged `main`
+
+Create a brand-new disposable PostgreSQL database.
+
+Using only the normal migration runner from `main`:
+
+1. Confirm the database is empty.
+2. Apply all migrations in order.
+3. Verify the migration journal.
+4. Verify expected tables.
+5. Verify expected indexes.
+6. Verify foreign keys.
+7. Verify check constraints.
+8. Verify audit triggers.
+9. Verify audit-outbox structures.
+10. Verify exact patient-access assignment constraints.
+11. Run the migration command again.
+12. Confirm no pending migrations.
+13. Seed only fictitious test data.
+14. Destroy the database after verification.
+
+Do not execute migration SQL manually.
+
+Do not insert migration-journal rows manually.
+
+Save sanitized output to:
+
+`artifacts/sunrise-os/readiness/post-merge/phase-2-main-migration-verification.txt`
+
+---
+
+## 4. Run the complete merged test suite
+
+Ensure the Replit Secret is available:
+
+`PHASE2D_TEST_PASSWORD`
+
+Do not print its value.
+
+Run every test from merged `main`.
+
+Required result:
+
+* Zero failed required tests
+* Zero skipped required security tests
+
+Report:
+
+* Tests discovered
+* Passed
+* Failed
+* Skipped
+* Real PostgreSQL tests
+* Real HTTP tests
+* Restart tests
+* Multi-instance tests
+* Browser/manual tests
+
+Do not hide skipped tests.
+
+Do not change tests merely to make the merged build pass.
+
+Save sanitized output to:
+
+`artifacts/sunrise-os/readiness/post-merge/phase-2-main-test-results.txt`
+
+---
+
+## 5. Run TypeScript and production builds
+
+Run the final merged code through:
+
+* Database package TypeScript/build
+* API-server TypeScript
+* API-server production build
+* Sunrise OS TypeScript
+* Sunrise OS production build
+
+Report:
+
+* Exact command
+* Result
+* Duration
+* Warnings
+
+Do not expose environment-variable values.
+
+Save output under:
+
+`artifacts/sunrise-os/readiness/post-merge/build-logs/`
+
+---
+
+## 6. Run a production-mode smoke test
+
+Start the merged application using:
+
+* Real PostgreSQL
+* Real API
+* Real Sunrise OS frontend
+* Production data mode
+* No development identity headers
+* No route interception
+* No mock API responses
+
+Verify:
+
+1. Login page loads.
+2. Pre-login CSRF endpoint works.
+3. Fictitious user login succeeds.
+4. Session endpoint succeeds.
+5. Authorized Patient List loads.
+6. Patient fields follow the minimum-necessary policy.
+7. Authorized Patient Detail loads.
+8. Unauthorized patient access is denied.
+9. Browser refresh preserves the session.
+10. Logout succeeds.
+11. Protected API returns 401 after logout.
+
+Record the result without exposing credentials or tokens.
+
+---
+
+## 7. Create a post-merge verification report
+
+Create:
+
+`artifacts/sunrise-os/readiness/post-merge/phase-2-post-merge-verification.md`
+
+Include:
+
+* Merge commit
+* Main HEAD
+* Migration result
+* Migration reapplication result
+* Test results
+* TypeScript results
+* Production build results
+* Smoke-test results
+* Missing-file check
+* Known limitations
+* Regression findings
+* Final result
+
+The final result must be exactly one of:
+
+```text id="psm002"
+PHASE 2 MERGE VERIFIED
+```
+
+or:
+
+```text id="psm003"
+PHASE 2 MERGE REGRESSION FOUND
+```
+
+If a regression is found, stop and report it.
+
+Do not begin Phase 3 planning until the merged Phase 2 state passes verification.
+
+Commit only the post-merge verification artifacts if the repository policy permits readiness evidence on `main`.
+
+Do not make unrelated code changes on `main`.
+
+---
+
+# Part 2 — Prepare the Phase 3 Plan
+
+Begin this part only after the report states:
+
+`PHASE 2 MERGE VERIFIED`
+
+Create a planning branch from the verified `main` HEAD:
+
+`planning/phase-3-scope`
+
+Do not implement Phase 3 features on this branch.
+
+---
+
+## 8. Inventory the current Sunrise OS application
+
+Review:
+
+* Existing roadmap documents
+* Readiness documents
+* Current database schema
+* API routes
+* Frontend routes
+* Existing patient workflows
+* Current permissions
+* Seeded roles
+* Test coverage
+* Open TODOs
+* Deferred functionality
+* Existing UI components
+* Existing domain terminology
+
+Produce an accurate current-state inventory.
+
+Do not infer that a partially named or placeholder feature is production-ready.
+
+---
+
+## 9. Identify the next intended roadmap phase
+
+Search the repository for:
+
+* `Phase 3`
+* `phase-3`
+* `roadmap`
+* `next phase`
+* `TODO`
+* `deferred`
+* `planned`
+* `backlog`
+
+Determine whether an approved Phase 3 scope already exists.
+
+### When an approved Phase 3 scope exists
+
+Use that scope and cite the exact repository documents that define it.
+
+### When no approved Phase 3 scope exists
+
+Recommend exactly one smallest coherent Phase 3 vertical slice based on:
+
+* Current application architecture
+* Existing product roadmap
+* Dependencies already completed
+* Security and compliance risk
+* Clinical workflow value
+* Ability to test the feature end to end
+* Ability to keep the work package reviewable
+
+Do not select several unrelated features.
+
+Do not begin implementation.
+
+---
+
+## 10. Produce the Phase 3 scope document
+
+Create:
+
+`docs/readiness/phase-3-proposed-scope.md`
+
+Include:
+
+### A. Phase name
+
+Use a clear descriptive name.
+
+### B. User and operational problem
+
+Explain what concrete workflow problem the phase solves.
+
+### C. Current-state dependency
+
+Explain which Phase 1 and Phase 2 capabilities it relies on.
+
+### D. In scope
+
+List only the functionality required for the proposed vertical slice.
+
+### E. Out of scope
+
+Explicitly exclude adjacent functionality.
+
+### F. User roles
+
+Identify which Sunrise OS roles use or administer the feature.
+
+### G. Data model
+
+List proposed tables, fields, relationships, and constraints.
+
+Do not write migrations yet.
+
+### H. Authorization model
+
+For every operation, define:
+
+* Required permission
+* Organization scope
+* Facility scope
+* Patient scope
+* Assignment limitations
+* Minimum-necessary response fields
+* Audit requirements
+
+### I. API design
+
+List proposed endpoints with:
+
+* Method
+* Path
+* Request
+* Response
+* Permission
+* Validation
+* Audit event
+* Error behavior
+
+Do not implement the endpoints.
+
+### J. Frontend workflow
+
+Describe:
+
+* Entry point
+* Screens
+* States
+* Validation
+* Empty states
+* Loading states
+* Error states
+* Permission-denied states
+* Demo-mode behavior
+
+### K. Audit events
+
+List every event that must be written.
+
+### L. Testing strategy
+
+Define:
+
+* Unit tests
+* PostgreSQL integration tests
+* Real HTTP tests
+* Authorization tests
+* Cross-tenant tests
+* Cross-facility tests
+* Field-projection tests
+* Browser tests
+* Manual persona checks
+* Migration tests
+
+### M. Migration strategy
+
+Describe how the schema change will be introduced and verified from an empty database.
+
+### N. Acceptance criteria
+
+Write objective pass/fail criteria.
+
+### O. Risks and unresolved decisions
+
+Identify anything requiring product, clinical, compliance, or architectural approval.
+
+---
+
+## 11. Keep Phase 3 appropriately small
+
+The proposal must represent one reviewable vertical slice.
+
+It must not combine several major areas such as:
+
+* Clinical notes
+* Medication management
+* Claims
+* Laboratory integration
+* Electronic prescribing
+* Messaging
+* Scheduling
+* Analytics
+* Document management
+
+Choose one coherent capability.
+
+Supporting authorization, audit, testing, and migration work for that capability is allowed.
+
+Unrelated feature work is not.
+
+---
+
+## 12. Create the proposed Phase 3 task prompt
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-3/phase-3-replit-implementation-prompt.md`
+
+This must be a complete implementation prompt that can be pasted into a new Replit task after human approval.
+
+It must include:
+
+* Starting branch
+* Proposed implementation branch
+* Exact scope
+* Out-of-scope items
+* Database requirements
+* API requirements
+* Frontend requirements
+* Authorization requirements
+* Audit requirements
+* Test requirements
+* Browser evidence requirements
+* Review ZIP requirements
+* Required final response
+* Explicit instruction not to merge automatically
+
+Do not execute that prompt.
+
+---
+
+## 13. Create the Phase 3 decision summary
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-3/phase-3-decision-summary.md`
+
+Keep it concise.
+
+Include:
+
+* Recommended Phase 3 name
+* Why it should be next
+* Primary user
+* Main workflow
+* Estimated number of database changes
+* Estimated number of API endpoints
+* Estimated number of frontend screens
+* Main risks
+* Dependencies
+* Explicit exclusions
+* Proposed implementation branch
+* Recommendation
+
+The recommendation must be exactly one of:
+
+```text id="psm004"
+PHASE 3 SCOPE READY FOR HUMAN APPROVAL
+```
+
+or:
+
+```text id="psm005"
+PHASE 3 SCOPE REQUIRES PRODUCT DECISION
+```
+
+---
+
+# Required final response
+
+Provide:
+
+1. Main merge commit
+2. Verified main HEAD
+3. Working-tree status
+4. Complete migration result
+5. Migration reapplication result
+6. Tests discovered
+7. Tests passed
+8. Tests failed
+9. Tests skipped
+10. TypeScript results
+11. Production build results
+12. Production smoke-test result
+13. Phase 2 post-merge verification result
+14. Phase 3 planning branch
+15. Existing Phase 3 roadmap found: yes/no
+16. Proposed Phase 3 name
+17. Proposed primary workflow
+18. In-scope summary
+19. Out-of-scope summary
+20. Proposed database-change count
+21. Proposed API-endpoint count
+22. Proposed frontend-screen count
+23. Main risks
+24. Scope-document path
+25. Implementation-prompt path
+26. Decision-summary path
+27. Explicit Phase 3 planning recommendation
+
+Do not implement Phase 3.
+
+Do not merge the Phase 3 planning branch.
+
+Stop after producing the post-merge verification and Phase 3 planning package.
