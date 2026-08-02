@@ -38,3 +38,14 @@ Any new audit event type must be added to both migration SQL (DROP/ADD CONSTRAIN
 ## PatientQueryTier: per-tier Drizzle column maps
 
 `listPatients` and `listAssignedPatients` accept `PatientQueryTier`. Identity/demographics tiers use narrow column maps and skip `attachEpisodes`. DB tier = global max (so data is available for all projection tiers); response projection is per-patient/per-grant.
+
+## Evidence Handoff: reproducibility proof structure
+
+Final evidence lives in `artifacts/sunrise-os/readiness/phase-2c/`:
+- `evidence-manifest.json` — structured §1-§18 coverage with SHA-256 per source file
+- `clean-migration-proof.md` — disposable DB (`phase2c_proof_db`) created, 4 migrations applied, schema verified (18 tables / 42 indexes / 37 constraints / 4 triggers / 4 journal entries)
+- `phase-2c-final-review.zip` — 26 files, 111 KB, ZIP SHA-256 `11de5b0ec9e412273f9e3aeeac41cb084a4d3ce7dfc7d8be2da2f8161a556c06`
+
+Reproducibility fixes committed (d7e57ec): `lib/db` declarations were stale (old 3-arg listAssignedPatients signature) — always rebuild `lib/db` with `tsc -p tsconfig.json` when the repo's declaration is older than the source. Also: `sunrise-os` vite.config.ts now guards `!isBuild` before throwing on missing PORT/BASE_PATH — required for CI production builds. devSeed org insert was missing `slug` field after migration 0002 made it NOT NULL.
+
+§13-§15 (manual browser walk-through, devtools screenshots, HAR) cannot be performed by an agent; automated HTTP substitutes provided and noted in manifest.
