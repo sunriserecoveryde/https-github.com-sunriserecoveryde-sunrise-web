@@ -29,6 +29,7 @@ import { logger } from "./lib/logger";
 import { notifySpamAlert } from "./lib/spamAlert";
 import { devIdentityMiddleware } from "./middlewares/devIdentity";
 import { sessionAuthMiddleware } from "./middlewares/sessionAuth";
+import { globalErrorHandler } from "./middlewares/globalErrorHandler";
 import healthRouter from "./routes/health";
 
 const app: Express = express();
@@ -252,5 +253,11 @@ app.use(healthRouter);
 
 // ── 10. API routers ───────────────────────────────────────────────────────────
 app.use("/api", router);
+
+// ── 11. Global error handler ──────────────────────────────────────────────────
+// Catches any error passed to next(err) that was not handled by a more-specific
+// error handler above (e.g. the CSRF 403 handler at §8a).
+// See src/middlewares/globalErrorHandler.ts for the full implementation.
+app.use(globalErrorHandler);
 
 export default app;
