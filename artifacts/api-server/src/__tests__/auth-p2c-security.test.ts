@@ -1059,3 +1059,48 @@ describe("§3-D Disable: multi-assignment target denied if any assignment out of
     await agent.post("/api/v1/auth/logout").set("X-CSRF-Token", logoutToken).send({});
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// §RL — Rate-limit rejection body — no stack trace leak
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("§RL Rate-limit rejection body — no stack trace leak", () => {
+  it("RL-A: /api/contact rate-limit → 429 JSON with no stack or node_modules text", async () => {
+    // makeLimiter() sets limit=5 per hour for /api/contact (app.ts).
+    // Uses the default MemoryStore — no external state, no skip in test mode.
+    // Fire up to 10 requests; the limiter must trip by the 6th at the latest.
+    let rateLimitedRes: import("supertest").Response | null = null;
+    for (let i = 0; i < 10; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      const res = await request(app)
+        .post("/api/contact")
+        .send({ name: "Test", email: "test@example.com", message: "rate-limit probe" });
+      if (res.status === 429) {
+        rateLimitedRes = res;
+        break;
+      }
+    }
+
+    expect(rateLimitedRes).not.toBeNull();
+    const res = rateLimitedRes!;
+
+    // Must be JSON, not an HTML error page.
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+
+    // Body must carry a generic error key — no internal stack details.
+    const body = res.body as Record<string, unknown>;
+    expect(body).toHaveProperty("error");
+    expect(body).not.toHaveProperty("stack");
+
+    // Raw serialisation must contain no stack-trace markers.
+    const raw = JSON.stringify(body);
+    expect(raw).not.toContain("node_modules");
+    expect(raw).not.toContain("at Object.");
+    expect(raw).not.toContain("at Function.");
+
+    console.log(
+      "[807 §RL-A] rate-limit 429 body is clean JSON | " +
+        "content-type=json | no stack | error=" + String(body.error) + " | PASS",
+    );
+  });
+});
