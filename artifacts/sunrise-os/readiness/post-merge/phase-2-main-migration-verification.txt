@@ -1,0 +1,221 @@
+DISPOSABLE_DB=sos_postmerge_verify_1785698528
+--- Empty check ---
+Did not find any relations.
+--- Apply all migrations via drizzle-kit ---
+Reading config file '/home/runner/workspace/lib/db/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[⣟] applying migrations...[2K[1G[⡿] applying migrations...[2K[1G[⢿] applying migrations...[2K[1G[⣻] applying migrations...[2K[1G[✓] migrations applied successfully!Migration exit: 0
+--- Tables ---
+                 List of relations
+ Schema |          Name          | Type  |  Owner   
+--------+------------------------+-------+----------
+ public | compliance_audit_state | table | postgres
+ public | conversations          | table | postgres
+ public | grow_user_state        | table | postgres
+ public | grow_users             | table | postgres
+ public | messages               | table | postgres
+ public | sos_audit_outbox       | table | postgres
+ public | sos_auth_audit         | table | postgres
+ public | sos_episodes_of_care   | table | postgres
+ public | sos_facilities         | table | postgres
+ public | sos_organizations      | table | postgres
+ public | sos_patient_access     | table | postgres
+ public | sos_patients           | table | postgres
+ public | sos_rate_limit_windows | table | postgres
+ public | sos_role_assignments   | table | postgres
+ public | sos_sessions           | table | postgres
+ public | sos_staff_profiles     | table | postgres
+ public | sos_user_accounts      | table | postgres
+ public | sos_user_identity_refs | table | postgres
+(18 rows)
+
+--- Indexes ---
+       tablename        |               indexname                
+------------------------+----------------------------------------
+ compliance_audit_state | compliance_audit_state_pkey
+ conversations          | conversations_pkey
+ grow_user_state        | grow_user_state_pkey
+ grow_users             | grow_users_email_unique
+ grow_users             | grow_users_pkey
+ messages               | messages_pkey
+ sos_audit_outbox       | idx_sos_audit_outbox_created_at
+ sos_audit_outbox       | idx_sos_audit_outbox_pending
+ sos_audit_outbox       | idx_sos_audit_outbox_processed_at
+ sos_audit_outbox       | sos_audit_outbox_pkey
+ sos_auth_audit         | idx_sos_auth_audit_created_at
+ sos_auth_audit         | idx_sos_auth_audit_org_id
+ sos_auth_audit         | idx_sos_auth_audit_user_id
+ sos_auth_audit         | sos_auth_audit_pkey
+ sos_episodes_of_care   | idx_sos_episodes_org_id
+ sos_episodes_of_care   | idx_sos_episodes_patient_id
+ sos_episodes_of_care   | sos_episodes_of_care_pkey
+ sos_facilities         | idx_sos_facilities_org_id
+ sos_facilities         | idx_sos_facilities_org_id_id
+ sos_facilities         | sos_facilities_pkey
+ sos_organizations      | idx_sos_organizations_slug
+ sos_organizations      | sos_organizations_pkey
+ sos_patient_access     | idx_sos_patient_access_patient
+ sos_patient_access     | idx_sos_patient_access_role_assignment
+ sos_patient_access     | idx_sos_patient_access_user
+ sos_patient_access     | sos_patient_access_pkey
+ sos_patients           | idx_sos_patients_facility_id
+ sos_patients           | idx_sos_patients_org_id
+ sos_patients           | idx_sos_patients_org_id_id
+ sos_patients           | idx_sos_patients_org_mrn
+ sos_patients           | sos_patients_pkey
+ sos_rate_limit_windows | idx_sos_rate_limit_window_end
+ sos_rate_limit_windows | pk_sos_rate_limit_windows
+ sos_role_assignments   | idx_sos_role_assignments_effective_at
+ sos_role_assignments   | idx_sos_role_assignments_facility
+ sos_role_assignments   | idx_sos_role_assignments_org_user
+ sos_role_assignments   | sos_role_assignments_pkey
+ sos_sessions           | idx_sos_sessions_expire
+ sos_sessions           | idx_sos_sessions_user_id
+ sos_sessions           | sos_sessions_pkey
+ sos_staff_profiles     | idx_sos_staff_profiles_org_id
+ sos_staff_profiles     | sos_staff_profiles_pkey
+ sos_user_accounts      | idx_sos_user_accounts_org_email
+ sos_user_accounts      | idx_sos_user_accounts_org_id
+ sos_user_accounts      | idx_sos_user_accounts_org_id_id
+ sos_user_accounts      | sos_user_accounts_pkey
+ sos_user_identity_refs | idx_sos_user_refs_org_ext_auth_ref
+ sos_user_identity_refs | idx_sos_user_refs_org_id
+ sos_user_identity_refs | idx_sos_user_refs_org_id_id
+ sos_user_identity_refs | sos_user_identity_refs_pkey
+(50 rows)
+
+--- Foreign keys ---
+       table_name       |     column_name      |       ref_table        
+------------------------+----------------------+------------------------
+ grow_user_state        | user_id              | grow_users
+ messages               | conversation_id      | conversations
+ sos_episodes_of_care   | org_id               | sos_facilities
+ sos_episodes_of_care   | org_id               | sos_facilities
+ sos_episodes_of_care   | facility_id          | sos_facilities
+ sos_episodes_of_care   | facility_id          | sos_facilities
+ sos_episodes_of_care   | org_id               | sos_patients
+ sos_episodes_of_care   | org_id               | sos_patients
+ sos_episodes_of_care   | patient_id           | sos_patients
+ sos_episodes_of_care   | patient_id           | sos_patients
+ sos_episodes_of_care   | facility_id          | sos_facilities
+ sos_episodes_of_care   | org_id               | sos_organizations
+ sos_episodes_of_care   | patient_id           | sos_patients
+ sos_facilities         | org_id               | sos_organizations
+ sos_patient_access     | org_id               | sos_organizations
+ sos_patient_access     | org_id               | sos_facilities
+ sos_patient_access     | org_id               | sos_facilities
+ sos_patient_access     | facility_id          | sos_facilities
+ sos_patient_access     | facility_id          | sos_facilities
+ sos_patient_access     | org_id               | sos_patients
+ sos_patient_access     | org_id               | sos_patients
+ sos_patient_access     | patient_id           | sos_patients
+ sos_patient_access     | patient_id           | sos_patients
+ sos_patient_access     | org_id               | sos_user_accounts
+ sos_patient_access     | org_id               | sos_user_accounts
+ sos_patient_access     | user_id              | sos_user_accounts
+ sos_patient_access     | user_id              | sos_user_accounts
+ sos_patient_access     | role_assignment_id   | sos_role_assignments
+ sos_patients           | facility_id          | sos_facilities
+ sos_patients           | facility_id          | sos_facilities
+ sos_patients           | org_id               | sos_organizations
+ sos_patients           | org_id               | sos_facilities
+ sos_patients           | org_id               | sos_facilities
+ sos_patients           | facility_id          | sos_facilities
+ sos_role_assignments   | facility_id          | sos_facilities
+ sos_role_assignments   | org_id               | sos_user_accounts
+ sos_role_assignments   | org_id               | sos_user_accounts
+ sos_role_assignments   | user_id              | sos_user_accounts
+ sos_role_assignments   | user_id              | sos_user_accounts
+ sos_role_assignments   | org_id               | sos_organizations
+ sos_role_assignments   | facility_id          | sos_facilities
+ sos_role_assignments   | org_id               | sos_facilities
+ sos_role_assignments   | org_id               | sos_facilities
+ sos_sessions           | user_id              | sos_user_accounts
+ sos_staff_profiles     | org_id               | sos_user_identity_refs
+ sos_staff_profiles     | user_id              | sos_user_identity_refs
+ sos_staff_profiles     | org_id               | sos_organizations
+ sos_staff_profiles     | org_id               | sos_user_identity_refs
+ sos_staff_profiles     | user_id              | sos_user_identity_refs
+ sos_user_accounts      | org_id               | sos_user_identity_refs
+ sos_user_accounts      | user_identity_ref_id | sos_user_identity_refs
+ sos_user_accounts      | org_id               | sos_organizations
+ sos_user_accounts      | user_identity_ref_id | sos_user_identity_refs
+ sos_user_accounts      | org_id               | sos_user_identity_refs
+ sos_user_identity_refs | org_id               | sos_organizations
+(55 rows)
+
+--- Check constraints ---
+          tbl           |               conname                |                                                                                                                                                                                                                                                                                                                                                            def                                                                                                                                                                                                                                                                                                                                                             
+------------------------+--------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ sos_episodes_of_care   | ck_sos_episodes_date_order           | CHECK (((discharge_date IS NULL) OR (admission_date IS NULL) OR (discharge_date >= admission_date)))
+ sos_episodes_of_care   | ck_sos_episodes_status               | CHECK ((episode_status = ANY (ARRAY['active'::text, 'discharged'::text, 'transferred'::text, 'completed'::text, 'void'::text])))
+ sos_facilities         | ck_sos_facilities_status             | CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'closed'::text])))
+ sos_organizations      | ck_sos_organizations_status          | CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'suspended'::text])))
+ sos_patients           | ck_sos_patients_status               | CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'discharged'::text, 'transferred'::text])))
+ sos_staff_profiles     | ck_sos_staff_profiles_status         | CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'terminated'::text])))
+ sos_user_identity_refs | ck_sos_user_refs_status              | CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'revoked'::text])))
+ sos_user_accounts      | ck_sos_user_accounts_mfa_status      | CHECK ((mfa_status = ANY (ARRAY['disabled'::text, 'totp_pending'::text, 'totp_active'::text, 'webauthn_active'::text])))
+ sos_user_accounts      | ck_sos_user_accounts_status          | CHECK ((status = ANY (ARRAY['active'::text, 'disabled'::text, 'locked'::text, 'pending_verification'::text])))
+ sos_role_assignments   | ck_sos_role_assignments_status       | CHECK ((status = ANY (ARRAY['active'::text, 'revoked'::text, 'expired'::text])))
+ sos_patient_access     | ck_active_access_requires_assignment | CHECK (((status <> 'active'::text) OR (role_assignment_id IS NOT NULL)))
+ sos_patient_access     | ck_sos_patient_access_relationship   | CHECK ((relationship_type = ANY (ARRAY['primary_counselor'::text, 'caseload_member'::text, 'covering_staff'::text, 'observer'::text, 'authorized_reviewer'::text])))
+ sos_patient_access     | ck_sos_patient_access_status         | CHECK ((status = ANY (ARRAY['active'::text, 'revoked'::text, 'expired'::text])))
+ sos_auth_audit         | ck_sos_auth_audit_outcome            | CHECK ((outcome = ANY (ARRAY['success'::text, 'failure'::text, 'error'::text])))
+(15 rows)
+
+--- Triggers ---
+                 trigger_name                  | event_object_table |                      action_statement                      
+-----------------------------------------------+--------------------+------------------------------------------------------------
+ sos_audit_no_delete                           | sos_auth_audit     | EXECUTE FUNCTION sos_prevent_audit_modification()
+ sos_audit_no_update                           | sos_auth_audit     | EXECUTE FUNCTION sos_prevent_audit_modification()
+ sos_patient_access_assignment_integrity_check | sos_patient_access | EXECUTE FUNCTION sos_patient_access_assignment_integrity()
+ sos_patient_access_assignment_integrity_check | sos_patient_access | EXECUTE FUNCTION sos_patient_access_assignment_integrity()
+ sos_patient_access_facility_check             | sos_patient_access | EXECUTE FUNCTION sos_check_patient_access_facility()
+ sos_patient_access_facility_check             | sos_patient_access | EXECUTE FUNCTION sos_check_patient_access_facility()
+(6 rows)
+
+--- Audit/outbox tables ---
+       table_name       
+------------------------
+ compliance_audit_state
+ sos_audit_outbox
+ sos_auth_audit
+(3 rows)
+
+--- Patient access constraints ---
+        tbl         |                    conname                    |                                                                                 def                                                                                  
+--------------------+-----------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ sos_patients       | ck_sos_patients_status                        | CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'discharged'::text, 'transferred'::text])))
+ sos_patients       | fk_sos_patients_org_facility                  | FOREIGN KEY (org_id, facility_id) REFERENCES sos_facilities(org_id, id) ON DELETE RESTRICT
+ sos_patients       | sos_patients_facility_id_sos_facilities_id_fk | FOREIGN KEY (facility_id) REFERENCES sos_facilities(id) ON DELETE RESTRICT
+ sos_patients       | sos_patients_org_id_sos_organizations_id_fk   | FOREIGN KEY (org_id) REFERENCES sos_organizations(id) ON DELETE CASCADE
+ sos_patient_access | ck_active_access_requires_assignment          | CHECK (((status <> 'active'::text) OR (role_assignment_id IS NOT NULL)))
+ sos_patient_access | ck_sos_patient_access_relationship            | CHECK ((relationship_type = ANY (ARRAY['primary_counselor'::text, 'caseload_member'::text, 'covering_staff'::text, 'observer'::text, 'authorized_reviewer'::text])))
+ sos_patient_access | ck_sos_patient_access_status                  | CHECK ((status = ANY (ARRAY['active'::text, 'revoked'::text, 'expired'::text])))
+ sos_patient_access | fk_sos_patient_access_org_facility            | FOREIGN KEY (org_id, facility_id) REFERENCES sos_facilities(org_id, id) ON DELETE RESTRICT
+ sos_patient_access | fk_sos_patient_access_org_patient             | FOREIGN KEY (org_id, patient_id) REFERENCES sos_patients(org_id, id) ON DELETE CASCADE
+ sos_patient_access | fk_sos_patient_access_org_user                | FOREIGN KEY (org_id, user_id) REFERENCES sos_user_accounts(org_id, id) ON DELETE CASCADE
+ sos_patient_access | fk_sos_patient_access_role_assignment         | FOREIGN KEY (role_assignment_id) REFERENCES sos_role_assignments(id) ON DELETE RESTRICT
+ sos_patient_access | sos_patient_access_org_id_fkey                | FOREIGN KEY (org_id) REFERENCES sos_organizations(id) ON DELETE CASCADE
+(12 rows)
+
+--- Reapply (idempotency) ---
+Reading config file '/home/runner/workspace/lib/db/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[✓] migrations applied successfully!Reapply exit: 0
+--- Migration journal ---
+ERROR:  column "tag" does not exist
+LINE 1: SELECT "tag", "created_at" FROM drizzle.__drizzle_migrations...
+               ^
+--- Seed fictitious data ---
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/runner/workspace/artifacts/api-server/artifacts/api-server/src/seed/authSeed.ts' imported from /home/runner/workspace/artifacts/api-server/
+--- Destroy ---
+DESTROYED: sos_postmerge_verify_1785698528
+
+=== PRIMARY DB MIGRATION JOURNAL ===
+ id |                               hash                               |  created_at   
+----+------------------------------------------------------------------+---------------
+  1 | 0000_perpetual_rafael_vega                                       | 1785588813000
+  2 | 86b492875afcbdfe10daf7867f66fb31930148fe42c10fd33527c7809d34508d | 1785600000000
+(2 rows)
+

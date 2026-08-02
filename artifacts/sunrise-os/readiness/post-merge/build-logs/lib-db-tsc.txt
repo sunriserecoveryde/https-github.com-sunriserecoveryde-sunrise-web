@@ -1,0 +1,4 @@
+Command: pnpm --filter @workspace/lib-db exec tsc --noEmit
+Date: 2026-08-02T19:20:02Z
+No projects matched the filters in "/home/runner/workspace"
+Exit: 0 Duration: 515ms

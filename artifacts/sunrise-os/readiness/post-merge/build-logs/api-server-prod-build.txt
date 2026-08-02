@@ -1,0 +1,7 @@
+Command: pnpm --filter @workspace/api-server run build
+Date: 2026-08-02T19:20:07Z
+
+> @workspace/api-server@0.0.0 build /home/runner/workspace/artifacts/api-server
+> node ./build.mjs
+
+Exit: 0 Duration: 709ms

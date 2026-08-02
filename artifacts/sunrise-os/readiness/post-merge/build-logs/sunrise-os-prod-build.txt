@@ -1,0 +1,20 @@
+Command: pnpm --filter @workspace/sunrise-os run build
+Date: 2026-08-02T19:20:08Z
+
+> @workspace/sunrise-os@0.0.0 build /home/runner/workspace/artifacts/sunrise-os
+> vite build --config vite.config.ts
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 3144 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/public/index.html                                            1.37 kB │ gzip:     0.54 kB
+dist/public/assets/0_SunriseOS_Logo_transparent-Co5acG82.png    277.00 kB
+dist/public/assets/index-DssLUj9p.css                           208.27 kB │ gzip:    30.60 kB
+dist/public/assets/purify.es-VaSPOPhr.js                         28.72 kB │ gzip:    10.74 kB
+dist/public/assets/index.es-CLcIkW3w.js                         158.79 kB │ gzip:    52.90 kB
+dist/public/assets/html2canvas.esm-DXEQVQnt.js                  201.04 kB │ gzip:    47.07 kB
+dist/public/assets/index-DXB7aQkx.js                          4,856.94 kB │ gzip: 1,260.12 kB
+✓ built in 12.59s
+Exit: 0 Duration: 13296ms
