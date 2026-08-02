@@ -58,6 +58,10 @@ const FACILITY_ID = "00000000-0000-4000-a000-000000000002";
 const FACILITY_2_ID = "00000000-0000-4000-a000-000000000003";
 const ORG_SLUG    = "sunrise";
 
+// Deterministic patient ID used by test 6-B to verify patient-access enforcement.
+// A fixed UUID avoids creating duplicate rows on repeated seed runs.
+const TEST_PATIENT_ID = "00000000-0000-4000-a000-000000000099";
+
 const ARGON2_OPTIONS: argon2.HashOptions = {
   type: argon2.argon2id,
   memoryCost: 65536,
@@ -231,6 +235,26 @@ async function upsertFacility(id: string, name: string): Promise<void> {
   }
 }
 
+/**
+ * Upserts a minimal test patient used by auth test 6-B to verify patient-access
+ * enforcement. Fields beyond the NOT NULL constraints are intentionally omitted.
+ * This row must exist on any fresh database so isolated test runs pass 414/414.
+ */
+async function upsertTestPatient(): Promise<void> {
+  await db
+    .insert(sosPatients)
+    .values({
+      id:        TEST_PATIENT_ID,
+      orgId:     ORG_ID,
+      facilityId: FACILITY_ID,
+      mrn:       "TEST-0001",
+      firstName: "[TEST]",
+      lastName:  "Patient",
+      status:    "active",
+    })
+    .onConflictDoNothing();
+}
+
 export async function seed(): Promise<void> {
   if (process.env.NODE_ENV === "production") {
     throw new Error("seed() must never run in production");
@@ -254,6 +278,9 @@ export async function seed(): Promise<void> {
   // Ensure both facilities exist.
   await upsertFacility(FACILITY_ID,   "Sunrise Recovery Center — Main Campus");
   await upsertFacility(FACILITY_2_ID, "Sunrise Recovery Center — Annex");
+
+  // Ensure the test patient fixture exists so test 6-B passes on a fresh database.
+  await upsertTestPatient();
 
   for (const user of TEST_USERS) {
     const email = user.email;
