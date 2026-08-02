@@ -58,6 +58,12 @@ description: Phase 2D final closure — exact assignment binding, outbox worker,
 - Clean migration proof: `artifacts/sunrise-os/readiness/phase-2d/clean-migration-proof.txt`
 - Browser runbook: `artifacts/sunrise-os/readiness/phase-2d/manual-browser-verification-runbook.md`
 
+## Phase 2 Final Approval Execution findings
+- authSeed does NOT seed sos_patients — disposable-DB test run shows 6-B failing (seededPt undefined); this is a seed-scope gap, primary DB passes 414/414
+- Phase 2C evidence-manifest.json had plaintext "Sunrise2026!Test" — redacted during this session
+- AuditOutboxWorker must be wired into src/index.ts post-listen; worker not started = events accumulate unprocessed
+- Final ZIP: 32 files, 87KB, SHA-256 3f00abc5265293cfd5e73db13c35d4b2aca61f4506fe6e646f21608ece813678
+
 ## Additional findings
 - `express-rate-limit` v8.6.0 initialises `config.limit` from `passedOptions.max ?? 5` first; setting both `limit:` and `max:` is required to guarantee the override works.
 - `AuditOutboxWorker.start()` must be called from `src/index.ts` post-listen to enable startup recovery; forgetting this leaves pending events unprocessed.
