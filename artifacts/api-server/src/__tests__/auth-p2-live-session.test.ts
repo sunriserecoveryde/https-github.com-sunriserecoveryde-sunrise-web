@@ -68,9 +68,12 @@ afterAll(async () => {
 /** Create a supertest agent and log in.  Returns agent + login response. */
 async function loginAs(email: string, password = TEST_PASSWORD) {
   const agent = request.agent(app);
-  // Phase 2B: login requires orgSlug for tenant-deterministic auth.
+  // §7 (Phase 2C): Login requires a CSRF token — fetch pre-login token first.
+  const csrfRes = await agent.get("/api/v1/auth/csrf-token");
+  const csrfToken = (csrfRes.body as { csrfToken?: string }).csrfToken ?? "";
   const res = await agent
     .post("/api/v1/auth/login")
+    .set("X-CSRF-Token", csrfToken)
     .send({ orgSlug: "sunrise", email, password });
   return { agent, res };
 }
@@ -113,9 +116,11 @@ describe("§A CSRF — 17-step real authenticated session flow", { timeout: 30_0
 
   // ── Steps 3 + 4: Valid login — session created and rotated ─────────────────
 
-  it("step-3+4: POST /auth/login with valid credentials → 200, session cookie set (session rotation confirmed)", async () => {
+  it("step-3+4: POST /auth/login with valid credentials + CSRF token → 200, session cookie set (session rotation confirmed)", async () => {
+    // §7 (Phase 2C): Login is no longer CSRF-exempt — must send the pre-login token.
     const res = await csrfAgent
       .post("/api/v1/auth/login")
+      .set("X-CSRF-Token", preLoginToken)
       .send({ orgSlug: "sunrise", email: USERS.clinician, password: TEST_PASSWORD });
 
     expect(res.status).toBe(200);
@@ -446,8 +451,13 @@ describe("§B Session store — PostgreSQL persistence proof (connect-pg-simple)
 
 describe("§C Rate limiting — threshold and header evidence", { timeout: 30_000 }, () => {
   it("C-01: Failed login returns 401 (rate limit headers present or implicit)", async () => {
-    const res = await request(app)
+    // §7 (Phase 2C): login requires CSRF — use an agent so session cookie persists.
+    const c01Agent = request.agent(app);
+    const c01Csrf = await c01Agent.get("/api/v1/auth/csrf-token");
+    const c01Token = (c01Csrf.body as { csrfToken?: string }).csrfToken ?? "";
+    const res = await c01Agent
       .post("/api/v1/auth/login")
+      .set("X-CSRF-Token", c01Token)
       .send({ orgSlug: "sunrise", email: "nonexistent@ratelimit.test", password: "WrongPass1!" });
     expect(res.status).toBe(401);
     // Rate limit headers (X-RateLimit-Limit, Retry-After) may be present
@@ -489,9 +499,15 @@ describe("§C Rate limiting — threshold and header evidence", { timeout: 30_00
     expect(before.length).toBe(1);
     const countBefore = (before[0] as { failed_login_count: number }).failed_login_count;
 
+    // §7 (Phase 2C): Login requires CSRF — use an agent.
+    const lockAgent = request.agent(app);
+    const lockCsrf = await lockAgent.get("/api/v1/auth/csrf-token");
+    const lockToken = (lockCsrf.body as { csrfToken?: string }).csrfToken ?? "";
+
     // Attempt login with wrong password
-    const res = await request(app)
+    const res = await lockAgent
       .post("/api/v1/auth/login")
+      .set("X-CSRF-Token", lockToken)
       .send({ orgSlug: "sunrise", email: USERS.clinician, password: "WrongPasswordForLockoutTest!" });
     expect(res.status).toBe(401);
 
@@ -512,11 +528,22 @@ describe("§C Rate limiting — threshold and header evidence", { timeout: 30_00
   });
 
   it("C-04: Login response body is identical for bad email vs bad password (account enumeration prevention)", async () => {
-    const badEmail = await request(app)
+    // §7 (Phase 2C): Login requires CSRF — use separate agents per attempt.
+    const agentBadEmail = request.agent(app);
+    const csrfBadEmail  = await agentBadEmail.get("/api/v1/auth/csrf-token");
+    const tokenBadEmail = (csrfBadEmail.body as { csrfToken?: string }).csrfToken ?? "";
+
+    const agentBadPass = request.agent(app);
+    const csrfBadPass  = await agentBadPass.get("/api/v1/auth/csrf-token");
+    const tokenBadPass = (csrfBadPass.body as { csrfToken?: string }).csrfToken ?? "";
+
+    const badEmail = await agentBadEmail
       .post("/api/v1/auth/login")
+      .set("X-CSRF-Token", tokenBadEmail)
       .send({ orgSlug: "sunrise", email: "doesnotexist@nosuchuser.test", password: "AnyPassword1!" });
-    const badPass = await request(app)
+    const badPass = await agentBadPass
       .post("/api/v1/auth/login")
+      .set("X-CSRF-Token", tokenBadPass)
       .send({ orgSlug: "sunrise", email: USERS.clinician, password: "WrongPassword999!" });
 
     expect(badEmail.status).toBe(401);
@@ -573,8 +600,13 @@ describe("§D Audit persistence — sos_auth_audit writes verified in PostgreSQL
   });
 
   it("D-02: Failed login → 'login_failure' audit row written with reason_code", async () => {
-    const res = await request(app)
+    // §7 (Phase 2C): Login requires CSRF.
+    const d02agent = request.agent(app);
+    const d02csrf = await d02agent.get("/api/v1/auth/csrf-token");
+    const d02token = (d02csrf.body as { csrfToken?: string }).csrfToken ?? "";
+    const res = await d02agent
       .post("/api/v1/auth/login")
+      .set("X-CSRF-Token", d02token)
       .send({ orgSlug: "sunrise", email: USERS.clinician, password: "WrongPasswordForAuditTest!" });
     expect(res.status).toBe(401);
 
@@ -745,8 +777,13 @@ describe("§E Authorization — real DB, real sessions, real API requests", { ti
   // ── E-04: Disabled user cannot authenticate ───────────────────────────────
 
   it("E-04 disabled: disabled account cannot log in → 401", async () => {
-    const res = await request(app)
+    // §7 (Phase 2C): Login requires CSRF. Use an agent so the cookie persists.
+    const e04agent = request.agent(app);
+    const e04csrf = await e04agent.get("/api/v1/auth/csrf-token");
+    const e04token = (e04csrf.body as { csrfToken?: string }).csrfToken ?? "";
+    const res = await e04agent
       .post("/api/v1/auth/login")
+      .set("X-CSRF-Token", e04token)
       .send({ orgSlug: "sunrise", email: USERS.disabled, password: TEST_PASSWORD });
     expect(res.status).toBe(401);
     // Generic error — does not reveal that the account is disabled
@@ -765,18 +802,24 @@ describe("§E Authorization — real DB, real sessions, real API requests", { ti
 
   // ── E-05: Expired-role user ───────────────────────────────────────────────
 
-  it("E-05 expired-role: account is active but role expired → login may succeed, GET /patients → unauthorized", async () => {
-    const loginRes = await request(app)
+  it("E-05 expired-role: account is active but role expired → login returns 401 (no active assignments), GET /patients → unauthorized", async () => {
+    // §7 (Phase 2C): Login requires CSRF. Use an agent.
+    const e05agent = request.agent(app);
+    const e05csrf = await e05agent.get("/api/v1/auth/csrf-token");
+    const e05token = (e05csrf.body as { csrfToken?: string }).csrfToken ?? "";
+    const loginRes = await e05agent
       .post("/api/v1/auth/login")
+      .set("X-CSRF-Token", e05token)
       .send({ orgSlug: "sunrise", email: USERS.expiredRole, password: TEST_PASSWORD });
-    // Login may succeed (account is active) — permissionCodes may or may not be populated
-    // depending on whether login filters by expires_at
+    // §5 (Phase 2C): Expired role → getRoleAssignments returns [] → 401 (no role assignments).
     console.log("[E] E-05 | expired-role | login status=" + loginRes.status + " | permCodes=" + JSON.stringify((loginRes.body as { permissionCodes?: unknown }).permissionCodes));
 
     if (loginRes.status === 200) {
-      // If login succeeded, create agent and try to access patients
+      // If login somehow succeeded (seed not applied), try to access patients
       const agent = request.agent(app);
-      await agent.post("/api/v1/auth/login").send({ orgSlug: "sunrise", email: USERS.expiredRole, password: TEST_PASSWORD });
+      const agentCsrf = await agent.get("/api/v1/auth/csrf-token");
+      const agentToken = (agentCsrf.body as { csrfToken?: string }).csrfToken ?? "";
+      await agent.post("/api/v1/auth/login").set("X-CSRF-Token", agentToken).send({ orgSlug: "sunrise", email: USERS.expiredRole, password: TEST_PASSWORD });
 
       const patientsRes = await agent.get("/api/v1/patients");
       // Either 401 (no valid session identity) or 403 (no permissions)

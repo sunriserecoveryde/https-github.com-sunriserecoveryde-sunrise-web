@@ -37,12 +37,13 @@ import {
   sosRoleAssignments,
   sosAuthAudit,
 } from "@workspace/db";
-import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { rateLimit } from "express-rate-limit";
 import { PgRateLimitStore } from "../lib/pgRateLimiter";
 import { getPermissionsForRole, isRoleFacilityWide, isKnownRole } from "../lib/permissionPolicy";
 import { buildScopedGrant } from "../lib/authorizationService";
 import { evaluateRoleGrant } from "../lib/roleGrantPolicy";
+import { authorizeAdminAction } from "../lib/adminAuthorizationService";
 import { logger } from "../lib/logger";
 import type { AuthenticatedIdentity, ScopedGrant } from "../lib/authorizationService";
 import { hasPermission } from "../lib/authorizationService";
@@ -57,6 +58,19 @@ const ARGON2_OPTIONS: argon2.HashOptions = {
   timeCost: 3,
   parallelism: 1,
 };
+
+// ── §9: Precomputed constant-time dummy hash ──────────────────────────────────
+// Computed once at module load so unknown-account logins spend the same time
+// as wrong-password logins against real accounts (prevents timing enumeration).
+// Uses identical Argon2id parameters to production hashes.
+const DUMMY_HASH_PROMISE: Promise<string> = argon2
+  .hash("__sunrise_dummy_sentinel_do_not_use__", ARGON2_OPTIONS)
+  .catch((err) => {
+    logger.error({ err }, "authV1: failed to precompute dummy hash at startup");
+    // Fallback: a syntactically valid Argon2id PHC string that will always fail
+    // argon2.verify() — still constant-time (verify throws internally).
+    return "$argon2id$v=19$m=65536,t=3,p=1$c29tZXNhbHRoZXJlc2FsdA$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  });
 
 // ── Session timeout (ms) ──────────────────────────────────────────────────────
 const ABSOLUTE_TIMEOUT_MS = parseInt(process.env.SESSION_ABSOLUTE_TIMEOUT_MS ?? "28800000", 10);
@@ -120,10 +134,10 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+// §10: Use req.ip which honours app.set("trust proxy", 1).
+// Never parse X-Forwarded-For directly — that allows spoofing.
 function getIpAddress(req: Request): string {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string") return forwarded.split(",")[0].trim();
-  return req.socket.remoteAddress ?? "unknown";
+  return (req.ip ?? req.socket?.remoteAddress ?? "unknown").replace(/^::ffff:/, "");
 }
 
 function getUserAgentSummary(req: Request): string {
@@ -217,6 +231,8 @@ async function getRoleAssignments(userId: string, orgId: string) {
         eq(sosRoleAssignments.orgId, orgId),
         eq(sosRoleAssignments.userId, userId),
         eq(sosRoleAssignments.status, "active"),
+        // §5: Only include assignments that have become effective (past/present).
+        lte(sosRoleAssignments.effectiveAt, now),
         or(
           isNull(sosRoleAssignments.expiresAt),
           gt(sosRoleAssignments.expiresAt, now),
@@ -258,14 +274,16 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
     // No global email scan — duplicate emails across organizations are safe.
     const [user] = await db
       .select({
-        id:               sosUserAccounts.id,
-        orgId:            sosUserAccounts.orgId,
-        email:            sosUserAccounts.email,
-        passwordHash:     sosUserAccounts.passwordHash,
-        status:           sosUserAccounts.status,
-        failedLoginCount: sosUserAccounts.failedLoginCount,
-        lockedUntil:      sosUserAccounts.lockedUntil,
-        sessionVersion:   sosUserAccounts.sessionVersion,
+        id:                sosUserAccounts.id,
+        orgId:             sosUserAccounts.orgId,
+        email:             sosUserAccounts.email,
+        passwordHash:      sosUserAccounts.passwordHash,
+        status:            sosUserAccounts.status,
+        failedLoginCount:  sosUserAccounts.failedLoginCount,
+        lockedUntil:       sosUserAccounts.lockedUntil,
+        sessionVersion:    sosUserAccounts.sessionVersion,
+        // §11: needed to find staff profile (profiles join on identity_ref.id, not account.id)
+        userIdentityRefId: sosUserAccounts.userIdentityRefId,
       })
       .from(sosUserAccounts)
       .innerJoin(
@@ -279,8 +297,9 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
       .limit(1);
 
     // ── Constant-time failure path ───────────────────────────────────────────
-    // Always verify a hash to prevent timing-based user enumeration.
-    const dummyHash = "$argon2id$v=19$m=65536,t=3,p=1$dummysaltdummysalt$dummyhashvalue";
+    // §9: Always verify a real Argon2id hash to prevent timing-based enumeration.
+    // The dummy hash was precomputed at module startup with production parameters.
+    const dummyHash = await DUMMY_HASH_PROMISE;
 
     if (!user || !user.passwordHash) {
       await argon2.verify(dummyHash, password).catch(() => {});
@@ -371,13 +390,7 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
 
     // ── Password verified ─────────────────────────────────────────────────────
 
-    // Reset failed-login counter.
-    await db
-      .update(sosUserAccounts)
-      .set({ failedLoginCount: 0, lockedUntil: null, lastLoginAt: now, updatedAt: now })
-      .where(eq(sosUserAccounts.id, user.id));
-
-    // Load role assignments.
+    // Load role assignments (§5: effectiveAt <= now is enforced in getRoleAssignments).
     const assignments = await getRoleAssignments(user.id, user.orgId);
     if (assignments.length === 0) {
       await writeAuditEvent({
@@ -406,21 +419,32 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
       req.session.save((err) => (err ? reject(err) : resolve())),
     );
 
-    // Update sos_sessions compliance columns.
-    await db
-      .update(sosSessions)
-      .set({ userId: user.id, orgId: user.orgId, sessionVersion: user.sessionVersion, ipAddress: ip, userAgentSummary: ua })
-      .where(eq(sosSessions.sid, req.sessionID));
+    // §8: All post-authentication DB writes in ONE transaction so account reset,
+    // session compliance update, and audit events cannot partially succeed.
+    await db.transaction(async (tx) => {
+      // Reset failed-login counter + set lastLoginAt.
+      await tx
+        .update(sosUserAccounts)
+        .set({ failedLoginCount: 0, lockedUntil: null, lastLoginAt: now, updatedAt: now })
+        .where(eq(sosUserAccounts.id, user.id));
 
-    await writeAuditEvent({
-      orgId: user.orgId, userId: user.id, sessionId: req.sessionID,
-      eventType: "login_success", outcome: "success",
-      ipAddress: ip, userAgentSummary: ua,
-    });
-    await writeAuditEvent({
-      orgId: user.orgId, userId: user.id, sessionId: req.sessionID,
-      eventType: "session_created", outcome: "success",
-      ipAddress: ip, userAgentSummary: ua,
+      // Update sos_sessions compliance columns.
+      await tx
+        .update(sosSessions)
+        .set({ userId: user.id, orgId: user.orgId, sessionVersion: user.sessionVersion, ipAddress: ip, userAgentSummary: ua })
+        .where(eq(sosSessions.sid, req.sessionID));
+
+      // Write login_success and session_created audit events.
+      await writeAuditEventTx(tx, {
+        orgId: user.orgId, userId: user.id, sessionId: req.sessionID,
+        eventType: "login_success", outcome: "success",
+        ipAddress: ip, userAgentSummary: ua,
+      });
+      await writeAuditEventTx(tx, {
+        orgId: user.orgId, userId: user.id, sessionId: req.sessionID,
+        eventType: "session_created", outcome: "success",
+        ipAddress: ip, userAgentSummary: ua,
+      });
     });
 
     // Build safe session summary for response.
@@ -430,13 +454,15 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
       ...new Set(assignments.map((a) => a.facilityId).filter((f): f is string => f !== null)),
     ];
 
+    // §11: sos_staff_profiles.userId references sos_user_identity_refs.id,
+    // NOT sos_user_accounts.id.  Use userIdentityRefId as the join key.
     const [staffProfile] = await db
       .select({ displayName: sosStaffProfiles.displayName })
       .from(sosStaffProfiles)
       .where(
         and(
           eq(sosStaffProfiles.orgId, user.orgId),
-          eq(sosStaffProfiles.userId, user.id),
+          eq(sosStaffProfiles.userId, user.userIdentityRefId ?? ""),
         ),
       )
       .limit(1);
@@ -452,6 +478,19 @@ router.post("/v1/auth/login", authRateLimiter, async (req: Request, res: Respons
       authenticationMethod: "password",
     });
   } catch (err) {
+    // §8 fault isolation: if the DB transaction failed AFTER the session was saved
+    // as authenticated, destroy the session and clear the cookie so no partial-auth
+    // state persists. The client will see 503 and must retry from scratch.
+    if (req.session.userId) {
+      await new Promise<void>((resolve) =>
+        req.session.destroy((destroyErr) => {
+          if (destroyErr) logger.error({ err: destroyErr }, "authV1 POST /login: session cleanup failed after tx error");
+          resolve();
+        }),
+      );
+      const cookieName = process.env.NODE_ENV === "production" ? "sos_session" : "sos_dev_session";
+      res.clearCookie(cookieName, { path: "/api" });
+    }
     logger.error({ err }, "authV1 POST /login error");
     res.status(503).json({ error: "Service temporarily unavailable" });
   }
@@ -466,12 +505,23 @@ router.post("/v1/auth/logout", async (req: Request, res: Response) => {
   const sid    = req.sessionID;
 
   try {
+    // §8: Session revocation + logout audit in ONE transaction so they cannot
+    // partially succeed.  If the DB write fails, the cookie is still cleared
+    // (defence-in-depth) but the session row is left for a retry.
     if (sid) {
-      // Mark session revoked — do NOT destroy the row (preserved for audit trail).
-      await db
-        .update(sosSessions)
-        .set({ revokedAt: new Date(), revokedReason: "logout" })
-        .where(eq(sosSessions.sid, sid));
+      await db.transaction(async (tx) => {
+        // Mark session revoked — do NOT destroy the row (preserved for audit trail).
+        await tx
+          .update(sosSessions)
+          .set({ revokedAt: new Date(), revokedReason: "logout" })
+          .where(eq(sosSessions.sid, sid));
+
+        await writeAuditEventTx(tx, {
+          orgId, userId, sessionId: sid,
+          eventType: "logout", outcome: "success",
+          ipAddress: ip,
+        });
+      });
     }
 
     req.session.userId         = undefined;
@@ -487,12 +537,6 @@ router.post("/v1/auth/logout", async (req: Request, res: Response) => {
       process.env.NODE_ENV === "production" ? "sos_session" : "sos_dev_session",
       { path: "/api" },
     );
-
-    await writeAuditEvent({
-      orgId, userId, sessionId: sid,
-      eventType: "logout", outcome: "success",
-      ipAddress: ip,
-    });
 
     res.json({ ok: true });
   } catch (err) {
@@ -511,16 +555,17 @@ router.get("/v1/auth/session", async (req: Request, res: Response) => {
   }
 
   try {
-    const [staffProfile] = await db
-      .select({ displayName: sosStaffProfiles.displayName })
-      .from(sosStaffProfiles)
-      .where(
-        and(
-          eq(sosStaffProfiles.orgId, auth.orgId),
-          eq(sosStaffProfiles.userId, auth.userId),
-        ),
-      )
-      .limit(1);
+    // §11: Use staffProfileId resolved by sessionAuth (via identity ref join).
+    // Fall back to a direct lookup if staffProfileId is not set (dev identity, etc.).
+    let staffProfileDisplayName: string | null = null;
+    if (auth.staffProfileId) {
+      const [sp] = await db
+        .select({ displayName: sosStaffProfiles.displayName })
+        .from(sosStaffProfiles)
+        .where(eq(sosStaffProfiles.id, auth.staffProfileId))
+        .limit(1);
+      staffProfileDisplayName = sp?.displayName ?? null;
+    }
 
     const [sessionRow] = await db
       .select({ expire: sosSessions.expire })
@@ -533,8 +578,9 @@ router.get("/v1/auth/session", async (req: Request, res: Response) => {
 
     res.json({
       userId:              auth.userId,
+      staffProfileId:      auth.staffProfileId ?? null,
       orgId:               auth.orgId,
-      displayName:         staffProfile?.displayName ?? auth.userId,
+      displayName:         staffProfileDisplayName ?? auth.userId,
       roleIds:             auth.roleIds,
       permissionCodes:     auth.permissionCodes,
       facilityIds:         auth.facilityIds,
@@ -558,6 +604,20 @@ router.get("/v1/auth/csrf-token", (req: Request, res: Response) => {
     res.status(500).json({ error: "CSRF token generator not configured" });
     return;
   }
+
+  // §7 (Phase 2C): Persist the session so the session cookie is returned in
+  // this response.  Required for the pre-login CSRF flow:
+  //   GET /csrf-token → POST /login (with X-CSRF-Token).
+  //
+  // express-session's saveUninitialized:false means a brand-new, unmodified
+  // session is never written to the store and no Set-Cookie header is emitted.
+  // When POST /login then arrives without a session cookie, express-session
+  // creates a *new* session with a *different* ID, so the HMAC(sessionId, secret)
+  // that csrf-csrf embedded in the _csrf cookie no longer matches → 403.
+  //
+  // Setting any property on req.session marks it as "modified", which forces
+  // express-session to save it and emit the Set-Cookie header.
+  (req.session as Record<string, unknown>).csrfInit = true;
 
   const token = generateToken(req, res, { overwrite: true, validateOnReuse: false });
   res.json({ csrfToken: token });
@@ -617,6 +677,44 @@ router.post(
       return;
     }
 
+    // §3: Scoped admin authorization — facility admins cannot create org-level users.
+    const adminAuthDecision = authorizeAdminAction({
+      adminIdentity:    adminAuth,
+      targetOrgId:      orgId,
+      targetFacilityId: facilityId ?? null,
+      targetRoleId:     roleId,
+      action:           "create_user",
+    });
+    if (!adminAuthDecision.allowed) {
+      res.status(403).json({ error: "Forbidden", reason: adminAuthDecision.reason, detail: adminAuthDecision.detail });
+      return;
+    }
+
+    // §2: Role-grant policy validation before any DB write.
+    // Use a sentinel target ID since the user doesn't exist yet; self-escalation
+    // check compares against adminAuth.userId so the sentinel always passes.
+    const grantDecision = evaluateRoleGrant({
+      adminIdentity: adminAuth,
+      targetOrgId:   orgId,
+      targetUserId:  "__new_user_sentinel__",
+      roleId,
+      facilityId:    facilityId ?? null,
+    });
+    if (!grantDecision.allowed) {
+      await writeAuditEvent({
+        orgId, userId: adminAuth.userId,
+        eventType: "role_grant_denied", outcome: "failure",
+        ipAddress: ip,
+        metadata: { email, roleId, facilityId: facilityId ?? null, reason: grantDecision.reason },
+      });
+      res.status(403).json({
+        error: "Role grant denied by policy.",
+        reason: grantDecision.reason,
+        detail: grantDecision.detail,
+      });
+      return;
+    }
+
     try {
       const passwordHash = await argon2.hash(password, ARGON2_OPTIONS);
 
@@ -626,6 +724,13 @@ router.post(
           .insert(sosUserIdentityRefs)
           .values({ orgId })
           .returning({ id: sosUserIdentityRefs.id });
+
+        await tx.insert(sosStaffProfiles).values({
+          orgId,
+          userId: identityRef.id,
+          displayName: email.split("@")[0],
+          professionalRole: roleId,
+        });
 
         const [account] = await tx
           .insert(sosUserAccounts)
@@ -638,12 +743,15 @@ router.post(
           })
           .returning({ id: sosUserAccounts.id });
 
-        if (facilityId) {
-          await tx.insert(sosRoleAssignments).values({
-            orgId, userId: account.id, roleId, facilityId, status: "active",
-            createdByUserId: adminAuth.userId,
-          });
-        }
+        // Create the role assignment (with or without facilityId).
+        await tx.insert(sosRoleAssignments).values({
+          orgId,
+          userId:          account.id,
+          roleId,
+          facilityId:      facilityId ?? null,
+          status:          "active",
+          createdByUserId: adminAuth.userId,
+        });
 
         await writeAuditEventTx(tx, {
           orgId, userId: adminAuth.userId,
@@ -657,7 +765,13 @@ router.post(
 
       res.status(201).json(result);
     } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes("unique")) {
+      // Use optional chaining rather than instanceof to avoid ESM-boundary
+      // issues where DrizzleQueryError may not satisfy `instanceof Error`.
+      // DrizzleQueryError stores the postgres error in .cause — the top-level
+      // .message only contains the query text + params, not the pg error code.
+      const causeCode: string = ((err as { cause?: { code?: string } })?.cause?.code) ?? "";
+      const causeMsg: string  = ((err as { cause?: { message?: string } })?.cause?.message) ?? "";
+      if (causeCode === "23505" || causeMsg.includes("duplicate key") || causeMsg.includes("unique")) {
         res.status(409).json({ error: "A user with that email already exists in this organization." });
         return;
       }
@@ -679,6 +793,55 @@ router.post(
     if (adminAuth.userId === targetUserId) {
       res.status(400).json({ error: "Cannot disable your own account." });
       return;
+    }
+
+    // §3: Resolve ALL active effective role assignments for the target user.
+    // A facility-admin must be denied if the target holds ANY assignment outside
+    // the admin's facility scope (e.g. an org-level role alongside a facility role).
+    // Using LIMIT 1 / most-recent is insufficient for multi-assignment targets.
+    const now = new Date();
+    const targetAssignments = await db
+      .select({ facilityId: sosRoleAssignments.facilityId, roleId: sosRoleAssignments.roleId })
+      .from(sosRoleAssignments)
+      .where(and(
+        eq(sosRoleAssignments.userId, targetUserId),
+        eq(sosRoleAssignments.orgId, adminAuth.orgId),
+        eq(sosRoleAssignments.status, "active"),
+        lte(sosRoleAssignments.effectiveAt, now),
+        or(isNull(sosRoleAssignments.expiresAt), gt(sosRoleAssignments.expiresAt, now)),
+      ));
+
+    // Deny if ANY active assignment is outside admin authority.
+    for (const assignment of targetAssignments) {
+      const check = authorizeAdminAction({
+        adminIdentity:    adminAuth,
+        targetOrgId:      adminAuth.orgId,
+        targetUserId,
+        targetFacilityId: assignment.facilityId ?? null,
+        targetRoleId:     assignment.roleId,
+        action:           "disable_user",
+      });
+      if (!check.allowed) {
+        res.status(403).json({ error: "Forbidden", reason: check.reason, detail: check.detail });
+        return;
+      }
+    }
+
+    // No active assignments found is treated as a soft deny for facility-admins
+    // (the target may have only revoked/expired assignments; org-admins can still proceed).
+    if (targetAssignments.length === 0) {
+      const fallbackCheck = authorizeAdminAction({
+        adminIdentity:    adminAuth,
+        targetOrgId:      adminAuth.orgId,
+        targetUserId,
+        targetFacilityId: null,
+        targetRoleId:     undefined,
+        action:           "disable_user",
+      });
+      if (!fallbackCheck.allowed) {
+        res.status(403).json({ error: "Forbidden", reason: fallbackCheck.reason, detail: fallbackCheck.detail });
+        return;
+      }
     }
 
     try {
@@ -733,6 +896,50 @@ router.post(
     const adminAuth = req.auth!;
     const ip = getIpAddress(req);
 
+    // §3: Resolve ALL active effective role assignments for the target user.
+    // Facility-admin is denied if the target holds ANY assignment outside admin scope.
+    const reactivateNow = new Date();
+    const reactivateTargetAssignments = await db
+      .select({ facilityId: sosRoleAssignments.facilityId, roleId: sosRoleAssignments.roleId })
+      .from(sosRoleAssignments)
+      .where(and(
+        eq(sosRoleAssignments.userId, targetUserId),
+        eq(sosRoleAssignments.orgId, adminAuth.orgId),
+        eq(sosRoleAssignments.status, "active"),
+        lte(sosRoleAssignments.effectiveAt, reactivateNow),
+        or(isNull(sosRoleAssignments.expiresAt), gt(sosRoleAssignments.expiresAt, reactivateNow)),
+      ));
+
+    for (const assignment of reactivateTargetAssignments) {
+      const check = authorizeAdminAction({
+        adminIdentity:    adminAuth,
+        targetOrgId:      adminAuth.orgId,
+        targetUserId,
+        targetFacilityId: assignment.facilityId ?? null,
+        targetRoleId:     assignment.roleId,
+        action:           "reactivate_user",
+      });
+      if (!check.allowed) {
+        res.status(403).json({ error: "Forbidden", reason: check.reason, detail: check.detail });
+        return;
+      }
+    }
+
+    if (reactivateTargetAssignments.length === 0) {
+      const fallbackCheck = authorizeAdminAction({
+        adminIdentity:    adminAuth,
+        targetOrgId:      adminAuth.orgId,
+        targetUserId,
+        targetFacilityId: null,
+        targetRoleId:     undefined,
+        action:           "reactivate_user",
+      });
+      if (!fallbackCheck.allowed) {
+        res.status(403).json({ error: "Forbidden", reason: fallbackCheck.reason, detail: fallbackCheck.detail });
+        return;
+      }
+    }
+
     try {
       await db.transaction(async (tx) => {
         const [user] = await tx
@@ -783,13 +990,42 @@ router.post(
     const adminAuth = req.auth!;
     const ip = getIpAddress(req);
 
+    // §3: Admin authorization — self-revoke blocked via admin route.
+    const adminAuthDecision = authorizeAdminAction({
+      adminIdentity: adminAuth,
+      targetOrgId:   adminAuth.orgId,
+      targetUserId,
+      action:        "revoke_sessions",
+    });
+    if (!adminAuthDecision.allowed) {
+      res.status(403).json({ error: "Forbidden", reason: adminAuthDecision.reason, detail: adminAuthDecision.detail });
+      return;
+    }
+
     try {
       let count = 0;
       await db.transaction(async (tx) => {
+        // §4: Verify target user belongs to the admin's org (cross-tenant guard).
+        const [targetUser] = await tx
+          .select({ id: sosUserAccounts.id })
+          .from(sosUserAccounts)
+          .where(and(
+            eq(sosUserAccounts.id, targetUserId),
+            eq(sosUserAccounts.orgId, adminAuth.orgId),
+          ))
+          .limit(1);
+
+        if (!targetUser) throw new Error("not_found");
+
+        // §4: Revoke sessions scoped to the admin's org — prevents cross-tenant revocation.
         const result = await tx
           .update(sosSessions)
           .set({ revokedAt: new Date(), revokedReason: "admin_revoke_all" })
-          .where(and(eq(sosSessions.userId, targetUserId), isNull(sosSessions.revokedAt)));
+          .where(and(
+            eq(sosSessions.userId, targetUserId),
+            eq(sosSessions.orgId, adminAuth.orgId),  // §4: org-scoped
+            isNull(sosSessions.revokedAt),
+          ));
 
         // Bump session version so any cached session objects are invalidated.
         await tx
@@ -810,7 +1046,11 @@ router.post(
       });
 
       res.json({ ok: true, revokedCount: count });
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "not_found") {
+        res.status(404).json({ error: "User not found." });
+        return;
+      }
       logger.error({ err }, "authV1 POST /admin/sessions/:userId/revoke-all error");
       res.status(503).json({ error: "Service temporarily unavailable" });
     }

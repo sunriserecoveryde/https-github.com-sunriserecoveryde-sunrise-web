@@ -222,7 +222,7 @@ describe("§11.7 Migration journal", () => {
     const journal = JSON.parse(fs.readFileSync(journalPath, "utf8")) as {
       entries: { idx: number; tag: string }[];
     };
-    expect(journal.entries).toHaveLength(3);
+    expect(journal.entries).toHaveLength(4); // Phase 2C added entry idx=3
     expect(journal.entries[0].idx).toBe(0);
     expect(journal.entries[1].idx).toBe(1);
     expect(journal.entries[2].idx).toBe(2);

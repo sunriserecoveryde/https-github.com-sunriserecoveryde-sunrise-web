@@ -1,11 +1,11 @@
 /**
- * Authentication seed — Phase 2B
+ * Authentication seed — Phase 2C
  *
  * Creates fictitious test users with Argon2id-hashed passwords.
  * Also seeds the org slug required for tenant-deterministic login.
  * MUST NOT run in production (enforced at the top of this file).
  *
- * Users seeded:
+ * Users seeded (16 total — Phase 2C complete persona set):
  *  1.  org-admin@test.sunrise        — CMO / org-wide admin
  *  2.  facility-admin@test.sunrise   — Director of Operations, facility-scoped
  *  3.  clinician@test.sunrise        — Certified Clinician, Facility 1
@@ -13,15 +13,24 @@
  *  5.  billing@test.sunrise          — Billing Staff, Facility 1 (caseload-limited)
  *  6.  readonly@test.sunrise         — BHT, Facility 1 (caseload-limited)
  *  7.  other-facility@test.sunrise   — Clinician, Facility 2 only
- *  8.  disabled@test.sunrise         — Disabled account
+ *  8.  disabled@test.sunrise         — Disabled account (§9 timing test)
  *  9.  expired-role@test.sunrise     — Active account, expired role assignment
  *  10. security-admin@test.sunrise   — Security admin (org-wide, NO patient access)
  *  11. multi-facility@test.sunrise   — Clinician at BOTH facilities
  *  12. mixed-role@test.sunrise       — Security admin (org-wide) + BHT (facility-1 caseload-limited)
+ *  13. aftercare@test.sunrise        — Aftercare staff, Facility 1 (caseload-limited)
+ *  14. ownership@test.sunrise        — Ownership/board (org-wide, read-only oversight)
+ *  15. hr@test.sunrise               — Human Resources (org-wide, zero patient access)
+ *  16. future-role@test.sunrise      — Active account, role effectiveAt tomorrow (§5 test — zero access today)
+ *  17. revoked-role@test.sunrise     — Active account, role assignment status='revoked' (§6 test)
  *
  * Phase 2B mixed-role exploit cases:
  *  A. security-admin + BHT: org-wide security admin must NOT get org-wide patient access
  *  B. multi-facility: clinical access limited to assigned facilities only
+ *
+ * Phase 2C additions:
+ *  C. future-role: effectiveAt > today → zero permissions at login (§5 effectiveAt guard)
+ *  D. revoked-role: status='revoked' → not loaded by sessionAuth (different from expiredAt past)
  *
  * Run: pnpm --filter @workspace/api-server run seed:auth
  */
@@ -63,6 +72,8 @@ interface TestUser {
   facilityId?:  string;  // undefined = org-wide
   status?:      "active" | "disabled";
   roleExpired?: boolean;
+  roleRevoked?: boolean;  // Phase 2C §6: assignment status='revoked'
+  futureRole?:  boolean;  // Phase 2C §5: effectiveAt = tomorrow
   secondRole?:  { roleId: string; facilityId?: string };  // Phase 2B: mixed-role users
 }
 
@@ -145,6 +156,46 @@ const TEST_USERS: TestUser[] = [
     roleId:      "security_admin",
     facilityId:  undefined,   // org-wide security admin
     secondRole:  { roleId: "bht", facilityId: FACILITY_ID },
+  },
+  // ── Phase 2C new personas ──────────────────────────────────────────────────
+  {
+    // §14: Aftercare staff — caseload-limited, Facility 1.
+    email:       "aftercare@test.sunrise",
+    displayName: "[TEST] Avery Patel, Aftercare Coordinator",
+    roleId:      "aftercare_staff",
+    facilityId:  FACILITY_ID,
+  },
+  {
+    // §14: Ownership / board-level observer — org-wide, no patient writes.
+    email:       "ownership@test.sunrise",
+    displayName: "[TEST] Board Observer (ownership)",
+    roleId:      "ownership",
+    facilityId:  undefined,   // org-wide
+  },
+  {
+    // §14: Human Resources — org-wide, zero patient access.
+    email:       "hr@test.sunrise",
+    displayName: "[TEST] Human Resources (org-wide, no patient access)",
+    roleId:      "human_resources",
+    facilityId:  undefined,   // org-wide
+  },
+  {
+    // §5 Phase 2C: effectiveAt is set to tomorrow → role not yet effective.
+    // Login must succeed (account active) but session has zero permissions.
+    email:       "future-role@test.sunrise",
+    displayName: "[TEST] Future-Role User (effectiveAt tomorrow, §5 test)",
+    roleId:      "certified_clinician",
+    facilityId:  FACILITY_ID,
+    futureRole:  true,
+  },
+  {
+    // §6 Phase 2C: role assignment is status='revoked' (explicit revocation).
+    // Different from roleExpired (expiresAt in the past) — tests the status filter.
+    email:       "revoked-role@test.sunrise",
+    displayName: "[TEST] Revoked-Role User (status=revoked, §6 test)",
+    roleId:      "certified_clinician",
+    facilityId:  FACILITY_ID,
+    roleRevoked: true,
   },
 ];
 
@@ -283,7 +334,10 @@ export async function seed(): Promise<void> {
 
     // ── Primary role assignment ───────────────────────────────────────────────
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const expiresAt = user.roleExpired ? yesterday : null;
+    const tomorrow  = new Date(Date.now() + 25 * 60 * 60 * 1000); // 25h from now for stability
+    const expiresAt   = user.roleExpired ? yesterday : null;
+    const effectiveAt = user.futureRole  ? tomorrow  : undefined; // undefined = DB default (now())
+    const assignmentStatus: "active" | "revoked" = user.roleRevoked ? "revoked" : "active";
 
     // Check if primary assignment already exists.
     const [existingAssignment] = await db
@@ -299,19 +353,22 @@ export async function seed(): Promise<void> {
       ))
       .limit(1);
 
+    const baseValues = {
+      orgId:      ORG_ID,
+      userId:     accountId,
+      roleId:     user.roleId,
+      facilityId: user.facilityId ?? null,
+      status:     assignmentStatus,
+      expiresAt,
+      ...(effectiveAt !== undefined ? { effectiveAt } : {}),
+    };
+
     if (!existingAssignment) {
-      await db.insert(sosRoleAssignments).values({
-        orgId:      ORG_ID,
-        userId:     accountId,
-        roleId:     user.roleId,
-        facilityId: user.facilityId ?? null,
-        status:     "active",
-        expiresAt,
-      });
+      await db.insert(sosRoleAssignments).values(baseValues);
     } else {
       await db
         .update(sosRoleAssignments)
-        .set({ expiresAt, status: "active" })
+        .set({ expiresAt, status: assignmentStatus, ...(effectiveAt !== undefined ? { effectiveAt } : {}) })
         .where(eq(sosRoleAssignments.id, existingAssignment.id));
     }
 

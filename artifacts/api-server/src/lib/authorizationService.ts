@@ -30,8 +30,8 @@
  */
 
 import { db } from "@workspace/db";
-import { sosPatientAccess, sosAuthAudit } from "@workspace/db";
-import { and, eq, isNull, or, gt } from "drizzle-orm";
+import { sosPatientAccess, sosAuthAudit, sosAuditOutbox, sosRoleAssignments } from "@workspace/db";
+import { and, eq, isNotNull, isNull, lte, or, gt } from "drizzle-orm";
 import {
   isRoleFacilityWide,
   getPermissionsForRole,
@@ -161,13 +161,22 @@ function denied(reasonCode: AuthorizationReasonCode): AuthorizationDecision {
   return { allowed: false, reasonCode };
 }
 
+// ── §8: Durable outbox for authorization-denial audit events ──────────────────
+//
+// Denial events cannot share a DB transaction with the operation they describe
+// (denials block state changes — there is no state change to co-commit with).
+//
+// Strategy: write to sos_audit_outbox first (guaranteed durable), then schedule
+// an async drain to sos_auth_audit.  If the drain fails, the outbox retains the
+// event for the next drain cycle.  This prevents silent loss of denial events.
+
 async function writeAuditDenial(
   identity: AuthenticatedIdentity | null,
   reasonCode: AuthorizationReasonCode,
   req: Pick<AuthorizationRequest, "orgId" | "permission" | "facilityId" | "patientId" | "ipAddress">,
 ): Promise<void> {
   try {
-    await db.insert(sosAuthAudit).values({
+    await db.insert(sosAuditOutbox).values({
       orgId:     req.orgId ?? identity?.orgId ?? null,
       userId:    identity?.userId ?? null,
       sessionId: identity?.sessionId ?? null,
@@ -181,35 +190,160 @@ async function writeAuditDenial(
         patientId:  req.patientId ?? null,
       },
     });
+    // Schedule background drain; does not block the current request.
+    setImmediate(() => { drainAuditOutbox().catch(() => {}); });
   } catch (err) {
-    logger.error({ err }, "authorizationService: failed to write denial audit event");
+    // Outbox write failed — fall back to direct insert into sos_auth_audit.
+    logger.error({ err }, "authorizationService: outbox write failed — attempting direct audit insert");
+    try {
+      await db.insert(sosAuthAudit).values({
+        orgId:     req.orgId ?? identity?.orgId ?? null,
+        userId:    identity?.userId ?? null,
+        sessionId: identity?.sessionId ?? null,
+        eventType: "authorization_denied",
+        outcome:   "failure",
+        reasonCode,
+        ipAddress: req.ipAddress ?? null,
+        metadata:  {
+          permission: req.permission,
+          facilityId: req.facilityId ?? null,
+          patientId:  req.patientId ?? null,
+        },
+      });
+    } catch (fallbackErr) {
+      logger.error({ err: fallbackErr }, "authorizationService: both outbox and direct audit write failed");
+    }
   }
 }
+
+/**
+ * Drain unprocessed outbox entries into sos_auth_audit.
+ * Called after each outbox write and can be invoked externally for testing.
+ * Idempotent — rows are only drained once (processedAt is set atomically).
+ */
+export async function drainAuditOutbox(limit = 50): Promise<number> {
+  let drained = 0;
+  try {
+    const rows = await db
+      .select()
+      .from(sosAuditOutbox)
+      .where(isNull(sosAuditOutbox.processedAt))
+      .orderBy(sosAuditOutbox.createdAt)
+      .limit(limit);
+
+    for (const row of rows) {
+      try {
+        await db.transaction(async (tx) => {
+          await tx.insert(sosAuthAudit).values({
+            orgId:            row.orgId ?? null,
+            userId:           row.userId ?? null,
+            sessionId:        row.sessionId ?? null,
+            eventType:        row.eventType,
+            outcome:          row.outcome as "success" | "failure" | "error",
+            reasonCode:       row.reasonCode ?? null,
+            targetUserId:     row.targetUserId ?? null,
+            ipAddress:        row.ipAddress ?? null,
+            userAgentSummary: row.userAgentSummary ?? null,
+            metadata:         row.metadata as Record<string, unknown> | null,
+          });
+          await tx
+            .update(sosAuditOutbox)
+            .set({ processedAt: new Date(), attempts: (row.attempts ?? 0) + 1 })
+            .where(eq(sosAuditOutbox.id, row.id));
+        });
+        drained++;
+      } catch (err) {
+        // Bump attempts counter but do not mark as processed — will retry next cycle.
+        await db
+          .update(sosAuditOutbox)
+          .set({
+            attempts:    (row.attempts ?? 0) + 1,
+            errorDetail: err instanceof Error ? err.message.slice(0, 500) : String(err),
+          })
+          .where(eq(sosAuditOutbox.id, row.id))
+          .catch(() => {});
+        logger.error({ err, outboxId: row.id }, "authorizationService: drain failed for outbox entry");
+      }
+    }
+  } catch (err) {
+    logger.error({ err }, "authorizationService: drainAuditOutbox query failed");
+  }
+  return drained;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function checkPatientAccessForGrant(
   orgId: string,
   patientId: string,
   userId: string,
   facilityId: string | null,
+  roleAssignmentId: string,
 ): Promise<boolean> {
+  // §6: Patient access is tied to the EXACT authorizing role assignment.
+  //
+  // Three cases for an access row:
+  //   (a) roleAssignmentId IS NULL  — created before Phase 2C; backward compat, allow.
+  //   (b) roleAssignmentId = <this assignment>  — must be active/effective (LEFT JOIN).
+  //   (c) roleAssignmentId = <different assignment>  — access bound to a different
+  //       assignment; even if that assignment is still active, deny (exact binding).
+  //
+  // If the caller's roleAssignmentId is not a valid UUID (e.g. dev-identity sentinel),
+  // fall back to the pre-Phase-2C simple check (no FK binding).
   const now = new Date();
-  const conditions = [
+
+  const baseConditions: ReturnType<typeof eq>[] = [
     eq(sosPatientAccess.orgId, orgId),
     eq(sosPatientAccess.patientId, patientId),
     eq(sosPatientAccess.userId, userId),
     eq(sosPatientAccess.status, "active"),
-    or(
-      isNull(sosPatientAccess.expiresAt),
-      gt(sosPatientAccess.expiresAt, now),
-    ),
+    or(isNull(sosPatientAccess.expiresAt), gt(sosPatientAccess.expiresAt, now))!,
   ];
   if (facilityId) {
-    conditions.push(eq(sosPatientAccess.facilityId, facilityId));
+    baseConditions.push(eq(sosPatientAccess.facilityId, facilityId));
   }
+
+  if (!UUID_RE.test(roleAssignmentId)) {
+    // Non-UUID assignment ID (dev identity, etc.) — simple check, no FK binding.
+    const rows = await db
+      .select({ id: sosPatientAccess.id })
+      .from(sosPatientAccess)
+      .where(and(...baseConditions))
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  // LEFT JOIN only on the SPECIFIC assignment.  If the access row FK points to a
+  // different assignment, the join returns null and the WHERE rejects the row.
   const rows = await db
-    .select({ id: sosPatientAccess.id })
+    .select({ id: sosPatientAccess.id, raId: sosRoleAssignments.id })
     .from(sosPatientAccess)
-    .where(and(...conditions))
+    .leftJoin(
+      sosRoleAssignments,
+      and(
+        eq(sosRoleAssignments.id, sosPatientAccess.roleAssignmentId),
+        eq(sosRoleAssignments.id, roleAssignmentId),           // §6: exact assignment
+        eq(sosRoleAssignments.orgId, orgId),
+        eq(sosRoleAssignments.userId, userId),
+        eq(sosRoleAssignments.status, "active"),
+        lte(sosRoleAssignments.effectiveAt, now),
+        or(isNull(sosRoleAssignments.expiresAt), gt(sosRoleAssignments.expiresAt, now)),
+      ),
+    )
+    .where(
+      and(
+        ...baseConditions,
+        // §6: Allow pre-Phase-2C rows (no FK), or rows whose FK exactly matches this
+        // assignment AND the LEFT JOIN confirmed the assignment is still active.
+        or(
+          isNull(sosPatientAccess.roleAssignmentId),
+          and(
+            eq(sosPatientAccess.roleAssignmentId, roleAssignmentId),
+            isNotNull(sosRoleAssignments.id),  // LEFT JOIN succeeded → assignment active
+          ),
+        ),
+      ),
+    )
     .limit(1);
   return rows.length > 0;
 }
@@ -265,6 +399,7 @@ export async function authorize(
           patientId,
           identity.userId,
           effectiveFacilityId ?? null,
+          grant.roleAssignmentId,
         );
         if (!hasAccess) {
           bestDenialReason = "patient-out-of-scope";

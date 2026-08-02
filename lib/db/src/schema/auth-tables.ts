@@ -150,7 +150,7 @@ export const sosPatientAccess = pgTable(
     facilityId:       uuid("facility_id"),
     patientId:        uuid("patient_id").notNull(),
     userId:           uuid("user_id").notNull(),
-    roleAssignmentId: uuid("role_assignment_id"),  // which grant authorized this access
+    roleAssignmentId: uuid("role_assignment_id"),  // §6: FK → sos_role_assignments.id
     status:           text("status").notNull().default("active"),
     grantedByUserId:  uuid("granted_by_user_id"),
     grantedAt:        timestamp("granted_at", { withTimezone: true }).defaultNow().notNull(),
@@ -179,6 +179,13 @@ export const sosPatientAccess = pgTable(
       foreignColumns: [sosUserAccounts.orgId, sosUserAccounts.id],
       name: "fk_sos_patient_access_org_user",
     }).onDelete("cascade"),
+    // §6: Patient access tied to the specific role assignment — revoked assignments
+    // automatically lose access (ON DELETE SET NULL allows legacy rows without FK).
+    fkRoleAssignment: foreignKey({
+      columns: [t.roleAssignmentId],
+      foreignColumns: [sosRoleAssignments.id],
+      name: "fk_sos_patient_access_role_assignment",
+    }).onDelete("set null"),
   }),
 );
 export type SosPatientAccess = typeof sosPatientAccess.$inferSelect;
@@ -208,6 +215,22 @@ export const sosAuthAudit = pgTable(
     idxUserId:    index("idx_sos_auth_audit_user_id").on(t.userId),
     idxOrgId:     index("idx_sos_auth_audit_org_id").on(t.orgId),
     idxCreatedAt: index("idx_sos_auth_audit_created_at").on(t.createdAt),
+    ckEventType: check(
+      "ck_sos_auth_audit_event_type",
+      sql`${t.eventType} = ANY (ARRAY[
+        'login_success', 'login_failure', 'logout',
+        'session_created', 'session_expired', 'session_revoked',
+        'account_locked', 'account_unlocked',
+        'password_reset_requested', 'password_reset_completed', 'password_changed',
+        'role_assignment_created', 'role_assignment_revoked',
+        'facility_assignment_changed',
+        'patient_access_created', 'patient_access_revoked',
+        'authorization_denied',
+        'admin_session_revocation', 'sessions_revoked_all',
+        'user_disabled', 'user_reactivated',
+        'user_created', 'role_grant_denied', 'csrf_violation'
+      ]::text[])`,
+    ),
     ckOutcome:    check(
       "ck_sos_auth_audit_outcome",
       sql`${t.outcome} IN ('success', 'failure', 'error')`,
@@ -216,6 +239,41 @@ export const sosAuthAudit = pgTable(
 );
 export type SosAuthAudit = typeof sosAuthAudit.$inferSelect;
 export type InsertSosAuthAudit = typeof sosAuthAudit.$inferInsert;
+
+// ── sos_audit_outbox ───────────────────────────────────────────────────────
+// §8 (Phase 2C): Durable outbox for authorization-denial audit events.
+// Denial events cannot share a transaction with the operation they describe
+// (there is no state change to co-commit with).  Writing to the outbox first
+// guarantees the event is not silently lost when the main audit INSERT fails.
+//
+// A background drain (see authorizationService.ts) copies processed rows into
+// sos_auth_audit.  Rows with processedAt IS NULL are unprocessed.
+export const sosAuditOutbox = pgTable(
+  "sos_audit_outbox",
+  {
+    id:               uuid("id").primaryKey().defaultRandom(),
+    orgId:            uuid("org_id"),
+    userId:           uuid("user_id"),
+    sessionId:        text("session_id"),
+    eventType:        text("event_type").notNull(),
+    outcome:          text("outcome").notNull().default("failure"),
+    reasonCode:       text("reason_code"),
+    targetUserId:     uuid("target_user_id"),
+    ipAddress:        text("ip_address"),
+    userAgentSummary: text("user_agent_summary"),
+    metadata:         jsonb("metadata"),
+    attempts:         integer("attempts").notNull().default(0),
+    errorDetail:      text("error_detail"),
+    processedAt:      timestamp("processed_at", { withTimezone: true }),
+    createdAt:        timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    idxCreatedAt: index("idx_sos_audit_outbox_created_at").on(t.createdAt),
+    idxProcessed: index("idx_sos_audit_outbox_processed_at").on(t.processedAt),
+  }),
+);
+export type SosAuditOutbox = typeof sosAuditOutbox.$inferSelect;
+export type InsertSosAuditOutbox = typeof sosAuditOutbox.$inferInsert;
 
 // ── sos_rate_limit_windows ─────────────────────────────────────────────────
 // PostgreSQL-backed rate limit counter store.

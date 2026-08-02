@@ -172,17 +172,14 @@ describe("CSRF — double-submit cookie pattern (16 steps)", () => {
     expect(res.status).not.toBe(403);
   });
 
-  // Step 8: POST /api/v1/auth/login is exempt from CSRF (rate-limited, not CSRF-protected)
-  it("step-08: POST /auth/login is CSRF-exempt (public route)", async () => {
-    // Login without CSRF token should NOT be rejected by CSRF middleware.
-    // Phase 2B: without orgSlug → 400 (validation error, not CSRF).
-    // With orgSlug but bad credentials → 401.
-    // Either way the response must NOT be 403 (CSRF block).
+  // Step 8: POST /api/v1/auth/login now REQUIRES CSRF (Phase 2C §7 — login no longer exempt)
+  it("step-08: POST /auth/login without CSRF token → 403 (Phase 2C §7 — login is no longer CSRF-exempt)", async () => {
+    // Phase 2C: Login is NOT exempt from CSRF. A login attempt without X-CSRF-Token
+    // is rejected by the CSRF middleware before reaching the route handler → 403.
     const res = await request(app)
       .post("/api/v1/auth/login")
       .send({ orgSlug: "sunrise", email: "nonexistent@test.example", password: "BadPassword1!" });
-    expect([400, 401]).toContain(res.status);
-    expect(res.status).not.toBe(403);
+    expect(res.status).toBe(403);
   });
 
   // Step 9: POST /api/v1/auth/csrf-token is exempt from CSRF (it issues the token)
@@ -219,15 +216,19 @@ describe("CSRF — double-submit cookie pattern (16 steps)", () => {
   // The mechanism is verified by: step-10 (no token → 403), step-11 (wrong token → 403),
   // and by code inspection of csrf-csrf v4 doubleCsrfProtection middleware in app.ts.
   it("step-12: valid CSRF token in authenticated session passes CSRF (real HTTP login → real CSRF token → real logout)", async () => {
-    // Real flow: login with seeded credentials (NODE_ENV=test skips rate-limit),
-    // fetch a CSRF token bound to the established session, then POST /logout with
-    // that token.  Must not return 403 — CSRF accepted.
+    // Real flow (Phase 2C §7): GET /csrf-token → POST /login with CSRF token →
+    // GET /csrf-token (new token) → POST /logout with new token.  Must not return 403.
     const pwd = process.env.DEV_TEST_PASSWORD ?? "Sunrise2026!Test";
     const agent = request.agent(app);
 
+    // §7: Fetch pre-login CSRF token first (Phase 2C requirement).
+    const preLoginCsrfRes = await agent.get("/api/v1/auth/csrf-token");
+    const preLoginCsrfToken = (preLoginCsrfRes.body as { csrfToken?: string }).csrfToken ?? "";
+
     const loginRes = await agent
       .post("/api/v1/auth/login")
-      .send({ email: "clinician@test.sunrise", password: pwd });
+      .set("X-CSRF-Token", preLoginCsrfToken)
+      .send({ email: "clinician@test.sunrise", orgSlug: "sunrise", password: pwd });
 
     if (loginRes.status !== 200) {
       // Seed not run in this test-file run — document the fallback path.

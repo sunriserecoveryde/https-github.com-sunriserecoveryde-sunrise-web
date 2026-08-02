@@ -207,8 +207,10 @@ app.set("csrfGenerateToken", generateCsrfToken);
 //  - GET / HEAD / OPTIONS (safe methods)
 app.use("/api/v1", (req: Request, res: Response, next: NextFunction) => {
   const SAFE_METHODS = ["GET", "HEAD", "OPTIONS"];
+  // §7 (Phase 2C): Login is NO LONGER exempt from CSRF.
+  // The pre-login CSRF flow: GET /csrf-token → POST /login (with X-CSRF-Token).
+  // After session.regenerate(), a fresh token must be fetched for subsequent requests.
   const CSRF_EXEMPT = [
-    "/api/v1/auth/login",
     "/api/v1/auth/csrf-token",
     "/api/v1/auth/password-reset/request",
   ];

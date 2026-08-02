@@ -1,32 +1,31 @@
 /**
- * sessionAuth — Phase 2B session-based identity middleware.
+ * sessionAuth — Phase 2C session-based identity middleware.
  *
- * Key change vs Phase 2: resolveIdentityFromSession now builds ScopedGrant[]
- * from each role assignment row independently. Authorization is evaluated
- * through one complete grant — a permission from one assignment never
- * inherits scope from another.
+ * Phase 2C additions (see Phase 2B for base description):
+ *  §5  effectiveAt <= now() enforced — future-dated roles contribute zero permissions.
+ *  §11 staffProfileId resolved from sos_staff_profiles via userIdentityRefId.
  *
  * Behaviour:
  *
  * Production (NODE_ENV === 'production'):
  *   • Reads req.session.userId (set by express-session after login).
- *   • Loads user, status, session_version, and role assignments from DB.
+ *   • Loads user, status, session_version, userIdentityRefId, and role assignments from DB.
  *   • Validates: user active, session not revoked/expired, session_version matches.
+ *   • §5: Only assignments with effectiveAt <= now() are included.
+ *   • §11: Resolves staffProfileId from sos_staff_profiles via identity ref.
  *   • Builds ScopedGrant[] from assignments.
- *   • Attaches req.auth (AuthenticatedIdentity with grants).
+ *   • Attaches req.auth (AuthenticatedIdentity with grants + staffProfileId).
  *   • Returns 401 for any failure — does NOT reveal the failure reason.
  *
  * Development (NODE_ENV !== 'production'):
  *   • If a real session exists and is valid → uses it.
  *   • Otherwise → falls back to synthetic dev identity (unless DISABLE_AUTH_FALLBACK=true).
- *
- * This middleware must run AFTER express-session has been registered (in app.ts).
  */
 
 import { Request, Response, NextFunction } from "express";
 import { db } from "@workspace/db";
-import { sosUserAccounts, sosSessions, sosRoleAssignments } from "@workspace/db";
-import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { sosUserAccounts, sosSessions, sosRoleAssignments, sosStaffProfiles } from "@workspace/db";
+import { and, eq, gt, isNull, lte, or } from "drizzle-orm";
 import {
   getPermissionsForRole,
   isRoleFacilityWide,
@@ -78,13 +77,14 @@ async function resolveIdentityFromSession(
     }
   }
 
-  // ── Load user account ──────────────────────────────────────────────────────
+  // ── Load user account (§11: include userIdentityRefId) ────────────────────
   const [user] = await db
     .select({
-      id:             sosUserAccounts.id,
-      orgId:          sosUserAccounts.orgId,
-      status:         sosUserAccounts.status,
-      sessionVersion: sosUserAccounts.sessionVersion,
+      id:                sosUserAccounts.id,
+      orgId:             sosUserAccounts.orgId,
+      status:            sosUserAccounts.status,
+      sessionVersion:    sosUserAccounts.sessionVersion,
+      userIdentityRefId: sosUserAccounts.userIdentityRefId,
     })
     .from(sosUserAccounts)
     .where(
@@ -109,7 +109,7 @@ async function resolveIdentityFromSession(
   if (!sessionRow) return null;
   if (sessionRow.revokedAt !== null) return null;
 
-  // ── Load active role assignments ──────────────────────────────────────────
+  // ── Load active role assignments (§5: effectiveAt <= now) ─────────────────
   const now = new Date();
   const assignments = await db
     .select({
@@ -127,6 +127,8 @@ async function resolveIdentityFromSession(
         eq(sosRoleAssignments.orgId, orgId),
         eq(sosRoleAssignments.userId, userId),
         eq(sosRoleAssignments.status, "active"),
+        // §5: Only assignments that have become effective.
+        lte(sosRoleAssignments.effectiveAt, now),
         or(
           isNull(sosRoleAssignments.expiresAt),
           gt(sosRoleAssignments.expiresAt, now),
@@ -136,9 +138,24 @@ async function resolveIdentityFromSession(
 
   if (assignments.length === 0) return null;
 
+  // ── §11: Resolve staffProfileId via identity ref ──────────────────────────
+  // sos_staff_profiles.userId = sos_user_identity_refs.id (not sos_user_accounts.id)
+  let staffProfileId: string | null = null;
+  if (user.userIdentityRefId) {
+    const [staffProfile] = await db
+      .select({ id: sosStaffProfiles.id })
+      .from(sosStaffProfiles)
+      .where(
+        and(
+          eq(sosStaffProfiles.orgId, orgId),
+          eq(sosStaffProfiles.userId, user.userIdentityRefId),
+        ),
+      )
+      .limit(1);
+    staffProfileId = staffProfile?.id ?? null;
+  }
+
   // ── Build scoped grants (Phase 2B) ────────────────────────────────────────
-  // Each grant is independent. Permission from one grant NEVER inherits
-  // facility scope from another grant.
   const grants: ScopedGrant[] = assignments.map((a) =>
     buildScopedGrant({
       id:          a.id,
@@ -151,7 +168,6 @@ async function resolveIdentityFromSession(
   );
 
   // ── Flat summaries (backward compat — for session response & audit) ────────
-  // These MUST NOT be used for authorization decisions. Use grants[].
   const roleIds = [...new Set(assignments.map((a) => a.roleId))];
   const permissionCodes: PermissionCode[] = [
     ...new Set(roleIds.flatMap((r) => getPermissionsForRole(r))),
@@ -167,7 +183,7 @@ async function resolveIdentityFromSession(
 
   return {
     userId:               user.id,
-    staffProfileId:       null,
+    staffProfileId,
     orgId:                user.orgId,
     sessionId:            req.sessionID,
     grants,

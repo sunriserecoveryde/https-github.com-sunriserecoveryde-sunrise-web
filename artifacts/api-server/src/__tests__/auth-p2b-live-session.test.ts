@@ -79,15 +79,25 @@ async function loginAs(email: string, password = TEST_PASSWORD): Promise<{
   status:        number;
   body:          Record<string, unknown>;
 }> {
-  // Step 1: Get initial CSRF token + _csrf cookie
+  // Step 1: Get initial CSRF token + _csrf cookie + pre-login session cookie.
+  // §7 (Phase 2C): The /csrf-token endpoint now sets csrfInit on the session,
+  // so express-session emits a Set-Cookie for the session too.  We must send
+  // BOTH the _csrf cookie AND the session cookie with POST /login so that
+  // csrf-csrf can verify HMAC(sessionId, secret) === X-CSRF-Token header.
   const csrfRes1   = await request(app).get("/api/v1/auth/csrf-token");
   const csrfToken1 = (csrfRes1.body?.csrfToken as string) ?? "";
-  const csrfCookie1 = (csrfRes1.headers["set-cookie"] as string[] | string | undefined)?.[0] ?? "";
+  const rawCookies1 = csrfRes1.headers["set-cookie"] as string[] | string | undefined;
+  const cookieList1 = Array.isArray(rawCookies1) ? rawCookies1 : rawCookies1 ? [rawCookies1] : [];
+  const csrfCookieValue1    = (cookieList1.find((c) => c.startsWith("_csrf=")) ?? "").split(";")[0];
+  const sessionCookieValue1 = (
+    cookieList1.find((c) => c.startsWith("sos_dev_session=") || c.startsWith("sos_session=")) ?? ""
+  ).split(";")[0];
+  const preCookies1 = [csrfCookieValue1, sessionCookieValue1].filter(Boolean).join("; ");
 
   // Step 2: Login (session is regenerated inside the handler)
   const loginRes = await request(app)
     .post("/api/v1/auth/login")
-    .set("Cookie", csrfCookie1)
+    .set("Cookie", preCookies1)
     .set("X-CSRF-Token", csrfToken1)
     .send({ orgSlug: ORG_SLUG, email, password });
 
@@ -130,13 +140,17 @@ describe("§10 Tenant-deterministic login & security behaviours", () => {
 
   // 10-A: orgSlug required — without it returns 400 (not 403 CSRF blocked)
   it("10-A: login without orgSlug returns 400 (not 403) — CSRF-exempt, validation error", async () => {
+    // §7: Must send both _csrf cookie AND session cookie so CSRF HMAC matches.
     const csrfRes = await request(app).get("/api/v1/auth/csrf-token");
     const csrfToken = csrfRes.body?.csrfToken as string;
-    const csrfCookie = (csrfRes.headers["set-cookie"] as string[])?.[0] ?? "";
+    const rawCookies = csrfRes.headers["set-cookie"] as string[] | undefined ?? [];
+    const csrfCookieVal = (rawCookies.find((c) => c.startsWith("_csrf=")) ?? "").split(";")[0];
+    const sessCookieVal  = (rawCookies.find((c) => c.startsWith("sos_dev_session=") || c.startsWith("sos_session=")) ?? "").split(";")[0];
+    const allCookies = [csrfCookieVal, sessCookieVal].filter(Boolean).join("; ");
 
     const res = await request(app)
       .post("/api/v1/auth/login")
-      .set("Cookie", csrfCookie)
+      .set("Cookie", allCookies)
       .set("X-CSRF-Token", csrfToken)
       .send({ email: USERS.clinician, password: TEST_PASSWORD });
       // No orgSlug
@@ -147,13 +161,17 @@ describe("§10 Tenant-deterministic login & security behaviours", () => {
 
   // 10-B: Wrong orgSlug → generic 401
   it("10-B: wrong orgSlug → generic 401 (no account enumeration)", async () => {
+    // §7: Both _csrf and session cookies required.
     const csrfRes = await request(app).get("/api/v1/auth/csrf-token");
     const csrfToken = csrfRes.body?.csrfToken as string;
-    const csrfCookie = (csrfRes.headers["set-cookie"] as string[])?.[0] ?? "";
+    const rawCookies = csrfRes.headers["set-cookie"] as string[] | undefined ?? [];
+    const csrfCookieVal = (rawCookies.find((c) => c.startsWith("_csrf=")) ?? "").split(";")[0];
+    const sessCookieVal  = (rawCookies.find((c) => c.startsWith("sos_dev_session=") || c.startsWith("sos_session=")) ?? "").split(";")[0];
+    const allCookies = [csrfCookieVal, sessCookieVal].filter(Boolean).join("; ");
 
     const res = await request(app)
       .post("/api/v1/auth/login")
-      .set("Cookie", csrfCookie)
+      .set("Cookie", allCookies)
       .set("X-CSRF-Token", csrfToken)
       .send({ orgSlug: "wrong-org-slug-xyz", email: USERS.clinician, password: TEST_PASSWORD });
 
@@ -163,13 +181,17 @@ describe("§10 Tenant-deterministic login & security behaviours", () => {
 
   // 10-C: Correct orgSlug + wrong password
   it("10-C: correct orgSlug + wrong password → generic 401", async () => {
+    // §7: Both _csrf and session cookies required.
     const csrfRes = await request(app).get("/api/v1/auth/csrf-token");
     const csrfToken = csrfRes.body?.csrfToken as string;
-    const csrfCookie = (csrfRes.headers["set-cookie"] as string[])?.[0] ?? "";
+    const rawCookies = csrfRes.headers["set-cookie"] as string[] | undefined ?? [];
+    const csrfCookieVal = (rawCookies.find((c) => c.startsWith("_csrf=")) ?? "").split(";")[0];
+    const sessCookieVal  = (rawCookies.find((c) => c.startsWith("sos_dev_session=") || c.startsWith("sos_session=")) ?? "").split(";")[0];
+    const allCookies = [csrfCookieVal, sessCookieVal].filter(Boolean).join("; ");
 
     const res = await request(app)
       .post("/api/v1/auth/login")
-      .set("Cookie", csrfCookie)
+      .set("Cookie", allCookies)
       .set("X-CSRF-Token", csrfToken)
       .send({ orgSlug: ORG_SLUG, email: USERS.clinician, password: "definitely-wrong-password-xyz" });
 
@@ -402,13 +424,17 @@ describe("§10 Audit event persistence in PostgreSQL", () => {
   it("audit-02: failed login writes a login_failure audit event", async () => {
     const beforeLogin = new Date(Date.now() - 1000);
 
+    // §7 (Phase 2C): must send BOTH _csrf cookie AND session cookie so CSRF validates.
     const csrfRes = await request(app).get("/api/v1/auth/csrf-token");
     const csrfToken = csrfRes.body?.csrfToken as string;
-    const csrfCookie = (csrfRes.headers["set-cookie"] as string[])?.[0] ?? "";
+    const rawAuditCookies = csrfRes.headers["set-cookie"] as string[] | undefined ?? [];
+    const auditCsrfCookieVal = (rawAuditCookies.find((c) => c.startsWith("_csrf=")) ?? "").split(";")[0];
+    const auditSessCookieVal = (rawAuditCookies.find((c) => c.startsWith("sos_dev_session=") || c.startsWith("sos_session=")) ?? "").split(";")[0];
+    const auditAllCookies = [auditCsrfCookieVal, auditSessCookieVal].filter(Boolean).join("; ");
 
     await request(app)
       .post("/api/v1/auth/login")
-      .set("Cookie", csrfCookie)
+      .set("Cookie", auditAllCookies)
       .set("X-CSRF-Token", csrfToken)
       .send({ orgSlug: ORG_SLUG, email: USERS.clinician, password: "BadPassword!123" });
 

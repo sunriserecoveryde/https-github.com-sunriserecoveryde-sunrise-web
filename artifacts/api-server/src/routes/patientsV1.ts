@@ -1,5 +1,6 @@
 /**
- * Phase 2B — Patient List, Patient Detail, and Active Episode endpoints.
+ * Phase 2C — Patient List, Patient Detail, and Active Episode endpoints.
+ * §1: Field-level DTO projection applied — response shape depends on permissions.
  *
  * Key change from Phase 2: patient-list filtering uses scoped grants instead
  * of the flat orgWide/facilityIds model.
@@ -27,8 +28,10 @@ import {
   getActiveEpisode,
   NotFoundError,
   DatabaseError,
+  type PatientQueryTier,
 } from "@workspace/db";
 import { authorize, getAuthorizedFacilitiesForPermission } from "../lib/authorizationService";
+import { projectPatient, buildPatientPermissionSet } from "../lib/patientDTOs";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -88,38 +91,77 @@ router.get("/v1/patients", async (req: Request, res: Response) => {
       return;
     }
 
-    // Query patients per grant scope, then union results.
-    const patientSets = await Promise.all(
-      authorizedScopes.map(({ facilityId, orgWide, facilityWide }) => {
+    // §1 (Phase 2C): DB query tier = maximum across all grants so data is always
+    // available for any projection tier.  Per-patient response projection uses
+    // only the permissions from grants that actually authorised each patient,
+    // preventing higher-tier fields from leaking to patients accessible only
+    // via a lower-tier grant (mixed-role / mixed-scope users).
+    const globalPermSet = buildPatientPermissionSet(auth.grants.map((g) => g.permissions));
+    const dbTier: PatientQueryTier = globalPermSet.has("patient.chart.view")
+      ? "chart"
+      : globalPermSet.has("patient.episode.view")
+      ? "episode"
+      : globalPermSet.has("patient.demographics.view")
+      ? "demographics"
+      : "identity";
+
+    // Query each grant scope in parallel; tag results with the authorising grant.
+    const scopeResults = await Promise.all(
+      authorizedScopes.map(async ({ facilityId, orgWide, facilityWide, grant }) => {
+        let patients;
         if (orgWide) {
-          // Org-wide grant: all patients in the org.
-          return listPatients(auth.orgId);
+          patients = await listPatients(auth.orgId, undefined, dbTier);
+        } else if (facilityWide && facilityId) {
+          patients = await listPatients(auth.orgId, facilityId, dbTier);
+        } else if (!facilityWide) {
+          // §6 exact-binding: caseload-limited scope restricts to the exact presenting
+          // grant's roleAssignmentId so that patients bound to another assignment are
+          // not surfaced for this grant.
+          patients = await listAssignedPatients(
+            auth.orgId, auth.userId, facilityId ?? undefined, dbTier,
+            grant.roleAssignmentId,
+          );
+        } else {
+          patients = [];
         }
-        if (facilityWide && facilityId) {
-          // Facility-scoped grant with full facility access: all patients in facility.
-          return listPatients(auth.orgId, facilityId);
-        }
-        if (!facilityWide) {
-          // Caseload-limited (BHT, aftercare, billing): explicitly assigned patients only.
-          // No full facility census.
-          return listAssignedPatients(auth.orgId, auth.userId, facilityId ?? undefined);
-        }
-        return Promise.resolve([]);
+        return { patients, grant };
       }),
     );
 
-    // Deduplicate by patient ID (multiple grants may cover overlapping patients).
-    const seen = new Set<string>();
-    const unique = patientSets
-      .flat()
-      .filter((p) => {
-        if (seen.has(p.id)) return false;
-        seen.add(p.id);
-        return true;
-      });
+    // Build per-patient data map and per-patient authorising-grant permission set.
+    // When the same patient is authorised by multiple grants (overlapping scopes),
+    // the patient data is kept at the highest-tier version already stored, and
+    // permissions from all authorising grants are unioned.  This ensures that a
+    // patient reachable via a high-tier grant gets projected at the high tier,
+    // while a patient reachable ONLY via a low-tier grant is projected at that
+    // lower tier — never inheriting fields from an unrelated grant.
+    type PermCode = typeof auth.grants[number]["permissions"][number];
+    const patientDataMap  = new Map<string, (typeof scopeResults[number]["patients"])[number]>();
+    const patientPermMap  = new Map<string, Set<PermCode>>();
+
+    for (const { patients, grant } of scopeResults) {
+      for (const patient of patients) {
+        if (!patientDataMap.has(patient.id)) {
+          patientDataMap.set(patient.id, patient);
+        }
+        if (!patientPermMap.has(patient.id)) {
+          patientPermMap.set(patient.id, new Set<PermCode>());
+        }
+        for (const perm of grant.permissions) {
+          patientPermMap.get(patient.id)!.add(perm);
+        }
+      }
+    }
+
+    // §1: Project each patient using only the permissions from grants that
+    // actually authorised that patient.
+    const projected = Array.from(patientDataMap.values()).map((patient) => {
+      const effectivePerms = patientPermMap.get(patient.id) ?? new Set<PermCode>();
+      return projectPatient(patient, effectivePerms as ReadonlySet<PermCode>);
+    });
 
     setPatientCacheHeaders(res);
-    res.json(unique);
+    res.json(projected);
   } catch (err) {
     handleDbError(err, res);
   }
