@@ -427,7 +427,7 @@ describe("§10 Audit event persistence in PostgreSQL", () => {
     // §7 (Phase 2C): must send BOTH _csrf cookie AND session cookie so CSRF validates.
     const csrfRes = await request(app).get("/api/v1/auth/csrf-token");
     const csrfToken = csrfRes.body?.csrfToken as string;
-    const rawAuditCookies = csrfRes.headers["set-cookie"] as string[] | undefined ?? [];
+    const rawAuditCookies = (csrfRes.headers["set-cookie"] as unknown as string[] | undefined) ?? [];
     const auditCsrfCookieVal = (rawAuditCookies.find((c) => c.startsWith("_csrf=")) ?? "").split(";")[0];
     const auditSessCookieVal = (rawAuditCookies.find((c) => c.startsWith("sos_dev_session=") || c.startsWith("sos_session=")) ?? "").split(";")[0];
     const auditAllCookies = [auditCsrfCookieVal, auditSessCookieVal].filter(Boolean).join("; ");

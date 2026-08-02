@@ -78,6 +78,7 @@ async function seed() {
   await db.insert(sosOrganizations).values({
     id: ORG_ID,
     name: "[TEST] Sunrise Health Maryland",
+    slug: "test-sunrise-health-maryland",
     status: "active",
   });
 

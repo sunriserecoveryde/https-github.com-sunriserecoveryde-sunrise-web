@@ -108,7 +108,7 @@ router.get("/v1/patients", async (req: Request, res: Response) => {
     // Query each grant scope in parallel; tag results with the authorising grant.
     const scopeResults = await Promise.all(
       authorizedScopes.map(async ({ facilityId, orgWide, facilityWide, grant }) => {
-        let patients;
+        let patients: import("@workspace/db").PatientWithEpisode[];
         if (orgWide) {
           patients = await listPatients(auth.orgId, undefined, dbTier);
         } else if (facilityWide && facilityId) {

@@ -617,7 +617,7 @@ router.get("/v1/auth/csrf-token", (req: Request, res: Response) => {
   //
   // Setting any property on req.session marks it as "modified", which forces
   // express-session to save it and emit the Set-Cookie header.
-  (req.session as Record<string, unknown>).csrfInit = true;
+  (req.session as unknown as Record<string, unknown>).csrfInit = true;
 
   const token = generateToken(req, res, { overwrite: true, validateOnReuse: false });
   res.json({ csrfToken: token });
