@@ -58,4 +58,9 @@ description: Phase 2D final closure — exact assignment binding, outbox worker,
 - Clean migration proof: `artifacts/sunrise-os/readiness/phase-2d/clean-migration-proof.txt`
 - Browser runbook: `artifacts/sunrise-os/readiness/phase-2d/manual-browser-verification-runbook.md`
 
+## Additional findings
+- `express-rate-limit` v8.6.0 initialises `config.limit` from `passedOptions.max ?? 5` first; setting both `limit:` and `max:` is required to guarantee the override works.
+- `AuditOutboxWorker.start()` must be called from `src/index.ts` post-listen to enable startup recovery; forgetting this leaves pending events unprocessed.
+- Shell env-var assignments like `PHASE2D_RATE_LIMIT_MAX=2 node ...` did not override the built process in testing; use `export` or pass via env file for reliable subprocess env injection.
+
 **Why:** Phase 2 is a multi-phase security hardening track. Phase 3 must not start until browser verification (BV-1 through BV-5) is completed by a human reviewer.
