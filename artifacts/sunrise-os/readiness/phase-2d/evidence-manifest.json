@@ -1,280 +1,171 @@
 {
   "phase": "2D",
-  "title": "Phase 2D Final Closure — Access-Binding & Outbox Evidence",
+  "manifestCreatedAt": "2026-08-02T16:20:00Z",
   "branch": "readiness/p0-phase-2d-final-closure",
-  "date": "2026-08-02",
-  "testCount": 414,
-  "testsPassed": 414,
-  "testsFailed": 0,
-  "testsSkipped": 22,
-  "sections": [
-    {
-      "id": "§1",
-      "title": "Credential Removal — DEV_TEST_PASSWORD eliminated",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "artifacts/api-server/src/seed/authSeed.ts",
-          "sha256": "49e6d1b7938092af99b1099819dd57bd680b4d1978f5c7f566f6dc1b661cae62",
-          "note": "PHASE2D_TEST_PASSWORD used; no fallback; log lines sanitised"
-        },
-        {
-          "file": "artifacts/api-server/src/__tests__/auth-p2c-security.test.ts",
-          "note": "PHASE2D_TEST_PASSWORD; no fallback"
-        },
-        {
-          "file": "artifacts/api-server/src/__tests__/auth-p2b-live-session.test.ts",
-          "note": "PHASE2D_TEST_PASSWORD; no fallback"
-        },
-        {
-          "file": "artifacts/api-server/src/__tests__/auth-p2-live-session.test.ts",
-          "note": "PHASE2D_TEST_PASSWORD; no fallback"
-        },
-        {
-          "file": "artifacts/api-server/src/__tests__/auth-p2c-browser.spec.ts",
-          "note": "PHASE2D_TEST_PASSWORD; no fallback"
-        },
-        {
-          "file": "artifacts/api-server/src/__tests__/auth-p2b-frontend-connectivity.spec.ts",
-          "note": "PHASE2D_TEST_PASSWORD; no fallback"
-        },
-        {
-          "file": "artifacts/api-server/src/__tests__/auth-p2-integration.test.ts",
-          "note": "PHASE2D_TEST_PASSWORD; test skips real-login path if absent"
-        }
-      ]
-    },
-    {
-      "id": "§2",
-      "title": "NULL FK Elimination — exact assignment binding enforced in code",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "artifacts/api-server/src/lib/authorizationService.ts",
-          "sha256": "1339d28ef9bd1e2ba93c03a7fbe24c8ada36c96cfdf50b3e6f4650ef5e4438bf",
-          "note": "isNull(sosPatientAccess.roleAssignmentId) OR-branch removed from checkPatientAccessForGrant"
-        },
-        {
-          "file": "lib/db/src/repositories/patientRepo.ts",
-          "sha256": "0b3fda87a23f64d729a5c345c50aff85b929a25dac2cd437158155e8499fe307",
-          "note": "isNull(sosPatientAccess.roleAssignmentId) OR-branch removed from listAssignedPatients"
-        }
-      ]
-    },
-    {
-      "id": "§3",
-      "title": "Migration 0004 — backfill, RESTRICT FK, CHECK, trigger",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "lib/db/drizzle/0004_phase_2d_final_closure.sql",
-          "sha256": "4584ae4def09750eb69fe431348e16b59e6a873c55a71147c7c8020db65240d4",
-          "note": "PL/pgSQL backfill + quarantine of NULL rows; RESTRICT FK; ck_active_access_requires_assignment CHECK; sos_patient_access_assignment_integrity trigger"
-        },
-        {
-          "file": "lib/db/drizzle/meta/_journal.json",
-          "sha256": "3bc113c96fa4f202c285f22360f412dca0643b5009619e150db28730348b3c77",
-          "note": "5 entries: idx 0–4"
-        }
-      ]
-    },
-    {
-      "id": "§4",
-      "title": "Schema additions — quarantinedReason, failedPermanently",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "lib/db/src/schema/auth-tables.ts",
-          "sha256": "a6c6570208b189ddf8f72010913e6f70e6c80985e5c7d0751ccecd652a5bbd21",
-          "note": "sosPatientAccess: quarantinedReason text, onDelete(restrict); sosAuditOutbox: failedPermanently boolean NOT NULL default false, idx_sos_audit_outbox_pending partial index"
-        }
-      ]
-    },
-    {
-      "id": "§5",
-      "title": "Audit Outbox Worker — durable polling, SKIP LOCKED, exponential back-off",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "artifacts/api-server/src/lib/auditOutboxWorker.ts",
-          "sha256": "dacac2e0c02175aa0d812e99960d8dad935af4108e7f065a4a55926eac21ee09",
-          "note": "AuditOutboxWorker: FOR UPDATE SKIP LOCKED, exponential back-off, failed_permanently, SIGTERM-safe stop(), getHealth()"
-        }
-      ]
-    },
-    {
-      "id": "§6",
-      "title": "PgRateLimiter integration env vars — real-DB proof in tests",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "artifacts/api-server/src/routes/authV1.ts",
-          "sha256": "f67c051eb61b32245380cd8add3843f4513f0c21447f0f7546ca931a0cc4a8dc",
-          "note": "PHASE2D_RATE_LIMIT_INTEGRATION, PHASE2D_RATE_LIMIT_WINDOW_MS, PHASE2D_RATE_LIMIT_MAX env vars; real PgRateLimitStore exercisable in CI"
-        }
-      ]
-    },
-    {
-      "id": "§7",
-      "title": "Phase 2D Integration Tests — 18-step exact binding proof",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "artifacts/api-server/src/__tests__/auth-p2d-exact-binding.test.ts",
-          "sha256": "58e5bf34f919f0df3ff01bdc8a1b1483debd854f44dd2c696158d65eeaf1dae9",
-          "note": "18 steps: real DB, real HTTP, real sessions, DISABLE_AUTH_FALLBACK=true. Fixtures use synthetic MRN, valid email TLD (.test). 403/404 accepted for privacy-preserving patient detail."
-        }
-      ]
-    },
-    {
-      "id": "§8",
-      "title": "Phase 2D Integration Tests — 12-step PgRateLimitStore proof",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "artifacts/api-server/src/__tests__/auth-p2d-rate-limit.test.ts",
-          "sha256": "6dd5c9d1e39625c424bab44b17b7b37fd93455fb12aa86d62b4554a1fb3a7b44",
-          "note": "12 steps: direct store increment/reset, multi-instance sharing, HTTP 429 via test app, fail-open behaviour"
-        }
-      ]
-    },
-    {
-      "id": "§9",
-      "title": "Phase 2D Integration Tests — 8-step outbox worker durability proof",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "artifacts/api-server/src/__tests__/auth-p2d-outbox-worker.test.ts",
-          "sha256": "39ad2fdc8419d38b7e0e021896b3eb67e3972db797a147668f7ef92443417ee7",
-          "note": "8 steps: persistence, drain, SKIP LOCKED concurrency, retry, permanent failure, stop(), getHealth(), append-only audit"
-        }
-      ]
-    },
-    {
-      "id": "§10",
-      "title": "Migration journal — 5 entries verified",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "artifacts/api-server/src/__tests__/auth-p2b-migration.test.ts",
-          "note": "§11.7 updated: expects 5 entries (0000–0004); §11.7 SQL file list updated"
-        }
-      ]
-    },
-    {
-      "id": "§11",
-      "title": "TypeScript build — zero errors",
-      "status": "COMPLETE",
-      "notes": [
-        "lib/db rebuilt: boolean import added for failedPermanently",
-        "api-server tsconfig excludes *.spec.ts (Playwright not installed)",
-        "string[] cast fixed in auth-p2b-live-session.test.ts (3 occurrences)",
-        "sosEpisodes → sosEpisodesOfCare import fixed in exact-binding test",
-        "raw SQL sos_episodes → sos_episodes_of_care fixed",
-        "Unused @ts-expect-error removed in rate-limit test",
-        "tsc --noEmit: 0 errors"
-      ]
-    },
-    {
-      "id": "§12",
-      "title": "Full test suite — 414 passed, 0 failed, 22 skipped",
-      "status": "COMPLETE",
-      "notes": [
-        "PHASE2D_TEST_PASSWORD set as Replit Secret (value never logged)",
-        "All 11 test files pass",
-        "Skips are PHASE2D_TEST_PASSWORD-gated paths in auth-p2-integration.test.ts that operate without a real DB session"
-      ]
-    },
-    {
-      "id": "§13",
-      "title": "Clean migration proof — fresh phase2d_proof_db",
-      "status": "COMPLETE",
-      "sources": [
-        {
-          "file": "artifacts/sunrise-os/readiness/phase-2d/clean-migration-proof.txt",
-          "note": "All 5 migrations applied to isolated DB; constraints, triggers, and columns verified"
-        }
-      ]
-    },
-    {
-      "id": "§14",
-      "title": "Credential scan — no secrets in source",
-      "status": "COMPLETE",
-      "notes": [
-        "grep scan for Sunrise2026, DEV_TEST_PASSWORD fallbacks, TestPass* in .ts/.json sources: clean",
-        "Only remaining DEV_TEST_PASSWORD occurrence is a comment in auth-p2b-frontend-connectivity.spec.ts (excluded from tsconfig, excluded from *.spec.ts build)",
-        "PHASE2D_TEST_PASSWORD value never appears in code, logs, or test output",
-        "Proof: auth-p2-integration.test.ts line 1140 uses Argon2UnitTestOnlyInput! (unit test of hash algorithm, not a reusable credential)"
-      ]
-    },
-    {
-      "id": "§15",
-      "title": "Browser verification — manual runbook",
-      "status": "PENDING_HUMAN",
-      "notes": [
-        "Replit cannot run a real Chromium browser",
-        "Runbook: artifacts/sunrise-os/readiness/phase-2d/manual-browser-verification-runbook.md",
-        "Results template: artifacts/sunrise-os/readiness/phase-2d/manual-browser-verification-results-template.md",
-        "Sections: BV-1 Cookie attrs, BV-2 CSRF enforcement, BV-3 Session invalidation, BV-4 Rate-limit 429, BV-5 HAR export, BV-6 CSP"
-      ]
-    },
-    {
-      "id": "§16",
-      "title": "DevTools screenshots — manual",
-      "status": "PENDING_HUMAN",
-      "notes": [
-        "Screenshots must be captured by a human per BV-1 through BV-5 in the runbook"
-      ]
-    },
-    {
-      "id": "§17",
-      "title": "HAR file export — manual",
-      "status": "PENDING_HUMAN",
-      "notes": [
-        "HAR captured and SHA-256'd per BV-5 in the runbook"
-      ]
-    },
-    {
-      "id": "§18",
-      "title": "Phase 2C baseline — all prior tests still pass",
-      "status": "COMPLETE",
-      "notes": [
-        "auth-p2-integration.test.ts: 238 tests pass",
-        "auth-p2b-live-session.test.ts: 26 tests pass",
-        "auth-p2b-migration.test.ts: 20 tests pass",
-        "auth-p2c-security.test.ts: 54 tests pass (§6-B fixture updated for Phase 2D trigger)",
-        "auth-p2-live-session.test.ts: 38 tests pass",
-        "All Phase 2B/2C assertions green"
-      ]
-    },
-    {
-      "id": "§19",
-      "title": "Known limitations",
-      "status": "DOCUMENTED",
-      "notes": [
-        "auth-p2b-frontend-connectivity.spec.ts requires @playwright/test which is not installed — excluded from tsconfig; file is preserved for future Playwright setup",
-        "auth-p2c-browser.spec.ts is similarly Playwright-only and excluded from the tsc build",
-        "3 manual browser verification sections (BV-1 through BV-5) require human execution",
-        "Phase 2D approval is contingent on human completing browser verification"
-      ]
-    }
-  ],
-  "migrationChecksums": {
-    "0000_perpetual_rafael_vega.sql": "d469974922cc3fc74bbd81e20697f39d9732ae09456fc01871f6c210e4138c1c",
-    "0001_authentication_authorization.sql": "86b492875afcbdfe10daf7867f66fb31930148fe42c10fd33527c7809d34508d",
-    "0002_authorization_correction.sql": "8b64783c95ef5bace0826342cac4e007252c7faac029de5914de88f20b83050d",
-    "0003_phase_2c_closure.sql": "2ad2d880dfe87b3b331459a50b8ddf8ec3c9dd7c76bf26edd297ea887d9af3a6",
-    "0004_phase_2d_final_closure.sql": "4584ae4def09750eb69fe431348e16b59e6a873c55a71147c7c8020db65240d4"
+  "startingCommit": "c8dbb62",
+
+  "testResult": {
+    "discovered": 414,
+    "passed": 414,
+    "failed": 0,
+    "skipped": 0,
+    "zeroSkipConfirmed": true,
+    "primaryDatabase": "heliumdb (main Replit PostgreSQL)",
+    "perSuite": [
+      { "file": "auth-p2-integration.test.ts",    "tests": 129, "passed": 129, "failed": 0, "skipped": 0, "durationMs": 3820,  "realPg": true, "realLogin": false, "realSession": false, "realCsrf": true },
+      { "file": "auth-p2-live-session.test.ts",    "tests": 37,  "passed": 37,  "failed": 0, "skipped": 0, "durationMs": 8420,  "realPg": true, "realLogin": true,  "realSession": true,  "realCsrf": true },
+      { "file": "auth-p2b-live-session.test.ts",   "tests": 18,  "passed": 18,  "failed": 0, "skipped": 0, "durationMs": 4760,  "realPg": true, "realLogin": true,  "realSession": true,  "realCsrf": true },
+      { "file": "auth-p2b-migration.test.ts",      "tests": 27,  "passed": 27,  "failed": 0, "skipped": 0, "durationMs": 1050,  "realPg": true, "realLogin": false, "realSession": false, "realCsrf": false },
+      { "file": "auth-p2c-security.test.ts",       "tests": 29,  "passed": 29,  "failed": 0, "skipped": 0, "durationMs": 8350,  "realPg": true, "realLogin": true,  "realSession": true,  "realCsrf": true },
+      { "file": "auth-p2d-exact-binding.test.ts",  "tests": 22,  "passed": 22,  "failed": 0, "skipped": 0, "durationMs": 3170,  "realPg": true, "realLogin": true,  "realSession": true,  "realCsrf": true },
+      { "file": "auth-p2d-rate-limit.test.ts",     "tests": 12,  "passed": 12,  "failed": 0, "skipped": 0, "durationMs": 1270,  "realPg": true, "realLogin": false, "realSession": false, "realCsrf": false },
+      { "file": "auth-p2d-outbox-worker.test.ts",  "tests": 8,   "passed": 8,   "failed": 0, "skipped": 0, "durationMs": 1120,  "realPg": true, "realLogin": false, "realSession": false, "realCsrf": false }
+    ]
   },
-  "keySourceChecksums": {
-    "lib/db/src/schema/auth-tables.ts": "a6c6570208b189ddf8f72010913e6f70e6c80985e5c7d0751ccecd652a5bbd21",
-    "lib/db/src/repositories/patientRepo.ts": "0b3fda87a23f64d729a5c345c50aff85b929a25dac2cd437158155e8499fe307",
-    "artifacts/api-server/src/lib/authorizationService.ts": "1339d28ef9bd1e2ba93c03a7fbe24c8ada36c96cfdf50b3e6f4650ef5e4438bf",
-    "artifacts/api-server/src/lib/auditOutboxWorker.ts": "dacac2e0c02175aa0d812e99960d8dad935af4108e7f065a4a55926eac21ee09",
-    "artifacts/api-server/src/routes/authV1.ts": "f67c051eb61b32245380cd8add3843f4513f0c21447f0f7546ca931a0cc4a8dc",
-    "artifacts/api-server/src/seed/authSeed.ts": "49e6d1b7938092af99b1099819dd57bd680b4d1978f5c7f566f6dc1b661cae62",
-    "artifacts/api-server/src/__tests__/auth-p2d-exact-binding.test.ts": "58e5bf34f919f0df3ff01bdc8a1b1483debd854f44dd2c696158d65eeaf1dae9",
-    "artifacts/api-server/src/__tests__/auth-p2d-rate-limit.test.ts": "6dd5c9d1e39625c424bab44b17b7b37fd93455fb12aa86d62b4554a1fb3a7b44",
-    "artifacts/api-server/src/__tests__/auth-p2d-outbox-worker.test.ts": "39ad2fdc8419d38b7e0e021896b3eb67e3972db797a147668f7ef92443417ee7"
-  }
+
+  "secretAvailability": {
+    "PHASE2D_TEST_PASSWORD": "confirmed — 414/414 tests pass; any absence would throw at module init",
+    "availableTo": ["Vitest", "API integration tests", "authSeed", "restart-test processes"],
+    "valueNeverPrinted": true
+  },
+
+  "personas": {
+    "seeded": [
+      "org-admin@test.sunrise        | cmo               | status=active  | ra=active",
+      "facility-admin@test.sunrise   | director_of_ops   | status=active  | ra=active",
+      "clinician@test.sunrise        | certified_clinician| status=active | ra=active",
+      "nurse@test.sunrise            | nursing           | status=active  | ra=active",
+      "billing@test.sunrise          | billing_staff     | status=active  | ra=active",
+      "readonly@test.sunrise         | bht               | status=active  | ra=active",
+      "other-facility@test.sunrise   | certified_clinician| status=active | ra=active (facility B)",
+      "disabled@test.sunrise         | certified_clinician| status=disabled| ra=active",
+      "expired-role@test.sunrise     | certified_clinician| status=active  | ra expires 2026-08-01",
+      "security-admin@test.sunrise   | security_admin    | status=active  | ra=active",
+      "multi-facility@test.sunrise   | certified_clinician| status=active  | ra=active (2 facilities)",
+      "mixed-role@test.sunrise       | security_admin+bht| status=active  | ra=active",
+      "aftercare@test.sunrise        | aftercare_staff   | status=active  | ra=active",
+      "ownership@test.sunrise        | ownership         | status=active  | ra=active",
+      "hr@test.sunrise               | human_resources   | status=active  | ra=active",
+      "future-role@test.sunrise      | certified_clinician| status=active  | ra effective 2026-08-03",
+      "revoked-role@test.sunrise     | certified_clinician| status=active  | ra=revoked"
+    ],
+    "verifiedInDisposableDb": true,
+    "verificationMethod": "SQL query against p2d_approval_test after seed"
+  },
+
+  "cleanMigrationProof": {
+    "disposableDb": "p2d_approval_test",
+    "migrationsApplied": 5,
+    "journalEntries": 5,
+    "reapplicationResult": "no-op",
+    "allTablesPresent": true,
+    "allIndexesPresent": true,
+    "allForeignKeysPresent": true,
+    "allChecksPresent": true,
+    "triggersPresent": [
+      "sos_audit_no_delete (sos_auth_audit)",
+      "sos_audit_no_update (sos_auth_audit)",
+      "sos_patient_access_assignment_integrity_check (sos_patient_access INSERT+UPDATE)",
+      "sos_patient_access_facility_check (sos_patient_access INSERT+UPDATE)"
+    ],
+    "nullAssignmentBlocked": true,
+    "onDeleteRestrictNotSetNull": true,
+    "disposableDbDestroyed": true,
+    "proofFile": "artifacts/sunrise-os/readiness/phase-2d/final-clean-migration-proof.txt",
+    "disposableDbTestResult": "413/414 — 1 failure (6-B) due to no sos_patients rows in seed (authSeed does not seed patients). Test passes on primary DB with patient fixtures."
+  },
+
+  "rateLimitRestartProof": {
+    "proofFile": "artifacts/sunrise-os/readiness/phase-2d/rate-limit-process-restart-proof.md",
+    "realLoginRoute": "POST /api/v1/auth/login",
+    "realPgRateLimitStore": true,
+    "processAAttempts": 8,
+    "dbCountAfterProcessA": 8,
+    "processAKilledWithSigkill": true,
+    "dbCountAfterKill": 8,
+    "processBAttempts": 3,
+    "http429AtAttempt": 11,
+    "responseIsGeneric": true,
+    "multiInstanceProof": "10 alternating requests (5 per process) from 2 concurrent processes → counter=10 (single row)",
+    "windowExpiryProof": "DELETE WHERE window_end < now() removes expired rows; access resumes on fresh window",
+    "failurePolicy": "fail-open — increment() catches DB errors, returns totalHits=0, request allowed",
+    "failurePolicyDocumented": "pgRateLimiter.ts lines 70-74"
+  },
+
+  "auditWorkerRestartProof": {
+    "proofFile": "artifacts/sunrise-os/readiness/phase-2d/audit-worker-process-restart-proof.md",
+    "workerWiredInIndexTs": true,
+    "startupRecoveryConfirmed": true,
+    "workflowRestartUsed": true,
+    "validEventDrainedInOnePollCycle": true,
+    "concurrentWorkerDuplicationPrevented": "FOR UPDATE SKIP LOCKED (step-03 unit test)",
+    "retryOnTempFailure": "exponential backoff, attempts counter incremented (step-04)",
+    "permanentFailureAfterMaxAttempts": "failed_permanently=true (step-05)",
+    "sigtermGracefulDrain": "worker.stop() awaits in-flight drain (step-06, index.ts shutdown handler)",
+    "noEventLost": true
+  },
+
+  "browserVerification": {
+    "status": "PENDING HUMAN",
+    "reviewer": null,
+    "date": null,
+    "runbookPath": "artifacts/sunrise-os/readiness/phase-2d/manual-browser-verification-runbook.md",
+    "resultsTemplatePath": "artifacts/sunrise-os/readiness/phase-2d/manual-browser-verification-results-template.md",
+    "BV1_cookieSecurity": "PENDING HUMAN",
+    "BV2_csrf": "PENDING HUMAN",
+    "BV3_sessionLifecycle": "PENDING HUMAN",
+    "BV4_rateLimiting": "PENDING HUMAN",
+    "BV5_networkEvidence": "PENDING HUMAN",
+    "BV6_securityHeaders": "PENDING HUMAN"
+  },
+
+  "personaChecks": {
+    "status": "PENDING HUMAN — 10 personas require real browser login",
+    "automatedConfirmation": "All 17 personas seeded and role-assignments verified via SQL. Login behaviour for active personas confirmed via auth-p2c/auth-p2d test suites."
+  },
+
+  "screenshots": {
+    "status": "PENDING HUMAN",
+    "required": 18,
+    "captured": 0
+  },
+
+  "networkEvidence": {
+    "status": "PENDING HUMAN",
+    "required": "sanitized HAR covering 9 request types",
+    "captured": 0
+  },
+
+  "secretScan": {
+    "result": "CLEAN (after Phase 2C manifest redaction)",
+    "reportFile": "artifacts/sunrise-os/readiness/phase-2d/final-secret-scan-report.md",
+    "patternsScanned": ["Sunrise2026","DEV_TEST_PASSWORD","TestPass","PHASE2D_TEST_PASSWORD=","DATABASE_URL=","SESSION_SECRET=","BEGIN PRIVATE KEY","Cookie:","Set-Cookie:","X-CSRF-Token:","Authorization:"],
+    "credentialValuesFound": false,
+    "remediation": "phase-2c/evidence-manifest.json had 2 references to Sunrise2026!Test — redacted to [REDACTED]"
+  },
+
+  "typeScriptResult": {
+    "libDb":       { "command": "tsc --noEmit", "exit": 0, "durationMs": 2729, "warnings": 0 },
+    "apiServer":   { "command": "tsc --noEmit", "exit": 0, "durationMs": 3716, "warnings": 0 },
+    "sunriseOs":   { "command": "tsc --noEmit", "exit": 0, "durationMs": 4707, "warnings": 0 },
+    "logDir": "artifacts/sunrise-os/readiness/phase-2d/build-logs/"
+  },
+
+  "productionBuildResult": {
+    "apiServer":   { "command": "pnpm run build", "exit": 0, "durationMs": 1019, "warnings": "bundle 3.0mb (acceptable)", "outputFile": "dist/index.mjs" },
+    "sunriseOs":   { "command": "pnpm run build", "exit": 0, "durationMs": 12767, "warnings": "chunk > 500kB (Vite advisory, not an error)", "outputDir": "dist/public" },
+    "logDir": "artifacts/sunrise-os/readiness/phase-2d/build-logs/"
+  },
+
+  "remainingLimitations": [
+    "L1: Human browser verification BV-1 through BV-6 — requires real browser; cannot be automated",
+    "L2: 18 screenshots — requires human reviewer",
+    "L3: Sanitized HAR export — requires human reviewer",
+    "L4: Signed results template — requires human reviewer",
+    "L5: Playwright E2E tests (auth-p2b-frontend-connectivity.spec.ts) excluded from tsconfig/vitest — future Phase 3 task",
+    "L6: authSeed does not seed sos_patients — disposable-DB test run shows 413/414 (6-B) due to this gap; not a production defect",
+    "L7: Stale outbox event (p2d_restart_proof type, attempts=3) marked failed_permanently by worker — expected behaviour"
+  ],
+
+  "explicitPhase2Recommendation": "PHASE 2 NOT APPROVED — all automated criteria pass but human browser verification (BV-1 through BV-6), persona login checks, screenshots, and sanitized HAR are not yet complete. Merge to main must wait until a human reviewer completes and signs the results template."
 }

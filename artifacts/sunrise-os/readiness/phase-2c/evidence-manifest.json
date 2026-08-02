@@ -247,9 +247,9 @@
   },
 
   "§14_runtime_screenshots": {
-    "note": "Runtime browser devtools screenshots cannot be captured autonomously. The app is live and responding at the Replit dev domain. A reviewer with browser access can navigate to the app preview, log in with any of the 16 seeded personas (password: Sunrise2026!Test), and capture screenshots.",
+    "note": "Runtime browser devtools screenshots cannot be captured autonomously. The app is live and responding at the Replit dev domain. A reviewer with browser access can navigate to the app preview, log in with any of the 16 seeded personas (password: [REDACTED — use PHASE2D_TEST_PASSWORD secret]), and capture screenshots.",
     "app_entry_point": "artifacts/sunrise-os (Vite dev server)",
-    "seed_credentials": "See artifacts/api-server/src/seed/authSeed.ts for the full persona list. All passwords: Sunrise2026!Test (set via DEV_TEST_PASSWORD env var during seed)."
+    "seed_credentials": "See artifacts/api-server/src/seed/authSeed.ts for the full persona list. All passwords hashed from PHASE2D_TEST_PASSWORD Replit Secret (value not stored here)."
   },
 
   "§15_browser_network_evidence": {

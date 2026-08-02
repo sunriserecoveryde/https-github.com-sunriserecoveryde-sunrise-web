@@ -1,0 +1,733 @@
+# Sunrise OS — Phase 2 Final Approval Execution
+
+Continue on:
+
+`readiness/p0-phase-2d-final-closure`
+
+Do not create another branch.
+
+Do not begin Phase 3.
+
+Do not merge into `main` until every approval criterion below passes.
+
+Do not add new features or refactor unrelated code.
+
+## Objective
+
+Complete the remaining Phase 2 approval gates:
+
+1. Run every security test with zero skips.
+2. Prove the PostgreSQL rate limiter across real API-process restart.
+3. Prove the audit-outbox worker across real API-process restart.
+4. Guide the human reviewer through browser verification.
+5. Incorporate the signed browser results, screenshots, and sanitized network evidence.
+6. Regenerate the complete final review ZIP.
+7. Produce an explicit Phase 2 merge recommendation.
+
+---
+
+# 1. Confirm the Phase 2D test secret is available
+
+The Replit Secret already exists:
+
+`PHASE2D_TEST_PASSWORD`
+
+Verify that it is available to:
+
+* Vitest
+* API integration tests
+* Authentication seed
+* Restart-test processes
+* Browser-test environment
+
+Do not print its value.
+
+Do not copy it into:
+
+* Source files
+* Shell history included in evidence
+* Logs
+* Screenshots
+* HAR files
+* Manifests
+* Documentation
+* ZIP contents
+
+Fail immediately if the secret is unavailable.
+
+Do not use a fallback password.
+
+---
+
+# 2. Seed the isolated approval database
+
+Create or reset a dedicated fictitious Phase 2 approval database.
+
+Use only synthetic data.
+
+Seed all required personas, including:
+
+* CMO
+* Facility administrator
+* Clinician
+* Nurse
+* Billing
+* BHT
+* Aftercare
+* Security administrator
+* Human resources
+* Multi-facility user
+* Mixed-role user
+* Disabled user
+* Future-role user
+* Expired-role user
+* Revoked-role user
+* Unrelated-facility user
+
+Use the value of `PHASE2D_TEST_PASSWORD` only for hashing the synthetic credentials.
+
+Do not print the plaintext value.
+
+Verify every seeded account has the expected organization, facilities, assignments, and permissions.
+
+---
+
+# 3. Run every automated test with zero skips
+
+Run the complete database, API, frontend, and Phase 2 security test suites with the Replit Secret available.
+
+The previous result was:
+
+* 414 passed
+* 22 skipped
+
+The final approval run must have:
+
+* Zero failed tests
+* Zero skipped security tests
+
+Report counts accurately as:
+
+* Discovered
+* Passed
+* Failed
+* Skipped
+
+Do not report “414 total” if additional skipped tests were discovered.
+
+Run these suites explicitly:
+
+```text
+auth-p2-integration.test.ts
+auth-p2-live-session.test.ts
+auth-p2b-live-session.test.ts
+auth-p2b-migration.test.ts
+auth-p2c-security.test.ts
+auth-p2d-exact-binding.test.ts
+auth-p2d-rate-limit.test.ts
+auth-p2d-outbox-worker.test.ts
+```
+
+For every suite report:
+
+* Tests discovered
+* Passed
+* Failed
+* Skipped
+* Duration
+* Real PostgreSQL used
+* Real login route used
+* Real session cookie used
+* Real CSRF middleware used
+
+Do not hide or exclude a failing test.
+
+Do not change a test to skip in order to obtain a green result.
+
+---
+
+# 4. Reprove clean migrations
+
+Create a new empty disposable PostgreSQL database.
+
+Using only the normal checked-in migration runner, apply:
+
+```text
+0000_perpetual_rafael_vega.sql
+0001_authentication_authorization.sql
+0002_authorization_correction.sql
+0003_phase_2c_closure.sql
+0004_phase_2d_final_closure.sql
+```
+
+Verify:
+
+* Migration journal has five entries.
+* All expected tables exist.
+* All expected indexes exist.
+* All expected foreign keys exist.
+* All expected checks exist.
+* All audit triggers exist.
+* Audit-outbox structures exist.
+* Active patient access requires a role assignment.
+* Patient-access integrity trigger exists.
+* `ON DELETE SET NULL` is not used for the role-assignment relationship.
+* Null assignment access cannot authorize a patient.
+
+Run the migration command again.
+
+Confirm:
+
+* No pending migrations
+* No manual DDL
+* No manual journal changes
+* No direct execution of migration SQL through application code
+
+Seed the database and run the approval tests against it.
+
+Destroy the disposable database afterward.
+
+Save sanitized output to:
+
+`artifacts/sunrise-os/readiness/phase-2d/final-clean-migration-proof.txt`
+
+---
+
+# 5. Prove the rate limiter across real process restart
+
+Use the actual login route and actual `PgRateLimitStore`.
+
+Do not prove this only through direct calls to `increment()`.
+
+Required sequence:
+
+1. Start API process A.
+2. Submit failed login attempts through `/api/v1/auth/login`.
+3. Confirm the PostgreSQL rate-limit record exists.
+4. Stop process A completely.
+5. Start API process B using the same PostgreSQL database.
+6. Continue the failed login sequence.
+7. Confirm the previous count remains.
+8. Reach the configured threshold.
+9. Confirm HTTP 429.
+10. Confirm the response does not reveal whether the account exists.
+11. Start a second concurrent API process.
+12. Confirm both API processes share the counter.
+13. Allow or simulate window expiration.
+14. Confirm access resumes.
+15. Test the documented rate-limit-store failure policy.
+
+Record:
+
+* Process IDs or sanitized process identifiers
+* Request count
+* Status sequence
+* Database counter before restart
+* Database counter after restart
+* Multi-process result
+* Window-expiration result
+* Failure policy
+
+Do not include credentials.
+
+Save evidence to:
+
+`artifacts/sunrise-os/readiness/phase-2d/rate-limit-process-restart-proof.md`
+
+---
+
+# 6. Prove the audit worker across real process restart
+
+Use the real audit-outbox worker.
+
+Required sequence:
+
+1. Create a pending outbox event.
+2. Confirm it exists in PostgreSQL.
+3. Stop the API before the event is finalized.
+4. Start a new API process.
+5. Confirm startup recovery finds the event.
+6. Confirm the worker writes the final audit event.
+7. Confirm the outbox event is marked processed.
+8. Confirm exactly one final audit record exists.
+9. Start two worker processes.
+10. Confirm they do not duplicate an event.
+11. Test temporary failure and retry.
+12. Test permanent failure and review state.
+13. Test graceful SIGTERM while a drain is in progress.
+14. Confirm no event is lost.
+
+Save sanitized evidence to:
+
+`artifacts/sunrise-os/readiness/phase-2d/audit-worker-process-restart-proof.md`
+
+---
+
+# 7. Prepare the real browser environment
+
+Start:
+
+* Real Sunrise OS frontend
+* Real API server
+* Real PostgreSQL approval database
+
+Use:
+
+```text
+NODE_ENV=production
+VITE_SUNRISE_DATA_MODE=production
+```
+
+Use the correct production-test API base and frontend origin.
+
+Do not use:
+
+* Playwright route interception
+* Mock Service Worker
+* Static JSON fixtures
+* Mock repositories
+* Development identity headers
+* Demo identities
+* Demo patient data
+
+Confirm the production login page loads.
+
+Provide the human reviewer with:
+
+* The browser preview URL
+* The organization slug
+* The fictitious usernames to test
+* The Replit Secret name, not its value
+* The runbook path
+
+Do not expose the password in chat or output.
+
+---
+
+# 8. Pause for the human browser verification
+
+A human reviewer must execute:
+
+`artifacts/sunrise-os/readiness/phase-2d/manual-browser-verification-runbook.md`
+
+Do not mark the browser portion complete before the reviewer supplies results.
+
+The human reviewer must verify:
+
+## BV-1 — Cookie security
+
+* HttpOnly
+* Secure
+* Correct SameSite
+* Correct path
+* No token in localStorage
+* No token in sessionStorage
+* No session ID in URLs
+
+## BV-2 — CSRF
+
+* Missing login CSRF fails
+* Invalid login CSRF fails
+* Valid pre-login CSRF succeeds
+* Authenticated write requires refreshed CSRF
+* Logout without CSRF fails
+* Logout with valid CSRF succeeds
+
+## BV-3 — Session lifecycle
+
+* Login succeeds
+* Patient List loads
+* Refresh preserves session
+* Logout succeeds
+* Protected API returns 401 after logout
+* Old cookie does not restore access
+
+## BV-4 — Rate limiting
+
+* Repeated invalid login reaches HTTP 429 using the test threshold
+
+## BV-5 — Browser network evidence
+
+Capture sanitized requests for:
+
+* Pre-login CSRF
+* Login
+* Authenticated CSRF refresh
+* Session
+* Patient List
+* Patient Detail
+* Unauthorized Patient Detail
+* Logout
+* Post-logout 401
+
+## BV-6 — Security headers
+
+Verify:
+
+* CSP
+* Frame protection
+* MIME sniffing protection
+* Referrer policy
+* Cache controls
+* HSTS where applicable to the actual deployment
+
+---
+
+# 9. Required human persona checks
+
+The human browser reviewer must test at least:
+
+1. CMO
+2. Facility clinician
+3. Billing user
+4. BHT assignment-limited user
+5. Mixed-role user
+6. Facility administrator
+7. Disabled user
+8. Future-role user
+9. Expired-role user
+10. Unrelated-facility user
+
+For each persona record:
+
+* Login result
+* Patient List count
+* Expected Patient List count
+* Visible patient fields
+* Authorized Patient Detail result
+* Unauthorized Patient Detail result
+* Cross-facility result
+* Administrative result where applicable
+* Logout result
+* Related audit event
+
+Do not classify automated HTTP testing as this human browser verification.
+
+---
+
+# 10. Required screenshots
+
+The human reviewer must capture at least:
+
+1. Production login
+2. Invalid-CSRF login rejection
+3. Invalid credentials
+4. CMO Patient List
+5. Facility clinician Patient List
+6. Billing minimum-necessary Patient List
+7. BHT assignment-limited Patient List
+8. Mixed-role Patient List
+9. Authorized Patient Detail
+10. Unauthorized Patient Detail
+11. Cross-facility denial
+12. Facility-admin grant denial
+13. Disabled-user login
+14. Future-role denial
+15. Expired-role denial
+16. Logout result
+17. Production mode without demo UI
+18. Demo mode with demo banner
+
+Every production patient screenshot must be labeled:
+
+`Real API — no route interception`
+
+Do not capture:
+
+* Passwords
+* Cookies
+* CSRF values
+* Session IDs
+* Real patient data
+
+---
+
+# 11. Human results submission
+
+The human reviewer must complete and sign:
+
+`artifacts/sunrise-os/readiness/phase-2d/manual-browser-verification-results-template.md`
+
+The completed result must include:
+
+* Reviewer name
+* Date and time
+* Browser and version
+* Environment
+* BV-1 through BV-6 results
+* Persona results
+* Screenshot filenames
+* Sanitized HAR or network-evidence filename
+* Failures or deviations
+* Final reviewer recommendation
+
+Do not prefill unperformed tests as passed.
+
+If the reviewer finds a failure:
+
+* Record the failure.
+* Correct only that defect.
+* Repeat the affected automated and browser checks.
+* Do not proceed to merge while the failure remains.
+
+---
+
+# 12. Add browser evidence to the archive
+
+After the human reviewer completes the runbook, add:
+
+* Signed browser results
+* Screenshots
+* Sanitized HAR or network export
+* Browser test notes
+* Exact persona counts
+* Exact field observations
+
+Run a content scan to confirm the browser evidence contains no:
+
+* Password values
+* Cookie values
+* Session IDs
+* CSRF token values
+* Authorization headers
+* Database credentials
+* Private keys
+* Real patient data
+
+---
+
+# 13. Run final secret scans
+
+Scan the repository and final archive.
+
+At minimum search for:
+
+```text
+Sunrise2026
+DEV_TEST_PASSWORD
+TestPass
+PHASE2D_TEST_PASSWORD=
+DATABASE_URL=
+SESSION_SECRET=
+BEGIN PRIVATE KEY
+Cookie:
+Set-Cookie:
+X-CSRF-Token:
+Authorization:
+```
+
+The name `PHASE2D_TEST_PASSWORD` may appear.
+
+Its value must not appear.
+
+Review matches manually so expected source-code header names are not confused with leaked values.
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-2d/final-secret-scan-report.md`
+
+---
+
+# 14. Run TypeScript and production builds again
+
+Run:
+
+* Database package TypeScript/build
+* API-server TypeScript
+* API-server production build
+* Sunrise OS TypeScript
+* Sunrise OS production build
+
+Use the final committed code.
+
+Report:
+
+* Command
+* Result
+* Duration
+* Warnings
+* Required environment-variable names
+
+Do not expose environment values.
+
+Save sanitized output under:
+
+`artifacts/sunrise-os/readiness/phase-2d/build-logs/`
+
+---
+
+# 15. Update the evidence manifest
+
+Update:
+
+`artifacts/sunrise-os/readiness/phase-2d/evidence-manifest.json`
+
+Include:
+
+* Final branch
+* Final commit
+* Accurate test counts
+* Zero-skip confirmation
+* Migration proof
+* Rate-limit process-restart proof
+* Audit-worker process-restart proof
+* Human browser reviewer
+* Human browser verification date
+* BV-1 through BV-6 results
+* Persona results
+* Screenshot inventory
+* Network-evidence inventory
+* Secret-scan result
+* TypeScript results
+* Production-build results
+* Remaining limitations
+* Explicit Phase 2 recommendation
+
+Validate the JSON.
+
+---
+
+# 16. Regenerate the final review ZIP
+
+Regenerate:
+
+`artifacts/sunrise-os/readiness/phase-2d-access-binding-evidence-review.zip`
+
+Include:
+
+* All five migrations
+* Migration metadata
+* Database schema
+* Authorization and repository code
+* Rate limiter
+* Audit worker
+* Tests
+* Zero-skip test logs
+* Clean migration proof
+* Rate-limit restart proof
+* Audit-worker restart proof
+* Human browser runbook
+* Completed and signed browser results
+* Screenshots
+* Sanitized HAR/network evidence
+* TypeScript logs
+* Production build logs
+* Secret-scan report
+* Updated evidence manifest
+* Complete SHA-256 manifest
+
+The SHA manifest must cover every ZIP entry except itself.
+
+Do not include:
+
+* Passwords
+* Password hashes
+* Cookies
+* Session IDs
+* CSRF values
+* Reset tokens
+* Environment files
+* Credentials
+* Database dumps
+* Real patient data
+* Dependency caches
+* Build caches
+* Prior ZIP files
+* Duplicate convenience copies
+
+---
+
+# 17. Verify the final archive
+
+Run:
+
+```bash id="nhadv3"
+unzip -t artifacts/sunrise-os/readiness/phase-2d-access-binding-evidence-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-2d-access-binding-evidence-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-2d-access-binding-evidence-review.zip
+```
+
+Confirm:
+
+* ZIP integrity passes
+* Secret scan passes
+* SHA-manifest coverage is complete
+* All tests ran with zero skips
+* Human browser results are included and signed
+* Screenshots are present
+* Network evidence is present
+* No previous review ZIP is nested inside
+
+---
+
+# Phase 2 approval criteria
+
+Recommend Phase 2 for merge only when all are true:
+
+* All discovered tests pass.
+* Zero tests fail.
+* Zero required security tests skip.
+* Clean migrations work from an empty database.
+* Migration reapplication succeeds.
+* Exact patient-access binding is enforced.
+* Rate limiter survives a real API restart.
+* Multiple API instances share rate-limit state.
+* Audit outbox survives a real API restart.
+* Audit workers do not duplicate events.
+* Human browser verification passes.
+* Required screenshots are captured.
+* Sanitized network evidence is captured.
+* Secret scans are clean.
+* TypeScript passes.
+* Production builds pass.
+* Final ZIP is complete and fully checksummed.
+
+---
+
+# Required final response
+
+Provide:
+
+1. Branch
+2. Starting commit
+3. Final commit
+4. Working-tree status
+5. Tests discovered
+6. Tests passed
+7. Tests failed
+8. Tests skipped
+9. Real-login tests result
+10. Clean migration result
+11. Migration reapplication result
+12. Rate-limit real-process restart result
+13. Multi-instance rate-limit result
+14. Audit-worker real-process restart result
+15. Audit duplicate-prevention result
+16. Human browser reviewer
+17. Human browser verification date
+18. BV-1 result
+19. BV-2 result
+20. BV-3 result
+21. BV-4 result
+22. BV-5 result
+23. BV-6 result
+24. Human personas tested
+25. Screenshot count
+26. Network-evidence count
+27. Repository secret-scan result
+28. ZIP secret-scan result
+29. TypeScript result
+30. Production-build result
+31. Final ZIP path
+32. ZIP size
+33. ZIP SHA-256
+34. ZIP entry count
+35. SHA-manifest coverage
+36. Remaining limitations
+37. Explicit answer: `PHASE 2 APPROVED FOR MERGE` or `PHASE 2 NOT APPROVED`
+
+Do not begin Phase 3.
+
+Do not merge into `main` automatically.
+
+Stop and present the evidence for final human approval.
