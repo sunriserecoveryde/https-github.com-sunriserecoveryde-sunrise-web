@@ -1,0 +1,744 @@
+# Sunrise OS — Phase 2 Evidence Correction and Final Package
+
+Continue on:
+
+`readiness/p0-authentication-authorization`
+
+Do not begin Phase 3.
+
+Do not merge into `main`.
+
+Do not add unrelated features.
+
+## Objective
+
+Resolve the remaining evidence defects in the Phase 2 handoff and produce a final review package proving that authentication, sessions, CSRF, authorization, migrations, audit persistence, rate limiting, and real frontend-to-API connectivity work as required.
+
+Passing tests alone are not sufficient when tests use documentation fallbacks or when migrations were applied manually.
+
+---
+
+# 1. Report the Exact Final Git State
+
+Run:
+
+```bash
+git branch --show-current
+git status --short
+git log --oneline --decorate -30
+git rev-parse HEAD
+git merge-base --is-ancestor HEAD main
+```
+
+Provide:
+
+* Branch
+* Phase 1A base commit
+* Initial Phase 2 commit
+* Every Phase 2 correction commit
+* Security-verification commit
+* Final HEAD
+* Working-tree status
+* Confirmation that the branch is not merged into `main`
+
+Do not use `HEAD` as a substitute for the actual commit hash.
+
+---
+
+# 2. Correct the Migration-Journal Problem
+
+The verification log states:
+
+> The DB migration journal has only 1 row — the Phase 2 migration was applied directly.
+
+This is not acceptable as final migration evidence.
+
+## Required correction
+
+Ensure every Phase 2 schema change exists in checked-in, ordered migration files and is registered through the normal migration system.
+
+Do not:
+
+* Apply Phase 2 tables directly through ad hoc SQL
+* Repair the final test database manually
+* Insert migration-journal rows manually
+* Change tests merely to accept an incomplete journal
+
+## Clean migration proof
+
+Create a disposable isolated PostgreSQL database.
+
+Run only the checked-in migration command.
+
+Required sequence:
+
+1. Confirm the target is empty.
+2. Apply Phase 1A migrations.
+3. Apply Phase 2 migrations.
+4. Confirm all Phase 1A and Phase 2 tables exist.
+5. Confirm all indexes exist.
+6. Confirm all foreign keys exist.
+7. Confirm all check constraints exist.
+8. Confirm the migration journal contains the expected entries.
+9. Run the migration command again.
+10. Confirm no pending migrations.
+11. Seed fictitious authentication users.
+12. Run database tests.
+13. Destroy the disposable target.
+
+If the existing migration sequence cannot reproduce the schema:
+
+* Generate or repair the versioned migration.
+* Repeat the proof from an empty target.
+* Do not retain direct-SQL setup as the official process.
+
+Provide:
+
+* Migration filenames
+* Expected journal entries
+* Actual journal entries
+* Clean migration output
+* Reapplication output
+* Confirmation that no manual DDL was used
+
+---
+
+# 3. Remove All Documentation-Only Security Test Fallbacks
+
+Search the tests for:
+
+* `design-doc`
+* `documentation fallback`
+* `documented behavior`
+* `skip`
+* `todo`
+* Assertions that only inspect source-code strings
+* Tests passing because a document says a control exists
+
+Security controls must be tested through executable behavior where practical.
+
+Documentation may supplement tests.
+
+It cannot replace runtime proof for:
+
+* CSRF issuance
+* CSRF validation
+* Cookie parsing
+* Session rotation
+* Session expiration
+* Logout
+* Session revocation
+* Authentication
+* Authorization
+* CORS
+* Rate limiting
+* Database constraints
+* Audit persistence
+* Frontend-to-API connectivity
+
+List every documentation-only assertion that remains and explain why it cannot be tested automatically.
+
+No critical security acceptance criterion may rely only on a documentation assertion.
+
+---
+
+# 4. Prove CSRF Through Real HTTP Integration Tests
+
+Use Supertest agents or an equivalent real cookie-preserving HTTP test client.
+
+Do not mock the CSRF library.
+
+Do not replace failed CSRF tests with documentation assertions.
+
+Test this exact sequence:
+
+1. Request a pre-login CSRF token.
+2. Confirm the CSRF cookie is set.
+3. Submit valid login with the token.
+4. Confirm the session is regenerated.
+5. Confirm the pre-login token is no longer accepted for authenticated writes.
+6. Request a new authenticated CSRF token.
+7. Submit logout using the refreshed token.
+8. Confirm logout succeeds.
+9. Confirm the session becomes invalid.
+10. Confirm a second logout fails safely.
+11. Missing CSRF token fails.
+12. Invalid CSRF token fails.
+13. Token from a different session fails.
+14. Token from an expired session fails.
+15. Administrative write without CSRF fails.
+16. Administrative write with valid CSRF proceeds to authorization.
+17. Safe GET requests behave according to the documented policy.
+
+Record:
+
+* HTTP status
+* Expected result
+* Actual result
+* Pass/fail
+
+Do not expose token or cookie values in evidence.
+
+---
+
+# 5. Prove the Production Session Store
+
+Report the exact production session-store technology.
+
+Acceptable examples:
+
+* PostgreSQL-backed session store
+* Redis-backed session store
+* Another approved durable shared store
+
+Unacceptable for production:
+
+* Express `MemoryStore`
+* Process-local JavaScript map
+* In-memory-only adapter
+
+Required tests:
+
+1. Login creates a durable session.
+2. Restart the API server.
+3. Existing session remains valid.
+4. Logout revokes the session.
+5. Restart the API server again.
+6. Revoked session remains invalid.
+7. Idle expiration works.
+8. Absolute expiration works.
+9. User disablement invalidates active access.
+10. Role change is reflected according to documented refresh policy.
+11. Session-store outage fails closed.
+12. Cleanup removes expired sessions.
+
+Provide:
+
+* Store package or implementation
+* Session table or key structure
+* Cleanup strategy
+* Failure behavior
+* Restart-test result
+
+If production still uses `MemoryStore`, replace it before packaging.
+
+---
+
+# 6. Prove Shared Rate Limiting
+
+Report the exact rate-limit store.
+
+Production must not rely on an in-memory-only counter.
+
+Required tests:
+
+* Invalid login threshold
+* Unknown-user login threshold
+* Valid login after the configured window
+* One account attacked from multiple sources
+* Multiple accounts attacked from one source
+* Counter persists across API restart
+* Multiple API instances share the same limit state, where testable
+* Store outage fails safely
+* Generic public response does not disclose account existence
+
+Provide:
+
+* Store technology
+* Threshold
+* Window
+* Key strategy
+* Proxy trust configuration
+* Restart result
+* Multi-instance design
+
+If the limiter is in memory, replace it or block production readiness explicitly.
+
+---
+
+# 7. Prove Authentication Audit Persistence
+
+Identify the exact audit table and repository.
+
+Run real operations and query the persisted audit records.
+
+Required events:
+
+* Login success
+* Login failure
+* Logout
+* Session creation
+* Session revocation
+* Session expiration
+* Account disablement
+* Account reactivation
+* Role assignment
+* Role revocation
+* Facility assignment
+* Facility revocation
+* Patient assignment
+* Patient assignment revocation
+* Authorization denial
+
+Verify that audit records contain:
+
+* Event ID
+* Event type
+* Outcome
+* Timestamp
+* Organization
+* User where known
+* Session where appropriate
+* Reason code
+* Target user for administrative events
+
+Verify they do not contain:
+
+* Password
+* Password hash
+* Session token
+* Cookie value
+* CSRF token
+* Reset token
+* Database URL
+* Clinical narrative
+
+Restart the API and confirm audit records remain available.
+
+Do not classify console logs as durable audit evidence.
+
+---
+
+# 8. Prove Authorization With Real Database and API Requests
+
+Do not rely only on unit testing the `authorize()` function.
+
+Create real fictitious users and assignments.
+
+Test:
+
+## Organization administrator
+
+* Can list appropriate patients across authorized organization facilities.
+* Cannot access another organization.
+
+## Facility-limited user
+
+* Can list only assigned facility patients.
+* Cannot broaden scope through query parameters or headers.
+
+## Multi-facility user
+
+* Can list the union of authorized facilities.
+* Cannot access unassigned facilities.
+
+## Patient-assignment-limited user
+
+* Can access only assigned patients.
+* Cannot access another patient by known UUID.
+
+## Read-only user
+
+* Can perform authorized reads.
+* Cannot use administrative or unsupported write endpoints.
+
+## Disabled user
+
+* Cannot authenticate.
+* Existing session becomes invalid.
+
+## Expired-role user
+
+* Cannot gain access from the expired assignment.
+
+## Revoked-assignment user
+
+* Cannot access the patient after revocation.
+
+Use:
+
+* Real PostgreSQL records
+* Real session cookies
+* Real API requests
+* Real authorization middleware
+
+Do not use development identity headers.
+
+---
+
+# 9. Prove Real Frontend-to-API Connectivity
+
+Create a working Replit preview or test deployment where the Sunrise OS frontend reaches the real API server.
+
+Correct the Vite proxy, API base, reverse proxy, or Replit routing configuration as necessary.
+
+Do not use Playwright `route()`.
+
+Do not use static API fixtures.
+
+Do not use mocked repositories.
+
+Required sequence:
+
+1. Open production-mode login.
+2. Log in with a fictitious seeded user.
+3. Confirm login response from real API.
+4. Confirm secure session cookie exists.
+5. Load `/api/v1/auth/session`.
+6. Load Patient List from real API.
+7. Open Patient Detail from real API.
+8. Load active episode from real API.
+9. Refresh the page.
+10. Confirm session and patient data persist.
+11. Log out with valid CSRF token.
+12. Confirm patient API returns 401 after logout.
+
+Capture browser network evidence showing:
+
+* Request path
+* Response status
+* Real API host or routed origin
+* No route interception
+* No mock marker
+* No development identity header
+
+Do not include cookie values or passwords.
+
+---
+
+# 10. Run the Full Test Suite Without Security Fallbacks
+
+Run all test suites after correcting migration and security evidence.
+
+Report separately:
+
+## Database
+
+* Test files
+* Tests
+* Passed
+* Failed
+* Skipped
+* Duration
+
+## API server
+
+* Test files
+* Tests
+* Passed
+* Failed
+* Skipped
+* Duration
+
+## Sunrise OS
+
+* Test files
+* Tests
+* Passed
+* Failed
+* Skipped
+* Duration
+
+## End-to-end tests
+
+* Test files
+* Tests
+* Passed
+* Failed
+* Skipped
+* Duration
+
+Also report:
+
+* Combined total
+* Tests using mocks
+* Tests using real PostgreSQL
+* Tests using real HTTP
+* Tests using real browser
+* Documentation-only checks
+
+No skipped security test may be hidden from the final summary.
+
+---
+
+# 11. Run TypeScript and Production Builds
+
+Run TypeScript for:
+
+* `@workspace/db`
+* `@workspace/api-server`
+* `@workspace/sunrise-os`
+
+Run production builds for:
+
+* Database package where applicable
+* API server
+* Sunrise OS frontend
+
+Use:
+
+```bash
+NODE_ENV=production
+VITE_SUNRISE_DATA_MODE=production
+```
+
+and the required non-secret production-test configuration.
+
+Report:
+
+* Exact commands
+* Result
+* Duration
+* Warnings
+* Required environment-variable names
+
+Do not expose values.
+
+---
+
+# 12. Complete Manual Persona Testing
+
+Manually test with fictitious users:
+
+* Organization administrator
+* Facility administrator
+* Clinician
+* Nurse
+* Billing user
+* Read-only user
+* Unrelated-facility user
+* Disabled user
+* Expired-role user
+* Patient-assignment-limited user
+
+For each record:
+
+* Login result
+* Patient List result
+* Patient Detail result
+* Active Episode result
+* Unauthorized route result
+* Facility scope
+* Patient scope
+* Logout result
+* Audit event result
+
+Do not classify code inspection as manual testing.
+
+---
+
+# 13. Capture Accurate Screenshots
+
+Capture:
+
+1. Production login
+2. Invalid login
+3. Real-API Patient List
+4. Real-API Patient Detail
+5. Active Episode
+6. Organization administrator
+7. Facility-limited user
+8. Multi-facility user
+9. Patient-assignment-limited user
+10. Billing restricted view
+11. Read-only view
+12. Unrelated-facility denial
+13. Disabled-account result
+14. Session-expired result
+15. Logout result
+16. Demo staff picker
+17. Demo banner
+18. Production with no demo UI
+
+Every screenshot record must include:
+
+* Filename
+* Viewport
+* Environment
+* Data mode
+* Role
+* Organization scope
+* Facility scope
+* Data source
+* Real or mocked API
+* Related test
+
+The Patient List and Patient Detail screenshots must be labeled:
+
+**Real API — no route interception**
+
+---
+
+# 14. Create a Final Evidence Manifest
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-2/evidence-manifest.json`
+
+Include:
+
+* Branch
+* All commits
+* Final HEAD
+* Files changed
+* Migration files
+* Migration journal entries
+* Authentication tables
+* Session-store technology
+* Rate-limit-store technology
+* Argon2 settings
+* Cookie settings
+* CSRF settings
+* CORS settings
+* Security headers
+* Permissions
+* Role mappings
+* Audit events
+* API routes
+* Test counts
+* Real-database tests
+* Real-HTTP tests
+* Real-browser tests
+* Documentation-only checks
+* TypeScript results
+* Build results
+* Persona results
+* Screenshots
+* Real frontend-to-API evidence
+* Known limitations
+* Deferred work
+* Timestamp
+
+Validate the JSON.
+
+Do not include secret values.
+
+---
+
+# 15. Create the Final Review ZIP
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-2-authentication-authorization-review.zip`
+
+Include:
+
+* Versioned Phase 1A and Phase 2 migrations required for reproduction
+* Migration metadata
+* Authentication schema
+* Session-store implementation
+* Rate-limit-store implementation
+* Password service
+* Authentication middleware
+* CSRF implementation
+* Authorization service
+* Permission definitions
+* Role mappings
+* Patient-access logic
+* Protected patient routes
+* Authentication audit repository
+* Frontend login and session code
+* Real API routing configuration
+* All tests
+* Sanitized test output
+* Clean migration proof
+* Session-restart proof
+* Rate-limit-restart proof
+* Manual persona results
+* Runtime screenshots
+* Architecture documentation
+* Threat model
+* Evidence manifest
+* File manifest with SHA-256 values
+
+Do not include:
+
+* Passwords
+* Password hashes
+* Session tokens
+* Cookies
+* CSRF tokens
+* Reset tokens
+* Private keys
+* Environment files
+* Database credentials
+* Real patient data
+* Dependency caches
+* Build caches
+* Old review ZIPs
+
+Run:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-2-authentication-authorization-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-2-authentication-authorization-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-2-authentication-authorization-review.zip
+```
+
+Verify:
+
+* ZIP opens successfully.
+* Size is reported.
+* Entry count is accurate.
+* SHA-256 is reported.
+* Manifest hashes match.
+* No secret values exist.
+* No route-mocked screenshot is labeled as real API evidence.
+
+---
+
+# Required Final Response
+
+Provide:
+
+1. Branch.
+2. Phase 1A base commit.
+3. Initial Phase 2 commit.
+4. Correction commits.
+5. Final HEAD.
+6. Working-tree status.
+7. Files changed.
+8. Migration filenames.
+9. Expected migration-journal entries.
+10. Actual migration-journal entries.
+11. Clean migration result.
+12. Migration reapplication result.
+13. Confirmation that no direct DDL was used.
+14. Argon2 configuration.
+15. Production session store.
+16. Session restart result.
+17. Cookie configuration.
+18. CSRF real-HTTP result.
+19. Documentation-only security checks remaining.
+20. Rate-limit store.
+21. Rate-limit restart result.
+22. CORS result.
+23. Security-header result.
+24. Authentication audit result.
+25. Authorization API result.
+26. Organization-wide result.
+27. Facility-limited result.
+28. Patient-assignment result.
+29. Real frontend-to-API result.
+30. Database test result.
+31. API-server test result.
+32. Frontend test result.
+33. End-to-end test result.
+34. Combined test total.
+35. Skipped-test count.
+36. TypeScript result.
+37. Production build result.
+38. Manual persona count.
+39. Screenshot count.
+40. Review ZIP path.
+41. ZIP size.
+42. ZIP SHA-256.
+43. ZIP entry count.
+44. Known limitations.
+45. Exact Phase 3 recommendation.
+
+Do not begin Phase 3.
+
+Do not merge into `main`.
+
+Stop after producing and verifying the final review ZIP.

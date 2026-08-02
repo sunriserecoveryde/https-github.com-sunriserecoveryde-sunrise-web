@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import sunriseLogo from '@assets/0_SunriseOS_Logo_transparent.png';
 import { Bell, Search, Settings, MessageSquare, ChevronDown, Flag, LogOut, UserCircle, RotateCcw, ArrowLeftCircle } from 'lucide-react';
 import { Screen } from '../../App';
-import { NotificationPanel, ALL_NOTIFICATION_IDS } from './NotificationPanel';
+import { NotificationPanel } from './NotificationPanel';
+import { useActiveNotifications } from '../../hooks/useActiveNotifications';
 import { CommandPalette } from './CommandPalette';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES, ROLE_CATEGORIES } from '../../data/mockRoles';
-import { useDemoStore, resetDemoData } from '../../store/demoStore';
+import { resetDemoData } from '../../store/demoStore';
 
 interface Props {
   navigate: (s: Screen, patientId?: string) => void;
@@ -25,11 +26,9 @@ export function Topbar({ navigate, currentScreen }: Props) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const { role, setRoleId } = useRole();
   const { currentStaff, logout } = useAuth();
-  const { state: demoState } = useDemoStore();
-  // Actual unread = all known notification IDs minus those already read
-  const unreadCount = ALL_NOTIFICATION_IDS.filter(
-    id => !demoState.notificationReadIds.includes(id),
-  ).length;
+  // Badge count — from the shared selector so Topbar and NotificationPanel
+  // always agree. Reactive to the global snooze timer (useNotifNow inside hook).
+  const { criticalUnreadCount: unreadCount } = useActiveNotifications();
 
   // Ctrl+K global shortcut
   useEffect(() => {

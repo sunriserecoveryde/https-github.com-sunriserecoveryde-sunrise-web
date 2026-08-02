@@ -1,0 +1,381 @@
+# Sunrise OS — Phase 2D Final Approval Gate
+
+Continue on:
+
+`readiness/p0-phase-2d-final-closure`
+
+Do not create another phase branch.
+
+Do not begin Phase 3.
+
+Do not merge into `main`.
+
+Do not make new feature or architecture changes.
+
+Complete only the remaining approval evidence.
+
+---
+
+# 1. Run the gated real-login tests with zero skips
+
+The final report says:
+
+* 414 passed
+* 22 skipped
+
+The skipped tests require:
+
+`PHASE2D_TEST_PASSWORD`
+
+The Replit Secret has already been created.
+
+Ensure the secret is available to the actual test process without printing its value.
+
+Run the complete test suite again with the environment correctly configured.
+
+Requirements:
+
+* The 22 real-login tests must execute.
+* They must not skip.
+* Do not add a fallback password.
+* Do not print the secret.
+* Do not weaken the tests to avoid credential use.
+* Do not change `it()` to `it.skip()`.
+* Do not conditionally pass when the secret is missing.
+
+If the secret is not visible to the test command, fix the Replit run/test configuration so the existing Replit Secret is passed to the process.
+
+Report the counts accurately:
+
+* Tests discovered
+* Passed
+* Failed
+* Skipped
+
+For example, if the same set runs successfully, the expected reporting format would be:
+
+```text
+436 discovered
+436 passed
+0 failed
+0 skipped
+```
+
+Use the actual final numbers.
+
+---
+
+# 2. Rerun the Phase 2D integration suites explicitly
+
+Run these separately with the real secret and real PostgreSQL:
+
+* `auth-p2-integration.test.ts`
+* `auth-p2-live-session.test.ts`
+* `auth-p2b-live-session.test.ts`
+* `auth-p2c-security.test.ts`
+* `auth-p2d-exact-binding.test.ts`
+* `auth-p2d-rate-limit.test.ts`
+* `auth-p2d-outbox-worker.test.ts`
+
+Report for each:
+
+* Tests
+* Passed
+* Failed
+* Skipped
+* Duration
+* Real PostgreSQL used: yes/no
+* Real session cookie used: yes/no
+* Real login route used: yes/no
+
+No security integration suite may remain skipped.
+
+---
+
+# 3. Correct the rate-limit evidence description
+
+The existing report describes:
+
+* Direct `PgRateLimitStore.increment()`
+* Multiple store instances
+* HTTP 429 using a test Express application
+
+Clarify whether an actual API process restart was performed.
+
+If not, perform a real restart proof:
+
+1. Start API process A.
+2. Submit failed login attempts through the real login route.
+3. Confirm the PostgreSQL counter.
+4. Stop process A.
+5. Start a new API process.
+6. Continue failed login attempts.
+7. Confirm the previous counter remains.
+8. Reach the threshold.
+9. Confirm HTTP 429.
+10. Confirm the response remains generic.
+
+Also start a second API process or logically separate app instance using the same PostgreSQL database and confirm both share the counter.
+
+Do not describe two store objects in one process as a full process-restart proof.
+
+---
+
+# 4. Correct the audit-worker evidence description
+
+The existing report proves:
+
+* Pending-row persistence
+* `drainOnce()`
+* Multi-worker locking
+* Retry behavior
+* Permanent-failure state
+* Worker stop behavior
+
+Clarify whether a real process restart was performed.
+
+If not, perform:
+
+1. Insert pending outbox event.
+2. Shut down the API process before it is drained.
+3. Start a new API process.
+4. Confirm startup recovery processes the event.
+5. Confirm one final audit record exists.
+6. Confirm no duplicate final audit record exists.
+
+Include sanitized output.
+
+---
+
+# 5. Complete human browser verification
+
+Use the existing:
+
+`artifacts/sunrise-os/readiness/phase-2d/manual-browser-verification-runbook.md`
+
+A human reviewer must complete BV-1 through BV-5.
+
+At minimum verify:
+
+## BV-1 — Cookie attributes
+
+Confirm the authenticated session cookie has:
+
+* HttpOnly
+* Secure in production
+* Expected SameSite
+* Expected path
+* No token in localStorage
+* No token in sessionStorage
+* No session ID in URLs
+
+## BV-2 — CSRF
+
+Confirm:
+
+* Login without CSRF fails.
+* Login with invalid CSRF fails.
+* Login with valid pre-login CSRF succeeds.
+* Authenticated writes require the refreshed CSRF token.
+* Logout without CSRF fails.
+* Logout with valid authenticated CSRF succeeds.
+
+## BV-3 — Session invalidation
+
+Confirm:
+
+* Login succeeds.
+* Patient List loads.
+* Browser refresh preserves the session.
+* Logout succeeds.
+* Patient API returns 401 after logout.
+* Reusing the old cookie does not restore access.
+
+## BV-4 — Rate limiting
+
+Confirm repeated invalid login attempts eventually produce 429 according to the configured test threshold.
+
+Do not perform this against real staff accounts.
+
+## BV-5 — Network evidence
+
+Export a sanitized HAR or equivalent request log for:
+
+* CSRF token
+* Login
+* Authenticated CSRF refresh
+* Session endpoint
+* Patient List
+* Patient Detail
+* Unauthorized request
+* Logout
+* Post-logout 401
+
+Remove:
+
+* Passwords
+* Cookie values
+* CSRF token values
+* Session identifiers
+* Authorization headers
+* Database information
+
+---
+
+# 6. Capture the minimum required screenshots
+
+Capture at least:
+
+1. Production login
+2. Invalid-CSRF login rejection
+3. Authenticated Patient List
+4. Authorized Patient Detail
+5. Unauthorized Patient Detail result
+6. Assignment-limited Patient List
+7. Billing minimum-necessary Patient List
+8. Mixed-role Patient List
+9. Logout result
+10. Post-logout unauthenticated state
+11. Production mode without demo UI
+12. Demo mode with clear demo banner
+
+Every production patient screenshot must be labeled:
+
+`Real API — no route interception`
+
+Do not include visible passwords, tokens, or real patient data.
+
+---
+
+# 7. Complete and sign the browser results
+
+Fill in:
+
+`artifacts/sunrise-os/readiness/phase-2d/manual-browser-verification-results-template.md`
+
+Record:
+
+* Date
+* Reviewer
+* Environment
+* Browser
+* Each BV result
+* Screenshot filenames
+* HAR/network evidence filename
+* Failures or deviations
+* Final reviewer decision
+
+Do not pre-mark unperformed checks as passed.
+
+If any check fails:
+
+* Do not merge.
+* Correct only the failing issue.
+* Repeat the affected browser check.
+
+---
+
+# 8. Regenerate the final evidence package
+
+After the zero-skip test run and completed browser verification, regenerate:
+
+`artifacts/sunrise-os/readiness/phase-2d-access-binding-evidence-review.zip`
+
+Add:
+
+* Zero-skip test output
+* Accurate test-count summary
+* API restart rate-limit proof
+* API restart outbox proof
+* Completed browser results
+* Screenshots
+* Sanitized HAR/network evidence
+* Updated evidence manifest
+* Updated SHA manifest
+
+The SHA manifest must cover every ZIP entry except itself.
+
+Rerun the secret scan after screenshots, HAR, and logs are added.
+
+The ZIP must contain no:
+
+* Passwords
+* Cookie values
+* CSRF token values
+* Session identifiers
+* Environment values
+* Database credentials
+* Private keys
+* Real patient data
+
+---
+
+# 9. Verify the final ZIP
+
+Run:
+
+```bash id="xjhrw9"
+unzip -t artifacts/sunrise-os/readiness/phase-2d-access-binding-evidence-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-2d-access-binding-evidence-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-2d-access-binding-evidence-review.zip
+```
+
+Confirm:
+
+* No ZIP errors
+* Complete SHA-manifest coverage
+* Secret scan clean
+* Browser evidence included
+* Zero skipped security tests
+* No prior review ZIPs nested inside
+
+---
+
+# Required final response
+
+Provide:
+
+1. Branch
+2. Final HEAD
+3. Tests discovered
+4. Tests passed
+5. Tests failed
+6. Tests skipped
+7. Real-login tests passed
+8. Rate-limit process-restart result
+9. Multi-instance rate-limit result
+10. Audit-worker process-restart result
+11. Audit duplicate-prevention result
+12. Browser reviewer
+13. Browser verification date
+14. BV-1 result
+15. BV-2 result
+16. BV-3 result
+17. BV-4 result
+18. BV-5 result
+19. Screenshot count
+20. HAR/network-evidence count
+21. Repository secret-scan result
+22. ZIP secret-scan result
+23. Final ZIP path
+24. ZIP size
+25. ZIP SHA-256
+26. ZIP entry count
+27. SHA-manifest coverage
+28. Remaining limitations
+29. Explicit Phase 2 merge recommendation
+
+Phase 2 may be recommended for merge only when:
+
+* All required tests run with zero skips.
+* Human browser verification is completed.
+* Browser evidence is sanitized and included.
+* Rate-limit restart behavior is proven.
+* Audit-worker restart behavior is proven.
+* The final ZIP is clean and fully checksummed.
+
+Do not begin Phase 3.
+
+Do not merge into `main`.
+
+Stop after regenerating and verifying the final Phase 2D review package.

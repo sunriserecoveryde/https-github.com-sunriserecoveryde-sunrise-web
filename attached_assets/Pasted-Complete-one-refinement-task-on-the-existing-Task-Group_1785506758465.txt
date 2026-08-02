@@ -1,0 +1,216 @@
+Complete one refinement task on the existing Task Group 1 branch:
+
+**Task: Add clear trend indicators and comparison context to the Dashboard KPI cards**
+
+Do not begin any other improvement task during this run.
+
+Use the existing KPI cards and current dashboard data sources. Do not rebuild the Dashboard and do not change any underlying clinical, financial, or operational calculations.
+
+## Goal
+
+Make each KPI understandable at a glance by showing:
+
+* Current value
+* Direction of change
+* Comparison period
+* Whether the change is favorable, unfavorable, or neutral
+* A clear route to supporting detail, when available
+
+## KPIs to include
+
+Apply this improvement to all existing primary KPI cards, including where currently available:
+
+* Census
+* Occupancy
+* AMA Risk
+* Pending Co-Signatures
+* Average Length of Stay
+* Discharges
+* Authorizations Requiring Attention
+
+Do not fabricate a KPI that is not currently supported by data.
+
+## 1. Add trend indicators
+
+Each KPI card should support one of these states:
+
+* Increasing
+* Decreasing
+* No meaningful change
+* Insufficient comparison data
+
+Use:
+
+* Up arrow for increasing
+* Down arrow for decreasing
+* Horizontal indicator for no meaningful change
+* Neutral placeholder for insufficient data
+
+Do not rely on color alone.
+
+Each trend must include text such as:
+
+* Up 6% from the previous 7 days
+* Down 3 patients from the previous period
+* No meaningful change
+* Comparison unavailable
+
+## 2. Show the comparison period
+
+The comparison label must be visible or available through an accessible tooltip.
+
+Use the most appropriate period already supported by the data:
+
+* Previous 7 days
+* Previous 30 days
+* Previous calendar month
+* Same period last month
+
+Do not display a comparison period that the data does not actually support.
+
+If historical data is unavailable, show:
+
+**Comparison unavailable**
+
+Do not generate fake percentages or placeholder trends.
+
+## 3. Interpret whether the trend is favorable
+
+Trend direction is not always inherently good or bad.
+
+Examples:
+
+* Census increasing may be favorable or neutral depending on capacity.
+* Occupancy above the safe or target range may be unfavorable.
+* AMA Risk increasing is unfavorable.
+* Pending Co-Signatures increasing is unfavorable.
+* Average Length of Stay may be neutral unless compared with a defined target.
+* Discharges increasing may be neutral unless successful-discharge context exists.
+* Authorizations Requiring Attention increasing is unfavorable.
+
+Create a small helper function or configuration map that separates:
+
+1. Direction
+2. Operational interpretation
+
+Use labels such as:
+
+* Favorable
+* Needs attention
+* Within expected range
+* Neutral
+* Insufficient context
+
+Do not change any clinical or business thresholds unless those thresholds already exist in the codebase.
+
+## 4. Add tooltip definitions
+
+Each KPI must have an information tooltip explaining:
+
+* What the KPI measures
+* How the displayed value is calculated
+* What comparison period is being used
+* What the trend indicator means
+
+Keep tooltip language concise and non-technical.
+
+Examples:
+
+Census:
+“Number of active patients currently admitted across the selected facility and level of care.”
+
+Pending Co-Signatures:
+“Clinical documents awaiting a required supervisory or medical co-signature.”
+
+Do not include unsupported claims.
+
+## 5. Make cards actionable
+
+Where a real destination already exists, make the KPI card or a clearly labeled action open the relevant workflow.
+
+Examples:
+
+* Census → Open Census
+* AMA Risk → Review AMA Risk
+* Pending Co-Signatures → Open Co-Sign Queue
+* Authorizations Requiring Attention → Review Authorizations
+* Discharges → Open Discharge Activity
+
+Requirements:
+
+* Do not use vague labels such as “View.”
+* Do not create placeholder pages.
+* Preserve existing permission rules.
+* If the user lacks access, do not make the card clickable.
+* Do not place nested interactive buttons inside another clickable element.
+
+## 6. Standardize the KPI card layout
+
+Each card must use a consistent structure:
+
+1. KPI label
+2. Information tooltip
+3. Current value
+4. Trend indicator
+5. Comparison label
+6. Operational interpretation
+7. Optional specific action
+
+Design requirements:
+
+* Consistent height across all KPI cards
+* Consistent spacing and typography
+* No text wrapping that breaks the layout
+* No overflow at 1280×720
+* Trend text must remain readable at 200% browser zoom
+* Keyboard-accessible tooltips and actions
+* Visible focus states
+
+## 7. Empty and unavailable states
+
+When a KPI value or historical comparison is unavailable:
+
+* Do not display zero unless zero is the actual value.
+* Display “Unavailable” or “Comparison unavailable.”
+* Keep the card layout intact.
+* Include an accessible explanation.
+
+## Acceptance criteria
+
+* Every displayed KPI has a current value and comparison state.
+* No fake historical data is created.
+* Every trend includes an icon and text.
+* Trend meaning remains understandable without color.
+* Favorable and unfavorable interpretations are appropriate to the KPI.
+* Tooltips explain the metric and comparison period.
+* Clickable cards open functioning destinations.
+* Permission rules remain unchanged.
+* Card heights remain consistent.
+* No overlap occurs at 1280×720, 1440×900, or 1920×1080.
+* TypeScript check passes.
+* Production build passes.
+* Existing tests pass, if configured.
+
+## Required deliverables
+
+1. List of files changed.
+2. Explanation of where historical comparison values come from.
+3. Screenshot of the complete KPI row at 1440×900.
+4. Screenshot showing:
+
+   * Increasing trend
+   * Decreasing trend
+   * No meaningful change
+   * Comparison unavailable
+5. Screenshot of an open KPI tooltip.
+6. Screenshot showing a permission-restricted non-clickable KPI.
+7. TypeScript result.
+8. Production build result.
+9. Test and lint results, or confirmation that no scripts are configured.
+10. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge it into main.
+
+Stop after completing this single task and wait for review.

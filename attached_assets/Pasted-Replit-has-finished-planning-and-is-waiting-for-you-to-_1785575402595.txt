@@ -1,0 +1,56 @@
+Replit has finished planning and is waiting for you to switch it back to **Build mode**. Its plan matches the task: section-aware clarity processing, field-specific acceptance, stale-result detection, direct navigation, deletion of `inferFieldId()`, and focused tests. 
+
+In Replit, change the mode from **Plan** to **Build**, then paste this:
+
+You are now in Build mode.
+
+Proceed with Task #759 exactly as planned:
+
+**Make Improve Clarity section-aware with field navigation.**
+
+Implement the approved plan:
+
+* Create the pure `clarityConfig.ts` module with typed section-aware interfaces and helpers.
+* Process BIRP, DAP, SOAP, and GIRP fields independently.
+* Preserve the typed `ProgressNoteFieldId` for every reviewed section.
+* Replace the combined-string clarity result with one result per note section.
+* Replace positional `\n\n` text splitting with typed field-specific update callbacks.
+* Add per-section:
+
+  * Original text
+  * Suggested revision
+  * Changes identified
+  * Accept revision
+  * Keep original
+  * Copy suggestion
+  * Move to field
+* Add `Accept All Suggested Revisions`.
+* Ensure accepting one section never modifies another section.
+* Add stale-result detection by comparing current field text with the reviewed source snapshot.
+* Require explicit confirmation before replacing a field that changed after the review.
+* Add stable clarity finding IDs such as:
+
+  * `clarity:behavior`
+  * `clarity:intervention`
+  * `clarity:response`
+  * `clarity:plan`
+* Add direct field navigation for section-specific clarity findings.
+* Delete `inferFieldId()` after confirming it has no active callers.
+* Extend the existing Vitest suite with the planned clarity tests.
+* Preserve the existing AI safety restrictions, Clinical Documentation Review pipeline, medical-necessity typed codes, consistency checks, permissions, note workflow, signing workflow, database schema, and seeded data.
+
+Do not enter Plan mode again.
+
+Do not make unrelated changes.
+
+Run:
+
+* TypeScript check
+* Vitest
+* Production build
+
+Commit the completed task to the existing improvement branch.
+
+Do not merge into `main`.
+
+Stop after completing this task and provide the required deliverables and known limitations.

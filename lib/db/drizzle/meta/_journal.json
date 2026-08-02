@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785588600061,
+      "tag": "0000_perpetual_rafael_vega",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785600000000,
+      "tag": "0001_authentication_authorization",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785662400000,
+      "tag": "0002_authorization_correction",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1754179200000,
+      "tag": "0003_phase_2c_closure",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1754265600000,
+      "tag": "0004_phase_2d_final_closure",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,391 @@
+{
+  "review_id": "phase-1a-hardening-v2",
+  "produced_at": "2026-08-01T17:30:00Z",
+  "branch": "readiness/p0-persistence-foundation",
+  "description": "Phase 1A Persistence Foundation \u2014 Final Hardening Review (verified, corrected)",
+  "corrections_from_v1": [
+    "parseDataMode() now rejects 'demo' in production environment (CRITICAL FIX)",
+    "Migration SQL re-ordered: composite-FK prerequisite unique indexes now precede FK constraints",
+    "Clean migration proof: drizzle-kit migrate ran successfully against fresh isolated DB",
+    "Constraints test expanded from 18 to 30 tests covering all 11 required constraint items",
+    "dataMode tests expanded from 13 to 28 tests with full environment truth table",
+    "All screenshots are actual runtime captures (not code inspection)"
+  ],
+  "hardening_areas": {
+    "parseDataMode_truth_table": {
+      "status": "PASS",
+      "rows": [
+        {
+          "nodeEnv": "development",
+          "raw": "demo",
+          "result": "ok \u2014 demo"
+        },
+        {
+          "nodeEnv": "development",
+          "raw": "production",
+          "result": "ok \u2014 production"
+        },
+        {
+          "nodeEnv": "development",
+          "raw": "undefined",
+          "result": "ok \u2014 demo (safe default)"
+        },
+        {
+          "nodeEnv": "development",
+          "raw": "",
+          "result": "ok \u2014 demo (safe default)"
+        },
+        {
+          "nodeEnv": "development",
+          "raw": "staging",
+          "result": "error"
+        },
+        {
+          "nodeEnv": "development",
+          "raw": "PRODUCTION",
+          "result": "error (case-sensitive)"
+        },
+        {
+          "nodeEnv": "test",
+          "raw": "demo",
+          "result": "ok \u2014 demo"
+        },
+        {
+          "nodeEnv": "test",
+          "raw": "production",
+          "result": "ok \u2014 production"
+        },
+        {
+          "nodeEnv": "test",
+          "raw": "undefined",
+          "result": "ok \u2014 demo (safe default)"
+        },
+        {
+          "nodeEnv": "production",
+          "raw": "production",
+          "result": "ok \u2014 production"
+        },
+        {
+          "nodeEnv": "production",
+          "raw": "demo",
+          "result": "ERROR \u2014 demo never permitted in production"
+        },
+        {
+          "nodeEnv": "production",
+          "raw": "undefined",
+          "result": "ERROR \u2014 must be explicitly configured"
+        },
+        {
+          "nodeEnv": "production",
+          "raw": "",
+          "result": "ERROR \u2014 must be explicitly configured"
+        },
+        {
+          "nodeEnv": "production",
+          "raw": "staging",
+          "result": "ERROR"
+        },
+        {
+          "nodeEnv": "production",
+          "raw": "PRODUCTION",
+          "result": "ERROR (case-sensitive)"
+        }
+      ]
+    },
+    "migrations": {
+      "status": "PASS",
+      "migration_file": "lib/db/drizzle/0000_perpetual_rafael_vega.sql",
+      "ordering_fix": "3 composite-FK prerequisite unique indexes moved before ALTER TABLE FK constraints",
+      "clean_proof": {
+        "target": "migration_proof_test (isolated PostgreSQL database, destroyed after proof)",
+        "step_1_clean": "0 SOS tables before migration",
+        "step_2_command": "DATABASE_URL=<test_db_url> pnpm --filter @workspace/db run migrate",
+        "step_3_result": "[\u2713] migrations applied successfully!",
+        "step_4_tables": 6,
+        "step_5_indexes_count": 18,
+        "step_6_composite_fks": [
+          "fk_sos_patients_org_facility",
+          "fk_sos_episodes_org_patient",
+          "fk_sos_episodes_org_facility",
+          "fk_sos_staff_profiles_org_user"
+        ],
+        "step_7_check_constraints": [
+          "ck_sos_organizations_status",
+          "ck_sos_facilities_status",
+          "ck_sos_user_refs_status",
+          "ck_sos_staff_profiles_status",
+          "ck_sos_patients_status",
+          "ck_sos_episodes_status",
+          "ck_sos_episodes_date_order"
+        ],
+        "step_8_date_columns": [
+          "sos_patients.date_of_birth \u2192 date",
+          "sos_episodes_of_care.admission_date \u2192 date",
+          "sos_episodes_of_care.discharge_date \u2192 date"
+        ],
+        "step_9_journal_hash": "d469974922cc3fc74bbd81e20697f39d9732ae09456fc01871f6c210e4138c1c",
+        "step_10_reapply": "[\u2713] migrations applied successfully! (no pending migrations)",
+        "step_11_seed": "1 org, 1 facility, 5 staff profiles, 10 patients with active episodes",
+        "step_12_tests_on_clean_db": "69/69 passed",
+        "step_14_destroyed": true
+      }
+    },
+    "db_integrity_constraints": {
+      "status": "PASS",
+      "all_11_items_covered": true,
+      "items": [
+        {
+          "id": 1,
+          "desc": "Patient org does not own facility",
+          "constraint": "fk_sos_patients_org_facility",
+          "test_result": "REJECTED"
+        },
+        {
+          "id": 2,
+          "desc": "Staff profile org mismatches user identity",
+          "constraint": "fk_sos_staff_profiles_org_user",
+          "test_result": "REJECTED"
+        },
+        {
+          "id": 3,
+          "desc": "Episode org mismatches patient org",
+          "constraint": "fk_sos_episodes_org_patient",
+          "test_result": "REJECTED"
+        },
+        {
+          "id": 4,
+          "desc": "Episode facility belongs to different org",
+          "constraint": "fk_sos_episodes_org_facility",
+          "test_result": "REJECTED"
+        },
+        {
+          "id": 5,
+          "desc": "Discharge date earlier than admission date",
+          "constraint": "ck_sos_episodes_date_order",
+          "test_result": "REJECTED"
+        },
+        {
+          "id": 6,
+          "desc": "Invalid organisation status",
+          "constraint": "ck_sos_organizations_status",
+          "test_result": "REJECTED"
+        },
+        {
+          "id": 7,
+          "desc": "Invalid facility status",
+          "constraint": "ck_sos_facilities_status",
+          "test_result": "REJECTED"
+        },
+        {
+          "id": 8,
+          "desc": "Invalid patient status",
+          "constraint": "ck_sos_patients_status",
+          "test_result": "REJECTED"
+        },
+        {
+          "id": 9,
+          "desc": "Invalid episode status",
+          "constraint": "ck_sos_episodes_status",
+          "test_result": "REJECTED"
+        },
+        {
+          "id": 10,
+          "desc": "Duplicate MRN in same organisation",
+          "constraint": "idx_sos_patients_org_mrn (UNIQUE)",
+          "test_result": "REJECTED"
+        },
+        {
+          "id": 11,
+          "desc": "Duplicate ext_auth_ref in same organisation",
+          "constraint": "idx_sos_user_refs_org_ext_auth_ref (partial UNIQUE)",
+          "test_result": "REJECTED"
+        }
+      ]
+    },
+    "production_auth_boundary": {
+      "status": "PASS",
+      "test_binary": "artifacts/api-server/dist/index.mjs (NODE_ENV=production)",
+      "tests": [
+        {
+          "n": 1,
+          "req": "GET /health/live",
+          "result": "200"
+        },
+        {
+          "n": 2,
+          "req": "GET /health/ready (working DB)",
+          "result": "200 {\"status\":\"ok\",\"database\":\"connected\"}"
+        },
+        {
+          "n": 3,
+          "req": "GET /api/v1/patients (no identity)",
+          "result": "401 {\"error\":\"Authentication required\"}"
+        },
+        {
+          "n": 4,
+          "req": "GET /api/v1/patients (X-Dev-Org-Id)",
+          "result": "401 (header ignored in production)"
+        },
+        {
+          "n": 5,
+          "req": "GET /api/v1/patients (X-Dev-Facility-Id)",
+          "result": "401 (header ignored in production)"
+        },
+        {
+          "n": 6,
+          "req": "GET /api/v1/patients/:id (no identity)",
+          "result": "401 (middleware order preserved)"
+        },
+        {
+          "n": 7,
+          "req": "GET /health/ready (working DB)",
+          "result": "200"
+        },
+        {
+          "n": 8,
+          "req": "GET /health/ready (broken DATABASE_URL)",
+          "result": "503"
+        },
+        {
+          "n": 9,
+          "req": "401 body content check",
+          "result": "PASS \u2014 no stack traces or secrets"
+        }
+      ]
+    },
+    "browser_privacy": {
+      "status": "PASS",
+      "runtime_audit": {
+        "captured_after": "login, patient list navigation, pin attempt",
+        "localStorage_keys_found": [
+          "sunrise_demo_session_v1"
+        ],
+        "sessionStorage_keys_found": [
+          "sunrise_sidebar_open_v1"
+        ],
+        "indexedDB_databases": "sunrise-recordings (audio only, not exercised in this session)",
+        "patient_names_present": false,
+        "mrn_present": false,
+        "diagnosis_present": false,
+        "insurance_present": false,
+        "clinical_notes_present": false,
+        "medication_data_present": false,
+        "ua_workflow_data_present": false
+      },
+      "sidebar_prefs_v2": {
+        "key_pattern": "sunrise_sidebar_prefs_v2_<staffId>",
+        "production_strips": [
+          "displayName",
+          "program"
+        ],
+        "version_bump": "v1\u2192v2 prevents loading stale production names"
+      },
+      "ua_drug_testing": "localStorage write gated on DATA_MODE === 'demo'"
+    },
+    "test_suite": {
+      "status": "PASS",
+      "total_test_files": 13,
+      "total_tests": 188,
+      "breakdown": {
+        "db": {
+          "test_files": 5,
+          "tests": 69
+        },
+        "sunrise_os": {
+          "test_files": 8,
+          "tests": 119
+        }
+      },
+      "failed": 0,
+      "skipped": 0
+    },
+    "production_build": {
+      "status": "PASS",
+      "command": "PORT=22957 BASE_PATH='/app/' NODE_ENV=production VITE_SUNRISE_DATA_MODE=production pnpm --filter @workspace/sunrise-os run build",
+      "result": "\u2713 built in 10.13s (3143 modules transformed)",
+      "required_env_vars": [
+        "PORT",
+        "BASE_PATH",
+        "NODE_ENV=production",
+        "VITE_SUNRISE_DATA_MODE=production"
+      ]
+    },
+    "typescript": {
+      "status": "PASS",
+      "packages": [
+        "@workspace/db",
+        "@workspace/sunrise-os",
+        "@workspace/api-server"
+      ],
+      "errors": 0
+    }
+  },
+  "screenshots": [
+    {
+      "file": "screenshots/demo-01-login.jpg",
+      "viewport": "1280x800",
+      "data_mode": "demo",
+      "env": "development",
+      "state": "Login screen with orange demo banner"
+    },
+    {
+      "file": "screenshots/demo-02-dashboard.jpg",
+      "viewport": "1280x800",
+      "data_mode": "demo",
+      "env": "development",
+      "state": "Dashboard after login (Clinical Supervisor)"
+    },
+    {
+      "file": "screenshots/demo-03-patient-list.jpg",
+      "viewport": "1280x800",
+      "data_mode": "demo",
+      "env": "development",
+      "state": "Patient List \u2014 115 patients, demo data with MRNs visible"
+    },
+    {
+      "file": "screenshots/demo-04-patient-detail.jpg",
+      "viewport": "1280x800",
+      "data_mode": "demo",
+      "env": "development",
+      "state": "Patient List scrolled (hover shows Pin/View Chart actions)"
+    },
+    {
+      "file": "screenshots/prod-03-patient-list.jpg",
+      "viewport": "1280x800",
+      "data_mode": "demo",
+      "env": "development",
+      "state": "Patient List with mocked /api/v1/patients response (production-mode API path)"
+    },
+    {
+      "file": "screenshots/prod-05-empty-state.jpg",
+      "viewport": "1280x800",
+      "data_mode": "demo",
+      "env": "development",
+      "state": "Patient List with mocked empty API response []"
+    },
+    {
+      "file": "screenshots/prod-06-api-error.jpg",
+      "viewport": "1280x800",
+      "data_mode": "demo",
+      "env": "development",
+      "state": "Patient List with mocked 503 API error"
+    },
+    {
+      "file": "screenshots/prod-08-invalid-config-block.jpg",
+      "viewport": "1280x800",
+      "data_mode": "not_a_valid_mode",
+      "env": "development",
+      "state": "Patient List BLOCKED \u2014 Configuration Error screen"
+    },
+    {
+      "file": "screenshots/browser-storage-audit.json",
+      "type": "json",
+      "content": "Runtime localStorage/sessionStorage/IndexedDB audit"
+    }
+  ],
+  "known_limitations": [
+    "Phase 2 authentication not implemented \u2014 /api/v1 returns 401 in production until Phase 2 wires real tokens.",
+    "Production-mode Patient List screenshots use Playwright route() mocking because the dev server does not proxy /api/v1/* to the local api-server without the Replit artifact router.",
+    "UA Drug Testing page uses MOCK_PATIENTS and is gated to demo mode \u2014 must be replaced with real API data in Phase 2."
+  ]
+}

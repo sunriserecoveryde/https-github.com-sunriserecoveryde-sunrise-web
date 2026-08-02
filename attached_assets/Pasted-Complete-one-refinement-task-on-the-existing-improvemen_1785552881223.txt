@@ -1,0 +1,557 @@
+Complete one refinement task on the existing improvement branch:
+
+**Task: Make Improve Clarity section-aware and add field-specific clarity navigation**
+
+Do not begin permissions work, audit persistence, scoring changes, additional AI modules, medical-necessity changes, or unrelated UI work during this task.
+
+Do not merge into `main`.
+
+## Current problem
+
+The existing `improveClarity()` workflow combines all Progress Note sections into one text string.
+
+As a result:
+
+* Clarity findings cannot identify which note section contains an issue.
+* Clinical Documentation Review clarity findings use only `fallbackTool: "clarity"`.
+* The clinician must manually determine where the suggested change belongs.
+* Accepting a combined revision requires splitting the combined text back into fields, which can become unreliable when note sections contain paragraph breaks.
+
+## Objective
+
+Refactor Improve Clarity so it processes each Progress Note section independently.
+
+Every clarity result must preserve:
+
+* Note format
+* Field identity
+* Original field text
+* Suggested field text
+* Change descriptions
+* Structured destination metadata
+
+The clinician should be able to:
+
+* Review clarity findings by section
+* Jump directly to the affected field
+* Accept changes for one section
+* Accept all approved section changes
+* Keep any original section unchanged
+
+Do not automatically overwrite the legal note.
+
+---
+
+# 1. Create Structured Clarity Result Types
+
+Replace the current combined-string clarity result with section-aware types.
+
+Use or adapt this structure:
+
+```ts
+export interface ClaritySectionResult {
+  fieldId: ProgressNoteFieldId;
+  fieldLabel: string;
+  originalText: string;
+  suggestedText: string;
+  changes: ClarityChange[];
+  hasChanges: boolean;
+}
+
+export interface ClarityChange {
+  id: string;
+  type:
+    | "grammar"
+    | "clarity"
+    | "redundancy"
+    | "abbreviation"
+    | "professional-tone"
+    | "sentence-structure";
+  description: string;
+  reason: string;
+}
+
+export interface ClarityReviewResult {
+  sections: ClaritySectionResult[];
+  totalChanges: number;
+  reviewedAt: string;
+}
+```
+
+Adapt the exact names to the existing code.
+
+Requirements:
+
+* Every result section must carry a typed `ProgressNoteFieldId`.
+* Do not determine the destination by parsing displayed text.
+* Do not combine field contents before processing.
+* Do not lose empty sections.
+* Do not fabricate a change when no improvement is needed.
+
+---
+
+# 2. Process Each Note Section Independently
+
+Refactor `improveClarity()` so it receives structured note sections.
+
+Preferred input:
+
+```ts
+interface ClaritySectionInput {
+  fieldId: ProgressNoteFieldId;
+  fieldLabel: string;
+  text: string;
+}
+```
+
+Example:
+
+```ts
+[
+  {
+    fieldId: "behavior",
+    fieldLabel: "Behavior",
+    text: values.Behavior
+  },
+  {
+    fieldId: "intervention",
+    fieldLabel: "Intervention",
+    text: values.Intervention
+  }
+]
+```
+
+The exact sections must depend on the active note format:
+
+## BIRP
+
+* Behavior
+* Intervention
+* Response
+* Plan
+
+## DAP
+
+* Data
+* Assessment
+* Plan
+
+## SOAP
+
+* Subjective
+* Objective
+* Assessment
+* Plan
+
+## GIRP
+
+* Goal
+* Intervention
+* Response
+* Plan
+
+Do not send a field that does not exist in the selected note format.
+
+---
+
+# 3. Preserve Clinical Meaning
+
+The section-aware clarity engine may:
+
+* Correct grammar
+* Improve sentence structure
+* Expand informal abbreviations
+* Reduce repetition
+* Improve professional tone
+* Improve readability
+
+It must not:
+
+* Add new clinical facts
+* Remove clinically meaningful facts
+* Change patient quotations
+* Add diagnoses
+* Add interventions
+* Change the documented patient response
+* Change risk findings
+* Change medication information
+* Change level-of-care recommendations
+* Strengthen certainty
+* Convert uncertainty into fact
+
+A section with no supported clarity changes must return:
+
+```ts
+hasChanges: false
+```
+
+and must preserve the original text exactly.
+
+---
+
+# 4. Update the Individual Improve Clarity Tool
+
+Display clarity results by note section.
+
+Suggested layout:
+
+## Behavior
+
+* Original
+* Suggested Revision
+* Changes Identified
+* Accept Behavior Revision
+* Keep Original
+* Copy Suggested Revision
+* Move to Behavior Field
+
+Repeat only for sections that contain text.
+
+For sections with no changes, display a compact state:
+
+**No clarity improvements identified in this section.**
+
+Requirements:
+
+* The clinician may accept one section without accepting others.
+* The clinician may accept all changed sections through:
+
+  * `Accept All Suggested Revisions`
+* Each section must also retain:
+
+  * `Keep Original`
+* Do not overwrite any section automatically.
+* Preserve unchanged sections.
+* Preserve manually edited sections unless the clinician explicitly accepts a replacement.
+
+---
+
+# 5. Remove Proportional Text Re-Splitting
+
+Remove the current behavior that:
+
+1. Joins all note fields with paragraph separators.
+2. Improves the combined text.
+3. Splits the combined revision back across fields.
+
+This proportional or paragraph-based re-splitting must no longer be used.
+
+Each suggested revision must already belong to one known field.
+
+Accepting a section revision should call a field-specific update such as:
+
+```ts
+onAcceptClaritySection(fieldId, suggestedText)
+```
+
+or an equivalent typed handler.
+
+Accepting all revisions should pass a structured field update map.
+
+Example:
+
+```ts
+{
+  behavior: "...",
+  intervention: "...",
+  response: "..."
+}
+```
+
+Do not update fields that have no accepted revision.
+
+---
+
+# 6. Add Field-Specific Clarity Findings to the Clinical Review
+
+When the unified Clinical Documentation Review detects clarity improvements, create one finding per affected section or one grouped finding with structured child sections.
+
+Preferred behavior:
+
+* One finding for each affected field when the change is meaningful.
+* Group trivial changes when necessary to avoid excessive noise.
+
+Example:
+
+```ts
+{
+  id: "clarity:intervention",
+  priority: "suggested",
+  category: "clarity",
+  title: "Intervention wording could be clearer",
+  explanation:
+    "The intervention section contains wording that may be simplified without changing clinical meaning.",
+  recommendedAction: "Review Intervention Wording",
+  targetFieldId: "intervention",
+  fallbackTool: "clarity",
+  sourceFields: ["Intervention"]
+}
+```
+
+Requirements:
+
+* Use stable IDs:
+
+  * `clarity:behavior`
+  * `clarity:intervention`
+  * `clarity:response`
+  * `clarity:plan`
+* Do not use text parsing to determine the target.
+* Do not classify grammar or style issues as Critical.
+* Most clarity findings should be:
+
+  * Suggested Improvement
+  * Informational
+* Use Important only if unclear wording creates a meaningful documentation ambiguity.
+* A finding with a valid field target should offer direct field navigation.
+* Detailed clarity results must remain available through the individual Clarity tool.
+
+---
+
+# 7. Add Section-Level Change Acceptance
+
+The parent Progress Notes form must support accepting a revision for one specific field.
+
+Requirements:
+
+* Use the existing note state update mechanism.
+* Mark only the accepted field as changed.
+* Preserve every other field.
+* Do not sign, save, submit, lock, or finalize the note.
+* Do not navigate away.
+* Show confirmation:
+
+  * `Intervention revision inserted — clinician review required.`
+* Announce the result to screen readers.
+* Keep the inserted text editable.
+* Preserve normal Save Draft and signing workflows.
+
+Before replacing a section that has changed since the clarity review was generated:
+
+* Warn the clinician that the field has been edited.
+* Show:
+
+  * Current field text
+  * Suggested revision
+* Require explicit confirmation before replacement.
+
+Do not silently overwrite more recent clinician edits.
+
+---
+
+# 8. Detect Stale Clarity Results
+
+Store a lightweight source snapshot or hash for each reviewed section.
+
+When the clinician attempts to accept a suggestion:
+
+* Compare the current field text with the text reviewed by Improve Clarity.
+* If unchanged:
+
+  * Allow normal acceptance.
+* If changed:
+
+  * Show a stale-result warning.
+
+Suggested message:
+
+**This section has changed since the clarity review was generated. Review the current and suggested text before replacing it.**
+
+Do not include patient text in general console logs.
+
+Do not use a cryptographic dependency unless already available; a direct text comparison is acceptable.
+
+---
+
+# 9. Update Audit Events
+
+Continue using the existing in-memory AI audit-event mechanism.
+
+Add or update events:
+
+* Clarity Review Requested
+* Clarity Review Completed
+* Clarity Section Opened
+* Clarity Section Revision Accepted
+* Clarity Section Revision Rejected
+* All Clarity Revisions Accepted
+* Stale Clarity Revision Warning Displayed
+
+Where supported, include:
+
+* User ID
+* Patient ID
+* Note reference
+* Timestamp
+* Field ID
+* Outcome
+* Review version
+* Whether text was inserted
+
+Do not include:
+
+* Original section text
+* Suggested section text
+* Patient quotations
+* Clinical narrative
+
+Audit persistence remains in memory only.
+
+Do not build a new backend during this task.
+
+---
+
+# 10. Remove Dead Text-Inference Code
+
+Search the full relevant codebase for all references to:
+
+```ts
+inferFieldId
+```
+
+If no active caller remains:
+
+* Delete the function completely.
+* Remove its deprecated warning.
+* Remove unused imports or comments related to it.
+
+If an active caller remains:
+
+* Replace the caller with structured metadata.
+* Then delete the function.
+
+Do not leave dead code merely as a safety net when TypeScript and tests can enforce the structured contract.
+
+---
+
+# 11. Add Focused Tests
+
+Extend the existing Vitest setup.
+
+Add tests for pure clarity transformation and result-mapping logic.
+
+Required test cases:
+
+1. BIRP sections retain their correct field IDs.
+2. DAP sections do not create Response or Intervention destinations when those fields do not exist.
+3. SOAP Objective clarity finding targets `objective`.
+4. GIRP Goal clarity finding targets `goal`.
+5. A section with no changes preserves the original text exactly.
+6. Accepting one section does not modify another section.
+7. A changed title does not change the target field.
+8. A changed explanation does not change the target field.
+9. Stable finding IDs use `clarity:{fieldId}`.
+10. Stale-result detection identifies clinician edits made after review.
+11. Empty sections do not generate fabricated clarity findings.
+12. Patient quotations remain unchanged.
+13. `inferFieldId` has no active references or no longer exists.
+
+Keep tests React-free where practical.
+
+Extract pure functions into a small module if necessary.
+
+Do not add a second testing framework.
+
+---
+
+# 12. Accessibility
+
+Requirements:
+
+* Each section result must have an accessible heading.
+* Accept and reject actions must include the field name.
+* Examples:
+
+  * `Accept Intervention revision`
+  * `Keep original Response text`
+* Field-navigation actions must use structured destination labels.
+* Screen readers must be notified when a section revision is accepted.
+* Keyboard users must be able to review and accept each section independently.
+* Confirmation dialogs must trap focus correctly.
+* Focus must return to the action that opened the confirmation.
+* Do not rely on red/green coloring alone to show original versus suggested text.
+
+---
+
+# 13. Preserve Existing Functionality
+
+Do not change:
+
+* Clinical Documentation Review pipeline order
+* Draft-generation behavior
+* Medical-necessity typed requirement codes
+* Internal-consistency behavior
+* Clinical Confidence panel
+* Completeness scoring
+* Finding-priority system
+* Jump-to-field behavior
+* AI permissions
+* Note signing
+* Note submission
+* Co-signature behavior
+* Patient access rules
+* Database schema
+* Seeded data
+
+Do not add external AI or LLM calls.
+
+Continue using the existing local rule-based clarity behavior.
+
+This task is a section-awareness and reliability refactor.
+
+---
+
+# Acceptance Criteria
+
+The task is complete only when:
+
+* Improve Clarity processes each note section independently.
+* Every clarity result retains a typed field ID.
+* Combined-text proportional re-splitting is removed.
+* Clinicians can accept one section revision at a time.
+* Clinicians can accept all approved revisions.
+* Unchanged sections are never overwritten.
+* Stale results trigger explicit confirmation.
+* Clinical Review clarity findings have structured field destinations.
+* Clarity finding titles may change without changing their target fields.
+* No clarity destination depends on text parsing.
+* `inferFieldId()` is removed after confirming no callers remain.
+* Existing note content remains clinician-controlled.
+* TypeScript passes.
+* Vitest passes.
+* Production build passes.
+
+---
+
+# Required Deliverables
+
+Provide:
+
+1. List of files changed.
+2. Updated section-aware clarity interfaces.
+3. Explanation of the new section-by-section clarity flow.
+4. Table of note formats and clarity field IDs.
+5. Example of a BIRP section result.
+6. Example of a SOAP section result.
+7. Example showing acceptance of one section only.
+8. Example showing Accept All behavior.
+9. Screenshot of section-by-section Clarity Review.
+10. Screenshot of one section’s original and suggested text.
+11. Screenshot of a field-specific clarity finding.
+12. Screenshot of the stale-result warning.
+13. Confirmation that proportional text re-splitting was removed.
+14. Confirmation that `inferFieldId()` was deleted.
+15. Audit-event list.
+16. Accessibility results.
+17. Vitest results.
+18. TypeScript result.
+19. Production build result.
+20. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge into `main`.
+
+Do not begin another feature.
+
+Stop after completing this single task and wait for review.

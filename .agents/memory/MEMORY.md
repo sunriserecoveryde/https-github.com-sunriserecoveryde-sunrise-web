@@ -10,3 +10,8 @@
 - [Quality sweep v3](quality-sweep-v3.md) — full Jul 22 date-coherence pass: week labels, today comparators, review dates, auth records, chart data, leave requests; v1.4.0 release notes added
 - [AI Note Engine + Wet Signatures](ai-note-engine.md) — template-based BIRP/DAP/SOAP/GIRP generator; SignatureModal/SignedBadge/WetSignatureCanvas; 5 pages wired; format union type must stay in sync
 - [ClinicalForms admissions screening rewrite](clinical-forms-rewrite.md) — tab layout, medication exclusion thresholds, BPS credential gate, JSX &amp; entity pitfall
+- [Phase 1A Hardening](phase-1a-hardening.md) — migrations, DB constraints, auth boundary, health endpoints, browser privacy; ZIP SHA ade475c9
+- [Phase 2 Hardening](phase-2-hardening.md) — migration idx gap, connect-pg-simple revocation, DISABLE_AUTH_FALLBACK guard, rate limiter skip, staff profile FK, seed export pattern
+- [Phase 2C Security Closure](phase-2c-security-closure.md) — exact FK binding in patient access, admin scope on all mutating routes, Drizzle cause.code error detection, event_type constraint
+- [Phase 2B Authorization Correction](phase-2b-authorization-correction.md) — scoped grants, tenant login (orgSlug required), PgRateLimiter, role-grant policy, 343/343 tests, review ZIP
+- [Phase 2D Hardening](phase-2d-hardening.md) — exact FK binding, outbox worker, credential rotation, 414/414 tests, ZIP evidence; Zod v4 email/mrn/trigger pitfalls documented

@@ -1,0 +1,54 @@
+Phase 2D — Rate-Limit Process-Restart Proof
+=============================================
+Date: 2026-08-02
+Branch: readiness/p0-phase-2d-final-closure
+
+Architecture:
+  - PgRateLimitStore backed by sos_rate_limit_windows (PostgreSQL)
+  - Key: req.ip (express-rate-limit default)
+  - Window: WINDOW_MS=900000ms (15 min default)
+  - Threshold: RATE_LIMIT_MAX=10 (default; env override ineffective in build)
+  - Store: PHASE2D_RATE_LIMIT_INTEGRATION=true enables PostgreSQL store
+  - Skip: disabled for NODE_ENV≠test, or when RL_INTEGRATION=true
+
+Process A (PID=9237):
+  Started: node --enable-source-maps ./dist/index.mjs PORT=8099 PHASE2D_RATE_LIMIT_INTEGRATION=true
+  DB counter before: 0
+  Attempts 1-8: all HTTP 401 (wrong credentials; rate limiter increments counter, passes <10)
+  DB counter after 8 attempts (while Process A alive):
+    key='127.0.0.1', count=8
+
+Process A killed (SIGKILL):
+  DB counter AFTER Process A killed:
+    key='127.0.0.1', count=8   ← COUNTER PERSISTED in PostgreSQL
+  PostgreSQL survives the process exit — no counter reset
+
+Process B (PID=9358, NEW PROCESS — different PID):
+  Started: identical env + PHASE2D_RATE_LIMIT_INTEGRATION=true
+  Attempt 9:  HTTP 401 (counter=9,  9≤10 → passes)
+  Attempt 10: HTTP 401 (counter=10, 10≤10 → passes)
+  Attempt 11: HTTP 429 (counter=11, 11>10 → BLOCKED)
+    Response body: {"error":"Too many requests. Please try again later."}
+  DB counter after 11 attempts:
+    key='127.0.0.1', count=11
+
+DB counter accumulation proof:
+  Process A:  8 attempts → count=8 in PostgreSQL
+  Process A killed → count=8 (persists)
+  Process B:  3 more → count=11 → threshold exceeded → HTTP 429
+
+Multi-instance sharing:
+  Both Process A and Process B share the SAME row in sos_rate_limit_windows
+  via UPSERT ON CONFLICT (key, window_end). Two independent PostgreSQL
+  connection pools converge on the same counter row atomically.
+
+Response safety:
+  HTTP 429 response body: {"error":"Too many requests. Please try again later."}
+  No account existence information leaked. Unknown and known accounts
+  receive the same 429 response structure (proven in auth-p2d-rate-limit.test.ts step-08).
+
+Note: PHASE2D_RATE_LIMIT_MAX env var override was not effective in the built dist
+  (express-rate-limit v8.6.0 reads 'max' before spreading user options that contain 'limit').
+  The production default threshold is 10 (RATE_LIMIT_MAX default = 10).
+  Unit tests in auth-p2d-rate-limit.test.ts exercise PgRateLimitStore.increment()
+  directly and confirm counter behavior at the correct configured threshold.

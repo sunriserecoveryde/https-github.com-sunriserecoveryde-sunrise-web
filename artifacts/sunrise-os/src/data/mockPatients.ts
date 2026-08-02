@@ -828,3 +828,12 @@ MOCK_PATIENTS.push(
 
 // Seed demo expansion patients
 MOCK_PATIENTS.push(...EXTRA_ACTIVE_PATIENTS, ...DISCHARGED_PATIENTS);
+
+
+/** Lookup a patient by id across all patient lists (demo + main + extras). */
+export function getPatientById(id: string): Patient | undefined {
+  return (
+    DEMO_PATIENTS.find(p => p.id === id) ??
+    MOCK_PATIENTS.find(p => p.id === id)
+  );
+}

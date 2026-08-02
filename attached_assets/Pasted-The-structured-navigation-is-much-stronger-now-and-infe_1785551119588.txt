@@ -1,0 +1,465 @@
+The structured navigation is much stronger now, and `inferFieldId()` is no longer used in the active finding path. 
+
+However, the medical-necessity mappings still depend on **exact user-facing strings**, so changing the wording can silently remove field navigation in production. Replit identified this itself as the main remaining weakness. 
+
+Copy and paste this next:
+
+Complete one refinement task on the existing improvement branch:
+
+**Task: Replace medical-necessity string-key mappings with typed requirement codes**
+
+Do not begin clarity-engine changes, permissions work, audit persistence, scoring changes, additional AI modules, or unrelated UI work during this task.
+
+Do not merge into `main`.
+
+## Current problem
+
+The Clinical Documentation Review no longer parses finding text with regular expressions to determine field destinations.
+
+However, the current medical-necessity implementation still uses exact displayed strings as keys in:
+
+* `NECESSITY_ELEMENT_DEST`
+* `NECESSITY_REVIEW_DEST`
+
+This creates a remaining drift risk.
+
+For example, if the displayed finding changes from:
+
+`No specific therapeutic intervention or modality is documented`
+
+to:
+
+`Document the clinical intervention delivered during the session`
+
+the lookup may no longer find the destination, even though both messages represent the same missing requirement.
+
+In development, the issue may be noticed manually.
+
+In production, the finding safely falls back to the Medical Necessity tool, but field navigation is silently lost.
+
+## Objective
+
+Refactor medical-necessity results so they use stable typed requirement codes.
+
+User-facing wording must be separate from:
+
+* Finding identity
+* Priority
+* Field destination
+* Source fields
+* Recommended action
+* Fallback behavior
+
+Changing the title or explanation must never change navigation behavior.
+
+---
+
+# 1. Create Typed Medical-Necessity Requirement Codes
+
+Create a typed union or enum for every medical-necessity requirement currently evaluated.
+
+Example:
+
+```ts
+export type MedicalNecessityRequirementCode =
+  | "intervention-documented"
+  | "patient-response-documented"
+  | "treatment-goal-linked"
+  | "follow-up-plan-documented"
+  | "safety-status-documented"
+  | "continued-service-supported"
+  | "level-of-care-supported";
+```
+
+Adapt the exact codes to the requirements actually produced by the existing medical-necessity engine.
+
+Requirements:
+
+* Codes must be stable internal identifiers.
+* Codes must not contain patient data.
+* Codes must not depend on displayed wording.
+* Codes should be descriptive enough for developers to understand.
+* Do not expose raw internal codes as clinician-facing labels.
+
+---
+
+# 2. Update Medical-Necessity Result Types
+
+Replace arrays of plain strings such as:
+
+```ts
+missingElements: string[];
+clinicianReviewAreas: string[];
+```
+
+with structured result objects.
+
+Preferred structure:
+
+```ts
+interface MedicalNecessityFindingSource {
+  code: MedicalNecessityRequirementCode;
+  status:
+    | "present"
+    | "missing"
+    | "needs-review"
+    | "unable-to-determine";
+  title: string;
+  explanation: string;
+  recommendedAction?: string;
+  priority: FindingPriority;
+  targetCandidates?: ProgressNoteFieldId[];
+  fallbackTool?: "necessity";
+  sourceFields?: string[];
+}
+```
+
+Adapt the exact interface to the existing code.
+
+The medical-necessity evaluator should return structured metadata directly.
+
+Do not convert a string into metadata later.
+
+---
+
+# 3. Create One Requirement Configuration Map
+
+Create one typed configuration map keyed by requirement code.
+
+Example:
+
+```ts
+const MEDICAL_NECESSITY_REQUIREMENTS: Record<
+  MedicalNecessityRequirementCode,
+  {
+    title: string;
+    explanation: string;
+    recommendedAction?: string;
+    priority: FindingPriority;
+    targetCandidates: ProgressNoteFieldId[];
+    fallbackTool: "necessity";
+    sourceFields?: string[];
+  }
+> = {
+  "intervention-documented": {
+    title: "Intervention is not documented",
+    explanation:
+      "The note does not clearly identify the clinical intervention provided.",
+    recommendedAction: "Add Intervention",
+    priority: "important",
+    targetCandidates: ["intervention", "data", "assessment"],
+    fallbackTool: "necessity",
+    sourceFields: ["Intervention"]
+  }
+};
+```
+
+The exact candidate order must remain format-aware and clinically reasonable.
+
+Requirements:
+
+* Use `satisfies` or another TypeScript mechanism to ensure every requirement code has a configuration entry.
+* A newly added requirement code should create a compile-time error until its configuration is added.
+* Do not maintain separate maps for title, destination, action, and priority.
+* Do not use displayed strings as map keys.
+* Do not duplicate medical-necessity evaluation logic.
+
+---
+
+# 4. Update the Medical-Necessity Evaluator
+
+Update `evaluateMedicalNecessity()` so it produces findings using stable requirement codes.
+
+Example behavior:
+
+```ts
+{
+  code: "intervention-documented",
+  status: "missing"
+}
+```
+
+The evaluator may determine the status.
+
+The requirement configuration should supply:
+
+* User-facing title
+* Explanation
+* Priority
+* Recommended action
+* Candidate fields
+* Source fields
+* Fallback tool
+
+If the current evaluator needs different explanations depending on context, allow it to provide a safe explanation override while preserving the stable code.
+
+Do not require the renderer or pipeline aggregator to recognize exact sentence wording.
+
+---
+
+# 5. Preserve Existing Medical-Necessity Output Sections
+
+The clinician-facing Medical Necessity tool should continue showing:
+
+* Evidence Present
+* Missing Documentation
+* Suggested Clinician Review
+* Overall support rating
+* Required disclaimer
+
+Internally, these sections should be derived from structured findings.
+
+Do not reduce the amount of useful information shown to the clinician.
+
+Do not expose technical codes.
+
+---
+
+# 6. Update Clinical Review Finding Generation
+
+When medical-necessity results are added to the consolidated Clinical Documentation Review:
+
+* Use the requirement code.
+* Use its configured priority.
+* Use its configured recommended action.
+* Resolve the destination from configured target candidates.
+* Preserve `fallbackTool: "necessity"`.
+* Preserve structured source fields.
+* Generate a stable finding ID from the requirement code.
+
+Example:
+
+```ts
+{
+  id: `medical-necessity:${result.code}`,
+  priority: config.priority,
+  category: "medical-necessity",
+  title: config.title,
+  explanation: result.explanation ?? config.explanation,
+  recommendedAction: config.recommendedAction,
+  targetFieldId: resolveFieldTarget(
+    config.targetCandidates,
+    activeFormat
+  ),
+  fallbackTool: "necessity",
+  sourceFields: config.sourceFields
+}
+```
+
+Do not use incrementing IDs such as `f-3` for stable medical-necessity requirements when a requirement code is available.
+
+---
+
+# 7. Respect Note Formats
+
+Continue validating configured candidates against the active note format.
+
+Examples:
+
+## BIRP
+
+* Intervention requirement → Intervention
+* Patient response requirement → Response
+* Follow-up planning → Plan
+* Safety statement → Behavior, Response, or Plan only if clinically appropriate and actually present
+
+## DAP
+
+* Intervention requirement → Data or Assessment
+* Patient response requirement → Assessment or Data
+* Follow-up planning → Plan
+* Safety statement → Assessment
+
+## SOAP
+
+* Intervention requirement → Assessment or Plan
+* Patient response requirement → Subjective or Assessment
+* Follow-up planning → Plan
+* Safety statement → Assessment
+
+## GIRP
+
+* Treatment-goal connection → Goal
+* Intervention requirement → Intervention
+* Patient response requirement → Response
+* Follow-up planning → Plan
+
+Do not configure a destination that does not exist in the format.
+
+If no appropriate destination exists:
+
+* Leave `targetFieldId` undefined.
+* Preserve `fallbackTool: "necessity"`.
+* Show `Review Medical Necessity Details`.
+
+---
+
+# 8. Eliminate String-Key Drift
+
+Remove:
+
+* `NECESSITY_ELEMENT_DEST`
+* `NECESSITY_REVIEW_DEST`
+
+or refactor them so they are keyed exclusively by typed requirement codes.
+
+No active medical-necessity navigation decision may depend on exact displayed text.
+
+Confirm that changing any of the following does not affect the destination:
+
+* Title
+* Explanation
+* Recommended-action wording
+* Disclaimer text
+* Section heading
+
+---
+
+# 9. Add Development-Time Validation
+
+Extend the existing finding validation to check:
+
+* Every medical-necessity result has a known requirement code.
+* Every requirement code has a configuration entry.
+* Every missing or needs-review requirement has:
+
+  * A priority
+  * A title
+  * An explanation
+  * A recommended action when Important or Critical
+  * At least one target candidate or a fallback tool
+* Every target candidate is a valid `ProgressNoteFieldId`.
+* Stable finding IDs do not collide.
+* No clinician-facing label is empty.
+
+Warnings must contain only structural metadata:
+
+* Requirement code
+* Status
+* Priority
+* Candidate field IDs
+
+Do not log:
+
+* Patient names
+* Patient IDs
+* Note text
+* Findings containing clinical narrative
+* Diagnoses
+* Risk details
+* Staff names
+
+---
+
+# 10. Add Focused Automated Tests
+
+The project currently has no configured test runner.
+
+For this task, add the smallest appropriate test setup only if it can be done without destabilizing the application.
+
+At minimum, test the pure requirement configuration and conversion logic.
+
+Required cases:
+
+1. Every requirement code has configuration.
+2. Changing a title does not change its destination.
+3. Changing an explanation does not change its destination.
+4. BIRP intervention requirement targets Intervention.
+5. DAP patient-response requirement does not target a nonexistent Response field.
+6. SOAP safety requirement targets Assessment.
+7. GIRP treatment-goal requirement targets Goal.
+8. No valid destination produces a Medical Necessity fallback action.
+9. Stable IDs are generated from requirement codes.
+10. Duplicate requirement codes are detected or safely deduplicated.
+
+Preferred tools:
+
+* Use the testing framework already present in dependencies, if one exists.
+* Otherwise, add a minimal Vitest configuration if compatible with the current Vite and TypeScript setup.
+
+Do not add a large testing framework or unrelated dependencies.
+
+If adding a test runner is genuinely unsafe for this artifact, create a deterministic development-only assertion function and clearly explain why automated tests were not added.
+
+---
+
+# 11. Preserve Existing Functionality
+
+Do not change:
+
+* Clinical Documentation Review pipeline order
+* Draft behavior
+* Clinical Confidence panel
+* Documentation-completeness score
+* Finding priorities
+* Jump-to-field behavior
+* Focus and highlighting behavior
+* Reduced-motion behavior
+* Individual AI tools
+* Existing medical-necessity disclaimer
+* Existing safety rules
+* Existing permissions
+* Audit-event behavior
+* Note signing or submission
+* Database schema
+* Seeded data
+
+Do not change the clinical meaning of the existing medical-necessity review.
+
+This task is an internal metadata and reliability refactor.
+
+---
+
+# Acceptance Criteria
+
+The task is complete only when:
+
+* Medical-necessity findings use stable typed requirement codes.
+* No medical-necessity navigation mapping uses displayed strings as keys.
+* Titles can be reworded without affecting destinations.
+* Explanations can be reworded without affecting destinations.
+* Requirement configuration is compile-time complete.
+* Medical-necessity findings have stable IDs.
+* Format-specific destinations remain valid.
+* Findings without valid destinations use the Medical Necessity fallback tool.
+* Existing clinician-facing Medical Necessity sections remain available.
+* No patient note content is written to warnings.
+* TypeScript passes.
+* Production build passes.
+* Focused tests pass, if added.
+
+---
+
+# Required Deliverables
+
+Provide:
+
+1. List of files changed.
+2. The complete medical-necessity requirement-code union.
+3. Updated structured result interfaces.
+4. The requirement configuration map structure.
+5. Table mapping requirement codes to:
+
+   * Priority
+   * Candidate destinations
+   * Fallback behavior
+6. Explanation of how displayed strings were removed as navigation keys.
+7. Example showing a title change without a destination change.
+8. Example showing an explanation change without a destination change.
+9. Note-format destination matrix.
+10. Stable finding-ID examples.
+11. Development-time validation behavior.
+12. Confirmation that warnings contain no patient or note content.
+13. Automated test results or explanation of the deterministic alternative.
+14. TypeScript result.
+15. Production build result.
+16. Test and lint status.
+17. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge into `main`.
+
+Do not begin another feature.
+
+Stop after completing this single task and wait for review.

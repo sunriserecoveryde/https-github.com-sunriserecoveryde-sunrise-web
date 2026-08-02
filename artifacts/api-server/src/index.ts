@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { getAuditOutboxWorker } from "./lib/auditOutboxWorker";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,17 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Start the audit-outbox worker after the server is bound.
+  // The worker performs a startup-recovery drain so any events that were
+  // pending when the previous process was stopped are processed immediately.
+  const worker = getAuditOutboxWorker();
+  worker.start();
+
+  // Graceful shutdown: stop the worker cleanly on SIGTERM / SIGINT.
+  const shutdown = () => {
+    worker.stop().then(() => process.exit(0)).catch(() => process.exit(1));
+  };
+  process.once("SIGTERM", shutdown);
+  process.once("SIGINT",  shutdown);
 });

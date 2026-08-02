@@ -1,0 +1,439 @@
+Complete one task on the existing improvement branch:
+
+**Task Group 2 — Task 1: Add Contextual AI Assistance to Progress Notes**
+
+Do not begin AI work in Treatment Plans, ASAM Assessments, Patient Profile, Discharge Summaries, or Authorizations during this run.
+
+Use the existing Sunrise AI infrastructure, current Progress Notes workflow, existing role permissions, existing note templates, existing audit logging, and existing patient data access rules.
+
+Do not create a second AI system.
+
+## Goal
+
+Add safe, clinician-controlled AI assistance directly inside the Progress Notes workflow so authorized clinicians can:
+
+1. Draft a progress note
+2. Improve note clarity
+3. Check medical necessity
+4. Check internal consistency
+
+AI output must remain a draft until the clinician explicitly reviews and approves it.
+
+---
+
+## 1. Add an AI Assist entry point
+
+Add a clearly labeled button inside the Progress Notes editor:
+
+**AI Assist**
+
+Placement:
+
+* Near the note editor actions
+* Visible without leaving the Progress Notes workflow
+* Separate from Save, Sign, Submit, or Finalize actions
+* Do not make AI Assist the primary action on the page
+
+When selected, open a right-side panel or modal without navigating away.
+
+The panel should include these actions:
+
+* Draft Progress Note
+* Improve Clarity
+* Check Medical Necessity
+* Check Internal Consistency
+
+Only display AI actions the current user is authorized to use.
+
+---
+
+## 2. Draft Progress Note
+
+Allow the clinician to generate a draft based only on information already available in the current workflow.
+
+Approved source information may include:
+
+* Current patient
+* Date of service
+* Level of care
+* Note type
+* Clinician role
+* Current treatment-plan goals
+* Documented interventions
+* Documented patient response
+* Documented progress
+* Documented barriers
+* Current risk information
+* Existing structured fields completed by the clinician
+* Prior note context only if already permitted and clinically appropriate
+
+Do not use unsupported or hidden information.
+
+Requirements:
+
+* Show the source fields used.
+* Clearly label the result:
+
+  * `AI-Generated Draft — Requires Clinician Review`
+* Do not automatically insert the draft into the legal note.
+* Provide:
+
+  * Insert Draft
+  * Copy Draft
+  * Regenerate
+  * Discard
+* `Insert Draft` must place the text into an editable draft field only.
+* Inserting the draft must not sign, submit, lock, or finalize the note.
+* Preserve clinician edits after insertion.
+* Never overwrite existing clinician-entered text without confirmation.
+
+If there is insufficient information, return:
+
+**Not enough documented information to generate a clinically supported draft.**
+
+Also identify which structured fields are missing.
+
+---
+
+## 3. Improve Clarity
+
+Allow the clinician to submit the current draft for clarity improvement.
+
+The AI may:
+
+* Correct grammar
+* Improve sentence structure
+* Reduce repetition
+* Improve professional tone
+* Improve readability
+* Preserve clinical meaning
+
+The AI must not:
+
+* Add new facts
+* Add observations not documented
+* Change patient quotations
+* Strengthen certainty beyond the source note
+* Add diagnoses
+* Add risk findings
+* Add interventions not performed
+* Change level-of-care recommendations
+* Change medication information
+
+Display:
+
+* Original text
+* Suggested revision
+* Highlighted differences where feasible
+
+Provide:
+
+* Accept Revision
+* Accept Selected Changes
+* Keep Original
+* Copy Suggested Revision
+
+Do not overwrite the original text automatically.
+
+---
+
+## 4. Check Medical Necessity
+
+Add a review function that evaluates whether the draft supports the documented service.
+
+The review may assess:
+
+* Connection between symptoms or impairments and treatment
+* Relationship to treatment-plan goals
+* Intervention provided
+* Patient response
+* Ongoing barriers
+* Progress or lack of progress
+* Continued need for the current service
+* Level-of-care support where relevant
+
+Output categories:
+
+* Supported
+* Partially Supported
+* Insufficiently Supported
+* Unable to Determine
+
+The review must clearly separate:
+
+1. Evidence already present
+2. Missing documentation
+3. Suggested areas for clinician review
+
+Do not rewrite unsupported content as fact.
+
+Do not provide a guarantee of payer approval.
+
+Display a disclaimer:
+
+**This review supports documentation quality and does not guarantee reimbursement, authorization, or payer acceptance.**
+
+---
+
+## 5. Check Internal Consistency
+
+The AI should identify conflicts inside the current note and between the note and authorized structured information.
+
+Examples:
+
+* Note says patient denied cravings, but another field records severe cravings
+* Note says no progress, while the progress field says goals were met
+* Intervention listed without patient response
+* Patient response documented without an intervention
+* Risk statement conflicts with selected risk fields
+* Level of care conflicts with the note narrative
+* Note references the wrong patient, date, clinician, or program
+* Mental-status narrative conflicts with selected structured fields
+
+Output:
+
+* No consistency concerns identified
+* Potential inconsistency
+* Missing connection
+* Requires clinician review
+
+Each finding must include:
+
+* Conflicting fields or text
+* Why it may be inconsistent
+* Suggested clinician action
+
+Do not silently correct the note.
+
+---
+
+## 6. Human review and approval
+
+AI-generated or AI-revised text must never automatically become part of the finalized legal health record.
+
+Requirements:
+
+* Require explicit clinician action before insertion.
+* Require normal existing signing and submission workflow afterward.
+* Do not allow AI to sign or finalize.
+* Do not allow AI to act under another clinician’s identity.
+* Preserve the original clinician-entered content.
+* Display:
+
+  * Generated timestamp
+  * User requesting assistance
+  * AI action type
+  * Patient and note context
+  * Approval, rejection, or partial acceptance
+* Record accepted AI text and the final clinician-edited version where the existing audit model supports it.
+
+Do not expose AI prompts or outputs to unauthorized roles.
+
+---
+
+## 7. Audit logging
+
+Create audit records using the existing audit mechanism for:
+
+* AI Draft Requested
+* AI Draft Generated
+* AI Draft Inserted
+* AI Draft Discarded
+* Clarity Review Requested
+* Revision Accepted
+* Revision Rejected
+* Medical Necessity Check Requested
+* Consistency Check Requested
+
+Where supported, record:
+
+* User ID
+* Patient ID
+* Note ID
+* Timestamp
+* AI action type
+* Outcome
+* Whether content was inserted
+* Whether inserted content was later edited
+
+Do not store raw sensitive prompts in general application logs.
+
+Do not log more clinical content than necessary.
+
+---
+
+## 8. Permissions
+
+Only authorized clinical roles should see contextual AI actions.
+
+Examples may include:
+
+* Counselor
+* Therapist
+* Clinical Supervisor
+* Medical Provider
+* Nurse, where appropriate to the note type
+* System Administrator for demo and configuration purposes
+
+Do not automatically give access to:
+
+* Billing-only users
+* HR users
+* Business-development users
+* Read-only users
+* Users without access to the note or patient
+
+Use existing role and note permissions.
+
+Do not create a broad new permission bypass.
+
+---
+
+## 9. Safety controls
+
+The AI must not independently:
+
+* Diagnose
+* Change diagnoses
+* Recommend medication changes
+* Enter medication orders
+* Assign ASAM level of care
+* Finalize suicide-risk decisions
+* Finalize violence-risk decisions
+* Finalize withdrawal-management decisions
+* Sign or lock documentation
+* Generate fabricated patient quotations
+* Add services not performed
+
+When information is missing or conflicting, the AI must state that clearly.
+
+Use language such as:
+
+* `Insufficient documented information`
+* `Potential inconsistency`
+* `Clinician review required`
+* `Unable to determine from available documentation`
+
+---
+
+## 10. User experience
+
+The AI panel must show:
+
+* Current action
+* Source information used
+* AI output
+* Warnings or limitations
+* Available clinician actions
+* Processing state
+* Error state
+* Empty state
+
+Requirements:
+
+* Do not block the entire Progress Notes workflow while processing.
+* Preserve unsaved clinician text.
+* Prevent accidental loss when closing the panel.
+* Warn before discarding uninserted AI output.
+* Support keyboard navigation.
+* Trap focus correctly inside a modal.
+* Return focus to the AI Assist button when closed.
+* Meet existing accessibility patterns.
+
+---
+
+## 11. Error handling
+
+If the AI service is unavailable:
+
+Show:
+
+**AI assistance is temporarily unavailable. Your note has not been changed.**
+
+Requirements:
+
+* Preserve all current note text.
+* Do not clear structured fields.
+* Do not display raw API errors.
+* Allow the clinician to continue documenting manually.
+* Provide Retry only where appropriate.
+
+If AI output is incomplete or malformed:
+
+* Do not insert it.
+* Show a safe error state.
+* Record a technical failure without storing unnecessary patient content.
+
+---
+
+## 12. Do not change
+
+Do not change:
+
+* Production database schema unless an existing approved AI audit structure already requires migration
+* Existing note-signing logic
+* Existing co-signature rules
+* Existing patient permissions
+* Existing note permissions
+* Existing clinical calculations
+* Existing diagnoses
+* Existing treatment-plan logic
+* Existing ASAM scoring
+* Existing risk thresholds
+* Existing authentication
+* Existing seeded data
+* Existing Sunrise AI module
+
+Do not replace the existing Progress Notes editor.
+
+---
+
+## Acceptance criteria
+
+* AI Assist appears only for authorized clinical users.
+* Draft Progress Note uses only approved documented source data.
+* AI output is clearly labeled as a draft.
+* AI content never auto-saves, auto-signs, or auto-finalizes.
+* Clinician approval is required before insertion.
+* Existing clinician text is not overwritten without confirmation.
+* Clarity review does not add new facts.
+* Medical-necessity review separates present evidence from missing support.
+* Consistency review identifies conflicts without silently correcting them.
+* Insufficient information produces a safe, explicit result.
+* Audit events are created using the existing audit mechanism.
+* Unauthorized roles do not see or access the AI actions.
+* AI failure does not affect manual documentation.
+* Keyboard and focus behavior work.
+* TypeScript check passes.
+* Production build passes.
+* Existing tests pass, if configured.
+
+---
+
+## Required deliverables
+
+1. List of files changed.
+2. Explanation of how the existing Sunrise AI infrastructure was reused.
+3. Table of all four AI actions and their permitted behavior.
+4. Screenshot of AI Assist inside Progress Notes.
+5. Screenshot of Draft Progress Note output.
+6. Screenshot showing source information used.
+7. Screenshot showing insertion requiring clinician approval.
+8. Screenshot of Improve Clarity with original and suggested versions.
+9. Screenshot of Medical Necessity findings.
+10. Screenshot of Internal Consistency findings.
+11. Screenshot of insufficient-information behavior.
+12. Screenshot showing an unauthorized role without AI access.
+13. Screenshot of the AI-unavailable error state.
+14. Audit-event list.
+15. Keyboard and accessibility results.
+16. TypeScript result.
+17. Production build result.
+18. Test and lint status, or confirmation that no scripts are configured.
+19. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge it into main.
+
+Stop after completing this single task and wait for review.

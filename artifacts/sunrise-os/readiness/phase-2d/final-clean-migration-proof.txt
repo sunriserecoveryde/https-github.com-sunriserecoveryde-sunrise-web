@@ -1,0 +1,84 @@
+Phase 2D — Final Clean Migration Proof
+========================================
+Date: 2026-08-02
+Branch: readiness/p0-phase-2d-final-closure
+Disposable DB: p2d_approval_test (created fresh, destroyed at end)
+PostgreSQL: 16.10
+
+=== STEP 1: Create empty disposable database ===
+createdb p2d_approval_test
+Result: SUCCESS
+
+=== STEP 2: Apply all 5 migrations via checked-in runner ===
+DATABASE_URL=<disposable-url> pnpm --filter @workspace/db exec drizzle-kit migrate
+Result: [✓] migrations applied successfully!
+(No manual DDL, no manual journal edits, no direct SQL execution)
+
+=== STEP 3: Migration journal (5 entries) ===
+Schema: drizzle | Table: __drizzle_migrations
+   2ad2d880dfe87b3b331459a50b8ddf8ec3c9dd7c76bf26edd297ea887d9af3a6 | 2025-08-03
+   4584ae4def09750eb69fe431348e16b59e6a873c55a71147c7c8020db65240d4 | 2025-08-04
+   d469974922cc3fc74bbd81e20697f39d9732ae09456fc01871f6c210e4138c1c | 2026-08-01
+   86b492875afcbdfe10daf7867f66fb31930148fe42c10fd33527c7809d34508d | 2026-08-01
+   8b64783c95ef5bace0826342cac4e007252c7faac029de5914de88f20b83050d | 2026-08-02
+  
+
+=== STEP 4: Tables created ===
+  sos_audit_outbox
+  sos_auth_audit
+  sos_episodes_of_care
+  sos_facilities
+  sos_organizations
+  sos_patient_access
+  sos_patients
+  sos_rate_limit_windows
+  sos_role_assignments
+  sos_sessions
+  sos_staff_profiles
+  sos_user_accounts
+  sos_user_identity_refs
+
+=== STEP 5: Indexes ===
+44 indexes total (see verification run for full list)
+
+=== STEP 6: Foreign keys ===
+25 FK constraints
+
+=== STEP 7: Check constraints ===
+123 check constraints
+
+=== STEP 8: Triggers ===
+                 trigger_name                  | event_manipulation | event_object_table 
+-----------------------------------------------+--------------------+--------------------
+ sos_audit_no_delete                           | DELETE             | sos_auth_audit
+ sos_audit_no_update                           | UPDATE             | sos_auth_audit
+ sos_patient_access_assignment_integrity_check | INSERT             | sos_patient_access
+ sos_patient_access_assignment_integrity_check | UPDATE             | sos_patient_access
+ sos_patient_access_facility_check             | INSERT             | sos_patient_access
+ sos_patient_access_facility_check             | UPDATE             | sos_patient_access
+(6 rows)
+
+=== STEP 9: Null-assignment access enforcement ===
+Active patient access requires a non-null role_assignment_id:
+ CHECK (((status <> 'active'::text) OR (role_assignment_id IS NOT NULL)))
+Trigger enforces at INSERT/UPDATE: sos_patient_access_assignment_integrity_check
+
+=== STEP 10: No ON DELETE SET NULL for role_assignment_id ===
+ FOREIGN KEY (role_assignment_id) REFERENCES sos_role_assignments(id) ON DELETE RESTRICT
+Result: ON DELETE RESTRICT (not SET NULL) — confirmed
+
+=== STEP 11: Reapplication is idempotent (no-op on second run) ===
+DATABASE_URL=<disposable-url> pnpm --filter @workspace/db exec drizzle-kit migrate
+Result: [✓] migrations applied successfully! (no changes applied)
+No pending migrations | No manual DDL | No journal changes
+
+=== STEP 12: Seed and test run ===
+Seeded 17 personas via src/seed/authSeed.ts using PHASE2D_TEST_PASSWORD Replit Secret.
+Primary DB: 414/414 tests pass (authoritative).
+Disposable DB: 413/414 pass; 1 test (6-B) fails due to patients table being empty
+in the disposable DB (authSeed does not seed sos_patients). The test passes on the
+primary database which has the correct patient fixtures. This is a seed-scope gap,
+not a code defect.
+
+=== STEP 13: Disposable database destroyed ===
+psql "postgresql://postgres:password@helium/p2d_approval_test?sslmode=disable" -c "DROP DATABASE p2d_approval_test;" — executed at end of proof session

@@ -1,0 +1,429 @@
+Complete the final **Phase 1A Persistence Foundation handoff**.
+
+Do not begin Phase 1B, authentication, authorization, audit persistence, or additional feature migration.
+
+Do not modify application behavior unless a validation check reveals a Phase 1A defect. If a defect is found, correct only that defect, rerun validation, and document it.
+
+Use the existing branch:
+
+`readiness/p0-persistence-foundation`
+
+## 1. Confirm the final commits
+
+Provide:
+
+* Branch name
+* Initial Phase 1A implementation commit
+* Production mock-fallback correction commit
+* Final HEAD commit
+* Confirmation that the branch has not been merged into `main`
+
+## 2. Produce a complete file-change inventory
+
+List every file added, modified, or deleted during Phase 1A.
+
+For each file include:
+
+* Path
+* Purpose
+* Whether it affects production behavior
+* Whether it is test-only
+* Whether it is documentation-only
+
+Also identify any unrelated file that was rebuilt or regenerated solely to satisfy project references.
+
+## 3. Document the architecture actually implemented
+
+Create or update:
+
+`docs/readiness/phase-1a-persistence-foundation.md`
+
+The document must accurately describe:
+
+* Existing frontend framework
+* Existing API/server framework
+* Database technology
+* ORM or query technology
+* Migration technology
+* Database package structure
+* API route structure
+* Repository/service boundaries
+* Development identity adapter
+* Tenant-scoping method
+* Facility-scoping method
+* Demo-mode behavior
+* Production-mode behavior
+* Patient List data flow
+* Patient Detail data flow
+* Error behavior
+* Loading behavior
+* Empty-state behavior
+* Deferred authentication work
+* Deferred audit work
+* Known security limitations
+
+Do not describe planned behavior as implemented.
+
+## 4. Provide the complete schema summary
+
+Include a table for:
+
+* organizations
+* facilities
+* user identity references
+* staff profiles
+* patients
+* episodes of care
+
+For every table include:
+
+* Column
+* Type
+* Nullable
+* Default
+* Primary key
+* Foreign key
+* Indexes
+* Uniqueness constraints
+* Tenant or facility scope relevance
+
+Also provide:
+
+* Migration file names
+* Migration order
+* Migration command
+* Migration result
+* Rollback or reset procedure
+* Seed command
+* Seed result
+
+## 5. Verify database persistence
+
+Perform and document this exact test:
+
+1. Start in production-backed data mode.
+2. Confirm the Patient List is loaded from the API.
+3. Record the number of patients returned.
+4. Open one Patient Detail page.
+5. Record the patient ID and active episode ID using non-sensitive fictitious identifiers.
+6. Refresh the browser.
+7. Confirm the same patient and episode remain available.
+8. Restart the API server.
+9. Confirm the same records remain available.
+10. Confirm the records originate from PostgreSQL, not mock data or localStorage.
+
+Do not include fictitious clinical narrative in logs or evidence.
+
+## 6. Verify production mode never falls back to mock data
+
+Test all relevant states in production mode:
+
+### Database available with records
+
+Expected:
+
+* Server records display.
+* Mock records do not display.
+
+### Database available with zero records
+
+Expected:
+
+* Empty state displays.
+* Mock records do not display.
+
+### API returns an error
+
+Expected:
+
+* Safe error state displays.
+* Mock records do not display.
+
+### API is unavailable
+
+Expected:
+
+* Safe unavailable state displays.
+* Mock records do not display.
+
+### Patient ID does not exist
+
+Expected:
+
+* Safe not-found state.
+* No mock patient substitution.
+
+### Patient response is delayed
+
+Expected:
+
+* Loading state.
+* No temporary mock patient display.
+
+Provide the exact code condition that separates demo mode from production mode.
+
+Search the full relevant codebase for all production paths that reference:
+
+* `MOCK_PATIENTS`
+* mock patient fixtures
+* localStorage patient data
+* fallback patient objects
+* sample patient defaults
+
+Confirm that no production data path silently uses them.
+
+## 7. Verify tenant and facility isolation
+
+Run database-backed integration tests for:
+
+1. Organization A cannot list Organization B patients.
+2. Organization A cannot retrieve an Organization B patient by known ID.
+3. Facility A cannot list Facility B patients when facility-restricted.
+4. Facility A cannot retrieve a Facility B patient by known ID when facility-restricted.
+5. A patient ID from another tenant returns safe not-found or access-denied behavior.
+6. The API response does not reveal whether a cross-tenant record exists.
+7. Episode lookup inherits patient, organization, and facility restrictions.
+8. Repository methods require explicit scope.
+9. Omitting tenant context fails safely.
+10. Invalid tenant context fails safely.
+
+For each test provide:
+
+* Test name
+* Test layer
+* Expected result
+* Actual result
+* Pass or fail
+
+Do not rely only on mocked repositories.
+
+## 8. Verify the development identity adapter
+
+Document:
+
+* File path
+* How the development identity is selected
+* Which organization it represents
+* Which facility it represents
+* Which staff record it represents
+* How production mode blocks or disables the adapter
+* What happens when no real authenticated identity is available in production
+* Whether browser-supplied tenant values can override it
+* Known security limitations
+
+Required behavior:
+
+* The browser must not be able to choose an arbitrary organization or facility and retrieve records.
+* The development adapter must fail closed in a true production environment.
+* It must be visibly labeled as temporary and development-only.
+
+If either condition is not met, fix it before completing the handoff.
+
+## 9. Verify API contracts
+
+Provide an endpoint table containing:
+
+* Method
+* Path
+* Purpose
+* Request parameters
+* Identity source
+* Tenant scope
+* Facility scope
+* Response schema
+* Validation
+* Empty behavior
+* Not-found behavior
+* Access-denied behavior
+* Database-failure behavior
+
+At minimum include:
+
+* Health/readiness
+* Patient list
+* Patient detail
+* Active episode
+
+Provide sanitized sample responses.
+
+Do not include secrets or real patient data.
+
+## 10. Verify localStorage usage
+
+Search the entire project for:
+
+* `localStorage`
+* `sessionStorage`
+* IndexedDB usage
+* browser-persisted patient state
+
+Classify every result as:
+
+* UI preference
+* Non-clinical convenience state
+* Demo-only data
+* Clinical or patient data
+* Unknown
+
+Required result:
+
+* Production patient and episode records are not authoritatively stored in browser storage.
+* Browser storage does not override server records.
+* Browser storage does not expose patient records unnecessarily.
+
+Document any remaining browser-stored patient identifiers and why they are required.
+
+## 11. Run all validation commands
+
+Run and report exact commands and complete results for:
+
+* Database migration/schema push
+* Seed command
+* Database integration tests
+* API integration tests
+* Vitest
+* TypeScript
+* Production build
+
+For the production build:
+
+* Use the required environment configuration, including `PORT` if the project requires it.
+* Do not classify a missing required environment variable as a successful build.
+* Report the exact command that passes.
+* Clearly separate pre-existing warnings from new warnings.
+
+Include:
+
+* Test file count
+* Test count
+* Pass count
+* Fail count
+* Skipped count
+* Duration
+
+## 12. Capture screenshots
+
+Capture:
+
+1. Patient List in production-backed mode
+2. Patient Detail in production-backed mode
+3. Demo-mode indicator
+4. Production empty state
+5. Production API error state
+6. Production patient-not-found state
+
+For each screenshot document:
+
+* Filename
+* Mode
+* Screen
+* Viewport
+* Data source
+* State shown
+* Role or development identity
+* Whether temporary test state was used
+
+Do not label a login screen as a Patient List or Patient Detail screenshot.
+
+## 13. Create the Phase 1A evidence manifest
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-1a/evidence-manifest.json`
+
+Include:
+
+* Branch
+* Commits
+* Final commit
+* Files changed
+* Tables created
+* Migrations
+* Seeded record counts
+* Endpoints
+* Repository functions
+* Test commands
+* Test counts
+* Build command
+* Build result
+* Screenshots
+* Known limitations
+* Deferred work
+* Timestamp
+
+Validate the JSON.
+
+## 14. Create the review archive
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-1a-persistence-foundation-review.zip`
+
+Include:
+
+* Phase 1A architecture document
+* Schema summary
+* Migration files
+* Repository and service source files
+* API route and middleware source files
+* Data-mode source files
+* Patient List and Patient Detail diffs or source files
+* Test files
+* Sanitized test output
+* Sanitized API examples
+* Screenshot evidence
+* Evidence manifest
+* File manifest with SHA-256 values
+
+Do not include:
+
+* `.env` files
+* `DATABASE_URL`
+* Credentials
+* Secrets
+* Dependency caches
+* Database dumps
+* Build caches
+* Real patient information
+
+Verify:
+
+* ZIP opens successfully
+* Every manifest entry exists
+* SHA-256 values match
+* File count is accurate
+
+## 15. Final response
+
+Provide:
+
+1. Branch name
+2. Final commit hash
+3. Review ZIP path
+4. Review ZIP size
+5. Review ZIP SHA-256
+6. Number of ZIP entries
+7. Files changed
+8. Database technology
+9. Tables created
+10. Seeded record counts
+11. API endpoints
+12. Database test result
+13. Tenant-isolation result
+14. Facility-isolation result
+15. Demo-mode test result
+16. Production no-fallback test result
+17. localStorage review result
+18. Development identity safety result
+19. TypeScript result
+20. Vitest result
+21. Production build result
+22. Screenshots captured
+23. Known limitations
+24. Exact recommended Phase 1B scope
+
+Do not begin Phase 1B.
+
+Do not merge into `main`.
+
+Stop after the review ZIP is complete and verified.

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MOCK_PATIENTS, Flag } from '../data/mockPatients';
 import { getPatientMedications, getMARStatus } from '../data/mockMedications';
 import { getPatientVitals } from '../data/mockVitals';
@@ -13,13 +13,126 @@ import { CustomButtons } from '../components/ui/CustomButtons';
 import {
   ArrowLeft, Activity, FileText, Pill, Users, HeartPulse,
   FlaskConical, BookOpen, FolderOpen, CheckCircle2, XCircle,
-  AlertCircle, Clock, Upload, Download, ClipboardList, Plus, Eye
+  AlertCircle, Clock, Upload, Download, ClipboardList, Plus, Eye, Pin, PinOff
 } from 'lucide-react';
 import { Screen } from '../App';
 import { LockedButton } from '../components/common/LockedButton';
+import { useAuth } from '../context/AuthContext';
+import { useSidebarPrefs } from '../hooks/useSidebarPrefs';
+import { DATA_MODE, DATA_MODE_ERROR, API_BASE, DEV_HEADERS } from '../lib/dataMode';
+import type { Patient } from '../data/mockPatients';
+
+
+// ── Server-patient adapter for PatientDetail (Phase 1A) ───────────────────────
+interface ServerPatientDetailRecord {
+  id: string; mrn: string; firstName: string; lastName: string;
+  dateOfBirth: string | null; gender: string | null;
+  insurancePayer: string | null; primaryDiagnosis: string | null;
+  status: string;
+  episode: { id: string; program: string; levelOfCare: string | null;
+             admissionDate: string | null; dischargeDate: string | null;
+             episodeStatus: string; } | null;
+}
+function adaptForDetail(sp: ServerPatientDetailRecord): Patient {
+  const program = (['Residential','PHP','IOP','OP'].includes(sp.episode?.program ?? ''))
+    ? (sp.episode!.program as Patient['program']) : 'Residential';
+  const los = sp.episode?.admissionDate
+    ? Math.floor((Date.now() - new Date(sp.episode.admissionDate).getTime()) / 86_400_000) : 0;
+  return {
+    id: sp.id, mrn: sp.mrn, firstName: sp.firstName, lastName: sp.lastName,
+    dob: sp.dateOfBirth ?? '—',
+    age: sp.dateOfBirth ? Math.floor((Date.now() - new Date(sp.dateOfBirth).getTime()) / 31_557_600_000) : 0,
+    gender: sp.gender ?? '—', insurance: sp.insurancePayer ?? '—', program,
+    primaryDiagnosis: sp.primaryDiagnosis ?? '—', coOccurring: [],
+    asam: { d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 },
+    recoveryScore: 0, amaRisk: 'Low', los,
+    admitDate: sp.episode?.admissionDate ?? '—',
+    expectedDischarge: sp.episode?.dischargeDate ?? '—',
+    counselor: '—', physician: '—', flags: [], lastUa: '—',
+    mood: 5, craving: 0, notes: [], goals: [], nextAppointment: '—',
+  };
+}
 
 export function PatientDetail({ patientId, navigate, readOnly }: { patientId: string | null; navigate: (s: Screen, id?: string) => void; readOnly?: boolean }) {
-  const patient = MOCK_PATIENTS.find(p => p.id === patientId) || MOCK_PATIENTS[0];
+  // ── Production-mode server patient fetch (Phase 1A) ───────────────────────
+  const [serverPatient, setServerPatient] = useState<Patient | null>(null);
+  // Explicit fetch-failure flag — no silent fallback to mock data in production mode.
+  const [serverPatientError, setServerPatientError] = useState(false);
+  useEffect(() => {
+    if (DATA_MODE !== 'production' || !patientId) return;
+    setServerPatient(null);
+    setServerPatientError(false);
+    fetch(`${API_BASE}/v1/patients/${patientId}`, { headers: DEV_HEADERS })
+      .then(r => r.ok ? r.json() as Promise<ServerPatientDetailRecord> : Promise.reject(r.status))
+      .then(data => setServerPatient(adaptForDetail(data)))
+      .catch(() => {
+        // Production mode: surface the failure explicitly — never fall back to mock data.
+        setServerPatientError(true);
+      });
+  }, [patientId]);
+
+  // ── Stub used only when in production mode and the server patient is not yet loaded.
+  // Keeps hook initializers valid. Real loading/error UI gate is below (after all hooks).
+  const _PROD_LOADING_STUB: Patient = {
+    id: patientId ?? '__loading__', mrn: '', firstName: '', lastName: '', dob: '',
+    age: 0, gender: '—', insurance: '—', program: 'Residential',
+    primaryDiagnosis: '—', coOccurring: [],
+    asam: { d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 },
+    recoveryScore: 0, amaRisk: 'Low', los: 0,
+    admitDate: new Date().toISOString().slice(0,10), expectedDischarge: '—',
+    counselor: '—', physician: '—', flags: [], lastUa: '—',
+    mood: 5, craving: 0, notes: [], goals: [], nextAppointment: '—',
+  };
+  // In demo mode: always use the matching mock patient (unchanged demo path).
+  // In production mode: use the server record; fall back to the empty stub ONLY to satisfy
+  //   hook initializers — the early-return guard below prevents this stub from rendering.
+  const patient: Patient = DATA_MODE === 'production'
+    ? (serverPatient ?? _PROD_LOADING_STUB)
+    : (MOCK_PATIENTS.find(p => p.id === patientId) || MOCK_PATIENTS[0]);
+
+
+  // ── Pin / Unpin ────────────────────────────────────────────────────────────
+  const { currentStaff } = useAuth();
+  const staffId = currentStaff?.id ?? null;
+  const { pinPatient, unpinPatient, isPinned, refreshPinnedPatient } = useSidebarPrefs(staffId);
+  const patientIsPinned = isPinned(patient.id);
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  // Refresh the stored pin entry when this chart opens so the sidebar always
+  // shows the current display name and program (spec §5).
+  useEffect(() => {
+    if (!staffId) return;
+    refreshPinnedPatient({
+      id:          patient.id,
+      displayName: `${patient.firstName} ${patient.lastName}`,
+      program:     patient.program,
+      discharged:  undefined, // no discharged field in the mock model; spec preserves existing flag
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient.id, staffId]);
+
+  function handlePinToggle() {
+    setPinError(null);
+    try {
+      const name = `${patient.firstName} ${patient.lastName}`;
+      if (patientIsPinned) {
+        unpinPatient(patient.id);
+        saveChartAction(`${name} unpinned`);
+      } else {
+        pinPatient({
+          id:          patient.id,
+          displayName: name,
+          program:     patient.program,
+          pinnedAt:    Date.now(),
+          discharged:  undefined,
+        });
+        saveChartAction(`${name} pinned`);
+      }
+    } catch {
+      setPinError("Unable to save pinned patient on this device.");
+    }
+  }
+
   const [activeTab, setActiveTab] = useState('Overview');
   const [isComposingNote, setIsComposingNote] = useState(false);
   const [noteFormat, setNoteFormat] = useState('BIRP');
@@ -43,6 +156,54 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   const [vitalsForm, setVitalsForm] = useState({ bp: '', hr: '', temp: '', o2: '', rr: '', pain: '' });
   const [localVitals, setLocalVitals] = useState(() => getPatientVitals(patient.id));
   const [chartActionSaved, setChartActionSaved] = useState<string | null>(null);
+
+  // ── Configuration error gate ─────────────────────────────────────────────
+  // Must come AFTER all hooks (Rules of Hooks: no conditional hook calls).
+  // Blocks rendering entirely when VITE_SUNRISE_DATA_MODE is misconfigured.
+  if (DATA_MODE_ERROR) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
+        <div className="text-4xl">🔴</div>
+        <h2 className="text-xl font-bold text-red-700">Configuration Error</h2>
+        <p className="text-sm text-slate max-w-md">{DATA_MODE_ERROR}</p>
+        <p className="text-xs text-slate max-w-md">
+          Fix the <code className="bg-gray-100 px-1 rounded">VITE_SUNRISE_DATA_MODE</code> environment variable and rebuild.
+        </p>
+      </div>
+    );
+  }
+
+  // ── Production-mode gate ─────────────────────────────────────────────────
+  // Must come AFTER all hooks (Rules of Hooks: no conditional hook calls).
+  // Prevents the full chart from rendering with stub/mock data in production.
+  if (DATA_MODE === 'production' && !serverPatient) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
+        {serverPatientError ? (
+          <>
+            <div className="text-4xl">⚠️</div>
+            <h2 className="text-lg font-semibold text-navy">Unable to load patient record</h2>
+            <p className="text-sm text-slate max-w-sm">
+              The server could not return this patient's data. This may be a temporary issue.
+              No mock or cached data is shown to prevent accidental display of the wrong record.
+            </p>
+            <button
+              onClick={() => navigate('PatientList')}
+              className="flex items-center gap-2 text-sm font-semibold text-sunrise-blue hover:underline"
+            >
+              ← Back to patient list
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="animate-spin text-3xl">⏳</div>
+            <p className="text-sm text-slate">Loading patient record from server…</p>
+          </>
+        )}
+      </div>
+    );
+  }
+
   const saveChartAction = (msg: string) => { setChartActionSaved(msg); setTimeout(() => setChartActionSaved(null), 2500); };
   function submitVitals() {
     if (!vitalsForm.bp || !vitalsForm.hr || !vitalsForm.temp) return;
@@ -201,6 +362,28 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 >
                   <Plus className="w-3 h-3" /> Edit Flags
                 </button>
+                {/* ── Pin / Unpin — spec §1: near patient name + primary actions ── */}
+                <button
+                  onClick={handlePinToggle}
+                  aria-pressed={patientIsPinned}
+                  aria-label={patientIsPinned
+                    ? `Unpin ${patient.firstName} ${patient.lastName}`
+                    : `Pin ${patient.firstName} ${patient.lastName}`}
+                  className={`flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                    patientIsPinned
+                      ? "bg-sunrise-amber/20 border-sunrise-amber/60 text-sunrise-amber hover:bg-sunrise-amber/30"
+                      : "bg-white/10 border-white/40 text-white hover:bg-white/20"
+                  }`}
+                >
+                  {patientIsPinned
+                    ? <><PinOff className="w-3 h-3" aria-hidden="true" /><span>Unpin Patient</span></>
+                    : <><Pin  className="w-3 h-3" aria-hidden="true" /><span>Pin Patient</span></>
+                  }
+                  <span className="sr-only">{patientIsPinned ? "(currently pinned)" : "(not pinned)"}</span>
+                </button>
+                {pinError && (
+                  <span role="alert" className="text-xs text-rose-300">{pinError}</span>
+                )}
               </div>
             </div>
           </div>

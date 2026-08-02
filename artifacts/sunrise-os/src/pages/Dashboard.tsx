@@ -1,11 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { MOCK_PATIENTS } from '../data/mockPatients';
 import { MetricCard } from '../components/ui/MetricCard';
+import { KpiCard } from '../components/ui/KpiCard';
 import { OccupancyRing } from '../components/ui/OccupancyRing';
 import {
-  AlertTriangle, Clock, ChevronRight, UserPlus, FileText, Droplets, DollarSign,
-  TrendingUp, BarChart3, Users, CalendarDays, Download, StickyNote, CheckCircle,
-  ShieldAlert, Filter, X, Send, Zap,
+  AlertTriangle, AlertCircle, Clock, ChevronRight, UserPlus, FileText, Droplets,
+  DollarSign, TrendingUp, BarChart3, Users, CalendarDays, Download, StickyNote,
+  CheckCircle, ShieldAlert, Filter, X, Send, Zap, Info,
+  Search, ClipboardList, BookOpen, LogOut, MoreHorizontal, Pin, PinOff,
 } from 'lucide-react';
 import { Screen } from '../App';
 import { FlagBadge } from '../components/ui/FlagBadge';
@@ -21,6 +23,99 @@ import { DrillDownModal, DrillDownColumn } from '../components/common/DrillDownM
 const DEMO_BOOKING_URL =
   import.meta.env.VITE_DEMO_BOOKING_URL ||
   'mailto:demo@sunrisehealth.com?subject=Schedule%20a%20Live%20Demo';
+
+// ── Quick Actions ─────────────────────────────────────────────────────────────
+const QUICK_ACTIONS_PINS_KEY = 'dashboard_quick_actions_pins';
+const DEFAULT_PINS = ['Admissions', 'PatientList', 'ProgressNotes', 'UADrugTesting'];
+const MAX_PINS = 4;
+
+interface QuickAction {
+  id: Screen;
+  label: string;
+  icon: React.ElementType;
+  color: string;       // tailwind text color
+  bg: string;          // tailwind bg color
+  border: string;      // tailwind border color
+}
+
+const ALL_QUICK_ACTIONS: QuickAction[] = [
+  { id: 'Admissions',           label: 'Admit Patient',            icon: UserPlus,      color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200' },
+  { id: 'PatientList',          label: 'Search Patient',           icon: Search,        color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200'  },
+  { id: 'ProgressNotes',        label: 'Write Progress Note',      icon: FileText,      color: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200'},
+  { id: 'ASAMAssessments',      label: 'Complete ASAM Assessment', icon: ClipboardList, color: 'text-violet-700', bg: 'bg-violet-50', border: 'border-violet-200'},
+  { id: 'TreatmentPlans',       label: 'Update Treatment Plan',    icon: BookOpen,      color: 'text-cyan-700',   bg: 'bg-cyan-50',   border: 'border-cyan-200'  },
+  { id: 'UADrugTesting',        label: 'Record Drug Screen',       icon: Droplets,      color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200'},
+  { id: 'InsuranceAuthorization', label: 'Review Authorization',   icon: ShieldAlert,   color: 'text-amber-700',  bg: 'bg-amber-50',  border: 'border-amber-200' },
+  { id: 'Discharges',           label: 'Discharge Patient',        icon: LogOut,        color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200'},
+];
+
+// ── Immediate Action severity ─────────────────────────────────────────────────
+type AlertSeverity = 'critical' | 'high' | 'moderate' | 'informational';
+
+const SEVERITY_ORDER: Record<AlertSeverity, number> = {
+  critical: 0,
+  high: 1,
+  moderate: 2,
+  informational: 3,
+};
+
+interface SeverityConfig {
+  label: string;
+  Icon: React.ElementType;
+  textColor: string;
+  bgColor: string;
+  borderColor: string;
+  ariaLabel: string;
+}
+const SEVERITY_CONFIG: Record<AlertSeverity, SeverityConfig> = {
+  critical: {
+    label: 'Critical',
+    Icon: AlertCircle,
+    textColor: 'text-red-700',
+    bgColor: 'bg-red-100',
+    borderColor: 'border-red-300',
+    ariaLabel: 'Severity: Critical',
+  },
+  high: {
+    label: 'High',
+    Icon: AlertTriangle,
+    textColor: 'text-orange-700',
+    bgColor: 'bg-orange-100',
+    borderColor: 'border-orange-300',
+    ariaLabel: 'Severity: High',
+  },
+  moderate: {
+    label: 'Moderate',
+    Icon: Clock,
+    textColor: 'text-amber-700',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-300',
+    ariaLabel: 'Severity: Moderate',
+  },
+  informational: {
+    label: 'Informational',
+    Icon: Info,
+    textColor: 'text-blue-700',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-300',
+    ariaLabel: 'Severity: Informational',
+  },
+};
+
+interface ImmediateItem {
+  key: string;
+  severity: AlertSeverity;
+  /** Lower = earlier/more urgent within the same severity group */
+  deadlinePriority: number;
+  typeBadge: string;
+  responsible: string;
+  deadline: string;
+  subject: string;
+  primaryAction: { label: string; onClick: () => void };
+  secondaryAction: { label: string; onClick: () => void };
+  /** Present only on dismissible live alerts */
+  dismissAction?: () => void;
+}
 
 // ── Chart data ────────────────────────────────────────────────────────────────
 const CENSUS_TREND = [
@@ -341,6 +436,55 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
     addAuditEntry({ staffName: role.label, action: 'Marked Alert Reviewed', entity: 'Dashboard Alert', detail: alertLabel });
   };
 
+  // ── Quick Actions pin state (localStorage, no schema changes) ───────────────
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(QUICK_ACTIONS_PINS_KEY) : null;
+      if (raw) {
+        const parsed = JSON.parse(raw) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.slice(0, MAX_PINS);
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_PINS;
+  });
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  const savePins = useCallback((ids: string[]) => {
+    setPinnedIds(ids);
+    try { localStorage.setItem(QUICK_ACTIONS_PINS_KEY, JSON.stringify(ids)); } catch { /* ignore */ }
+  }, []);
+
+  const pinAction = useCallback((id: string) => {
+    setPinnedIds(prev => {
+      if (prev.includes(id) || prev.length >= MAX_PINS) return prev;
+      const next = [...prev, id];
+      try { localStorage.setItem(QUICK_ACTIONS_PINS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  const unpinAction = useCallback((id: string) => {
+    savePins(pinnedIds.filter(p => p !== id));
+  }, [pinnedIds, savePins]);
+
+  // Close More Actions menu on outside click or Escape
+  useEffect(() => {
+    if (!showMoreMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowMoreMenu(false); };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [showMoreMenu]);
+
   // ── CC open alert counts ────────────────────────────────────────────────────
   const ccOpenAlerts = useMemo(() => {
     const open = ccAlerts.filter(a => a.status !== 'Resolved');
@@ -432,94 +576,230 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
       {/* ── CLINICAL VIEW ──────────────────────────────────────────────────── */}
       {isClinical && !isBHT && (
         <>
+          {/* ── LEVEL 1: IMMEDIATE ACTION ─────────────────────────────────────
+              All urgent alerts consolidated at the top, sorted by severity.
+              Every item carries a severity badge (icon + text + aria-label)
+              so the level is clear without relying on color alone.          */}
+          {(() => {
+            const liveVisible = liveAlerts.filter(a => !dismissedIds.has(a.id));
+            const amaReviewed   = reviewedAlerts.has('ama-alert');
+            const cosignReviewed = reviewedAlerts.has('cosign-alert');
+
+            // Build a typed, sortable list of items ─────────────────────────
+            //
+            // Severity mapping rationale:
+            //   • Live CIWA / COWS withdrawal alerts → Critical
+            //       Reason: severe withdrawal / medical instability (spec §Critical)
+            //   • AMA Risk (clients flagged HIGH)    → High
+            //       Reason: high AMA risk (spec §High)
+            //   • Co-sign queue (overdue)            → Moderate
+            //       Reason: overdue co-signatures (spec §Moderate)
+            const items: ImmediateItem[] = [];
+
+            // Critical — Live CIWA / COWS nurse alerts
+            liveVisible.forEach((alert, idx) => {
+              items.push({
+                key: alert.id,
+                severity: 'critical',
+                deadlinePriority: idx,         // earlier in the alert list = higher priority
+                typeBadge: 'Live · Nurse Alert',
+                responsible: `Logged by ${alert.nurseInitials}`,
+                deadline: new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                subject: `${alert.patientName} (Bed ${alert.patientBed}) — ${alert.scoreType} score: ${alert.score}`,
+                primaryAction: {
+                  label: 'Review Withdrawal Alert',
+                  onClick: () => navigate('WithdrawalMonitor'),
+                },
+                secondaryAction: {
+                  // Kept as a no-op here; actual dismiss is handled by dismissAction
+                  label: 'Dismiss',
+                  onClick: () => setDismissedIds(prev => new Set([...prev, alert.id])),
+                },
+                dismissAction: () => setDismissedIds(prev => new Set([...prev, alert.id])),
+              });
+            });
+
+            // High — AMA Risk
+            if (!amaReviewed) {
+              items.push({
+                key: 'ama-alert',
+                severity: 'high',
+                deadlinePriority: 0,
+                typeBadge: 'AMA Risk',
+                responsible: 'Clinical Team',
+                deadline: 'Due: Today',
+                subject: '2 clients flagged HIGH for early departure',
+                primaryAction: {
+                  label: 'Review AMA Risk',
+                  onClick: () => navigate('RiskDashboard'),
+                },
+                secondaryAction: {
+                  label: 'Mark Reviewed',
+                  onClick: () => markReviewed('ama-alert', 'AMA Risk Alert: 2 clients flagged HIGH for early departure'),
+                },
+              });
+            }
+
+            // Moderate — Co-sign queue
+            if (canAccessScreen('CosignQueue') && !cosignReviewed) {
+              items.push({
+                key: 'cosign-alert',
+                severity: 'moderate',
+                deadlinePriority: 0,
+                typeBadge: 'Documentation',
+                responsible: 'Clinical Supervisors',
+                deadline: 'Due: Today',
+                subject: '4 co-sign requests pending from primary counselors',
+                primaryAction: {
+                  label: 'Review Co-Signatures',
+                  onClick: () => navigate('CosignQueue'),
+                },
+                secondaryAction: {
+                  label: 'Mark Reviewed',
+                  onClick: () => markReviewed('cosign-alert', '4 co-sign requests pending'),
+                },
+              });
+            }
+
+            // Sort: severity order → deadline priority → key (stable tie-break)
+            items.sort((a, b) =>
+              SEVERITY_ORDER[a.severity] !== SEVERITY_ORDER[b.severity]
+                ? SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
+                : a.deadlinePriority - b.deadlinePriority
+            );
+
+            const hasCritical = items.some(i => i.severity === 'critical');
+            const totalCount  = items.length;
+
+            return (
+              <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
+                {/* Section header */}
+                <div className={`flex items-center justify-between px-4 py-2.5 border-b ${hasCritical || totalCount > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
+                  <div className="flex items-center gap-2">
+                    {totalCount > 0 ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-red-700">Immediate Action Required</span>
+                        <span className="text-[11px] text-red-500 font-medium">
+                          {totalCount} item{totalCount !== 1 ? 's' : ''} needing attention
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-3.5 h-3.5 text-green-600" aria-hidden="true" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-green-700">Immediate Actions</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Empty state */}
+                {totalCount === 0 ? (
+                  <div className="px-6 py-7 flex flex-col items-center gap-2 text-center" role="status" aria-live="polite">
+                    <CheckCircle className="w-8 h-8 text-green-500" aria-hidden="true" />
+                    <p className="text-sm font-semibold text-navy">No urgent actions require attention.</p>
+                    <p className="text-xs text-slate">All immediate alerts are resolved. You may continue to routine priorities below.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border" role="list" aria-label="Immediate action items">
+                    {items.map(item => {
+                      const sc = SEVERITY_CONFIG[item.severity];
+                      const SevIcon = sc.Icon;
+                      const isCrit = item.severity === 'critical';
+                      return (
+                        <div
+                          key={item.key}
+                          role="listitem"
+                          className={`flex items-start gap-3 px-4 py-3 ${isCrit ? 'bg-red-50/50' : ''}`}
+                        >
+                          {/* Severity icon — reinforces the badge without being the sole indicator */}
+                          <span
+                            className={`mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-full border shrink-0 ${sc.bgColor} ${sc.borderColor}`}
+                            aria-hidden="true"
+                          >
+                            <SevIcon className={`w-3.5 h-3.5 ${sc.textColor}`} />
+                          </span>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* ① Severity pill: icon + text + aria — color is NOT the only signal */}
+                              <span
+                                className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${sc.textColor} ${sc.bgColor} ${sc.borderColor}`}
+                                aria-label={sc.ariaLabel}
+                              >
+                                <SevIcon className="w-2.5 h-2.5" aria-hidden="true" />
+                                {sc.label}
+                              </span>
+                              {/* ② Type badge */}
+                              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded">
+                                {item.typeBadge}
+                              </span>
+                              {/* ③ Responsible + deadline */}
+                              <span className="text-xs text-slate">
+                                {item.responsible} · {item.deadline}
+                              </span>
+                            </div>
+                            <div className="text-sm font-medium text-navy mt-0.5">{item.subject}</div>
+                          </div>
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={item.primaryAction.onClick}
+                              className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                                isCrit
+                                  ? 'text-white bg-red-500 hover:bg-red-600 focus-visible:outline-red-500'
+                                  : 'text-navy border border-navy/30 hover:bg-navy/5 focus-visible:outline-navy'
+                              }`}
+                            >
+                              {item.primaryAction.label}
+                            </button>
+                            {/* Show secondary action only when it differs from the dismiss X button */}
+                            {!item.dismissAction && (
+                              <button
+                                onClick={item.secondaryAction.onClick}
+                                className="text-xs text-slate hover:text-navy border border-border hover:border-navy/30 px-3 py-1.5 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+                              >
+                                {item.secondaryAction.label}
+                              </button>
+                            )}
+                            {item.dismissAction && (
+                              <>
+                                <button
+                                  onClick={item.secondaryAction.onClick}
+                                  className="text-xs text-slate hover:text-navy border border-border hover:border-navy/30 px-3 py-1.5 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy sr-only sm:not-sr-only"
+                                >
+                                  Dismiss
+                                </button>
+                                <button
+                                  onClick={item.dismissAction}
+                                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
+                                  aria-label="Dismiss alert"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* ── LEVEL 2: FILTERS + TODAY'S PRIORITIES ─────────────────────── */}
           <FilterBar />
 
-          {/* Live nurse alerts */}
-          {liveAlerts.filter(a => !dismissedIds.has(a.id)).length > 0 && (
-            <div className="space-y-1.5">
-              {liveAlerts.filter(a => !dismissedIds.has(a.id)).map(alert => (
-                <div key={alert.id} className="bg-red-50 border border-red-400 px-4 py-3 rounded-lg flex items-center gap-3 shadow-sm">
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold shrink-0">!</span>
-                  <span className="text-sm font-medium text-red-900 flex-1">
-                    <strong>LIVE · Nurse Alert:</strong>{' '}
-                    {alert.patientName} (Bed {alert.patientBed}) — {alert.scoreType} {alert.score} · <em>{alert.severity}</em> · logged by {alert.nurseInitials}
-                  </span>
-                  <span className="text-xs text-red-400 shrink-0 mr-2">
-                    {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <button onClick={() => setDismissedIds(prev => new Set([...prev, alert.id]))} className="text-red-400 hover:text-red-600 shrink-0" aria-label="Dismiss">✕</button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Static alerts with Mark Reviewed */}
-          <div className="space-y-2">
-            {[
-              { id: 'ama-alert', level: 'high', icon: AlertTriangle, iconColor: 'text-high', bg: 'bg-high-bg border-high/20', text: 'AMA Risk Alert: 2 clients flagged HIGH for early departure', screen: 'RiskDashboard' as Screen },
-            ].map(al => (
-              <div key={al.id} className={`${al.bg} border px-4 py-3 rounded-lg flex items-center gap-3 shadow-sm ${reviewedAlerts.has(al.id) ? 'opacity-50' : ''}`}>
-                <al.icon className={`w-5 h-5 ${al.iconColor} shrink-0`} />
-                <span className="text-sm font-medium text-navy flex-1"><strong>{al.text}</strong></span>
-                {reviewedAlerts.has(al.id) ? (
-                  <span className="flex items-center gap-1 text-xs text-green-600 font-semibold"><CheckCircle className="w-3.5 h-3.5" /> Reviewed</span>
-                ) : (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => navigate(al.screen)} className="text-xs text-sunrise-blue font-medium hover:underline">View →</button>
-                    <button onClick={() => markReviewed(al.id, al.text)} className="text-xs bg-white border border-border text-slate hover:text-navy hover:border-navy font-medium px-2 py-1 rounded transition-colors">Mark Reviewed</button>
-                  </div>
-                )}
-              </div>
-            ))}
-            {canAccessScreen('CosignQueue') && (
-              <div className={`bg-moderate-bg border border-moderate/20 px-4 py-3 rounded-lg flex items-center gap-3 shadow-sm ${reviewedAlerts.has('cosign-alert') ? 'opacity-50' : ''}`}>
-                <Clock className="w-5 h-5 text-moderate shrink-0" />
-                <span className="text-sm font-medium text-navy flex-1">4 co-sign requests pending from primary counselors</span>
-                {reviewedAlerts.has('cosign-alert') ? (
-                  <span className="flex items-center gap-1 text-xs text-green-600 font-semibold"><CheckCircle className="w-3.5 h-3.5" /> Reviewed</span>
-                ) : (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => navigate('CosignQueue')} className="text-xs text-sunrise-blue font-medium hover:underline">Review →</button>
-                    <button onClick={() => markReviewed('cosign-alert', '4 co-sign requests pending')} className="text-xs bg-white border border-border text-slate hover:text-navy hover:border-navy font-medium px-2 py-1 rounded transition-colors">Mark Reviewed</button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Metrics Row */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div data-tour-id="kpi-census">
-              <MetricCard title="Census" value="18/22" subtitle="81.8% Occupancy" color="orange"
-                onClick={() => setDrillDown({ title: 'Active Census', subtitle: `${filterLoc !== 'All' ? filterLoc + ' · ' : ''}${filterLOC !== 'All' ? filterLOC + ' · ' : ''}${filterDate}`, badge: { label: '18 patients', color: 'bg-orange-100 text-orange-700' }, rows: DRILL_CENSUS_ROWS, columns: COLS_CENSUS, navigateLabel: 'Open Bed Board', onNavigate: () => { setDrillDown(null); navigate('CensusBedBoard'); } })} />
-            </div>
-            {canAccessScreen('RiskDashboard') && (
-              <div data-tour-id="ama-alerts">
-                <MetricCard title="AMA Risk" value="2" subtitle="High Risk Clients" color="red"
-                  onClick={() => setDrillDown({ title: 'High AMA Risk Clients', subtitle: 'Clients with elevated early-departure risk', badge: { label: '2 high risk', color: 'bg-red-100 text-red-700' }, rows: DRILL_AMA_ROWS, columns: COLS_AMA, navigateLabel: 'Risk Dashboard', onNavigate: () => { setDrillDown(null); navigate('RiskDashboard'); } })} />
-              </div>
-            )}
-            {canAccessScreen('CosignQueue') && (
-              <MetricCard title="Pending Co-signs" value="4" subtitle="Action Required" color="amber"
-                onClick={() => setDrillDown({ title: 'Pending Co-sign Requests', subtitle: 'Notes awaiting supervisor co-signature', badge: { label: '4 pending', color: 'bg-amber-100 text-amber-700' }, rows: DRILL_COSIGNS_ROWS, columns: COLS_COSIGNS, navigateLabel: 'Co-sign Queue', onNavigate: () => { setDrillDown(null); navigate('CosignQueue'); } })} />
-            )}
-            <MetricCard title="Avg LOS" value="18.4" subtitle="Days" trend={{ value: '1.2', direction: 'down' }} color="blue"
-              onClick={() => setDrillDown({ title: 'Length of Stay — All Active Patients', subtitle: 'Current LOS by patient', rows: DRILL_LOS_ROWS, columns: COLS_LOS, navigateLabel: 'Outcome Tracking', onNavigate: () => { setDrillDown(null); navigate('OutcomeTracking'); } })} />
-            {canAccessScreen('Discharges') && (
-              <MetricCard title="Discharges" value="3" subtitle="This Week" color="green"
-                onClick={() => setDrillDown({ title: 'Discharges This Week', subtitle: `${filterDate}`, rows: DRILL_DISCHARGES_ROWS, columns: COLS_DISCHARGES, navigateLabel: 'Discharges', onNavigate: () => { setDrillDown(null); navigate('Discharges'); } })} />
-            )}
-          </div>
-
-          {/* Period comparison */}
-          <ComparisonRow comparisons={CLINICAL_COMPARISONS} />
-
-          {/* Command Center summary for authorized users */}
+          {/* Today's Priorities — actionable items with owner, deadline, direct link */}
           {canSeeCC && (
             <button onClick={() => navigate('CommandCenter')}
-              className="w-full flex items-center justify-between px-5 py-3.5 bg-navy/5 border border-navy/15 hover:bg-navy/10 rounded-lg transition-colors group">
+              className="w-full flex items-center justify-between px-5 py-3 bg-navy/5 border border-navy/15 hover:bg-navy/10 rounded-lg transition-colors group">
               <div className="flex items-center gap-3">
-                <Zap className="w-5 h-5 text-sunrise-orange" />
+                <Zap className="w-4 h-4 text-sunrise-orange" />
                 <div className="text-left">
                   <div className="font-semibold text-navy text-sm">Command Center</div>
                   <div className="text-xs text-slate">{ccOpenAlerts.total} open alerts · {ccOpenAlerts.critical} critical requiring immediate action</div>
@@ -534,6 +814,269 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
             </button>
           )}
 
+          <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate">Today&apos;s Priorities</span>
+              <span className="text-xs text-slate">Common tasks for {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+            </div>
+            <div className="divide-y divide-border">
+              {[
+                canAccessScreen('Admissions') && { label: 'New Admission', desc: 'Intake team · Open today', icon: UserPlus, screen: 'Admissions' as Screen, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+                canAccessScreen('ProgressNotes') && { label: 'Write Progress Notes', desc: '5 notes pending · Due end of shift', icon: FileText, screen: 'ProgressNotes' as Screen, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+                canAccessScreen('UADrugTesting') && { label: 'Review UA Results', desc: 'Lab · Available now', icon: Droplets, screen: 'UADrugTesting' as Screen, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
+                canAccessScreen('IncidentReporting') && { label: 'Open Incidents (2)', desc: 'Safety team · Due: 24 hrs', icon: AlertTriangle, screen: 'IncidentReporting' as Screen, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
+                canAccessScreen('ChartReview') && { label: 'Chart Deficiencies', desc: '3 charts overdue · Clinicians assigned', icon: FileText, screen: 'ChartReview' as Screen, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
+              ].filter(Boolean).map((item) => {
+                if (!item) return null;
+                const Icon = item.icon;
+                return (
+                  <button key={item.label} onClick={() => navigate(item.screen)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left group">
+                    <span className={`w-7 h-7 rounded-lg border flex items-center justify-center flex-none ${item.bg} ${item.border}`}>
+                      <Icon className={`w-3.5 h-3.5 ${item.color}`} />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-navy">{item.label}</div>
+                      <div className="text-xs text-slate">{item.desc}</div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate/40 group-hover:text-navy transition-colors flex-none" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── QUICK ACTIONS ─────────────────────────────────────────────────
+              Up to 4 pinned actions shown directly; overflow in More Actions.
+              Pins stored in localStorage — no schema changes required.       */}
+          {(() => {
+            // Only show actions the current user can access
+            const authorised = ALL_QUICK_ACTIONS.filter(a => canAccessScreen(a.id));
+            if (authorised.length === 0) return null;
+
+            // Split into pinned (primary) and overflow (More Actions menu)
+            const pinned   = authorised.filter(a => pinnedIds.includes(a.id)).slice(0, MAX_PINS);
+            const overflow = authorised.filter(a => !pinnedIds.includes(a.id));
+            // Pad with unpinned items when fewer than MAX_PINS are pinned
+            const primary  = pinned.length < MAX_PINS
+              ? [...pinned, ...overflow.slice(0, MAX_PINS - pinned.length)]
+              : pinned;
+            const more     = authorised.filter(a => !primary.includes(a));
+
+            return (
+              <div className="bg-white border border-border rounded-xl shadow-sm overflow-visible">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate">Quick Actions</span>
+                  <span className="text-[11px] text-slate/60">
+                    Click <Pin className="w-2.5 h-2.5 inline" aria-hidden="true" /> to pin up to {MAX_PINS} shortcuts
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 px-4 py-3 flex-wrap">
+                  {/* Primary buttons */}
+                  {primary.map(action => {
+                    const Icon = action.icon;
+                    const isPinned = pinnedIds.includes(action.id);
+                    return (
+                      <div key={action.id} className="relative group/qa flex-none">
+                        <button
+                          onClick={() => navigate(action.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunrise-orange ${action.bg} ${action.border} ${action.color} hover:brightness-95`}
+                          aria-label={action.label}
+                        >
+                          <Icon className="w-3.5 h-3.5 flex-none" aria-hidden="true" />
+                          {action.label}
+                        </button>
+                        {/* Pin toggle — visible on hover */}
+                        <button
+                          onClick={e => { e.stopPropagation(); isPinned ? unpinAction(action.id) : pinAction(action.id); }}
+                          className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-white border border-border shadow-sm flex items-center justify-center opacity-0 group-hover/qa:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sunrise-orange"
+                          aria-label={isPinned ? `Unpin ${action.label}` : `Pin ${action.label}`}
+                          title={isPinned ? 'Unpin shortcut' : 'Pin shortcut'}
+                        >
+                          {isPinned
+                            ? <PinOff className="w-2.5 h-2.5 text-slate" aria-hidden="true" />
+                            : <Pin    className="w-2.5 h-2.5 text-slate" aria-hidden="true" />}
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* More Actions dropdown */}
+                  {more.length > 0 && (
+                    <div ref={moreMenuRef} className="relative flex-none">
+                      <button
+                        onClick={() => setShowMoreMenu(v => !v)}
+                        aria-haspopup="true"
+                        aria-expanded={showMoreMenu}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-white text-slate hover:bg-slate-50 hover:text-navy text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunrise-orange"
+                      >
+                        <MoreHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
+                        More Actions
+                        <span className="text-[10px] bg-slate-100 text-slate px-1 rounded font-bold">{more.length}</span>
+                      </button>
+
+                      {showMoreMenu && (
+                        <div
+                          role="menu"
+                          className="absolute left-0 top-full mt-1.5 w-56 bg-white border border-border rounded-xl shadow-xl z-30 overflow-hidden"
+                        >
+                          <div className="px-3 py-2 border-b border-border">
+                            <span className="text-[11px] text-slate font-medium">
+                              Additional actions · Pin to add to quick bar
+                            </span>
+                          </div>
+                          {more.map(action => {
+                            const Icon = action.icon;
+                            const canPin = pinnedIds.length < MAX_PINS;
+                            return (
+                              <div key={action.id} className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 transition-colors group/more">
+                                <button
+                                  role="menuitem"
+                                  onClick={() => { navigate(action.id); setShowMoreMenu(false); }}
+                                  className="flex items-center gap-2 flex-1 text-xs font-medium text-navy focus-visible:outline-none focus-visible:underline"
+                                  aria-label={action.label}
+                                >
+                                  <span className={`w-6 h-6 rounded-lg border flex items-center justify-center flex-none ${action.bg} ${action.border}`}>
+                                    <Icon className={`w-3 h-3 ${action.color}`} aria-hidden="true" />
+                                  </span>
+                                  {action.label}
+                                </button>
+                                <button
+                                  onClick={e => { e.stopPropagation(); pinAction(action.id); }}
+                                  disabled={!canPin}
+                                  title={canPin ? 'Pin to quick bar' : `Remove a pin first (max ${MAX_PINS})`}
+                                  aria-label={`Pin ${action.label}`}
+                                  className="opacity-0 group-hover/more:opacity-100 transition-opacity focus-visible:opacity-100 p-1 rounded hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sunrise-orange"
+                                >
+                                  <Pin className="w-3 h-3 text-slate" aria-hidden="true" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ── LEVEL 3: KPI CARDS ────────────────────────────────────────────
+              Each card shows: label, tooltip, value, trend (icon+text),
+              comparison period, operational interpretation, specific action.
+              Historical comparison source: CLINICAL_COMPARISONS — 7-day
+              period-over-period deltas stored at module level (demo data).
+              Auth card has no clinical 7-day comparison → shows unavailable.
+          ────────────────────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+
+            {/* Census ─ always visible for clinical roles */}
+            <div data-tour-id="kpi-census" className="h-full">
+              <KpiCard
+                label="Census"
+                tooltipText="Number of active patients currently admitted across the selected facility and level of care. Shown as current census over bed capacity. Compared against the previous 7 days."
+                value="18/22"
+                color="orange"
+                trend={{
+                  direction: 'up',
+                  text: 'Up 2 patients from previous 7 days',
+                  period: 'Previous 7 days',
+                  interpretation: 'within-range',
+                }}
+                action={{ label: 'Open Census', onClick: () => setDrillDown({ title: 'Active Census', subtitle: `${filterLoc !== 'All' ? filterLoc + ' · ' : ''}${filterLOC !== 'All' ? filterLOC + ' · ' : ''}${filterDate}`, badge: { label: '18 patients', color: 'bg-orange-100 text-orange-700' }, rows: DRILL_CENSUS_ROWS, columns: COLS_CENSUS, navigateLabel: 'Open Bed Board', onNavigate: () => { setDrillDown(null); navigate('CensusBedBoard'); } }) }}
+              />
+            </div>
+
+            {/* AMA Risk ─ card always visible; action gated on RiskDashboard */}
+            <div data-tour-id="ama-alerts" className="h-full">
+              <KpiCard
+                label="AMA Risk"
+                tooltipText="Clients currently flagged as high risk for leaving against medical advice. Monitored by the clinical team and updated each shift. Compared against the previous 7 days."
+                value="2"
+                color="red"
+                trend={{
+                  direction: 'down',
+                  text: 'Down 1 client from previous 7 days',
+                  period: 'Previous 7 days',
+                  interpretation: 'favorable',
+                }}
+                action={canAccessScreen('RiskDashboard') ? {
+                  label: 'Review AMA Risk',
+                  onClick: () => setDrillDown({ title: 'High AMA Risk Clients', subtitle: 'Clients with elevated early-departure risk', badge: { label: '2 high risk', color: 'bg-red-100 text-red-700' }, rows: DRILL_AMA_ROWS, columns: COLS_AMA, navigateLabel: 'Risk Dashboard', onNavigate: () => { setDrillDown(null); navigate('RiskDashboard'); } }),
+                } : undefined}
+              />
+            </div>
+
+            {/* Pending Co-Signs ─ card always visible; action gated on CosignQueue */}
+            <KpiCard
+              label="Pending Co-Signs"
+              tooltipText="Clinical documents awaiting a required supervisory or medical co-signature. Delays may affect compliance and timely billing. Compared against the previous 7 days."
+              value="4"
+              color="amber"
+              trend={{
+                direction: 'up',
+                text: 'Up 1 from previous 7 days',
+                period: 'Previous 7 days',
+                interpretation: 'needs-attention',
+              }}
+              action={canAccessScreen('CosignQueue') ? {
+                label: 'Open Co-Sign Queue',
+                onClick: () => setDrillDown({ title: 'Pending Co-sign Requests', subtitle: 'Notes awaiting supervisor co-signature', badge: { label: '4 pending', color: 'bg-amber-100 text-amber-700' }, rows: DRILL_COSIGNS_ROWS, columns: COLS_COSIGNS, navigateLabel: 'Co-sign Queue', onNavigate: () => { setDrillDown(null); navigate('CosignQueue'); } }),
+              } : undefined}
+            />
+
+            {/* Avg LOS ─ −0.3 days is within normal day-to-day variation;
+                rendered as flat / no meaningful change per clinical convention */}
+            <KpiCard
+              label="Avg LOS"
+              tooltipText="Average length of stay for all currently admitted patients, in days. A change of less than 1 day is within normal day-to-day variation and is shown as no meaningful change. Compared against the previous 7 days."
+              value="18.4"
+              valueUnit="days"
+              color="blue"
+              trend={{
+                direction: 'flat',
+                text: 'No meaningful change from previous period',
+                period: 'Previous 7 days (−0.3 days)',
+                interpretation: 'within-range',
+              }}
+              action={{ label: 'View LOS Details', onClick: () => setDrillDown({ title: 'Length of Stay — All Active Patients', subtitle: 'Current LOS by patient', rows: DRILL_LOS_ROWS, columns: COLS_LOS, navigateLabel: 'Outcome Tracking', onNavigate: () => { setDrillDown(null); navigate('OutcomeTracking'); } }) }}
+            />
+
+            {/* Discharges ─ action gated on Discharges screen access */}
+            {canAccessScreen('Discharges') && (
+              <KpiCard
+                label="Discharges"
+                tooltipText="Number of patients discharged this week across all levels of care. Successful-discharge benchmarks are not defined in the current data, so the interpretation is neutral. Compared against the previous 7 days."
+                value="3"
+                color="green"
+                trend={{
+                  direction: 'up',
+                  text: 'Up 1 from previous 7 days',
+                  period: 'Previous 7 days',
+                  interpretation: 'neutral',
+                }}
+                action={{ label: 'Open Discharge Activity', onClick: () => setDrillDown({ title: 'Discharges This Week', subtitle: `${filterDate}`, rows: DRILL_DISCHARGES_ROWS, columns: COLS_DISCHARGES, navigateLabel: 'Discharges', onNavigate: () => { setDrillDown(null); navigate('Discharges'); } }) }}
+              />
+            )}
+
+            {/* Authorizations Requiring Attention ─ gated; no 7-day clinical
+                comparison available → shows "Comparison unavailable" state */}
+            {canAccessScreen('InsuranceAuthorization') && (
+              <KpiCard
+                label="Auth Risk"
+                tooltipText="Active authorizations expiring within the next 7 days that require a renewal, concurrent review, or peer-to-peer call. No prior-period comparison is available for this metric in the clinical view."
+                value="3"
+                color="purple"
+                /* trend intentionally omitted → card shows "Comparison unavailable" */
+                action={{ label: 'Review Authorizations', onClick: () => setDrillDown({ title: 'Authorization Risk — 3 Patients', subtitle: 'Active authorizations expiring within 7 days', badge: { label: 'Action needed', color: 'bg-purple-100 text-purple-700' }, rows: DRILL_AUTH_RISK_ROWS, columns: COLS_AUTH_RISK, navigateLabel: 'Insurance Authorization', onNavigate: () => { setDrillDown(null); navigate('InsuranceAuthorization'); } }) }}
+              />
+            )}
+          </div>
+          {/* ComparisonRow removed — comparison context is now inside each KpiCard */}
+
+          {/* ── LEVEL 4: ANALYTICS + AI BRIEF ───────────────────────────────── */}
           {/* Main 2-Col */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-6">
@@ -644,30 +1187,6 @@ export function Dashboard({ navigate }: { navigate: (s: Screen, id?: string) => 
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white border border-border rounded-lg px-4 py-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-navy">Quick Actions</span>
-              <span className="text-xs text-slate">Common tasks for today</span>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {[
-                { label: 'New Admission', icon: UserPlus, screen: 'Admissions' as Screen, color: 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' },
-                { label: 'New Progress Note', icon: FileText, screen: 'ProgressNotes' as Screen, color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' },
-                { label: 'Co-sign Queue (4)', icon: FileText, screen: 'CosignQueue' as Screen, color: 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' },
-                { label: 'UA Results', icon: Droplets, screen: 'UADrugTesting' as Screen, color: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' },
-                { label: 'Open Incidents (2)', icon: AlertTriangle, screen: 'IncidentReporting' as Screen, color: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' },
-                { label: 'Chart Review', icon: Clock, screen: 'ChartReview' as Screen, color: 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' },
-              ].filter(a => canAccessScreen(a.screen)).map(({ label, icon: Icon, screen, color }) => (
-                <button key={label} onClick={() => navigate(screen)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${color}`}>
-                  <Icon className="w-3.5 h-3.5" />
-                  {label}
-                </button>
-              ))}
             </div>
           </div>
 

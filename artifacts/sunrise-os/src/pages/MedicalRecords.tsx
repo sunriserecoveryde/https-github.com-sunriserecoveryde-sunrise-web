@@ -125,6 +125,7 @@ const STATUS_STYLE: Record<ROIStatus, string> = {
 
 export function MedicalRecords({ navigate, readOnly }: Props) {
   const [roiSubmitted, setRoiSubmitted] = useState(false);
+  const [roiReason, setRoiReason] = useState<string>('');
   const [tab, setTab] = useState<'ROI Queue' | 'New Request' | 'Audit Log' | '42 CFR Guide' | 'Record Stats' | 'HIPAA Reference'>('ROI Queue');
   const [expandedROI, setExpandedROI] = useState<string | null>('ROI-001');
   const [filterStatus, setFilterStatus] = useState<ROIStatus | 'All'>('All');
@@ -275,6 +276,33 @@ export function MedicalRecords({ navigate, readOnly }: Props) {
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-slate mb-1">Recipient Name / Organization *</label>
                 <input className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Dr. Jane Smith, MD — Cool Springs Medical" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-slate mb-2">Reason for Release *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    'Care coordination',
+                    'Continuity of care',
+                    'Treatment purposes',
+                    'Payment / billing',
+                    'Legal / court order',
+                    'Patient request',
+                    'Insurance / prior authorization',
+                    'Other',
+                  ] as const).map(reason => (
+                    <label key={reason} className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name="roiReason"
+                        value={reason}
+                        checked={roiReason === reason}
+                        onChange={() => setRoiReason(reason)}
+                        className="accent-orange"
+                      />
+                      <span className="text-navy">{reason}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-slate mb-1">Purpose of Disclosure *</label>

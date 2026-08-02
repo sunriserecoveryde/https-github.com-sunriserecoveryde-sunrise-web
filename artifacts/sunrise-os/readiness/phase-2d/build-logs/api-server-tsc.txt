@@ -1,0 +1,3 @@
+# api-server TypeScript build — 2026-08-02T16:12:32Z
+Command: pnpm --filter @workspace/api-server exec tsc --noEmit
+Exit: 0 | Duration: 3524ms

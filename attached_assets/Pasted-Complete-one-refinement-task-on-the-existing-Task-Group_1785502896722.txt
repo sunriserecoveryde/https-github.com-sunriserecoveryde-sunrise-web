@@ -1,0 +1,70 @@
+Complete one refinement task on the existing Task Group 1 branch:
+
+**Task: Restore and redesign Quick Actions on the Dashboard**
+
+Do not begin any other improvement task during this run.
+
+Requirements:
+
+1. Restore the Quick Actions feature that was removed from the Dashboard.
+2. Do not restore the old design unchanged.
+3. Create a compact, clearly labeled **Quick Actions** section.
+4. Place it below the Immediate Action and Today’s Priorities sections, but above analytics.
+5. Show only actions the current user is authorized to perform.
+6. Preserve all existing role and permission rules.
+
+Include these actions when permitted:
+
+* Admit Patient
+* Search Patient
+* Write Progress Note
+* Complete ASAM Assessment
+* Create or Update Treatment Plan
+* Record Drug Screen
+* Review Authorization
+* Discharge Patient
+
+Design requirements:
+
+* Use consistent icons and button sizes.
+* Use specific action labels rather than vague labels.
+* Do not make every action visually dominant.
+* Allow up to four primary shortcuts to display directly.
+* Place additional actions inside a “More Actions” menu.
+* Ensure actions remain usable at 1280×720 and 1440×900.
+* Ensure keyboard access and visible focus states.
+* Ensure each action opens the correct existing workflow.
+* Do not create duplicate pages or placeholder workflows.
+* Do not change database schema, routing architecture, clinical logic, permission logic, or seeded data.
+
+Optional improvement:
+
+Allow each user to pin up to four authorized Quick Actions. Store the preference only if this can be done without changing the production database schema. Otherwise, document it as a future enhancement.
+
+Acceptance criteria:
+
+* Quick Actions are restored.
+* No unauthorized action is displayed.
+* Every visible action opens a working destination.
+* No action duplicates the purpose of an Immediate Action alert.
+* The section does not push the primary KPI area excessively far below the first screen.
+* The layout works on desktop and tablet.
+* Type checking passes.
+* Linting passes.
+* Production build passes.
+* Existing tests pass.
+
+Required deliverables:
+
+1. List of files changed.
+2. Before-and-after screenshots at 1440×900.
+3. Screenshot showing the “More Actions” menu.
+4. Screenshot showing role-based action visibility.
+5. Test, lint, type-check, and build results.
+6. Known limitations.
+
+Commit this task to the existing improvement branch.
+
+Do not merge it into main.
+
+Stop after completing this single task and wait for review.

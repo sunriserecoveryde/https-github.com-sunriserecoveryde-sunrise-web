@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Screen } from '../App';
 import { MOCK_PATIENTS } from '../data/mockPatients';
+import { DATA_MODE } from '../lib/dataMode';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import { LockedButton } from '../components/common/LockedButton';
 
@@ -207,12 +208,16 @@ export function UADrugTesting({ navigate, readOnly }: Props) {
   const [wfSaved, setWFSaved] = useState<string | null>(null);
   const saveWFAction = (msg: string) => { setWFSaved(msg); setTimeout(() => setWFSaved(null), 2500); };
 
-  // Persist workflow items to localStorage so stage progress survives a page refresh
+  // Persist workflow items to localStorage in demo mode only.
+  // In production mode, this page uses MOCK_PATIENTS and its state is not
+  // persisted — patient UUIDs (linkable identifiers) must not be written to
+  // localStorage in a production context.
   useEffect(() => {
+    if (DATA_MODE !== 'demo') return;
     try {
       localStorage.setItem('sunrise-os:ua-workflow-items', JSON.stringify(workflowItems));
     } catch { /* quota / private-mode errors are non-fatal */ }
-  }, [workflowItems]);
+  }, [workflowItems, DATA_MODE]);
 
   const totalTests = monitored.length * DAYS.filter((_, di) => true).length;
   const negatives = Object.values(SCHEDULE).flatMap(days => Object.values(days)).filter(s => s === 'Negative').length;

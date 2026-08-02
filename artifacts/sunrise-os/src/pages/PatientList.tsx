@@ -6,8 +6,12 @@ import { PatientAvatar } from '../components/ui/PatientAvatar';
 import { AcuityBadge } from '../components/ui/AcuityBadge';
 import { RecoveryScoreBadge } from '../components/ui/RecoveryScoreBadge';
 import { Screen } from '../App';
-import { Search, Plus, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle, TrendingUp, Users, Lock, CalendarDays } from 'lucide-react';
+import { Search, Plus, ArrowUp, ArrowDown, ArrowUpDown, AlertTriangle, TrendingUp, Users, Lock, CalendarDays, Pin, PinOff } from 'lucide-react';
 import { useRole } from '../context/RoleContext';
+import { useAuth } from '../context/AuthContext';
+import { useSidebarPrefs } from '../hooks/useSidebarPrefs';
+import { DATA_MODE, DATA_MODE_ERROR, API_BASE, DEV_HEADERS } from '../lib/dataMode';
+import type { Patient } from '../data/mockPatients';
 
 // Latest COWS/CIWA scores per patient (from most recent vitals entry)
 const WITHDRAWAL_SCORES: Record<string, { cows?: number; ciwa?: number }> = {};
@@ -76,8 +80,96 @@ function SortHeader({ label, field, sort, onSort, className }: {
   );
 }
 
+
+// ── Server-patient shape from Phase 1A API ────────────────────────────────────
+interface ServerPatientRecord {
+  id: string;
+  orgId: string;
+  facilityId: string;
+  mrn: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string | null;
+  gender: string | null;
+  insurancePayer: string | null;
+  primaryDiagnosis: string | null;
+  status: string;
+  episode: {
+    id: string;
+    program: string;
+    levelOfCare: string | null;
+    admissionDate: string | null;
+    dischargeDate: string | null;
+    episodeStatus: string;
+  } | null;
+}
+
+/** Maps a Phase 1A server patient record to the Patient type used throughout the UI.
+ *  Clinical fields not yet migrated (notes, goals, scores, flags, meds) are empty
+ *  and will be populated in later phases.
+ */
+function adaptServerPatient(sp: ServerPatientRecord): Patient {
+  const program = (['Residential','PHP','IOP','OP'].includes(sp.episode?.program ?? ''))
+    ? (sp.episode!.program as Patient['program'])
+    : 'Residential';
+  const los = sp.episode?.admissionDate
+    ? Math.floor((Date.now() - new Date(sp.episode.admissionDate).getTime()) / 86_400_000)
+    : 0;
+  return {
+    id: sp.id,
+    mrn: sp.mrn,
+    firstName: sp.firstName,
+    lastName: sp.lastName,
+    dob: sp.dateOfBirth ?? '—',
+    age: sp.dateOfBirth
+      ? Math.floor((Date.now() - new Date(sp.dateOfBirth).getTime()) / 31_557_600_000)
+      : 0,
+    gender: sp.gender ?? '—',
+    insurance: sp.insurancePayer ?? '—',
+    program,
+    primaryDiagnosis: sp.primaryDiagnosis ?? '—',
+    coOccurring: [],
+    asam: { d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 },
+    recoveryScore: 0,
+    amaRisk: 'Low',
+    los,
+    admitDate: sp.episode?.admissionDate ?? '—',
+    expectedDischarge: sp.episode?.dischargeDate ?? '—',
+    counselor: '—',
+    physician: '—',
+    flags: [],
+    lastUa: '—',
+    mood: 5,
+    craving: 0,
+    notes: [],
+    goals: [],
+    nextAppointment: '—',
+  };
+}
+
 export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) => void }) {
   const [searchTerm, setSearchTerm] = useState('');
+  // ── Production-mode server patient fetch ────────────────────────────────────
+  const [serverPatients, setServerPatients] = React.useState<Patient[] | null>(null);
+  const [serverLoading, setServerLoading] = React.useState(false);
+  const [serverError, setServerError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (DATA_MODE !== 'production') return;
+    setServerLoading(true);
+    fetch(`${API_BASE}/v1/patients`, { headers: DEV_HEADERS })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<ServerPatientRecord[]>; })
+      .then(data => { setServerPatients(data.map(adaptServerPatient)); setServerLoading(false); })
+      .catch(() => { setServerError('Unable to load patients from server.'); setServerLoading(false); });
+  }, []);
+  // Strict data-mode separation:
+  // - demo mode     → always MOCK_PATIENTS (unchanged path, never touches API)
+  // - production mode → only server records; empty array while loading; stays empty on error
+  //   (production must NEVER silently display mock clinical data)
+  const activePatients = DATA_MODE === 'production'
+    ? (serverPatients ?? [])
+    : MOCK_PATIENTS;
+
+
   const [program, setProgram]       = useState<Program>('All');
   const [risk, setRisk]             = useState<RiskLevel>('All');
   const [clinician, setClinician]   = useState<string>('All');
@@ -93,6 +185,36 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
   const listPermission = getPermissionForScreen('PatientList');
   const canAdmit       = listPermission === 'full';
 
+  // ── Pin / Unpin — shared with Sidebar and PatientDetail via useSidebarPrefs ─
+  const { currentStaff } = useAuth();
+  const { pinPatient, unpinPatient, isPinned } = useSidebarPrefs(currentStaff?.id ?? null);
+
+  function handlePinToggle(
+    e: React.MouseEvent | React.KeyboardEvent,
+    p: { id: string; firstName: string; lastName: string; program: string }
+  ) {
+    // Never let the pin action propagate to the row-level navigation click handler.
+    e.stopPropagation();
+    const name = `${p.firstName} ${p.lastName}`;
+    try {
+      if (isPinned(p.id)) {
+        unpinPatient(p.id);
+        savePlAction(`${name} unpinned`);
+      } else {
+        pinPatient({
+          id:          p.id,
+          displayName: name,
+          program:     p.program,
+          pinnedAt:    Date.now(),
+          discharged:  undefined,
+        });
+        savePlAction(`${name} pinned`);
+      }
+    } catch {
+      savePlAction("Unable to save pinned patient on this device.");
+    }
+  }
+
   function handleSort(field: SortField) {
     setSort(prev => prev.field === field ? { field, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'asc' });
   }
@@ -100,9 +222,9 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
   // Distinct counselors for the clinician filter dropdown
   const allClinicians = useMemo(() => {
     const s = new Set<string>();
-    MOCK_PATIENTS.forEach(p => { if (p.counselor) s.add(p.counselor); });
+    activePatients.forEach(p => { if (p.counselor) s.add(p.counselor); });
     return ['All', ...Array.from(s).sort()];
-  }, []);
+  }, [activePatients]);
 
   // Simulate admit status by LOS bucket (no status field in model)
   function getAdmitStatus(los: number): 'Active' | 'Pending Discharge' | 'Discharged' {
@@ -111,7 +233,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
   }
 
   const filtered = useMemo(() => {
-    let list = MOCK_PATIENTS.filter(p => {
+    let list = activePatients.filter(p => {
       const term = searchTerm.toLowerCase();
       const nameMatch = `${p.firstName} ${p.lastName}`.toLowerCase().includes(term) || p.mrn.toLowerCase().includes(term);
       const progMatch = program === 'All' || p.program === program;
@@ -133,14 +255,33 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
     });
 
     return list;
-  }, [searchTerm, program, risk, clinician, admitStatus, sort]);
+  }, [activePatients, searchTerm, program, risk, clinician, admitStatus, sort]);
 
-  const highRisk  = MOCK_PATIENTS.filter(p => p.amaRisk === 'High').length;
-  const avgLos    = Math.round(MOCK_PATIENTS.reduce((s, p) => s + p.los, 0) / MOCK_PATIENTS.length);
-  const avgCraving= (MOCK_PATIENTS.reduce((s, p) => s + p.craving, 0) / MOCK_PATIENTS.length).toFixed(1);
+  const highRisk  = activePatients.filter(p => p.amaRisk === 'High').length;
+  const _n        = activePatients.length || 1; // guard against division-by-zero when census is empty
+  const avgLos    = Math.round(activePatients.reduce((s, p) => s + p.los, 0) / _n);
+  const avgCraving= (activePatients.reduce((s, p) => s + p.craving, 0) / _n).toFixed(1);
 
   const PROGRAMS: Program[] = ['All', 'Residential', 'PHP', 'IOP', 'Detox'];
   const RISKS: RiskLevel[]  = ['All', 'High', 'Med', 'Low'];
+
+  // ── Fail-closed configuration gate ─────────────────────────────────────────
+  // If VITE_SUNRISE_DATA_MODE is set to an unrecognised value this screen BLOCKS
+  // rendering of all patient data so misconfiguration is immediately visible.
+  if (DATA_MODE_ERROR) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-8">
+        <AlertTriangle className="w-12 h-12 text-red-500" />
+        <h2 className="text-xl font-bold text-red-700">Configuration Error — Patient Data Unavailable</h2>
+        <p className="text-sm text-slate max-w-md">{DATA_MODE_ERROR}</p>
+        <p className="text-xs text-slate max-w-md">
+          Set the <code className="bg-gray-100 px-1 rounded">VITE_SUNRISE_DATA_MODE</code> environment
+          variable to <code className="bg-gray-100 px-1 rounded">"demo"</code> or{' '}
+          <code className="bg-gray-100 px-1 rounded">"production"</code> and rebuild.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -150,7 +291,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
           <h1 className="text-2xl font-bold text-navy flex items-center gap-2">
             <Users className="w-6 h-6 text-sunrise-blue" /> Patient List
           </h1>
-          <p className="text-slate text-sm mt-1">Active Census: {MOCK_PATIENTS.length} patients · {filtered.length} shown</p>
+          <p className="text-slate text-sm mt-1">Active Census: {activePatients.length} patients · {filtered.length} shown</p>
         </div>
         {canAdmit && (
           <button onClick={() => savePlAction('Admission intake opened')} className="bg-sunrise-blue text-white px-4 py-2 rounded font-medium flex items-center gap-2 hover:bg-sunrise-blue-light transition-colors shadow-sm text-sm">
@@ -174,13 +315,13 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
               <h3 className="font-semibold text-navy text-sm mb-3">AMA Risk Distribution</h3>
               <div className="space-y-3">
                 {[
-                  { label: 'High AMA Risk', n: MOCK_PATIENTS.filter(p => p.amaRisk === 'High').length, color: 'bg-red-500', text: 'text-red-600' },
-                  { label: 'Medium AMA Risk', n: MOCK_PATIENTS.filter(p => p.amaRisk === 'Med').length, color: 'bg-amber-400', text: 'text-amber-600' },
-                  { label: 'Low / No AMA Risk', n: MOCK_PATIENTS.filter(p => !p.amaRisk || p.amaRisk === 'Low').length, color: 'bg-green-500', text: 'text-green-600' },
+                  { label: 'High AMA Risk', n: activePatients.filter(p => p.amaRisk === 'High').length, color: 'bg-red-500', text: 'text-red-600' },
+                  { label: 'Medium AMA Risk', n: activePatients.filter(p => p.amaRisk === 'Med').length, color: 'bg-amber-400', text: 'text-amber-600' },
+                  { label: 'Low / No AMA Risk', n: activePatients.filter(p => !p.amaRisk || p.amaRisk === 'Low').length, color: 'bg-green-500', text: 'text-green-600' },
                 ].map(r => (
                   <div key={r.label}>
                     <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className={`font-bold ${r.text}`}>{r.n}</span></div>
-                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: `${Math.round(r.n / MOCK_PATIENTS.length * 100)}%` }} /></div>
+                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: activePatients.length ? `${Math.round(r.n / activePatients.length * 100)}%` : "0%" }} /></div>
                   </div>
                 ))}
               </div>
@@ -189,13 +330,13 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
               <h3 className="font-semibold text-navy text-sm mb-3">Recovery Score Distribution</h3>
               <div className="space-y-3">
                 {[
-                  { label: 'Strong (≥70)', n: MOCK_PATIENTS.filter(p => (p.recoveryScore ?? 0) >= 70).length, color: 'bg-green-500', text: 'text-green-600' },
-                  { label: 'Moderate (50–69)', n: MOCK_PATIENTS.filter(p => (p.recoveryScore ?? 0) >= 50 && (p.recoveryScore ?? 0) < 70).length, color: 'bg-amber-400', text: 'text-amber-600' },
-                  { label: 'Low (<50)', n: MOCK_PATIENTS.filter(p => (p.recoveryScore ?? 0) < 50).length, color: 'bg-red-500', text: 'text-red-600' },
+                  { label: 'Strong (≥70)', n: activePatients.filter(p => (p.recoveryScore ?? 0) >= 70).length, color: 'bg-green-500', text: 'text-green-600' },
+                  { label: 'Moderate (50–69)', n: activePatients.filter(p => (p.recoveryScore ?? 0) >= 50 && (p.recoveryScore ?? 0) < 70).length, color: 'bg-amber-400', text: 'text-amber-600' },
+                  { label: 'Low (<50)', n: activePatients.filter(p => (p.recoveryScore ?? 0) < 50).length, color: 'bg-red-500', text: 'text-red-600' },
                 ].map(r => (
                   <div key={r.label}>
                     <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className={`font-bold ${r.text}`}>{r.n}</span></div>
-                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: `${Math.round(r.n / MOCK_PATIENTS.length * 100)}%` }} /></div>
+                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: activePatients.length ? `${Math.round(r.n / activePatients.length * 100)}%` : "0%" }} /></div>
                   </div>
                 ))}
               </div>
@@ -204,13 +345,13 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
               <h3 className="font-semibold text-navy text-sm mb-3">Craving Score Distribution</h3>
               <div className="space-y-3">
                 {[
-                  { label: 'High Craving (≥8)', n: MOCK_PATIENTS.filter(p => (p.craving ?? 0) >= 8).length, color: 'bg-red-500', text: 'text-red-600' },
-                  { label: 'Moderate (5–7)', n: MOCK_PATIENTS.filter(p => (p.craving ?? 0) >= 5 && (p.craving ?? 0) < 8).length, color: 'bg-amber-400', text: 'text-amber-600' },
-                  { label: 'Manageable (<5)', n: MOCK_PATIENTS.filter(p => (p.craving ?? 0) < 5).length, color: 'bg-green-500', text: 'text-green-600' },
+                  { label: 'High Craving (≥8)', n: activePatients.filter(p => (p.craving ?? 0) >= 8).length, color: 'bg-red-500', text: 'text-red-600' },
+                  { label: 'Moderate (5–7)', n: activePatients.filter(p => (p.craving ?? 0) >= 5 && (p.craving ?? 0) < 8).length, color: 'bg-amber-400', text: 'text-amber-600' },
+                  { label: 'Manageable (<5)', n: activePatients.filter(p => (p.craving ?? 0) < 5).length, color: 'bg-green-500', text: 'text-green-600' },
                 ].map(r => (
                   <div key={r.label}>
                     <div className="flex justify-between text-xs mb-1"><span className="text-slate">{r.label}</span><span className={`font-bold ${r.text}`}>{r.n}</span></div>
-                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: `${Math.round(r.n / MOCK_PATIENTS.length * 100)}%` }} /></div>
+                    <div className="h-2 bg-gray-100 rounded-full"><div className={`h-2 rounded-full ${r.color}`} style={{ width: activePatients.length ? `${Math.round(r.n / activePatients.length * 100)}%` : "0%" }} /></div>
                   </div>
                 ))}
               </div>
@@ -232,7 +373,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {[...MOCK_PATIENTS]
+                {[...activePatients]
                   .sort((a, b) => {
                     const order: Record<string, number> = { High: 0, Med: 1, Low: 2 };
                     return (order[a.amaRisk ?? 'Low'] ?? 2) - (order[b.amaRisk ?? 'Low'] ?? 2);
@@ -270,6 +411,23 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
 
       {plTab === 'Census' && (
       <div className="space-y-5">
+
+      {/* Server loading / error state */}
+      {DATA_MODE === 'production' && serverLoading && (
+        <div className="flex items-center gap-2 text-sm text-slate bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+          <span className="animate-spin">⏳</span> Loading patients from server...
+        </div>
+      )}
+      {DATA_MODE === 'production' && serverError && (
+        <div className="flex items-center gap-2 text-sm text-critical bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          ⚠️ {serverError}
+        </div>
+      )}
+      {DATA_MODE === 'production' && !serverLoading && !serverError && (
+        <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-1.5">
+          ✓ Server-backed data · {activePatients.length} patients
+        </div>
+      )}
       {/* Access notice for roles without PatientDetail */}
       {!canViewDetail && (
         <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
@@ -286,10 +444,10 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
       {/* KPI strip */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
         {[
-          { label: 'Total Census',   value: MOCK_PATIENTS.length, color: 'text-navy' },
-          { label: 'Residential',    value: MOCK_PATIENTS.filter(p => p.program === 'Residential').length, color: 'text-sunrise-blue' },
-          { label: 'PHP',            value: MOCK_PATIENTS.filter(p => p.program === 'PHP').length, color: 'text-teal' },
-          { label: 'IOP',            value: MOCK_PATIENTS.filter(p => p.program === 'IOP').length, color: 'text-purple' },
+          { label: 'Total Census',   value: activePatients.length, color: 'text-navy' },
+          { label: 'Residential',    value: activePatients.filter(p => p.program === 'Residential').length, color: 'text-sunrise-blue' },
+          { label: 'PHP',            value: activePatients.filter(p => p.program === 'PHP').length, color: 'text-teal' },
+          { label: 'IOP',            value: activePatients.filter(p => p.program === 'IOP').length, color: 'text-purple' },
           { label: 'High AMA Risk',  value: highRisk, color: highRisk > 0 ? 'text-critical' : 'text-success' },
           { label: 'Avg Cravings',   value: `${avgCraving}/10`, color: 'text-sunrise-amber' },
         ].map(k => (
@@ -367,7 +525,7 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
               <option value="Pending Discharge">Pending Discharge</option>
             </select>
           </div>
-          <span className="ml-auto text-xs text-slate">{filtered.length} of {MOCK_PATIENTS.length} clients</span>
+          <span className="ml-auto text-xs text-slate">{filtered.length} of {activePatients.length} clients</span>
         </div>
 
         {/* Table */}
@@ -445,18 +603,45 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
                       {p.counselor.split(',')[0]}
                     </td>
                     <td className="p-4">
-                      {canViewDetail ? (
-                        <button
-                          onClick={() => navigate('PatientDetail', p.id)}
-                          className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-3 py-1.5 rounded"
-                        >
-                          View Chart
-                        </button>
-                      ) : (
-                        <span className="text-xs text-slate flex items-center gap-1">
-                          <Lock className="w-3 h-3" /> No access
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {canViewDetail ? (
+                          <>
+                            <button
+                              onClick={() => navigate('PatientDetail', p.id)}
+                              className="text-sunrise-blue text-xs font-medium hover:underline bg-sunrise-blue/10 px-3 py-1.5 rounded"
+                            >
+                              View Chart
+                            </button>
+                            {/* ── Pin / Unpin — spec §2 ──────────────────────── */}
+                            <button
+                              onClick={(e) => handlePinToggle(e, p)}
+                              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handlePinToggle(e, p)}
+                              aria-pressed={isPinned(p.id)}
+                              aria-label={isPinned(p.id)
+                                ? `Unpin ${p.firstName} ${p.lastName}`
+                                : `Pin ${p.firstName} ${p.lastName}`}
+                              title={isPinned(p.id) ? "Unpin patient" : "Pin patient"}
+                              className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunrise-blue ${
+                                isPinned(p.id)
+                                  ? "bg-sunrise-amber/10 border-sunrise-amber/40 text-sunrise-amber hover:bg-sunrise-amber/20"
+                                  : "bg-slate-50 border-border text-slate hover:text-navy hover:border-slate-400"
+                              }`}
+                            >
+                              {isPinned(p.id)
+                                ? <><PinOff className="w-3 h-3" aria-hidden="true" /><span>Pinned</span></>
+                                : <><Pin  className="w-3 h-3" aria-hidden="true" /><span>Pin</span></>
+                              }
+                              <span className="sr-only">
+                                {isPinned(p.id) ? "(pinned — click to unpin)" : "(not pinned)"}
+                              </span>
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate flex items-center gap-1">
+                            <Lock className="w-3 h-3" /> No access
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -535,15 +720,15 @@ export function PatientList({ navigate }: { navigate: (s: Screen, id?: string) =
           <div className="text-sm text-slate">Census-wide clinical flag distribution — identifies populations needing targeted clinical attention across the current roster.</div>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { flag: 'AMA Risk (High)', count: MOCK_PATIENTS.filter(p => p.amaRisk === 'High').length, color: 'text-red-600', bgColor: 'bg-red-50 border-red-200' },
-              { flag: 'Co-occurring MH Dx', count: Math.round(MOCK_PATIENTS.length * 0.68), color: 'text-purple-600', bgColor: 'bg-purple-50 border-purple-200' },
-              { flag: 'On MAT Protocol', count: MOCK_PATIENTS.filter(p => p.program === 'Residential').length, color: 'text-blue-600', bgColor: 'bg-blue-50 border-blue-200' },
-              { flag: 'Legal Involvement', count: Math.round(MOCK_PATIENTS.length * 0.41), color: 'text-amber-600', bgColor: 'bg-amber-50 border-amber-200' },
+              { flag: 'AMA Risk (High)', count: activePatients.filter(p => p.amaRisk === 'High').length, color: 'text-red-600', bgColor: 'bg-red-50 border-red-200' },
+              { flag: 'Co-occurring MH Dx', count: Math.round(activePatients.length * 0.68), color: 'text-purple-600', bgColor: 'bg-purple-50 border-purple-200' },
+              { flag: 'On MAT Protocol', count: activePatients.filter(p => p.program === 'Residential').length, color: 'text-blue-600', bgColor: 'bg-blue-50 border-blue-200' },
+              { flag: 'Legal Involvement', count: Math.round(activePatients.length * 0.41), color: 'text-amber-600', bgColor: 'bg-amber-50 border-amber-200' },
             ].map(f => (
               <div key={f.flag} className={`card border ${f.bgColor}`}>
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide">{f.flag}</div>
                 <div className={`text-3xl font-bold mt-1 ${f.color}`}>{f.count}</div>
-                <div className="text-xs text-slate mt-0.5">{Math.round(f.count / MOCK_PATIENTS.length * 100)}% of census</div>
+                <div className="text-xs text-slate mt-0.5">{Math.round(f.count / activePatients.length * 100)}% of census</div>
               </div>
             ))}
           </div>

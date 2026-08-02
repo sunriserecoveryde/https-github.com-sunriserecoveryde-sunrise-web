@@ -1,0 +1,739 @@
+Phase 2C implementation appears complete, with 372 passing tests, but the final security handoff has not been provided.
+
+Continue on:
+
+`readiness/p0-phase-2c-security-closure`
+
+Do not begin Phase 3.
+
+Do not merge into `main`.
+
+Do not add additional functionality.
+
+Complete one final task:
+
+# Phase 2C Final Reproducibility and Evidence Handoff
+
+The objective is to prove the final implementation exactly as it exists after all code-review corrections.
+
+Do not treat the activity log or test count alone as final evidence.
+
+---
+
+## 1. Provide the exact final Git state
+
+Run:
+
+```bash
+git branch --show-current
+git status --short
+git log --oneline --decorate -40
+git rev-parse HEAD
+git merge-base --is-ancestor HEAD main
+```
+
+Provide:
+
+* Branch
+* Phase 2B starting commit
+* Every Phase 2C implementation commit
+* Every code-review correction commit
+* Final HEAD
+* Working-tree status
+* Confirmation that the branch is not merged into `main`
+
+Do not report only `HEAD`; provide the full commit hash.
+
+---
+
+## 2. Prove migrations from a completely empty database
+
+The implementation log states that migration `0003` was directly applied to the test database while troubleshooting.
+
+That development recovery action is not final migration evidence.
+
+Create a new disposable PostgreSQL database that contains no Sunrise OS tables and no Drizzle migration journal.
+
+Using only the normal checked-in Drizzle migration runner:
+
+1. Apply Phase 1A migration.
+2. Apply Phase 2 migration.
+3. Apply Phase 2B migration.
+4. Apply Phase 2C migration.
+5. Confirm every expected table exists.
+6. Confirm every index exists.
+7. Confirm every foreign key exists.
+8. Confirm every check constraint exists.
+9. Confirm every audit trigger exists.
+10. Confirm every migration-journal entry exists.
+11. Run the migration command again.
+12. Confirm no migrations remain.
+13. Seed fictitious organizations, facilities, users, assignments, patients, and episodes.
+14. Run all database and API tests against this isolated database.
+15. Destroy the disposable database.
+
+Do not:
+
+* Execute migration files directly with `pool.query`
+* Manually apply DDL
+* Manually repair constraints
+* Manually add journal entries
+* Use the already-populated development database as proof
+
+If the clean migration fails, correct the checked-in migration sequence and repeat the entire proof.
+
+Include all migration files and metadata in the review package.
+
+---
+
+## 3. Verify the complete migration sequence
+
+The final package must contain the actual migration sequence required for a clean installation, including the implemented equivalents of:
+
+* Phase 1A persistence migration
+* Phase 2 authentication migration
+* Phase 2B authorization-correction migration
+* Phase 2C security-closure migration
+* Drizzle journal
+* Drizzle snapshots or other required metadata
+
+Provide:
+
+* Migration filenames
+* Migration order
+* Journal entries
+* Clean migration result
+* Reapplication result
+* Confirmation that no direct DDL was required
+
+---
+
+## 4. Prove field-level patient disclosure
+
+Use real PostgreSQL records and real authenticated API requests.
+
+For every relevant persona, record the exact JSON keys returned by Patient List and Patient Detail.
+
+At minimum verify:
+
+### Billing
+
+May receive only the approved billing/demographic fields.
+
+Must not receive unauthorized:
+
+* Active episode details
+* Program
+* Level of care
+* Admission information
+* Primary diagnosis beyond approved billing need
+* Clinical notes
+* Treatment-plan information
+* Medication information
+* ASAM information
+
+### BHT and aftercare
+
+Must receive only fields permitted by their exact scoped grant and patient assignment.
+
+### Security administrator and HR
+
+Must receive no patient information unless a separate grant explicitly authorizes it.
+
+### Clinician and nurse
+
+Must receive only fields covered by their effective permissions.
+
+### Mixed-role users
+
+Each patient’s response must be projected using the exact grant that authorized that patient.
+
+Do not project fields using the global union of all role permissions.
+
+For every persona provide:
+
+* Exact patient count
+* Exact sanitized patient IDs
+* Exact returned keys
+* Expected keys
+* Unexpected keys
+* Missing authorized keys
+* Pass/fail
+
+---
+
+## 5. Prove exact patient-access assignment binding through the API
+
+The implementation log shows that one correction was tested by calling `authorize()` directly with a constructed BHT identity.
+
+Keep that unit test, but add a complete database-backed HTTP test.
+
+Required flow:
+
+1. Create a real BHT user.
+2. Create Role Assignment A.
+3. Assign Patient 1 through Role Assignment A.
+4. Login through the real authentication endpoint.
+5. Confirm Patient 1 is visible.
+6. Confirm Patient 2 is not visible.
+7. Revoke Role Assignment A.
+8. Create Role Assignment B for the same user and facility.
+9. Do not create a new Patient 1 access row for Assignment B.
+10. Login or refresh the session identity.
+11. Confirm the stale Patient 1 access row from Assignment A does not authorize Assignment B.
+12. Create a valid Patient 2 assignment tied to Assignment B.
+13. Confirm only Patient 2 becomes visible.
+
+Use:
+
+* Real PostgreSQL
+* Real session cookie
+* Real route
+* Real authorization middleware
+
+Do not rely only on direct calls to `authorize()`.
+
+---
+
+## 6. Prove administrative authorization through real routes
+
+Using real seeded personas, test:
+
+### Facility administrator
+
+Must not:
+
+* Create a CMO
+* Create a security administrator
+* Create an organization-wide assignment
+* Disable a user whose active assignments extend outside the administrator’s facility
+* Reactivate such a user
+* Revoke sessions for such a user
+* Affect a user in another organization
+
+### Organization administrator
+
+May act only within their organization and only according to the role-grant policy.
+
+### Mixed-assignment target
+
+If the target user has assignments in multiple facilities, the administrator must be authorized over every relevant assignment according to the documented policy.
+
+Test through the actual administrative HTTP routes.
+
+Do not test only `authorizeAdminAction()` directly.
+
+Verify:
+
+* No partial user records remain after a rejected creation
+* No role assignment remains
+* No staff profile remains
+* No session is revoked
+* Denial audit event exists
+
+---
+
+## 7. Prove login CSRF end to end
+
+Use a cookie-preserving HTTP client under production configuration.
+
+Required sequence:
+
+1. Request pre-login CSRF token.
+2. Confirm both the CSRF cookie and session cookie are established.
+3. Submit login with the valid token.
+4. Confirm login succeeds.
+5. Confirm session ID rotates.
+6. Replay the pre-login token for an authenticated write.
+7. Confirm it fails.
+8. Request a new authenticated CSRF token.
+9. Perform an authenticated state-changing operation.
+10. Confirm it succeeds.
+11. Submit logout with the authenticated token.
+12. Confirm logout succeeds.
+13. Confirm the session is revoked.
+14. Confirm a protected API returns 401.
+15. Restart the API.
+16. Confirm the revoked session remains invalid.
+
+Also test:
+
+* Missing login CSRF token
+* Invalid login CSRF token
+* Token from another browser session
+* Token from an expired session
+
+Do not mock the CSRF library.
+
+---
+
+## 8. Prove audit reliability with fault injection
+
+Test the actual required audit policy.
+
+At minimum verify:
+
+### User creation
+
+If audit persistence fails:
+
+* User identity is rolled back
+* Account is rolled back
+* Staff profile is rolled back
+* Role assignment is rolled back
+* API does not report success
+
+### Role assignment
+
+If audit persistence fails:
+
+* Assignment is rolled back
+* Session version is not incorrectly updated
+* API does not report success
+
+### Disable/reactivate
+
+If audit persistence fails:
+
+* Account status remains unchanged
+* Sessions remain consistent
+* API does not report success
+
+### Login success
+
+Prove the documented behavior when audit persistence fails.
+
+### Logout and session revocation
+
+Prove the documented transactional or durable-outbox behavior.
+
+### Authorization denial
+
+Prove the durable outbox or reliable event persistence mechanism.
+
+Also directly prove ordinary application database credentials cannot update or delete audit rows.
+
+---
+
+## 9. Prove shared PostgreSQL rate limiting
+
+Use the actual `PgRateLimitStore`, not a test bypass.
+
+Required test:
+
+1. Start API instance A.
+2. Submit failed login attempts.
+3. Confirm the shared counter increments.
+4. Restart API instance A.
+5. Confirm the counter remains.
+6. Start API instance B against the same database.
+7. Confirm instance B sees the same counter.
+8. Reach the threshold.
+9. Confirm 429.
+10. Wait for or simulate window expiration.
+11. Confirm requests are permitted again.
+12. Test store failure according to the documented policy.
+
+Report whether the final policy fails open or fails closed and why.
+
+Do not skip the limiter merely because `NODE_ENV=test`.
+
+Use a dedicated integration-test configuration.
+
+---
+
+## 10. Prove effective-date enforcement
+
+Using real database role assignments and real sessions, test:
+
+* Future role contributes no permission
+* Future role contributes no facility
+* Future org-wide role does not broaden another role
+* Role becomes active at the correct effective time
+* Expired role contributes nothing
+* Revoked role contributes nothing
+* Session refresh reflects the role transition
+
+Do not rely only on static SQL inspection.
+
+---
+
+## 11. Prove staff-profile identity mapping
+
+Verify:
+
+* Login resolves the correct identity-reference ID
+* Correct staff profile is loaded
+* Correct `staffProfileId` is placed in the authenticated identity
+* Correct staff display name appears in the session response
+* Another organization’s staff profile cannot be selected
+* Account ID is not incorrectly used as the identity-reference ID
+
+Include exact sanitized test output.
+
+---
+
+## 12. Conduct real browser verification
+
+Use:
+
+* Real Sunrise OS frontend
+* Real API server
+* Real PostgreSQL database
+* Real authentication session
+* Real CSRF middleware
+* No route interception
+* No mocked API responses
+* No development identity headers
+
+Required browser flow:
+
+1. Open production login.
+2. Request pre-login CSRF token.
+3. Login with organization slug, email, and password.
+4. Confirm the real secure session cookie.
+5. Request authenticated CSRF token.
+6. Load session endpoint.
+7. Load Patient List.
+8. Verify exact patient count and field projection.
+9. Open an authorized Patient Detail.
+10. Attempt unauthorized Patient Detail.
+11. Attempt unauthorized facility access.
+12. Refresh the browser.
+13. Confirm session persists.
+14. Log out.
+15. Confirm the protected API returns 401.
+
+The Playwright test must fail—not skip—when the required environment is unavailable.
+
+---
+
+## 13. Manually verify personas in the browser
+
+Use fictitious test accounts.
+
+Manually verify:
+
+* CMO
+* Facility administrator
+* Clinician
+* Nurse
+* Billing
+* BHT
+* Aftercare
+* Security administrator
+* Human resources
+* Multi-facility user
+* Mixed-role user
+* Disabled user
+* Future-role user
+* Expired-role user
+* Revoked-role user
+* Unrelated-facility user
+
+For each provide:
+
+* Login result
+* Exact active grants
+* Exact Patient List count
+* Exact fields shown
+* Authorized Patient Detail result
+* Unauthorized Patient Detail result
+* Administrative action result where applicable
+* Logout result
+* Audit result
+
+Do not describe automated HTTP tests as manual browser verification.
+
+---
+
+## 14. Capture runtime screenshots
+
+Capture at minimum:
+
+1. Production login
+2. Missing-CSRF login
+3. Invalid credentials
+4. CMO Patient List
+5. Facility clinician Patient List
+6. Billing minimum-necessary Patient List
+7. BHT assignment-limited Patient List
+8. Aftercare assignment-limited Patient List
+9. Mixed-role Patient List
+10. Multi-facility Patient List
+11. Authorized Patient Detail
+12. Unauthorized Patient Detail
+13. Cross-facility denial
+14. Facility-admin grant denial
+15. Disabled-user login
+16. Future-role denial
+17. Expired-role denial
+18. Logout
+19. Production with no demo UI
+20. Demo staff picker and banner
+
+Each production screenshot must be labeled:
+
+`Real API — no route interception`
+
+Record:
+
+* Persona
+* Viewport
+* Environment
+* Data mode
+* Expected patient count
+* Actual patient count
+* Fields displayed
+* Related test
+
+---
+
+## 15. Capture browser network evidence
+
+Provide sanitized evidence for:
+
+* Pre-login CSRF
+* Login
+* Authenticated CSRF refresh
+* Session endpoint
+* Patient List
+* Patient Detail
+* Unauthorized Patient Detail
+* Logout
+* Post-logout 401
+
+Do not expose:
+
+* Passwords
+* Cookie values
+* CSRF token values
+* Session tokens
+* Database credentials
+
+---
+
+## 16. Run the final complete validation suite
+
+Report separately:
+
+* Migration tests
+* Constraint tests
+* Field-projection tests
+* Scoped-grant tests
+* Mixed-role tests
+* Patient-assignment binding tests
+* Administrative-scope tests
+* Role-grant tests
+* Cross-tenant session-revocation tests
+* Effective-date tests
+* CSRF tests
+* Session tests
+* Audit fault-injection tests
+* Rate-limit tests
+* Staff-profile tests
+* Proxy/IP tests
+* API tests
+* Frontend tests
+* Browser E2E tests
+* TypeScript
+* Production builds
+
+For every suite provide:
+
+* Test files
+* Total tests
+* Passed
+* Failed
+* Skipped
+* Duration
+* Real database tests
+* Real HTTP tests
+* Real browser tests
+* Unit tests
+* Static/documentation checks
+
+The final report must identify any skipped test.
+
+Do not describe 372 passing tests as complete if browser or restart tests were skipped.
+
+---
+
+## 17. Run TypeScript and production builds
+
+Run TypeScript for:
+
+* `@workspace/db`
+* `@workspace/api-server`
+* `@workspace/sunrise-os`
+
+Run production builds for:
+
+* Database package where applicable
+* API server
+* Sunrise OS frontend
+
+Use explicit production-test configuration.
+
+Report:
+
+* Commands
+* Result
+* Duration
+* Warnings
+* Required environment-variable names
+
+Do not expose secret values.
+
+---
+
+## 18. Create the final evidence manifest
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-2c/evidence-manifest.json`
+
+Include:
+
+* Branch
+* Commits
+* Final HEAD
+* Files changed
+* Migrations
+* Migration journal
+* Constraints
+* Triggers
+* Field-permission policy
+* Scoped grants
+* Administrative policy
+* CSRF policy
+* Audit reliability policy
+* Rate-limit policy
+* Staff-profile mapping
+* Test results
+* Browser results
+* Persona results
+* Screenshot inventory
+* Network evidence
+* Build results
+* Known limitations
+* Timestamp
+
+Validate the JSON.
+
+---
+
+## 19. Create the final review archive
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-2c-security-closure-review.zip`
+
+Include:
+
+* All migrations required from Phase 1A through Phase 2C
+* Complete migration metadata
+* Database schema
+* Authorization services
+* Field-level DTOs and projections
+* Patient repositories and routes
+* Administrative routes and policy
+* Session and CSRF implementation
+* Shared rate limiter
+* Audit reliability implementation
+* Proxy configuration
+* Tests
+* Sanitized test outputs
+* Clean migration proof
+* Session restart proof
+* Rate-limit restart proof
+* Automated persona report
+* Manual browser persona report
+* Screenshots
+* Network evidence
+* TypeScript logs
+* Production build logs
+* Evidence manifest
+* Complete SHA-256 manifest
+
+The SHA manifest must cover every ZIP entry except itself.
+
+Do not include:
+
+* Passwords
+* Password hashes
+* Cookies
+* Session tokens
+* CSRF tokens
+* Environment files
+* Credentials
+* Database dumps
+* Real patient data
+* Dependency caches
+* Build caches
+* Previous review ZIPs
+* Duplicate convenience copies
+
+Run:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-2c-security-closure-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-2c-security-closure-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-2c-security-closure-review.zip
+```
+
+---
+
+## Required final response
+
+Provide:
+
+1. Branch
+2. Starting commit
+3. Correction commits
+4. Final HEAD
+5. Working-tree status
+6. Migration filenames
+7. Migration journal entries
+8. Clean migration result
+9. Migration reapplication result
+10. Confirmation that no manual DDL was used
+11. Field-projection result
+12. Billing field result
+13. BHT field result
+14. Aftercare field result
+15. Mixed-role projection result
+16. Patient-assignment binding result
+17. Facility-admin result
+18. Cross-tenant session-revocation result
+19. Effective-date result
+20. Login CSRF result
+21. Session restart result
+22. Audit fault-injection result
+23. Rate-limit restart result
+24. Staff-profile mapping result
+25. Real frontend-to-API result
+26. Manual browser persona count
+27. Automated persona count
+28. Screenshot count
+29. Network-evidence count
+30. Total tests
+31. Failed tests
+32. Skipped tests
+33. Real database test count
+34. Real HTTP test count
+35. Real browser test count
+36. TypeScript results
+37. Production build results
+38. ZIP path
+39. ZIP size
+40. ZIP SHA-256
+41. ZIP entry count
+42. SHA-manifest coverage
+43. Known limitations
+
+Do not begin Phase 3.
+
+Do not merge into `main`.
+
+Stop after generating and verifying the complete Phase 2C review archive.

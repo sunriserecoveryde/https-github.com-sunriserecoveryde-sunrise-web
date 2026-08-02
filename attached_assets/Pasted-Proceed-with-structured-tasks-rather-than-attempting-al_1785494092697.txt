@@ -1,0 +1,84 @@
+Proceed with structured tasks rather than attempting all eight phases at once.
+
+Use the existing Sunrise OS project and create a separate Git branch or rollback checkpoint for each task. Do not create a new application.
+
+Organize the work into these three task groups, in this exact order:
+
+TASK GROUP 1 — Navigation, Dashboard, and Notifications
+
+Include:
+
+1. Desktop navigation restructuring
+2. Dashboard information hierarchy
+3. Notification categorization and notification-count correction
+
+This is the first and highest-priority task group.
+
+Do not begin the other task groups until this group is complete, tested, and presented for review.
+
+Required deliverables for Task Group 1:
+
+* List of files changed
+* Before-and-after screenshots
+* Expanded and collapsed sidebar screenshots
+* Dashboard screenshot at 1440×900
+* Notification panel screenshot
+* Type-check results
+* Lint results
+* Test results
+* Production build results
+* Accessibility scan results
+* Known limitations
+
+Do not merge the branch automatically.
+
+TASK GROUP 2 — Contextual AI and Workflow Standardization
+
+Include:
+
+1. Contextual AI entry points
+2. Standardized page headers
+3. Standardized primary and secondary actions
+4. Clearer workflow-specific labels
+5. Human review, approval, and audit controls for AI-generated content
+
+Do not allow AI-generated content to write directly into the legal health record. Require clinician review and explicit approval.
+
+Do not change clinical calculations, ASAM scoring, risk algorithms, diagnosis logic, medication workflows, or permission rules.
+
+TASK GROUP 3 — Mobile, Accessibility, and Final Regression Testing
+
+Include:
+
+1. Mobile Census Board corrections
+2. Responsive layout improvements
+3. WCAG 2.2 AA accessibility corrections
+4. Keyboard navigation
+5. Focus states and modal behavior
+6. Visual consistency
+7. Full regression testing
+
+For every task group:
+
+* Preserve existing Sunrise OS branding.
+* Preserve all working functionality.
+* Preserve database structure and seeded demo data.
+* Preserve role and permission logic.
+* Do not rebuild the application.
+* Do not replace the design system.
+* Do not remove modules or navigation destinations.
+* Do not modify production environment variables.
+* Do not merge changes without my approval.
+* Do not mark the task complete with failing tests.
+
+Begin only with Task Group 1.
+
+Before writing code, provide:
+
+1. The proposed implementation plan.
+2. The components and files likely to be changed.
+3. Any dependencies or risks.
+4. The branch name.
+5. The acceptance criteria you will use.
+
+After presenting that information, proceed with Task Group 1 without asking me additional routine questions. Stop after Task Group 1 is completed and validated so I can review the results before you begin Task Group 2.

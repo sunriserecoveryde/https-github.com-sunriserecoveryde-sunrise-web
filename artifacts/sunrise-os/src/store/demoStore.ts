@@ -6,9 +6,10 @@
  * synchronously whenever any component calls an update.
  */
 import { useSyncExternalStore, useCallback } from 'react';
+import { scheduleSnoozeCheck } from '../hooks/useNotifNow';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
-export const STORE_KEY   = 'sunrise_demo_state_v1';
+export const STORE_KEY   = 'sunrise_demo_state_v3';   // bumped: timed snooze, ack, resolved states
 export const SESSION_KEY = 'sunrise_demo_session_v1';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -111,6 +112,14 @@ export interface IntakePatient {
 
 export interface DemoState {
   notificationReadIds: string[];
+  /** @deprecated use notificationSnoozeExpiry — kept so old store blobs deserialise cleanly */
+  notificationSnoozedIds: string[];
+  /** Maps notification id → expiry epoch ms. Active snooze = expiry > Date.now() */
+  notificationSnoozeExpiry: Record<string, number>;
+  /** Notifications explicitly acknowledged by the user (critical-clinical gate) */
+  notificationAcknowledgedIds: string[];
+  /** Notifications resolved by the user — excluded from active counts */
+  notificationResolvedIds: string[];
   auditLog: AuditEntry[];
   lastResetAt: string | null;
   // Clinical documentation
@@ -126,6 +135,10 @@ export interface DemoState {
 
 const INITIAL_STATE: DemoState = {
   notificationReadIds: [],
+  notificationSnoozedIds: [],
+  notificationSnoozeExpiry: {},
+  notificationAcknowledgedIds: [],
+  notificationResolvedIds: [],
   auditLog: [],
   lastResetAt: null,
   pendingDocs: [],
@@ -230,6 +243,57 @@ export function useDemoStore() {
       const set = new Set([...s.notificationReadIds, ...ids]);
       return { ...s, notificationReadIds: [...set] };
     });
+  }, []);
+
+  /**
+   * Snooze a notification until `untilMs` (epoch milliseconds).
+   * After the expiry time the notification reappears in the active list.
+   * Also marks as read so the badge drops immediately.
+   */
+  const snoozeNotification = useCallback((id: string, untilMs: number) => {
+    _setState(s => ({
+      ...s,
+      notificationSnoozeExpiry: { ...s.notificationSnoozeExpiry, [id]: untilMs },
+      notificationReadIds: s.notificationReadIds.includes(id)
+        ? s.notificationReadIds
+        : [...s.notificationReadIds, id],
+    }));
+    // Wake the global timer early so Topbar badge updates at expiry, not up to 60 s later
+    scheduleSnoozeCheck(untilMs);
+  }, []);
+
+  /**
+   * Acknowledge a critical-clinical notification.
+   * Acknowledgment ≠ resolution — the notification remains active and visible
+   * but the ACK-required gate is cleared, enabling snooze and resolve.
+   */
+  const acknowledgeNotification = useCallback((id: string) => {
+    _setState(s => ({
+      ...s,
+      notificationAcknowledgedIds: s.notificationAcknowledgedIds.includes(id)
+        ? s.notificationAcknowledgedIds
+        : [...s.notificationAcknowledgedIds, id],
+      notificationReadIds: s.notificationReadIds.includes(id)
+        ? s.notificationReadIds
+        : [...s.notificationReadIds, id],
+    }));
+  }, []);
+
+  /**
+   * Resolve a notification — removes it from the active list and unread count.
+   * Critical-clinical notifications should only be resolved after acknowledgment
+   * (enforced in the UI layer). Audit trail is preserved via `notificationResolvedIds`.
+   */
+  const resolveNotification = useCallback((id: string) => {
+    _setState(s => ({
+      ...s,
+      notificationResolvedIds: s.notificationResolvedIds.includes(id)
+        ? s.notificationResolvedIds
+        : [...s.notificationResolvedIds, id],
+      notificationReadIds: s.notificationReadIds.includes(id)
+        ? s.notificationReadIds
+        : [...s.notificationReadIds, id],
+    }));
   }, []);
 
   const addAuditEntry = useCallback(
@@ -428,6 +492,9 @@ export function useDemoStore() {
     state,
     markRead,
     markAllRead,
+    snoozeNotification,
+    acknowledgeNotification,
+    resolveNotification,
     addAuditEntry,
     reset,
     // Doc lifecycle
