@@ -38,6 +38,13 @@ export const PERMISSION_CODES = [
   "role.manage",
   "session.manage",
   "audit.authentication.view",
+  // Phase 3 — Clinical Documentation Foundation
+  "clinical_note.create",
+  "clinical_note.view",
+  "clinical_note.edit_own_draft",
+  "clinical_note.sign_own",
+  "clinical_note.void",
+  "clinical_note.audit_view",
 ] as const;
 
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
@@ -78,6 +85,13 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.create",
       "patient.update",
       "patient.export",
+      // Phase 3 — Clinical Documentation Foundation
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
+      "clinical_note.audit_view",
     ],
   },
   certified_clinician: {
@@ -92,6 +106,11 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.episode.view",
       "patient.create",
       "patient.update",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
     ],
   },
   mh_therapist: {
@@ -106,6 +125,11 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.episode.view",
       "patient.create",
       "patient.update",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
     ],
   },
   cmo: {
@@ -132,6 +156,13 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "role.manage",
       "session.manage",
       "audit.authentication.view",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
+      "clinical_note.audit_view",
     ],
   },
   prescriber: {
@@ -144,6 +175,10 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.chart.view",
       "patient.demographics.view",
       "patient.episode.view",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.sign_own",
     ],
   },
   nursing: {
@@ -156,6 +191,11 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.chart.view",
       "patient.demographics.view",
       "patient.episode.view",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
     ],
   },
   director_of_operations: {
@@ -192,6 +232,8 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.chart.view",
       "patient.demographics.view",
       "patient.episode.view",
+      // Phase 3 — view-only clinical note access
+      "clinical_note.view",
     ],
   },
   billing_staff: {
@@ -241,6 +283,8 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "role.manage",
       "session.manage",
       "audit.authentication.view",
+      // Phase 3 — audit view only (no clinical note create/edit/sign; no patient access)
+      "clinical_note.audit_view",
     ],
   },
 };
