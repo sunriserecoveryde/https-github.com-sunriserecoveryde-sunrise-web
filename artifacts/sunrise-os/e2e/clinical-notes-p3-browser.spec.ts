@@ -109,18 +109,23 @@ async function navigateToPatient(
     },
     { screen: "PatientDetail", patientId },
   );
-  // ── Wait for the patient-detail API calls to complete ────────────────────
-  // With trace:on the CDP overhead delays React's popstate handler.  A 500 ms
-  // networkidle ceiling was enough for untraced runs but left the tab bar
-  // unrendered by the time openProgressNotesTab ran.  5 000 ms gives the
-  // patient-detail component time to mount and fetch its data under any
-  // reasonable tracing overhead while still catching quickly when the network
-  // goes idle (typically < 500 ms after the data loads).
-  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
 
-  // Dismiss FlagChartAlert if it appears (AMA-risk patient shows it on every visit).
+  // In production mode PatientDetail returns a loading spinner until the server
+  // patient record arrives (GET /v1/patients/:id).  Neither the FlagChartAlert
+  // nor the tab bar renders until serverPatient is set.  Wait for whichever
+  // appears first so we never race against the loading gate.
+  await Promise.race([
+    page
+      .waitForSelector('[data-testid="chart-alert-acknowledge"]', { timeout: 10_000 })
+      .catch(() => null),
+    page
+      .waitForSelector('[data-testid="tab-progress-notes"]', { timeout: 10_000 })
+      .catch(() => null),
+  ]);
+
+  // Dismiss FlagChartAlert if it appeared (AMA-risk patient shows it on every visit).
   const acknowledge = page.locator('[data-testid="chart-alert-acknowledge"]');
-  if (await acknowledge.isVisible({ timeout: 3000 }).catch(() => false)) {
+  if (await acknowledge.isVisible({ timeout: 1000 }).catch(() => false)) {
     await acknowledge.click();
     await expect(acknowledge).not.toBeVisible({ timeout: 5000 }).catch(() => {});
   }
@@ -136,9 +141,10 @@ async function navigateToPatient(
  * appears; tests for those users assert their own conditions independently.
  */
 async function openProgressNotesTab(page: Page): Promise<void> {
-  // Secondary dismiss in case FlagChartAlert appeared after navigateToPatient returned.
+  // Secondary dismiss in case FlagChartAlert appeared after navigateToPatient returned
+  // (e.g. the patient API response arrived just after the primary dismiss window closed).
   const ack = page.locator('[data-testid="chart-alert-acknowledge"]');
-  if (await ack.isVisible().catch(() => false)) {
+  if (await ack.isVisible({ timeout: 3000 }).catch(() => false)) {
     await ack.click();
     await expect(ack).not.toBeVisible({ timeout: 5000 }).catch(() => {});
   }
