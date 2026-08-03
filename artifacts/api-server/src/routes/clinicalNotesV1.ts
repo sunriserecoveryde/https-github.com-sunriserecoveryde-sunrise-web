@@ -35,6 +35,7 @@ import {
   OwnershipError,
   NotFoundError,
   DatabaseError,
+  EpisodeValidationError,
 } from "../lib/clinicalNoteService";
 import { logger } from "../lib/logger";
 
@@ -71,6 +72,10 @@ function handleNoteError(err: unknown, res: Response): void {
     return;
   }
   if (err instanceof NoteStatusError) {
+    res.status(422).json({ error: "Unprocessable", message: err.message });
+    return;
+  }
+  if (err instanceof EpisodeValidationError) {
     res.status(422).json({ error: "Unprocessable", message: err.message });
     return;
   }

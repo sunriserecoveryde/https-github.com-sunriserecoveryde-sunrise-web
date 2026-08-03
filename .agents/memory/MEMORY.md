@@ -17,4 +17,4 @@
 - [Phase 2D Hardening](phase-2d-hardening.md) — exact FK binding, outbox worker, credential rotation, 414/414 tests, ZIP evidence; Zod v4 email/mrn/trigger pitfalls documented
 - [Migration journal reconciliation](migration-journal-reconciliation.md) — drizzle.__drizzle_migrations drift cause, correct SHA-256 hashes for all 6 migrations, reconciliation script path, forward policy
 - [Phase 3 Clinical Documentation](phase-3-clinical-documentation.md) — signed_consistency constraint implication vs biconditional, append-only audit table, 401 design invariant pattern, 19 permission codes
-- [Phase 3 closure state](phase-3-closure.md) — 543/543 tests (§1–§13), pool:forks fix, Option B audit_view deferred, supervisor void UI, ZIP built
+- [Phase 3 closure state](phase-3-closure.md) — 550/550 vitest × 2 clean runs, 11/11 Playwright (Chromium), all 11 gate reqs met, ZIP SHA 6a35876...

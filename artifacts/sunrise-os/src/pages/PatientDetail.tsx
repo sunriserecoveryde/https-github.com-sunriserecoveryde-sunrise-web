@@ -109,8 +109,12 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
 
 
   // ── Pin / Unpin ────────────────────────────────────────────────────────────
-  const { currentStaff } = useAuth();
+  const { currentStaff, productionSession } = useAuth();
   const staffId = currentStaff?.id ?? null;
+  // Void button is only shown when the current production session has the void permission.
+  // The API still rejects unauthorized void requests even if this gate is bypassed.
+  const canVoidNote = DATA_MODE === 'production'
+    && ((productionSession?.permissionCodes ?? []) as string[]).includes('clinical_note.void');
   const { pinPatient, unpinPatient, isPinned, refreshPinnedPatient } = useSidebarPrefs(staffId);
   const patientIsPinned = isPinned(patient.id);
   const [pinError, setPinError] = useState<string | null>(null);
@@ -916,7 +920,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                           </div>
                           <div className="flex items-center gap-2 shrink-0 ml-2">
                             <span className="text-xs font-medium text-slate">{new Date(note.createdAt).toLocaleDateString()}</span>
-                            {note.status === 'signed' && (
+                            {note.status === 'signed' && canVoidNote && (
                               <button
                                 onClick={e => {
                                   e.stopPropagation();
@@ -926,6 +930,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                                   setVoidError(null);
                                 }}
                                 className="text-[10px] px-2 py-0.5 rounded border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors font-medium"
+                                title="Void this note (requires supervisory permission)"
                               >
                                 Void
                               </button>

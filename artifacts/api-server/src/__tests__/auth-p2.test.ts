@@ -25,10 +25,11 @@ import {
 } from "../lib/permissionPolicy";
 
 describe("permissionPolicy", () => {
-  it("exports the 19 canonical PermissionCode values", () => {
-    // Phase 3 added 6 clinical_note.* permission codes (create, view, edit_own_draft,
-    // sign_own, void, audit_view). Original 13 + 6 = 19.
-    expect(PERMISSION_CODES).toHaveLength(19);
+  it("exports the 18 canonical PermissionCode values", () => {
+    // Phase 3 added 5 clinical_note.* permission codes (create, view, edit_own_draft,
+    // sign_own, void). Original 13 + 5 = 18.
+    // clinical_note.audit_view was removed — no audit UI is implemented in Phase 3.
+    expect(PERMISSION_CODES).toHaveLength(18);
     expect(PERMISSION_CODES).toContain("patient.list.view");
     expect(PERMISSION_CODES).toContain("organization.admin");
     expect(PERMISSION_CODES).toContain("audit.authentication.view");

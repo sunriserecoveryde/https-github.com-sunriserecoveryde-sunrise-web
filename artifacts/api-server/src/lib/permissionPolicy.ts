@@ -2,7 +2,7 @@
  * Permission policy for Sunrise OS.
  *
  * Defines:
- *  1. PermissionCode union — 13 server-side permission codes.
+ *  1. PermissionCode union — 18 server-side permission codes (13 core + 5 clinical_note.*).
  *  2. ROLE_PERMISSIONS — maps every code-defined role ID to:
  *       - permissions: the set of permission codes it grants
  *       - facilityWide: true = role grants facility-wide patient access without
@@ -44,7 +44,6 @@ export const PERMISSION_CODES = [
   "clinical_note.edit_own_draft",
   "clinical_note.sign_own",
   "clinical_note.void",
-  "clinical_note.audit_view",
 ] as const;
 
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
@@ -91,7 +90,6 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "clinical_note.edit_own_draft",
       "clinical_note.sign_own",
       "clinical_note.void",
-      // clinical_note.audit_view deferred — Phase 3 Option B: no audit UI implemented yet.
     ],
   },
   certified_clinician: {
@@ -162,7 +160,6 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "clinical_note.edit_own_draft",
       "clinical_note.sign_own",
       "clinical_note.void",
-      // clinical_note.audit_view deferred — Phase 3 Option B: no audit UI implemented yet.
     ],
   },
   prescriber: {
@@ -283,8 +280,7 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "role.manage",
       "session.manage",
       "audit.authentication.view",
-      // Phase 3 Option B: clinical_note.audit_view deferred — no audit UI implemented yet.
-      // security_admin retains zero clinical note permissions in Phase 3.
+      // security_admin has zero clinical note permissions in Phase 3.
     ],
   },
 };

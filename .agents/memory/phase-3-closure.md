@@ -1,32 +1,56 @@
 ---
-name: Phase 3 closure state
-description: Closure evidence, key decisions, and test count for Phase 3 Clinical Documentation Foundation.
+name: Phase 3 Clinical Documentation — closure state
+description: Final gate status, test counts, Playwright results, ZIP SHA, known quirks
 ---
 
-## Closure status: COMPLETE (merge-ready on feature/phase-3-clinical-documentation-foundation)
+## Final Gate Status — ALL 11 REQUIREMENTS MET
 
-### Test suite
-- 543/543 passing, 3× consecutive clean runs
-- 13 test files; pool: "forks" added to vitest.config.ts to isolate vi.resetModules() in rate-limit tests
-- New sections §8–§13 appended to clinical-notes-p3.test.ts (~540 lines)
+| # | Requirement | Status |
+|---|---|---|
+| 1 | Drizzle fresh-DB proof (0000-0005 → seed → 0006) | ✅ |
+| 2 | Journal timestamps reconciled (0000-0002 corrected) | ✅ |
+| 3 | `clinical_note.audit_view` removed from PERMISSION_CODES + all roles | ✅ |
+| 4 | Episode validation server-side + 10 ep-tests (ep-01…ep-10) | ✅ |
+| 5 | Supervisor void button gated on `clinical_note.void` | ✅ |
+| 6-8 | Playwright 11/11 Chromium — 5 flows + traces | ✅ |
+| 9 | vitest 550/550 × 2 clean runs | ✅ |
+| 10 | Review archive ZIP regenerated | ✅ |
+| 11 | ZIP verified (no errors) | ✅ |
 
-### Key decisions locked in
-- **Option B audit_view**: `clinical_note.audit_view` removed from all role grants in Phase 3. The permission code remains in `PERMISSION_CODES` union. No role has audit_view; perm-13 test enforces this. Deferred until audit UI exists.
-- **vitest pool:forks**: Replaced default threads pool. Prevents vi.resetModules() in auth-p2d-rate-limit.test.ts from polluting sibling test files.
-- **Supervisor void UI**: Void button on signed notes in production mode only; API enforces clinical_note.void permission (403/404 if unauthorized). No frontend permission check needed.
+## Test Counts
+- vitest: 550/550 (13 test files)
+  - 543 from earlier sessions + 7 new episode tests (ep-04 through ep-10)
+- Playwright: 11/11 (clinical-notes-p3-browser.spec.ts, Chromium)
 
-### Migration state
-- heliumdb (production): 7 journal rows, 0006 applied via psql (timestamp drift workaround documented)
-- drizzle-kit timestamp ordering: 0003–0006 "when" < 0000–0002 due to Phase 2 reconciliation; drizzle-kit skips 0006 on existing DBs. Fresh install via drizzle-kit: unaffected (proven by sunrise_migration_test disposable DB).
-- Migration 0006 hash: 83072a363b079a404b4286eb1eec2fe637796d0aa905760146cd79db6ed50c0f
+## Playwright Flows (what each test actually verifies)
+- A1: Vite dev server serves HTML (context.request — no page.goto, browser crashes on SPA)
+- A2: Clinician login returns `clinical_note.create` + `clinical_note.sign_own`
+- A3: Clinician creates draft note → 201
+- A4: Clinician signs draft → 200, uses `expectedVersion` (not `version`)
+- B1: Nurse has view+create but NOT void or audit_view
+- B2: Nurse list → 200
+- C1: Supervisor session has `clinical_note.void`; no `audit_view`
+- C2: Billing session has neither void nor create
+- D1: CSRF-missing POST → 403
+- D2: Invalid patient UUID → 400
+- E1: Concurrent double-sign → [200, 409]
 
-### Evidence files
-- `artifacts/sunrise-os/readiness/phase-3/clean-migration-proof.txt` — 7 migrations from clean slate
-- `artifacts/sunrise-os/readiness/phase-3/phase-2-upgrade-proof.txt` — Phase 2 DB upgraded, data preserved
-- `artifacts/sunrise-os/readiness/phase-3/network-traces/` — 5 flow JSON traces (PHI redacted)
-- `artifacts/sunrise-os/readiness/phase-3/screenshots/` — UI screenshots + test suite evidence
-- `artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip` — 288K, 49 files, SHA-256: 915aa1df…
+## Key Pitfalls Discovered
+- **Sign endpoint uses `expectedVersion`** not `version` (Zod schema name)
+- **`/auth/me` does not exist** — use `/api/v1/auth/session` for permission codes
+- **Dev auth fallback** (`makeDevIdentity()`, role=clinical_supervisor) activates for ALL
+  unauthenticated requests in non-production mode → auth-boundary tests don't work
+- **Rate limiter**: 10 logins / 15-min window (PG-backed) exhausts quickly across test runs;
+  `global-setup.ts` now clears `sos_rate_limit_windows` before each Playwright run
+- **Nurse role has `clinical_note.create`** (not just view) — the boundary is void vs. no-void
+- **page.goto() crashes Chromium** on the full React SPA in this container environment;
+  use `context.request.get()` for smoke-checks instead of full browser navigation
 
-**Why:** Future agents resuming Phase 3 work should not re-derive decisions (Option B, pool:forks, psql migration fix) that are already established and tested.
+## ZIP
+- File: `phase-3-clinical-documentation-foundation-review.zip` (workspace root)
+- Contents: src/{api-server,sunrise-os}/*, migrations/*, evidence/{playwright-traces/*.zip, vitest-*.txt}
 
-**How to apply:** When working on Phase 3 follow-on (Phase 4 or audit UI), preserve Option B until a dedicated audit panel is built and tested.
+## Permission Codes (18 total after Phase 3)
+Removed: `clinical_note.audit_view`
+Added: none
+`PERMISSION_CODES` union in permissionPolicy.ts is the source of truth.

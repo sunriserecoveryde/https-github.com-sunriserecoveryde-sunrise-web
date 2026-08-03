@@ -17,13 +17,12 @@
  *  - clinical_note.edit_own_draft — same as create (author only)
  *  - clinical_note.sign_own     — same as create (author only)
  *  - clinical_note.void         — clinical_supervisor, cmo
- *  - clinical_note.audit_view   — clinical_supervisor, cmo, security_admin
  *
  * NOTE: Clinical note content MUST NOT appear in audit metadata.
  */
 
 import { db } from "@workspace/db";
-import { sosClinicalNotes, sosAuthAudit, type SosClinicalNote } from "@workspace/db";
+import { sosClinicalNotes, sosAuthAudit, sosEpisodesOfCare, type SosClinicalNote } from "@workspace/db";
 import {
   listClinicalNotes,
   getClinicalNote,
@@ -57,6 +56,69 @@ export class OwnershipError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "OwnershipError";
+  }
+}
+
+// ── Episode validation error ──────────────────────────────────────────────────
+
+export class EpisodeValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EpisodeValidationError";
+  }
+}
+
+// ── Episode consistency validator ─────────────────────────────────────────────
+//
+// Policy (Phase 3):
+//   - episodeId may be omitted (null/undefined) — omission is always valid.
+//   - When supplied, the episode must:
+//       1. exist in the same organisation as the patient
+//       2. belong to the same patient
+//       3. belong to the same facility as the patient
+//       4. have episodeStatus === "active"
+//
+// Called before any insert/update that carries an episodeId.
+// Do NOT trust the client-provided episode ID — always verify server-side.
+
+async function validateEpisodeId(
+  episodeId: string | null | undefined,
+  patient: { id: string; orgId: string; facilityId: string },
+): Promise<void> {
+  if (!episodeId) return; // null / undefined → omitted, skip validation
+
+  const rows = await db
+    .select()
+    .from(sosEpisodesOfCare)
+    .where(
+      and(
+        eq(sosEpisodesOfCare.id, episodeId),
+        eq(sosEpisodesOfCare.orgId, patient.orgId),
+      ),
+    )
+    .limit(1);
+
+  const episode = rows[0];
+
+  if (!episode) {
+    // Treats "belongs to a different org" and "nonexistent" identically —
+    // do not leak whether the ID exists in another organisation.
+    throw new EpisodeValidationError(
+      "Episode not found, does not exist, or belongs to a different organisation",
+    );
+  }
+  if (episode.patientId !== patient.id) {
+    throw new EpisodeValidationError("Episode belongs to a different patient");
+  }
+  if (episode.facilityId !== patient.facilityId) {
+    throw new EpisodeValidationError(
+      "Episode belongs to a different facility than the patient's current facility",
+    );
+  }
+  if (episode.episodeStatus !== "active") {
+    throw new EpisodeValidationError(
+      `Episode is not active (current status: ${episode.episodeStatus})`,
+    );
   }
 }
 
@@ -163,6 +225,13 @@ export async function createNote(
 ): Promise<SosClinicalNote> {
   const patient = await getPatient(input.patientId, auth.identity.orgId);
   await authorizeNoteOp(auth, "clinical_note.create", patient.facilityId, patient.id);
+
+  // Validate episode BEFORE the transaction — fail fast on bad episode IDs.
+  await validateEpisodeId(input.episodeId, {
+    id:         patient.id,
+    orgId:      auth.identity.orgId,
+    facilityId: patient.facilityId,
+  });
 
   const note = await db.transaction(async (tx) => {
     const rows = await tx

@@ -25,8 +25,8 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import request from "supertest";
 import { db } from "@workspace/db";
-import { sosClinicalNotes, sosAuthAudit } from "@workspace/db";
-import { and, eq, desc } from "drizzle-orm";
+import { sosClinicalNotes, sosAuthAudit, sosEpisodesOfCare } from "@workspace/db";
+import { and, eq, desc, or } from "drizzle-orm";
 import { ROLE_PERMISSIONS, PERMISSION_CODES } from "../lib/permissionPolicy";
 import app from "../app";
 import { seed } from "../seed/authSeed";
@@ -316,28 +316,28 @@ describe("§1 database — sos_clinical_notes migration and constraints", () => 
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe("§2 permission policy — clinical note codes", () => {
-  it("policy-01: all 6 clinical note codes are in PERMISSION_CODES", () => {
+  it("policy-01: all 5 clinical note codes are in PERMISSION_CODES", () => {
+    // clinical_note.audit_view was removed — no audit UI is implemented in Phase 3.
     const expectedCodes = [
       "clinical_note.create",
       "clinical_note.view",
       "clinical_note.edit_own_draft",
       "clinical_note.sign_own",
       "clinical_note.void",
-      "clinical_note.audit_view",
     ];
     for (const code of expectedCodes) {
       expect(PERMISSION_CODES).toContain(code);
     }
+    expect(PERMISSION_CODES as readonly string[]).not.toContain("clinical_note.audit_view");
   });
 
-  it("policy-02: clinical_supervisor has 5 active clinical note codes (audit_view deferred — Option B)", () => {
+  it("policy-02: clinical_supervisor has all 5 clinical note codes", () => {
     const perms = ROLE_PERMISSIONS["clinical_supervisor"]?.permissions ?? [];
     expect(perms).toContain("clinical_note.create");
     expect(perms).toContain("clinical_note.view");
     expect(perms).toContain("clinical_note.edit_own_draft");
     expect(perms).toContain("clinical_note.sign_own");
     expect(perms).toContain("clinical_note.void");
-    // Phase 3 Option B: audit_view not granted until audit UI is implemented.
     expect(perms).not.toContain("clinical_note.audit_view");
   });
 
@@ -359,10 +359,9 @@ describe("§2 permission policy — clinical note codes", () => {
     expect(perms).not.toContain("clinical_note.void");
   });
 
-  it("policy-05: cmo has void but not audit_view (Option B — deferred)", () => {
+  it("policy-05: cmo has void (no audit_view — removed from Phase 3)", () => {
     const perms = ROLE_PERMISSIONS["cmo"]?.permissions ?? [];
     expect(perms).toContain("clinical_note.void");
-    // Phase 3 Option B: audit_view not granted until audit UI is implemented.
     expect(perms).not.toContain("clinical_note.audit_view");
   });
 
@@ -373,9 +372,8 @@ describe("§2 permission policy — clinical note codes", () => {
     expect(perms).not.toContain("clinical_note.void");
   });
 
-  it("policy-07: security_admin has ZERO clinical note permissions (Phase 3 Option B — audit_view deferred)", () => {
+  it("policy-07: security_admin has ZERO clinical note permissions", () => {
     const perms = ROLE_PERMISSIONS["security_admin"]?.permissions ?? [];
-    // Option B: security_admin gets no clinical note permissions until an auditor UI exists.
     expect(perms).not.toContain("clinical_note.audit_view");
     expect(perms).not.toContain("clinical_note.create");
     expect(perms).not.toContain("clinical_note.view");
@@ -1488,23 +1486,21 @@ describe("§10 permission matrix — roles × clinical_note permissions", () => 
     expect(clinical).toHaveLength(0);
   });
 
-  it("perm-13: clinical_note.audit_view is NOT granted to any role (Phase 3 Option B — deferred)", () => {
-    for (const [roleId, def] of Object.entries(ROLE_PERMISSIONS)) {
-      expect(
-        def.permissions as string[],
-        `Role ${roleId} must not grant clinical_note.audit_view in Phase 3`,
-      ).not.toContain("clinical_note.audit_view");
-    }
+  it("perm-13: PERMISSION_CODES contains exactly 5 clinical_note codes (audit_view removed)", () => {
+    const clinicalCodes = (PERMISSION_CODES as readonly string[]).filter(
+      (c) => c.startsWith("clinical_note."),
+    );
+    expect(clinicalCodes).toHaveLength(5);
+    expect(clinicalCodes).not.toContain("clinical_note.audit_view");
   });
 
-  it("perm-14: PERMISSION_CODES union includes all 6 clinical_note codes (including deferred audit_view)", () => {
+  it("perm-14: PERMISSION_CODES union includes all 5 active clinical_note codes", () => {
     const expected = [
       "clinical_note.create",
       "clinical_note.view",
       "clinical_note.edit_own_draft",
       "clinical_note.sign_own",
       "clinical_note.void",
-      "clinical_note.audit_view",
     ];
     for (const code of expected) {
       expect(PERMISSION_CODES as readonly string[]).toContain(code);
@@ -1672,28 +1668,60 @@ describe("§12 ownership ID consistency — DB author/signer/voider IDs match so
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §13 — Episode consistency — FK validation for episodeId
+// §13 — Episode consistency — service-level enforcement on episodeId
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe("§13 episode consistency — FK enforcement on episode_id", () => {
+describe("§13 episode consistency — service-level enforcement on episode_id", () => {
   let clinicianAgent13: ReturnType<typeof request.agent>;
+  let mixedRoleAgent13: ReturnType<typeof request.agent>;
+  let billingAgent13: ReturnType<typeof request.agent>;
 
   const pwd13 = process.env.PHASE2D_TEST_PASSWORD ?? "";
+
+  // Deterministic episode IDs to enable reliable cleanup
+  const EPISODE_ACTIVE_ID    = "00000000-0000-4eee-a000-000000000001";
+  const EPISODE_CROSS_FAC_ID = "00000000-0000-4eee-a000-000000000002";
+  const EPISODE_CLOSED_ID    = "00000000-0000-4eee-a000-000000000003";
+  const DIFF_PATIENT_ID      = "00000000-0000-4000-a000-000000000098";
+
+  async function cleanupEpisodes(): Promise<void> {
+    await db.delete(sosEpisodesOfCare).where(
+      or(
+        eq(sosEpisodesOfCare.id, EPISODE_ACTIVE_ID),
+        eq(sosEpisodesOfCare.id, EPISODE_CROSS_FAC_ID),
+        eq(sosEpisodesOfCare.id, EPISODE_CLOSED_ID),
+      ),
+    );
+  }
 
   beforeAll(async () => {
     if (!pwd13) throw new Error("PHASE2D_TEST_PASSWORD required");
     await seed();
-    clinicianAgent13 = await loginAgent("clinician@test.sunrise", pwd13);
+    // Ensure a second test patient exists for the cross-patient test.
+    await db.execute(
+      `INSERT INTO sos_patients (id, org_id, facility_id, mrn, first_name, last_name, status)
+       VALUES ('${DIFF_PATIENT_ID}', '${ORG_ID}', '${FACILITY_ID}', 'TEST-XPAT', '[TEST]', 'OtherPatient', 'active')
+       ON CONFLICT (id) DO NOTHING`,
+    );
+    clinicianAgent13  = await loginAgent("clinician@test.sunrise", pwd13);
+    mixedRoleAgent13  = await loginAgent("mixed-role@test.sunrise", pwd13);
+    billingAgent13    = await loginAgent("billing@test.sunrise", pwd13);
   }, 180_000);
 
   afterAll(async () => {
     await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+    await cleanupEpisodes();
     await logoutAgent(clinicianAgent13);
+    await logoutAgent(mixedRoleAgent13);
+    await logoutAgent(billingAgent13);
   });
 
   afterEach(async () => {
     await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+    await cleanupEpisodes();
   });
+
+  // ── ep-01: null episodeId allowed ──────────────────────────────────────────
 
   it("ep-01: creating a note with no episodeId succeeds (nullable FK)", async () => {
     const res = await sendWithCsrf(clinicianAgent13, "post", BASE, {
@@ -1703,6 +1731,8 @@ describe("§13 episode consistency — FK enforcement on episode_id", () => {
     expect(res.status).toBe(201);
     expect((res.body as Record<string, unknown>)["id"]).toBeTruthy();
   });
+
+  // ── ep-02: null stored in DB ───────────────────────────────────────────────
 
   it("ep-02: episode_id is null in DB when not provided in POST body", async () => {
     const createRes = await sendWithCsrf(clinicianAgent13, "post", BASE, {
@@ -1716,13 +1746,148 @@ describe("§13 episode consistency — FK enforcement on episode_id", () => {
     expect(row.rows[0]?.episode_id).toBeNull();
   });
 
-  it("ep-03: creating a note with a non-existent episodeId is rejected", async () => {
+  // ── ep-03: nonexistent episode UUID → 422 ─────────────────────────────────
+
+  it("ep-03: creating a note with a non-existent episodeId is rejected with 422", async () => {
     const res = await sendWithCsrf(clinicianAgent13, "post", BASE, {
       noteType:  "progress_note",
       content:   "Bad episode test",
       episodeId: "00000000-dead-4ead-cafe-000000000000",
     });
-    // FK violation or validation error: the service should reject with 4xx or propagate 5xx.
-    expect([400, 422, 500]).toContain(res.status);
+    expect(res.status).toBe(422);
+  });
+
+  // ── ep-04: valid active episode → 201 ─────────────────────────────────────
+
+  it("ep-04: creating a note with a valid active episode for the same patient+facility succeeds", async () => {
+    await db.insert(sosEpisodesOfCare).values({
+      id:            EPISODE_ACTIVE_ID,
+      orgId:         ORG_ID,
+      facilityId:    FACILITY_ID,
+      patientId:     TEST_PATIENT_ID,
+      episodeStatus: "active",
+    }).onConflictDoNothing();
+
+    const res = await sendWithCsrf(clinicianAgent13, "post", BASE, {
+      noteType:  "progress_note",
+      content:   "Valid active episode test",
+      episodeId: EPISODE_ACTIVE_ID,
+    });
+    expect(res.status).toBe(201);
+    // Confirm episode_id stored in DB
+    const noteId = (res.body as { id?: string }).id!;
+    const row = await db.execute<{ episode_id: string }>(
+      `SELECT episode_id FROM sos_clinical_notes WHERE id = '${noteId}'`,
+    );
+    expect(row.rows[0]?.episode_id).toBe(EPISODE_ACTIVE_ID);
+  });
+
+  // ── ep-05: episode belonging to another patient → 422 ─────────────────────
+
+  it("ep-05: episode belonging to a different patient is rejected (422)", async () => {
+    // Episode for DIFF_PATIENT_ID, not for TEST_PATIENT_ID
+    await db.insert(sosEpisodesOfCare).values({
+      id:            EPISODE_ACTIVE_ID,
+      orgId:         ORG_ID,
+      facilityId:    FACILITY_ID,
+      patientId:     DIFF_PATIENT_ID,   // ← wrong patient
+      episodeStatus: "active",
+    }).onConflictDoNothing();
+
+    const res = await sendWithCsrf(clinicianAgent13, "post", BASE, {
+      noteType:  "progress_note",
+      content:   "Cross-patient episode test",
+      episodeId: EPISODE_ACTIVE_ID,
+    });
+    expect(res.status).toBe(422);
+    expect((res.body as Record<string, string>)["message"]).toMatch(/patient/i);
+  });
+
+  // ── ep-06: episode UUID not found in this org (simulates cross-org) → 422 ──
+
+  it("ep-06: episode UUID that does not exist in this organisation is rejected (422)", async () => {
+    const res = await sendWithCsrf(clinicianAgent13, "post", BASE, {
+      noteType:  "progress_note",
+      content:   "Cross-org episode test",
+      episodeId: "00000000-0000-4000-ffff-000000000001",
+    });
+    expect(res.status).toBe(422);
+    expect((res.body as Record<string, string>)["message"]).toMatch(/not found|organisation/i);
+  });
+
+  // ── ep-07: episode belonging to a different facility → 422 ────────────────
+
+  it("ep-07: episode belonging to a different facility than the patient is rejected (422)", async () => {
+    // Episode for TEST_PATIENT_ID but at FACILITY_2_ID (patient is at FACILITY_ID)
+    await db.insert(sosEpisodesOfCare).values({
+      id:            EPISODE_CROSS_FAC_ID,
+      orgId:         ORG_ID,
+      facilityId:    FACILITY_2_ID,     // ← wrong facility
+      patientId:     TEST_PATIENT_ID,
+      episodeStatus: "active",
+    }).onConflictDoNothing();
+
+    const res = await sendWithCsrf(clinicianAgent13, "post", BASE, {
+      noteType:  "progress_note",
+      content:   "Cross-facility episode test",
+      episodeId: EPISODE_CROSS_FAC_ID,
+    });
+    expect(res.status).toBe(422);
+    expect((res.body as Record<string, string>)["message"]).toMatch(/facility/i);
+  });
+
+  // ── ep-08: closed (discharged) episode → 422 ──────────────────────────────
+
+  it("ep-08: a non-active episode (discharged) is rejected (422)", async () => {
+    await db.insert(sosEpisodesOfCare).values({
+      id:            EPISODE_CLOSED_ID,
+      orgId:         ORG_ID,
+      facilityId:    FACILITY_ID,
+      patientId:     TEST_PATIENT_ID,
+      episodeStatus: "discharged",      // ← not active
+    }).onConflictDoNothing();
+
+    const res = await sendWithCsrf(clinicianAgent13, "post", BASE, {
+      noteType:  "progress_note",
+      content:   "Discharged episode test",
+      episodeId: EPISODE_CLOSED_ID,
+    });
+    expect(res.status).toBe(422);
+    expect((res.body as Record<string, string>)["message"]).toMatch(/not active|discharged/i);
+  });
+
+  // ── ep-09: cross-scope mixed-role user (security_admin + BHT) → 404 ───────
+  // BHT has clinical_note.view only — no create. Confirms authorization fires
+  // before episode validation and that no clinical note is created.
+
+  it("ep-09: mixed-role user (security_admin + BHT) cannot create notes regardless of valid episode", async () => {
+    await db.insert(sosEpisodesOfCare).values({
+      id:            EPISODE_ACTIVE_ID,
+      orgId:         ORG_ID,
+      facilityId:    FACILITY_ID,
+      patientId:     TEST_PATIENT_ID,
+      episodeStatus: "active",
+    }).onConflictDoNothing();
+
+    const res = await sendWithCsrf(mixedRoleAgent13, "post", BASE, {
+      noteType:  "progress_note",
+      content:   "Mixed-role episode test",
+      episodeId: EPISODE_ACTIVE_ID,
+    });
+    // BHT has no clinical_note.create → AuthorizationError → 404 (opaque denial)
+    expect(res.status).toBe(404);
+  });
+
+  // ── ep-10: assignment-limited user without patient assignment → 404 ────────
+  // billing_staff has no clinical note permissions — confirms caseload-limited
+  // roles are blocked even when episode is omitted entirely.
+
+  it("ep-10: caseload-limited user without patient access cannot create notes", async () => {
+    const res = await sendWithCsrf(billingAgent13, "post", BASE, {
+      noteType: "progress_note",
+      content:  "Billing staff note attempt",
+    });
+    // billing_staff has no clinical_note.create → AuthorizationError → 404
+    expect(res.status).toBe(404);
   });
 });
