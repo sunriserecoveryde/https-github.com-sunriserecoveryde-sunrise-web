@@ -25,6 +25,12 @@ export const PERMISSION_CODES = [
   "role.manage",
   "session.manage",
   "audit.authentication.view",
+  // Phase 3 — Clinical Documentation
+  "clinical_note.create",
+  "clinical_note.view",
+  "clinical_note.sign",
+  "clinical_note.void",
+  "clinical_note.export",
 ] as const;
 
 export type PermissionCode = (typeof PERMISSION_CODES)[number];

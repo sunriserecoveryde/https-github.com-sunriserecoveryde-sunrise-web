@@ -328,6 +328,19 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
       // will be the 9th hit — one below the production limit of 10.
       // We compute window_end the same way PgRateLimitStore does so the UPSERT
       // in increment() targets the correct existing row.
+      //
+      // Guard: if we are within 500 ms of the next window boundary, sleep
+      // until we are safely past it.  Otherwise, the seed row's window_end
+      // can expire between the INSERT and the HTTP request, causing the
+      // request to start a fresh counter at 1 instead of 9.
+      const guardBoundaryMs = 500;
+      const nowMs          = Date.now();
+      const windowEndMs    = Math.ceil(nowMs / TEST_WINDOW_MS) * TEST_WINDOW_MS;
+      const msUntilFlip    = windowEndMs - nowMs;
+      if (msUntilFlip < guardBoundaryMs) {
+        await new Promise<void>(resolve => setTimeout(resolve, msUntilFlip + 50));
+      }
+      // Recompute after any sleep so we use the current (non-expiring) window.
       const windowEnd = new Date(Math.ceil(Date.now() / TEST_WINDOW_MS) * TEST_WINDOW_MS);
       await pool.query(
         `INSERT INTO sos_rate_limit_windows (key, window_end, count, updated_at)

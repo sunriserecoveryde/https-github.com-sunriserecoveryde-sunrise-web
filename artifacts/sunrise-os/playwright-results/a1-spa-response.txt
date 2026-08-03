@@ -1,2 +1,0 @@
-Vite status: 200
-HTML size: 1519 bytes

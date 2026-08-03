@@ -620,6 +620,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
         {tabs.map(tab => (
           <button
             key={tab.id}
+            data-testid={`tab-${tab.id.replace(/\s+/g, '-').toLowerCase()}`}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 py-3 px-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
               activeTab === tab.id
@@ -786,6 +787,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 {!isComposingNote && (
                   <LockedButton
                     locked={readOnly}
+                    data-testid="new-note-btn"
                     onClick={() => { setIsComposingNote(true); setNoteIsDirty(false); setEditingNoteId(null); setNoteContent(''); setNoteApiError(null); setNoteConflict(false); }}
                     className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors"
                   >
@@ -853,6 +855,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                       Void Reason <span className="text-rose-500">*</span>
                     </label>
                     <textarea
+                      data-testid="void-reason-input"
                       className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px] mb-4"
                       placeholder="Enter a clinical reason for voiding this note (min. 5 characters)…"
                       value={voidReason}
@@ -868,6 +871,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                         Cancel
                       </button>
                       <button
+                        data-testid="confirm-void-btn"
                         onClick={handleProductionVoidNote}
                         disabled={voidReason.trim().length < 5 || voidSubmitting}
                         className={`px-4 py-2 rounded text-sm font-medium text-white transition-colors ${
@@ -891,6 +895,8 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                     .map(note => (
                       <div
                         key={note.id}
+                        data-testid={`note-card-${note.id}`}
+                        data-status={note.status}
                         className={`border border-border rounded-lg p-4 transition-colors group ${note.status === 'draft' ? 'hover:border-sunrise-blue cursor-pointer' : ''}`}
                         onClick={() => {
                           if (note.status === 'draft') {
@@ -922,6 +928,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                             <span className="text-xs font-medium text-slate">{new Date(note.createdAt).toLocaleDateString()}</span>
                             {note.status === 'signed' && canVoidNote && (
                               <button
+                                data-testid={`void-note-btn-${note.id}`}
                                 onClick={e => {
                                   e.stopPropagation();
                                   setVoidModalNoteId(note.id);
@@ -1031,6 +1038,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                         )}
                         <label className="block text-xs font-bold text-slate mb-1 uppercase">Note Content</label>
                         <textarea
+                          data-testid="note-content"
                           className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[300px]"
                           placeholder="Enter clinical note content…"
                           value={noteContent}
@@ -1108,6 +1116,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                       <>
                         <LockedButton
                           locked={!!readOnly || noteSaving || !noteIsDirty || noteConflict}
+                          data-testid="save-draft-btn"
                           onClick={handleProductionSaveDraft}
                           className={`px-4 py-2 border rounded text-sm font-medium transition-colors ${noteIsDirty && !noteSaving && !noteConflict ? 'border-border text-slate hover:bg-slate-50' : 'border-border text-slate opacity-40 cursor-not-allowed pointer-events-none'}`}
                         >
@@ -1115,6 +1124,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                         </LockedButton>
                         <LockedButton
                           locked={readOnly || noteSaving || !noteIsDirty || noteConflict}
+                          data-testid="sign-lock-btn"
                           onClick={handleProductionSignNote}
                           className={`px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium transition-colors ${noteIsDirty && !noteSaving && !noteConflict ? 'hover:bg-sunrise-blue-light' : 'opacity-40 cursor-not-allowed pointer-events-none'}`}
                         >

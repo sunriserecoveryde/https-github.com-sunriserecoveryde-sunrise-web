@@ -88,7 +88,15 @@ const allowedOrigins: string[] = [
   // Comma-separated production origins from env
   ...ALLOWED_ORIGINS_ENV.split(",").map((s) => s.trim()).filter(Boolean),
   // Local development
-  ...(isProduction ? [] : ["http://localhost:5173", "http://localhost:3000", "http://localhost:80"]),
+  ...(isProduction ? [] : [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:80",
+    // Playwright e2e — Vite dev server port used by the browser test runner
+    "http://localhost:23456",
+    // Allow any additional origins configured via env (e.g. CI / Playwright matrix)
+    ...(process.env.PLAYWRIGHT_ORIGIN ? [process.env.PLAYWRIGHT_ORIGIN] : []),
+  ]),
 ];
 
 app.use(
