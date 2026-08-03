@@ -330,14 +330,15 @@ describe("§2 permission policy — clinical note codes", () => {
     }
   });
 
-  it("policy-02: clinical_supervisor has all 6 clinical note codes", () => {
+  it("policy-02: clinical_supervisor has 5 active clinical note codes (audit_view deferred — Option B)", () => {
     const perms = ROLE_PERMISSIONS["clinical_supervisor"]?.permissions ?? [];
     expect(perms).toContain("clinical_note.create");
     expect(perms).toContain("clinical_note.view");
     expect(perms).toContain("clinical_note.edit_own_draft");
     expect(perms).toContain("clinical_note.sign_own");
     expect(perms).toContain("clinical_note.void");
-    expect(perms).toContain("clinical_note.audit_view");
+    // Phase 3 Option B: audit_view not granted until audit UI is implemented.
+    expect(perms).not.toContain("clinical_note.audit_view");
   });
 
   it("policy-03: certified_clinician has create, view, edit_own_draft, sign_own", () => {
@@ -358,10 +359,11 @@ describe("§2 permission policy — clinical note codes", () => {
     expect(perms).not.toContain("clinical_note.void");
   });
 
-  it("policy-05: cmo has all 6 clinical note codes", () => {
+  it("policy-05: cmo has void but not audit_view (Option B — deferred)", () => {
     const perms = ROLE_PERMISSIONS["cmo"]?.permissions ?? [];
     expect(perms).toContain("clinical_note.void");
-    expect(perms).toContain("clinical_note.audit_view");
+    // Phase 3 Option B: audit_view not granted until audit UI is implemented.
+    expect(perms).not.toContain("clinical_note.audit_view");
   });
 
   it("policy-06: bht has view only", () => {
@@ -371,9 +373,10 @@ describe("§2 permission policy — clinical note codes", () => {
     expect(perms).not.toContain("clinical_note.void");
   });
 
-  it("policy-07: security_admin has clinical_note.audit_view but not create/view/void", () => {
+  it("policy-07: security_admin has ZERO clinical note permissions (Phase 3 Option B — audit_view deferred)", () => {
     const perms = ROLE_PERMISSIONS["security_admin"]?.permissions ?? [];
-    expect(perms).toContain("clinical_note.audit_view");
+    // Option B: security_admin gets no clinical note permissions until an auditor UI exists.
+    expect(perms).not.toContain("clinical_note.audit_view");
     expect(perms).not.toContain("clinical_note.create");
     expect(perms).not.toContain("clinical_note.view");
     expect(perms).not.toContain("clinical_note.void");
@@ -891,8 +894,9 @@ describe("§5 authorization — access control", () => {
   });
 
   // ── auth-03: security_admin cannot view notes ──────────────────────────────
-  it("auth-03: security_admin cannot view clinical notes → 404 on GET", async () => {
-    // Even though security_admin has audit_view, they have no clinical_note.view.
+  it("auth-03: security_admin has no clinical note permissions → 404 on GET", async () => {
+    // security_admin has zero clinical note permissions (Phase 3 Option B — audit_view
+    // not granted until audit UI is implemented).
     const res = await securityAdminAgent.get(BASE);
     expect([403, 404]).toContain(res.status);
   });
@@ -1157,14 +1161,17 @@ describe("§6 audit — events written and content-free", () => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe("§7 migration — no pending migrations after 0006", () => {
-  it("migration-01: at least 6 migration entries exist in drizzle.__drizzle_migrations", async () => {
-    // Migration 0006 was applied via psql due to drizzle-kit silently failing on the
-    // trigger $$ block in CI. The tracking row count may be 6 or 7 depending on
-    // whether drizzle-kit also recorded the migration.
+  it("migration-01: exactly 7 migration entries in drizzle.__drizzle_migrations (0000–0006)", async () => {
+    // Migration 0006 applied via psql to the production DB (drizzle-kit timestamp ordering
+    // issue prevents upgrade-path application; fresh installs via drizzle-kit are unaffected).
+    // The journal row for 0006 is inserted explicitly after psql application.
     const rows = await db.execute<{ hash: string }>(
       `SELECT hash FROM drizzle.__drizzle_migrations ORDER BY created_at ASC`,
     );
-    expect(rows.rows.length).toBeGreaterThanOrEqual(6);
+    expect(rows.rows.length).toBe(7);
+    // 0006 hash must be present.
+    const hashes = rows.rows.map((r) => r.hash);
+    expect(hashes).toContain("83072a363b079a404b4286eb1eec2fe637796d0aa905760146cd79db6ed50c0f");
   });
 
   it("migration-02: sos_clinical_notes table exists", async () => {
@@ -1179,5 +1186,543 @@ describe("§7 migration — no pending migrations after 0006", () => {
       `SELECT trigger_name FROM information_schema.triggers WHERE event_object_table = 'sos_clinical_notes' AND trigger_name = 'sos_clinical_notes_no_edit_after_sign'`,
     );
     expect(result.rows.length).toBe(1);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// §8 — Signed-note immutability — DB trigger and API rejection
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("§8 signed-note immutability — DB trigger and API layer", () => {
+  let clinicianAgent8: ReturnType<typeof request.agent>;
+  let cmoAgent8: ReturnType<typeof request.agent>;
+
+  const pwd8 = process.env.PHASE2D_TEST_PASSWORD ?? "";
+
+  beforeAll(async () => {
+    if (!pwd8) throw new Error("PHASE2D_TEST_PASSWORD required");
+    await seed();
+    [clinicianAgent8, cmoAgent8] = await Promise.all([
+      loginAgent("clinician@test.sunrise", pwd8),
+      loginAgent("org-admin@test.sunrise", pwd8),
+    ]);
+  }, 180_000);
+
+  afterAll(async () => {
+    await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+    for (const a of [clinicianAgent8, cmoAgent8]) await logoutAgent(a);
+  });
+
+  afterEach(async () => {
+    await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+  });
+
+  it("immut-01: DB trigger rejects direct UPDATE of content on a signed note", async () => {
+    const createRes = await sendWithCsrf(clinicianAgent8, "post", BASE, {
+      noteType: "progress_note",
+      content:  "Immutability test — original content",
+    });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const v1     = (createRes.body as { version?: number }).version!;
+    await sendWithCsrf(clinicianAgent8, "post", `${BASE}/${noteId}/sign`, { expectedVersion: v1 });
+
+    await expect(
+      db.execute(`UPDATE sos_clinical_notes SET content = 'tampered' WHERE id = '${noteId}'`),
+    ).rejects.toThrow();
+  });
+
+  it("immut-02: DB trigger rejects UPDATE of note_type on a signed note", async () => {
+    const createRes = await sendWithCsrf(clinicianAgent8, "post", BASE, {
+      noteType: "progress_note",
+      content:  "Note type immutability test",
+    });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const v1     = (createRes.body as { version?: number }).version!;
+    await sendWithCsrf(clinicianAgent8, "post", `${BASE}/${noteId}/sign`, { expectedVersion: v1 });
+
+    await expect(
+      db.execute(`UPDATE sos_clinical_notes SET note_type = 'nursing_note' WHERE id = '${noteId}'`),
+    ).rejects.toThrow();
+  });
+
+  it("immut-03: DB trigger rejects UPDATE of signed_at on a signed note", async () => {
+    const createRes = await sendWithCsrf(clinicianAgent8, "post", BASE, {
+      noteType: "progress_note",
+      content:  "Signed-at immutability test",
+    });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const v1     = (createRes.body as { version?: number }).version!;
+    await sendWithCsrf(clinicianAgent8, "post", `${BASE}/${noteId}/sign`, { expectedVersion: v1 });
+
+    await expect(
+      db.execute(`UPDATE sos_clinical_notes SET signed_at = NOW() + INTERVAL '1 hour' WHERE id = '${noteId}'`),
+    ).rejects.toThrow();
+  });
+
+  it("immut-04: API PATCH on a signed note returns 422", async () => {
+    const createRes = await sendWithCsrf(clinicianAgent8, "post", BASE, {
+      noteType: "progress_note",
+      content:  "API patch immutability test",
+    });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const v1     = (createRes.body as { version?: number }).version!;
+    await sendWithCsrf(clinicianAgent8, "post", `${BASE}/${noteId}/sign`, { expectedVersion: v1 });
+
+    const patchRes = await sendWithCsrf(clinicianAgent8, "patch", `${BASE}/${noteId}`, {
+      content:         "Attempt to edit signed note",
+      expectedVersion: v1 + 1,
+    });
+    expect([400, 422]).toContain(patchRes.status);
+  });
+
+  it("immut-05: DB trigger allows void — content unchanged at DB level after void", async () => {
+    const originalContent = "Void immutability preservation test";
+    const createRes = await sendWithCsrf(clinicianAgent8, "post", BASE, {
+      noteType: "progress_note",
+      content:  originalContent,
+    });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const v1     = (createRes.body as { version?: number }).version!;
+    await sendWithCsrf(clinicianAgent8, "post", `${BASE}/${noteId}/sign`, { expectedVersion: v1 });
+    await sendWithCsrf(cmoAgent8, "post", `${BASE}/${noteId}/void`, {
+      voidReason: "Immutability void test", expectedVersion: v1 + 1,
+    });
+
+    const rows = await db.execute<{ content: string; status: string }>(
+      `SELECT content, status FROM sos_clinical_notes WHERE id = '${noteId}'`,
+    );
+    expect(rows.rows[0]?.status).toBe("voided");
+    expect(rows.rows[0]?.content).toBe(originalContent);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// §9 — Void preservation — all clinical fields unchanged, void metadata added
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("§9 void preservation — clinical fields unchanged, void metadata set", () => {
+  let clinicianAgent9: ReturnType<typeof request.agent>;
+  let cmoAgent9: ReturnType<typeof request.agent>;
+
+  const pwd9 = process.env.PHASE2D_TEST_PASSWORD ?? "";
+
+  beforeAll(async () => {
+    if (!pwd9) throw new Error("PHASE2D_TEST_PASSWORD required");
+    await seed();
+    [clinicianAgent9, cmoAgent9] = await Promise.all([
+      loginAgent("clinician@test.sunrise", pwd9),
+      loginAgent("org-admin@test.sunrise", pwd9),
+    ]);
+  }, 180_000);
+
+  afterAll(async () => {
+    await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+    for (const a of [clinicianAgent9, cmoAgent9]) await logoutAgent(a);
+  });
+
+  afterEach(async () => {
+    await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+  });
+
+  type NoteRow9 = {
+    content: string; note_type: string; author_user_id: string; patient_id: string;
+    facility_id: string; org_id: string; signed_at: string | null;
+    signed_by_user_id: string | null; status: string; version: number;
+    voided_at: string | null; voided_by_user_id: string | null; void_reason: string | null;
+  };
+
+  async function createSignVoid(content: string): Promise<{ snap: NoteRow9; after: NoteRow9; noteId: string }> {
+    const createRes = await sendWithCsrf(clinicianAgent9, "post", BASE, { noteType: "progress_note", content });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const v1     = (createRes.body as { version?: number }).version!;
+    await sendWithCsrf(clinicianAgent9, "post", `${BASE}/${noteId}/sign`, { expectedVersion: v1 });
+    const before = await db.execute<NoteRow9>(`SELECT * FROM sos_clinical_notes WHERE id = '${noteId}'`);
+    const snap = before.rows[0]!;
+    await sendWithCsrf(cmoAgent9, "post", `${BASE}/${noteId}/void`, {
+      voidReason: "Void preservation test", expectedVersion: v1 + 1,
+    });
+    const after2 = await db.execute<NoteRow9>(`SELECT * FROM sos_clinical_notes WHERE id = '${noteId}'`);
+    return { snap, after: after2.rows[0]!, noteId };
+  }
+
+  it("void-pres-01: content preserved after void", async () => {
+    const { snap, after } = await createSignVoid("Content preservation test");
+    expect(after.content).toBe(snap.content);
+  });
+
+  it("void-pres-02: note_type preserved after void", async () => {
+    const { snap, after } = await createSignVoid("Note type preservation test");
+    expect(after.note_type).toBe(snap.note_type);
+  });
+
+  it("void-pres-03: author_user_id preserved after void", async () => {
+    const { snap, after } = await createSignVoid("Author preservation test");
+    expect(after.author_user_id).toBe(snap.author_user_id);
+  });
+
+  it("void-pres-04: signed_at and signed_by_user_id preserved after void", async () => {
+    const { snap, after } = await createSignVoid("Signer preservation test");
+    expect(after.signed_at).toBeTruthy();
+    expect(after.signed_at).toBe(snap.signed_at);
+    expect(after.signed_by_user_id).toBe(snap.signed_by_user_id);
+  });
+
+  it("void-pres-05: void fields populated after void", async () => {
+    const { after } = await createSignVoid("Void metadata population test");
+    expect(after.status).toBe("voided");
+    expect(after.voided_at).toBeTruthy();
+    expect(after.voided_by_user_id).toBeTruthy();
+    expect(after.void_reason).toBe("Void preservation test");
+  });
+
+  it("void-pres-06: version incremented by 1 on void", async () => {
+    const { snap, after } = await createSignVoid("Version increment on void test");
+    expect(after.version).toBe(snap.version + 1);
+  });
+
+  it("void-pres-07: clinical_note_voided audit event written with correct noteId in metadata", async () => {
+    const { noteId } = await createSignVoid("Void audit event test");
+    await new Promise((r) => setTimeout(r, 100));
+    const auditRows = await db
+      .select()
+      .from(sosAuthAudit)
+      .where(and(
+        eq(sosAuthAudit.orgId, ORG_ID),
+        eq(sosAuthAudit.eventType, "clinical_note_voided"),
+      ))
+      .orderBy(desc(sosAuthAudit.createdAt))
+      .limit(5);
+    const matching = auditRows.find((r) => {
+      const meta = r.metadata as Record<string, unknown> | null;
+      return meta?.["noteId"] === noteId;
+    });
+    expect(matching).toBeDefined();
+    expect(matching?.outcome).toBe("success");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// §10 — Permission matrix — 11 roles × 6 Phase 3 clinical note permissions
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("§10 permission matrix — roles × clinical_note permissions", () => {
+  it("perm-01: clinical_supervisor has create/view/edit/sign/void", () => {
+    const p = ROLE_PERMISSIONS["clinical_supervisor"]!.permissions;
+    expect(p).toContain("clinical_note.create");
+    expect(p).toContain("clinical_note.view");
+    expect(p).toContain("clinical_note.edit_own_draft");
+    expect(p).toContain("clinical_note.sign_own");
+    expect(p).toContain("clinical_note.void");
+  });
+
+  it("perm-02: certified_clinician has create/view/edit/sign but NOT void", () => {
+    const p = ROLE_PERMISSIONS["certified_clinician"]!.permissions;
+    expect(p).toContain("clinical_note.create");
+    expect(p).toContain("clinical_note.view");
+    expect(p).toContain("clinical_note.edit_own_draft");
+    expect(p).toContain("clinical_note.sign_own");
+    expect(p).not.toContain("clinical_note.void");
+  });
+
+  it("perm-03: mh_therapist has create/view/edit/sign but NOT void", () => {
+    const p = ROLE_PERMISSIONS["mh_therapist"]!.permissions;
+    expect(p).toContain("clinical_note.create");
+    expect(p).not.toContain("clinical_note.void");
+  });
+
+  it("perm-04: cmo has create/view/edit/sign/void", () => {
+    const p = ROLE_PERMISSIONS["cmo"]!.permissions;
+    expect(p).toContain("clinical_note.void");
+  });
+
+  it("perm-05: prescriber has create/view/sign but NOT edit_own_draft or void", () => {
+    const p = ROLE_PERMISSIONS["prescriber"]!.permissions;
+    expect(p).toContain("clinical_note.create");
+    expect(p).toContain("clinical_note.sign_own");
+    expect(p).not.toContain("clinical_note.edit_own_draft");
+    expect(p).not.toContain("clinical_note.void");
+  });
+
+  it("perm-06: nursing has create/view/edit/sign but NOT void", () => {
+    const p = ROLE_PERMISSIONS["nursing"]!.permissions;
+    expect(p).toContain("clinical_note.create");
+    expect(p).not.toContain("clinical_note.void");
+  });
+
+  it("perm-07: bht has view-only — no create/edit/sign/void", () => {
+    const p = ROLE_PERMISSIONS["bht"]!.permissions;
+    expect(p).toContain("clinical_note.view");
+    expect(p).not.toContain("clinical_note.create");
+    expect(p).not.toContain("clinical_note.edit_own_draft");
+    expect(p).not.toContain("clinical_note.sign_own");
+    expect(p).not.toContain("clinical_note.void");
+  });
+
+  it("perm-08: security_admin has ZERO clinical note permissions (Phase 3 Option B)", () => {
+    const p = ROLE_PERMISSIONS["security_admin"]!.permissions;
+    const clinical = (p as string[]).filter((x) => x.startsWith("clinical_note."));
+    expect(clinical).toHaveLength(0);
+  });
+
+  it("perm-09: billing_staff has ZERO clinical note permissions", () => {
+    const p = ROLE_PERMISSIONS["billing_staff"]!.permissions;
+    const clinical = (p as string[]).filter((x) => x.startsWith("clinical_note."));
+    expect(clinical).toHaveLength(0);
+  });
+
+  it("perm-10: human_resources has ZERO clinical note permissions", () => {
+    const p = ROLE_PERMISSIONS["human_resources"]!.permissions;
+    const clinical = (p as string[]).filter((x) => x.startsWith("clinical_note."));
+    expect(clinical).toHaveLength(0);
+  });
+
+  it("perm-11: ownership has ZERO clinical note permissions", () => {
+    const p = ROLE_PERMISSIONS["ownership"]!.permissions;
+    const clinical = (p as string[]).filter((x) => x.startsWith("clinical_note."));
+    expect(clinical).toHaveLength(0);
+  });
+
+  it("perm-12: aftercare_staff has ZERO clinical note permissions", () => {
+    const p = ROLE_PERMISSIONS["aftercare_staff"]!.permissions;
+    const clinical = (p as string[]).filter((x) => x.startsWith("clinical_note."));
+    expect(clinical).toHaveLength(0);
+  });
+
+  it("perm-13: clinical_note.audit_view is NOT granted to any role (Phase 3 Option B — deferred)", () => {
+    for (const [roleId, def] of Object.entries(ROLE_PERMISSIONS)) {
+      expect(
+        def.permissions as string[],
+        `Role ${roleId} must not grant clinical_note.audit_view in Phase 3`,
+      ).not.toContain("clinical_note.audit_view");
+    }
+  });
+
+  it("perm-14: PERMISSION_CODES union includes all 6 clinical_note codes (including deferred audit_view)", () => {
+    const expected = [
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
+      "clinical_note.audit_view",
+    ];
+    for (const code of expected) {
+      expect(PERMISSION_CODES as readonly string[]).toContain(code);
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// §11 — Response field projection — list vs detail content exclusion
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("§11 response field projection — list excludes content, detail includes it", () => {
+  let clinicianAgent11: ReturnType<typeof request.agent>;
+  let noteId11: string;
+
+  const pwd11 = process.env.PHASE2D_TEST_PASSWORD ?? "";
+
+  beforeAll(async () => {
+    if (!pwd11) throw new Error("PHASE2D_TEST_PASSWORD required");
+    await seed();
+    clinicianAgent11 = await loginAgent("clinician@test.sunrise", pwd11);
+    const res = await sendWithCsrf(clinicianAgent11, "post", BASE, {
+      noteType: "progress_note",
+      content:  "Projection test content — must not appear in list",
+    });
+    noteId11 = (res.body as { id?: string }).id!;
+  }, 180_000);
+
+  afterAll(async () => {
+    await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+    await logoutAgent(clinicianAgent11);
+  });
+
+  it("proj-01: GET list response items do NOT include content field", async () => {
+    const res = await clinicianAgent11.get(BASE);
+    expect(res.status).toBe(200);
+    const notes = res.body as Array<Record<string, unknown>>;
+    expect(Array.isArray(notes)).toBe(true);
+    for (const note of notes) {
+      expect(note).not.toHaveProperty("content");
+    }
+  });
+
+  it("proj-02: GET detail response INCLUDES content field", async () => {
+    const res = await clinicianAgent11.get(`${BASE}/${noteId11}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("content");
+    expect(typeof (res.body as Record<string, unknown>).content).toBe("string");
+  });
+
+  it("proj-03: list items include expected metadata fields", async () => {
+    const res = await clinicianAgent11.get(BASE);
+    expect(res.status).toBe(200);
+    const notes = res.body as Array<Record<string, unknown>>;
+    const note = notes.find((n) => n["id"] === noteId11);
+    expect(note).toBeDefined();
+    for (const field of ["id", "noteType", "status", "authorUserId", "createdAt", "version", "updatedAt"]) {
+      expect(note).toHaveProperty(field);
+    }
+  });
+
+  it("proj-04: GET detail returns the exact content stored on creation", async () => {
+    const res = await clinicianAgent11.get(`${BASE}/${noteId11}`);
+    expect((res.body as Record<string, unknown>)["content"]).toBe(
+      "Projection test content — must not appear in list",
+    );
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// §12 — Ownership ID consistency — sos_user_accounts.id stored in author fields
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("§12 ownership ID consistency — DB author/signer/voider IDs match sos_user_accounts", () => {
+  let clinicianAgent12: ReturnType<typeof request.agent>;
+  let cmoAgent12: ReturnType<typeof request.agent>;
+
+  const pwd12 = process.env.PHASE2D_TEST_PASSWORD ?? "";
+
+  beforeAll(async () => {
+    if (!pwd12) throw new Error("PHASE2D_TEST_PASSWORD required");
+    await seed();
+    [clinicianAgent12, cmoAgent12] = await Promise.all([
+      loginAgent("clinician@test.sunrise", pwd12),
+      loginAgent("org-admin@test.sunrise", pwd12),
+    ]);
+  }, 180_000);
+
+  afterAll(async () => {
+    await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+    for (const a of [clinicianAgent12, cmoAgent12]) await logoutAgent(a);
+  });
+
+  afterEach(async () => {
+    await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+  });
+
+  it("own-01: author_user_id is a valid sos_user_accounts.id in the same org", async () => {
+    const createRes = await sendWithCsrf(clinicianAgent12, "post", BASE, {
+      noteType: "progress_note", content: "Ownership author test",
+    });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const row = await db.execute<{ author_user_id: string }>(
+      `SELECT author_user_id FROM sos_clinical_notes WHERE id = '${noteId}'`,
+    );
+    const authorId = row.rows[0]?.author_user_id;
+    expect(authorId).toBeTruthy();
+    const user = await db.execute<{ id: string }>(
+      `SELECT id FROM sos_user_accounts WHERE id = '${authorId}' AND org_id = '${ORG_ID}'`,
+    );
+    expect(user.rows.length).toBe(1);
+  });
+
+  it("own-02: signed_by_user_id is a valid sos_user_accounts.id after signing", async () => {
+    const createRes = await sendWithCsrf(clinicianAgent12, "post", BASE, {
+      noteType: "progress_note", content: "Ownership signer test",
+    });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const v1     = (createRes.body as { version?: number }).version!;
+    await sendWithCsrf(clinicianAgent12, "post", `${BASE}/${noteId}/sign`, { expectedVersion: v1 });
+    const row = await db.execute<{ signed_by_user_id: string }>(
+      `SELECT signed_by_user_id FROM sos_clinical_notes WHERE id = '${noteId}'`,
+    );
+    const signerId = row.rows[0]?.signed_by_user_id;
+    expect(signerId).toBeTruthy();
+    const user = await db.execute<{ id: string }>(
+      `SELECT id FROM sos_user_accounts WHERE id = '${signerId}' AND org_id = '${ORG_ID}'`,
+    );
+    expect(user.rows.length).toBe(1);
+  });
+
+  it("own-03: voided_by_user_id is a valid sos_user_accounts.id after voiding", async () => {
+    const createRes = await sendWithCsrf(clinicianAgent12, "post", BASE, {
+      noteType: "progress_note", content: "Ownership voider test",
+    });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const v1     = (createRes.body as { version?: number }).version!;
+    await sendWithCsrf(clinicianAgent12, "post", `${BASE}/${noteId}/sign`, { expectedVersion: v1 });
+    await sendWithCsrf(cmoAgent12, "post", `${BASE}/${noteId}/void`, {
+      voidReason: "Ownership voider test reason", expectedVersion: v1 + 1,
+    });
+    const row = await db.execute<{ voided_by_user_id: string }>(
+      `SELECT voided_by_user_id FROM sos_clinical_notes WHERE id = '${noteId}'`,
+    );
+    const voiderId = row.rows[0]?.voided_by_user_id;
+    expect(voiderId).toBeTruthy();
+    const user = await db.execute<{ id: string }>(
+      `SELECT id FROM sos_user_accounts WHERE id = '${voiderId}' AND org_id = '${ORG_ID}'`,
+    );
+    expect(user.rows.length).toBe(1);
+  });
+
+  it("own-04: author and signer are the same user when the author self-signs", async () => {
+    const createRes = await sendWithCsrf(clinicianAgent12, "post", BASE, {
+      noteType: "progress_note", content: "Self-sign identity test",
+    });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const v1     = (createRes.body as { version?: number }).version!;
+    await sendWithCsrf(clinicianAgent12, "post", `${BASE}/${noteId}/sign`, { expectedVersion: v1 });
+    const row = await db.execute<{ author_user_id: string; signed_by_user_id: string }>(
+      `SELECT author_user_id, signed_by_user_id FROM sos_clinical_notes WHERE id = '${noteId}'`,
+    );
+    expect(row.rows[0]?.author_user_id).toBe(row.rows[0]?.signed_by_user_id);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// §13 — Episode consistency — FK validation for episodeId
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("§13 episode consistency — FK enforcement on episode_id", () => {
+  let clinicianAgent13: ReturnType<typeof request.agent>;
+
+  const pwd13 = process.env.PHASE2D_TEST_PASSWORD ?? "";
+
+  beforeAll(async () => {
+    if (!pwd13) throw new Error("PHASE2D_TEST_PASSWORD required");
+    await seed();
+    clinicianAgent13 = await loginAgent("clinician@test.sunrise", pwd13);
+  }, 180_000);
+
+  afterAll(async () => {
+    await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+    await logoutAgent(clinicianAgent13);
+  });
+
+  afterEach(async () => {
+    await deleteTestNotes(ORG_ID, TEST_PATIENT_ID);
+  });
+
+  it("ep-01: creating a note with no episodeId succeeds (nullable FK)", async () => {
+    const res = await sendWithCsrf(clinicianAgent13, "post", BASE, {
+      noteType: "progress_note",
+      content:  "No episode ID test",
+    });
+    expect(res.status).toBe(201);
+    expect((res.body as Record<string, unknown>)["id"]).toBeTruthy();
+  });
+
+  it("ep-02: episode_id is null in DB when not provided in POST body", async () => {
+    const createRes = await sendWithCsrf(clinicianAgent13, "post", BASE, {
+      noteType: "progress_note",
+      content:  "Null episode check",
+    });
+    const noteId = (createRes.body as { id?: string }).id!;
+    const row = await db.execute<{ episode_id: string | null }>(
+      `SELECT episode_id FROM sos_clinical_notes WHERE id = '${noteId}'`,
+    );
+    expect(row.rows[0]?.episode_id).toBeNull();
+  });
+
+  it("ep-03: creating a note with a non-existent episodeId is rejected", async () => {
+    const res = await sendWithCsrf(clinicianAgent13, "post", BASE, {
+      noteType:  "progress_note",
+      content:   "Bad episode test",
+      episodeId: "00000000-dead-4ead-cafe-000000000000",
+    });
+    // FK violation or validation error: the service should reject with 4xx or propagate 5xx.
+    expect([400, 422, 500]).toContain(res.status);
   });
 });

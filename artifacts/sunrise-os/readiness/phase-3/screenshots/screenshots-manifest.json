@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-08-03T01:42:16Z",
+  "note": "Screenshots captured of Sunrise OS in demo mode. Production-mode clinical notes UI requires VITE_SUNRISE_DATA_MODE=production with API server. API-level evidence is provided by the 543-test suite in clinical-notes-p3.test.ts.",
+  "screenshots": [
+    {"file": "00-app-login.jpg", "label": "App login page (demo mode)", "flow": "setup"},
+    {"file": "01-clinician-patient-chart-progress-notes-tab.png", "label": "Patient chart — Progress Notes tab", "flow": "01"},
+    {"file": "02-nurse-patient-chart-progress-notes-tab.png", "label": "Patient chart — nursing note list", "flow": "02"},
+    {"file": "03-supervisor-void-confirmation.png", "label": "Supervisor void confirmation UI", "flow": "03"},
+    {"file": "04-authorization-denied.jpg", "label": "Authorization denied — billing_staff", "flow": "04"},
+    {"file": "05-concurrency-conflict.jpg", "label": "Concurrency conflict response", "flow": "05"},
+    {"file": "11-note-compose-panel.jpg", "label": "Note compose panel (new note)", "flow": "01-02"},
+    {"file": "12-note-list-draft.jpg", "label": "Note list showing draft status", "flow": "01"},
+    {"file": "13-note-list-signed.jpg", "label": "Note list showing signed status + Void button", "flow": "03"},
+    {"file": "14-void-modal-empty.jpg", "label": "Void modal — empty reason field (Confirm disabled)", "flow": "03"},
+    {"file": "15-void-modal-filled.jpg", "label": "Void modal — reason entered (Confirm enabled)", "flow": "03"},
+    {"file": "16-note-list-voided.jpg", "label": "Note list after void — voided status badge", "flow": "03"},
+    {"file": "17-permission-denied-api.jpg", "label": "API 404 response for billing_staff (dev tools)", "flow": "04"},
+    {"file": "18-test-suite-all-passing.jpg", "label": "Test suite — 543/543 passing", "flow": "api-evidence"}
+  ]
+}

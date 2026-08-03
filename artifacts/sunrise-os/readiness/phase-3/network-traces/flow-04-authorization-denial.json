@@ -1,0 +1,20 @@
+{
+  "flow": "04-authorization-denial",
+  "generatedAt": "2026-08-03T01:41:43Z",
+  "description": "billing_staff user denied access to clinical notes",
+  "actor": "billing@test.sunrise",
+  "role": "billing_staff",
+  "note": "billing_staff has zero clinical note permissions. Patient lookup fails with 404 before reaching clinical note route.",
+  "requests": [
+    {
+      "step": "4a GET /api/v1/patients/:id/clinical-notes (billing session)",
+      "method": "GET",
+      "url": "/api/v1/patients/[PATIENT_ID]/clinical-notes",
+      "responseStatus": 404,
+      "responseBodySample": {
+        "error": "Patient not found"
+      },
+      "explanation": "billing_staff lacks patient.chart.view permission \u2192 getPatient() returns 404 before reaching clinical note authorization. This is the correct defense-in-depth behavior."
+    }
+  ]
+}

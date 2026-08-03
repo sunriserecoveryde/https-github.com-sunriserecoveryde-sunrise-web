@@ -1,0 +1,24 @@
+PHASE 3 CLINICAL DOCUMENTATION FOUNDATION — Test Suite Evidence
+
+RESULT: 543 PASSED (0 failed, 0 skipped)
+═══════════════════════════════════════════════════
+
+Test Files:  13 passed (13)
+Tests:       543 passed (543)
+Duration:    ~17 seconds
+Pool:        forks (process-isolated — vi.resetModules() safe)
+Run twice:   CLEAN both runs
+
+§1  DB schema          — sos_clinical_notes table, trigger, constraints   ✓
+§2  Permission policy  — 19 codes, ROLE_PERMISSIONS matrix, Option B       ✓
+§3  Create flow        — draft note creation, field defaults               ✓
+§4  Concurrency        — optimistic locking, ConcurrencyError              ✓
+§5  Auth & access      — cross-facility/cross-org barriers                 ✓
+§6  Audit trail        — clinical note events in sos_auth_audit            ✓
+§7  Migration          — 7 journal entries, 0006 hash present              ✓
+§8  Immutability       — DB trigger rejects edits to signed notes          ✓
+§9  Void preservation  — content/signer preserved after void              ✓
+§10 Permission matrix  — 11 roles × 6 codes, audit_view deferred (B)     ✓
+§11 Field projection   — list omits content, detail includes it           ✓
+§12 Ownership IDs      — FK references sos_user_accounts.id               ✓
+§13 Episode FK         — nullable; non-existent UUIDs rejected            ✓

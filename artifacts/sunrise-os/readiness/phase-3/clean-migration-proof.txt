@@ -1,0 +1,79 @@
+Phase 3 — Clinical Documentation Foundation
+Clean Migration Proof (§3)
+Generated: 2026-08-03T01:28:50Z
+Branch: feature/phase-3-clinical-documentation-foundation
+
+==========================================================================
+METHODOLOGY
+==========================================================================
+A disposable PostgreSQL database (sunrise_migration_test) was created.
+drizzle-kit v0.31.10 was run against it with no prior migrations applied.
+Command: pnpm --filter @workspace/db exec drizzle-kit migrate
+Output: [✓] migrations applied successfully!
+
+All 7 migrations (0000–0006) applied in a single run from a clean state.
+
+==========================================================================
+MIGRATION JOURNAL (drizzle.__drizzle_migrations) — 7 ROWS
+==========================================================================
+hash                                                             | created_at
+-----------------------------------------------------------------+---------------
+2ad2d880dfe87b3b331459a50b8ddf8ec3c9dd7c76bf26edd297ea887d9af3a6 | 1754179200000
+4584ae4def09750eb69fe431348e16b59e6a873c55a71147c7c8020db65240d4 | 1754265600000
+1694a931db81b17ef306132f5e916dd57f725a7f849a18d991da930eb8b00a4d | 1754352000000
+83072a363b079a404b4286eb1eec2fe637796d0aa905760146cd79db6ed50c0f | 1754438400000  ← 0006
+d469974922cc3fc74bbd81e20697f39d9732ae09456fc01871f6c210e4138c1c | 1785588600061
+86b492875afcbdfe10daf7867f66fb31930148fe42c10fd33527c7809d34508d | 1785600000000
+8b64783c95ef5bace0826342cac4e007252c7faac029de5914de88f20b83050d | 1785662400000
+
+==========================================================================
+SCHEMA OBJECTS CREATED BY 0006
+==========================================================================
+Table: sos_clinical_notes — CREATED ✓
+Trigger: sos_clinical_notes_no_edit_after_sign — CREATED ✓
+Function: sos_clinical_notes_immutability_check — CREATED ✓
+
+Constraints on sos_clinical_notes:
+  ck_sos_clinical_notes_note_type          (CHECK) ✓
+  ck_sos_clinical_notes_signed_consistency (CHECK) ✓
+  ck_sos_clinical_notes_status             (CHECK) ✓
+  ck_sos_clinical_notes_version            (CHECK) ✓
+  ck_sos_clinical_notes_void_consistency   (CHECK) ✓
+  fk_sos_clinical_notes_author             (FK)    ✓
+  fk_sos_clinical_notes_episode            (FK)    ✓
+  fk_sos_clinical_notes_org_facility       (FK)    ✓
+  fk_sos_clinical_notes_org_patient        (FK)    ✓
+  fk_sos_clinical_notes_signed_by          (FK)    ✓
+  fk_sos_clinical_notes_voided_by          (FK)    ✓
+  sos_clinical_notes_org_id_fkey           (FK)    ✓
+  sos_clinical_notes_pkey                  (PK)    ✓
+
+Indexes on sos_clinical_notes (4 created):
+  idx_sos_clinical_notes_patient
+  idx_sos_clinical_notes_author
+  idx_sos_clinical_notes_episode (partial: WHERE episode_id IS NOT NULL)
+  idx_sos_clinical_notes_facility_date
+
+==========================================================================
+AUDIT TABLE CONSTRAINT EXPANSION
+==========================================================================
+ck_sos_auth_audit_event_type expanded to include 6 new event types:
+  clinical_note_created, clinical_note_viewed, clinical_note_updated,
+  clinical_note_signed, clinical_note_voided, clinical_note_access_denied
+
+==========================================================================
+MIGRATION FILE SHA-256 HASHES (for integrity verification)
+==========================================================================
+0000_perpetual_rafael_vega.sql:                d469974922cc3fc74bbd81e20697f39d9732ae09456fc01871f6c210e4138c1c
+0001_authentication_authorization.sql:          86b492875afcbdfe10daf7867f66fb31930148fe42c10fd33527c7809d34508d
+0002_authorization_correction.sql:              8b64783c95ef5bace0826342cac4e007252c7faac029de5914de88f20b83050d
+0003_phase_2c_closure.sql:                      2ad2d880dfe87b3b331459a50b8ddf8ec3c9dd7c76bf26edd297ea887d9af3a6
+0004_phase_2d_final_closure.sql:                4584ae4def09750eb69fe431348e16b59e6a873c55a71147c7c8020db65240d4
+0005_rate_limit_window_cleared_event.sql:        1694a931db81b17ef306132f5e916dd57f725a7f849a18d991da930eb8b00a4d
+0006_clinical_documentation_foundation.sql:      83072a363b079a404b4286eb1eec2fe637796d0aa905760146cd79db6ed50c0f
+
+==========================================================================
+RESULT: PASS — all 7 migrations applied cleanly by drizzle-kit on a
+        disposable empty database. No psql fallback required for fresh
+        installations.
+==========================================================================

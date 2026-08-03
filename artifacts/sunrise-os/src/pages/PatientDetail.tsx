@@ -250,6 +250,45 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
     }
   }
 
+  // ── Supervisor void note (Phase 3 §5) ──────────────────────────────────
+  async function handleProductionVoidNote() {
+    if (!patientId || !voidModalNoteId || voidReason.trim().length < 5) return;
+    setVoidSubmitting(true);
+    setVoidError(null);
+    try {
+      const csrf = await apiGetCsrfToken();
+      const res = await fetch(
+        `${API_BASE}/v1/patients/${patientId}/clinical-notes/${voidModalNoteId}/void`,
+        {
+          method:  'POST',
+          headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body:    JSON.stringify({ voidReason: voidReason.trim(), expectedVersion: voidModalNoteVersion }),
+        }
+      );
+      if (res.status === 409) {
+        setVoidError('This note was modified by someone else. Reload the patient chart and try again.');
+        return;
+      }
+      if (res.status === 403 || res.status === 404) {
+        setVoidError('You do not have permission to void notes, or this note is no longer available.');
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? `Void request failed (${res.status})`);
+      }
+      setVoidModalNoteId(null);
+      setVoidReason('');
+      setVoidError(null);
+      saveChartAction('Note voided');
+      await refreshClinicalNotesList();
+    } catch (err) {
+      setVoidError(err instanceof Error ? err.message : 'An unexpected error occurred while voiding.');
+    } finally {
+      setVoidSubmitting(false);
+    }
+  }
+
   function handlePinToggle() {
     setPinError(null);
     try {
@@ -307,6 +346,13 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   const [noteConflict, setNoteConflict] = useState(false);
   // Note type selector for the compose panel (production mode)
   const [apiNoteType, setApiNoteType] = useState<'progress_note' | 'nursing_note'>('progress_note');
+
+  // ── Supervisor void modal state (Phase 3 §5) ─────────────────────────────
+  const [voidModalNoteId, setVoidModalNoteId] = useState<string | null>(null);
+  const [voidModalNoteVersion, setVoidModalNoteVersion] = useState<number>(1);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidSubmitting, setVoidSubmitting] = useState(false);
+  const [voidError, setVoidError] = useState<string | null>(null);
 
   // ── Flags — local state so edits survive tab-switches within a chart session
   const [localFlags, setLocalFlags] = useState<Flag[]>(patient.flags);
@@ -784,6 +830,55 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 ) : null;
               })()}
 
+              {/* Void confirmation modal — production mode only (Phase 3 §5) */}
+              {DATA_MODE === 'production' && voidModalNoteId && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+                  onClick={() => { if (!voidSubmitting) { setVoidModalNoteId(null); setVoidReason(''); setVoidError(null); } }}
+                >
+                  <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+                    <h3 className="font-bold text-navy text-lg mb-1">Void Note</h3>
+                    <p className="text-sm text-slate mb-4">
+                      This action is irreversible. The note will be marked voided and its original content
+                      preserved for the audit record. A void reason is required.
+                    </p>
+                    {voidError && (
+                      <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded text-sm text-rose-600">{voidError}</div>
+                    )}
+                    <label className="block text-xs font-bold text-slate mb-1 uppercase tracking-wider">
+                      Void Reason <span className="text-rose-500">*</span>
+                    </label>
+                    <textarea
+                      className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px] mb-4"
+                      placeholder="Enter a clinical reason for voiding this note (min. 5 characters)…"
+                      value={voidReason}
+                      onChange={e => setVoidReason(e.target.value)}
+                      disabled={voidSubmitting}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => { setVoidModalNoteId(null); setVoidReason(''); setVoidError(null); }}
+                        className="px-4 py-2 border border-border text-slate rounded text-sm font-medium hover:bg-slate-50"
+                        disabled={voidSubmitting}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleProductionVoidNote}
+                        disabled={voidReason.trim().length < 5 || voidSubmitting}
+                        className={`px-4 py-2 rounded text-sm font-medium text-white transition-colors ${
+                          voidReason.trim().length >= 5 && !voidSubmitting
+                            ? 'bg-rose-600 hover:bg-rose-700'
+                            : 'bg-slate-300 cursor-not-allowed'
+                        }`}
+                      >
+                        {voidSubmitting ? 'Voiding…' : 'Confirm Void'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Note list — production mode */}
               {DATA_MODE === 'production' && !clinicalNotesLoading && !clinicalNotesError && (
                 <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
@@ -792,7 +887,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                     .map(note => (
                       <div
                         key={note.id}
-                        className="border border-border rounded-lg p-4 hover:border-sunrise-blue transition-colors cursor-pointer group"
+                        className={`border border-border rounded-lg p-4 transition-colors group ${note.status === 'draft' ? 'hover:border-sunrise-blue cursor-pointer' : ''}`}
                         onClick={() => {
                           if (note.status === 'draft') {
                             setEditingNoteId(note.id);
@@ -806,9 +901,9 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                           }
                         }}
                       >
-                        <div className="flex justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-navy group-hover:text-sunrise-blue transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`font-bold text-navy ${note.status === 'draft' ? 'group-hover:text-sunrise-blue transition-colors' : ''}`}>
                               {note.noteType === 'progress_note' ? 'Progress' : 'Nursing'} Note
                             </span>
                             <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
@@ -819,10 +914,37 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                               {note.status.charAt(0).toUpperCase() + note.status.slice(1)}
                             </span>
                           </div>
-                          <span className="text-xs font-medium text-slate">{new Date(note.createdAt).toLocaleDateString()}</span>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            <span className="text-xs font-medium text-slate">{new Date(note.createdAt).toLocaleDateString()}</span>
+                            {note.status === 'signed' && (
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setVoidModalNoteId(note.id);
+                                  setVoidModalNoteVersion(note.version);
+                                  setVoidReason('');
+                                  setVoidError(null);
+                                }}
+                                className="text-[10px] px-2 py-0.5 rounded border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors font-medium"
+                              >
+                                Void
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm text-navy line-clamp-3">{note.content}</p>
-                        {note.status === 'draft' && <p className="text-[10px] text-slate mt-1">Click to edit</p>}
+                        {note.content && <p className="text-sm text-navy line-clamp-3">{note.content}</p>}
+                        {note.status === 'draft'  && <p className="text-[10px] text-slate mt-1">Click to edit</p>}
+                        {note.status === 'signed' && note.signedAt && (
+                          <p className="text-[10px] text-success mt-1">
+                            Signed {new Date(note.signedAt).toLocaleString()}
+                          </p>
+                        )}
+                        {note.status === 'voided' && (
+                          <p className="text-[10px] text-slate mt-1">
+                            Voided {note.voidedAt ? new Date(note.voidedAt).toLocaleString() : '—'}
+                            {note.voidReason ? ` — Reason: ${note.voidReason}` : ''}
+                          </p>
+                        )}
                       </div>
                     ))}
                   {clinicalNotes.filter(n => noteTypeFilter === 'All' || n.noteType === noteTypeFilter).length === 0 && (

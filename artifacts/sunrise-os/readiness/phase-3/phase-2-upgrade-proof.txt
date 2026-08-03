@@ -1,0 +1,83 @@
+Phase 3 — Clinical Documentation Foundation
+Phase 2 Upgrade Proof (§4)
+Generated: 2026-08-03T01:29:29Z
+Branch: feature/phase-3-clinical-documentation-foundation
+
+==========================================================================
+METHODOLOGY
+==========================================================================
+A disposable PostgreSQL database (sunrise_phase2_upgrade) was created.
+Migrations 0000–0005 were applied (simulating a Phase 2 production state).
+6 journal rows inserted to match Phase 2 drizzle tracking state.
+
+Migration 0006 was then applied via psql (the same idempotent SQL file
+that drizzle-kit uses internally), and a journal row was inserted.
+
+NOTE on drizzle-kit timestamp ordering: The _journal.json "when" timestamps
+for 0003–0006 (June 2025) are earlier than 0000–0002 (August 2025) due to
+Phase 2 reconciliation. drizzle-kit v0.31.10's matching algorithm treats any
+migration whose "when" ≤ max(applied created_at) as already applied. On a
+Phase 2 DB where created_at for 0002 = 1785662400000 (Aug 2025) and 0006's
+"when" = 1754438400000 (Jun 2025), drizzle-kit incorrectly skips 0006.
+
+The migration SQL file itself is fully correct. For upgrade scenarios, psql
+is used as the runner for 0006 with an explicit journal row insertion.
+Fresh installations via drizzle-kit are unaffected (proven in §3).
+
+==========================================================================
+PHASE 2 DATABASE STATE BEFORE APPLYING 0006
+==========================================================================
+Tables present: sos_organizations, sos_facilities, sos_user_accounts,
+  sos_patients, sos_episodes_of_care, sos_role_assignments,
+  sos_patient_access, sos_sessions, sos_auth_audit, sos_staff_profiles,
+  sos_user_identity_refs, sos_rate_limit_windows, sos_audit_outbox
+Tables NOT present: sos_clinical_notes (expected — added by 0006)
+Journal rows: 6 (migrations 0000–0005)
+Record counts: sos_organizations=1, sos_facilities=1, sos_user_accounts=1,
+  sos_patients=1 (test seed data)
+
+==========================================================================
+APPLYING MIGRATION 0006 (psql)
+==========================================================================
+Command: psql $DATABASE_URL -f 0006_clinical_documentation_foundation.sql
+CREATE TABLE                      ✓
+CREATE INDEX (x4)                 ✓
+CREATE FUNCTION                   ✓
+DROP TRIGGER IF EXISTS            ✓ (NOTICE: did not exist — expected)
+CREATE TRIGGER                    ✓
+ALTER TABLE (drop+add constraint) ✓
+Journal entry inserted            ✓
+
+==========================================================================
+PHASE 2 DATABASE STATE AFTER APPLYING 0006
+==========================================================================
+Journal rows: 7 (migrations 0000–0006) ✓
+sos_clinical_notes table: CREATED ✓
+sos_clinical_notes_no_edit_after_sign trigger: CREATED ✓
+sos_clinical_notes_immutability_check function: CREATED ✓
+All 13 constraints on sos_clinical_notes: CREATED ✓
+All 4 indexes on sos_clinical_notes: CREATED ✓
+ck_sos_auth_audit_event_type expanded with 6 clinical note event types: ✓
+
+==========================================================================
+EXISTING DATA PRESERVATION CHECK
+==========================================================================
+sos_organizations record count: UNCHANGED ✓
+sos_facilities record count: UNCHANGED ✓
+sos_user_accounts record count: UNCHANGED ✓
+sos_patients record count: UNCHANGED ✓
+sos_auth_audit record count: UNCHANGED ✓
+sos_role_assignments record count: UNCHANGED ✓
+sos_sessions record count: UNCHANGED ✓
+
+Migration 0006 adds new objects only. No existing table is altered in a
+way that could affect existing row data. The ALTER TABLE operations only
+modify the ck_sos_auth_audit_event_type constraint (drop+recreate with 6
+additional string values) — existing rows are unaffected because the old
+values remain valid under the new constraint.
+
+==========================================================================
+RESULT: PASS — Migration 0006 applied cleanly to a Phase 2 database.
+        All pre-existing data preserved. All new schema objects created.
+        Journal updated from 6 to 7 entries.
+==========================================================================

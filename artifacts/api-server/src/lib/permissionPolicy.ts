@@ -91,7 +91,7 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "clinical_note.edit_own_draft",
       "clinical_note.sign_own",
       "clinical_note.void",
-      "clinical_note.audit_view",
+      // clinical_note.audit_view deferred — Phase 3 Option B: no audit UI implemented yet.
     ],
   },
   certified_clinician: {
@@ -162,7 +162,7 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "clinical_note.edit_own_draft",
       "clinical_note.sign_own",
       "clinical_note.void",
-      "clinical_note.audit_view",
+      // clinical_note.audit_view deferred — Phase 3 Option B: no audit UI implemented yet.
     ],
   },
   prescriber: {
@@ -283,8 +283,8 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "role.manage",
       "session.manage",
       "audit.authentication.view",
-      // Phase 3 — audit view only (no clinical note create/edit/sign; no patient access)
-      "clinical_note.audit_view",
+      // Phase 3 Option B: clinical_note.audit_view deferred — no audit UI implemented yet.
+      // security_admin retains zero clinical note permissions in Phase 3.
     ],
   },
 };
