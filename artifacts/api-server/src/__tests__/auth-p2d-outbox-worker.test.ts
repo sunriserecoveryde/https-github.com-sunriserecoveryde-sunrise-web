@@ -72,7 +72,12 @@ describe("Phase 2D — Audit Outbox Worker (8-step durability proof)", { timeout
   afterAll(async () => {
     await worker.stop();
     await cleanTestOutboxRows();
-    await pool.end().catch(() => {});
+    // Note: do NOT call pool.end() here.  Each vitest fork runs in its own OS
+    // process; the pool is garbage-collected when the process exits.  Calling
+    // pool.end() prematurely would trigger dangling-timer callbacks in the
+    // AuditOutboxWorker that try to drain after the pool is closed, producing
+    // spurious "Failed query" log errors that pollute the test output without
+    // causing actual failures — but they are confusing and mask real issues.
   });
 
   beforeEach(async () => {

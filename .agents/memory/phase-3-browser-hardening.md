@@ -1,44 +1,40 @@
 ---
 name: Phase 3 browser test hardening
-description: Four root-cause bugs that prevented full-suite 17/17 in the Playwright browser tests; fixes and detection patterns.
+description: Root causes fixed to achieve stable 17/17 Playwright runs for the Phase 3 clinical notes browser suite; session cookie name; Vite HMR fix; E-1 timeout.
 ---
 
-# Phase 3 True Browser Test Hardening
+## Bugs fixed to reach 17/17 Playwright stability
 
-Four distinct root causes were found and fixed to reach stable 17/17 across 3 consecutive full-suite runs.
+### Bug 1 — Vite HMR storm (blank white page)
+**Symptom:** Every test produced a blank white screenshot; Playwright network trace showed 1,649 aborted `ComplianceDemoTour.tsx` requests.
+**Root cause:** `globalSetup` writes 8 session JSON files to `e2e/sessions/` — inside the Vite project root. Vite's watcher fires an HMR update for each write. Each update re-requests all 50+ source modules and then aborts them when the next update arrives. The app never finishes loading.
+**Fix:** `vite.playwright.config.ts` → `server.watch.ignored: ["**/e2e/**", "**/playwright-results/**"]`
+**Why:** Any file written inside the Vite root during globalSetup (or test teardown) will trigger HMR unless explicitly ignored.
+**How to apply:** Any future globalSetup or teardown that writes files inside an artifact's directory must add those paths to `watch.ignored` in the Playwright Vite config.
 
-## 1. Fixture note left in voided state (C-1 failure)
+### Bug 2 — E-1 120 s timeout (serial two-context setup)
+**Symptom:** E-1 ("stale-version conflict") timed out at 120 s consistently.
+**Root cause:** `navigateToPatient` + `openProgressNotesTab` ran serially for both browser contexts. `openProgressNotesTab`'s `new-note-btn` retry loop costs 3×3 s = 9.6 s/context when the button doesn't appear (test patient has no active admission → button hidden). Two contexts = 19.2 s + 2×15 s draftCard visibility = 49 s before the actual conflict test.
+**Fix:** (a) `test.setTimeout(180_000)` inside E-1. (b) Parallelised the two-context setup with `Promise.all`.
+**Why:** Any test that sets up multiple browser contexts sequentially will multiply the navigation overhead.
 
-**Rule:** `browserTestSeed.ts` must DELETE + re-INSERT both fixture notes — never `onConflictDoNothing`.
+### Bug 3 — Missing `orgSlug` in production login
+**Symptom:** A-2 login would fail; API requires `orgSlug` for tenant-scoped login.
+**Fix:** `ProductionLogin.tsx` POST body now includes `orgSlug: import.meta.env.VITE_SUNRISE_ORG_SLUG ?? "sunrise"`.
 
-**Why:** C-3 voids `BROWSER_SIGNED_NOTE_ID`. On the next run, `onConflictDoNothing` silently skips the insert, leaving the note voided. C-1 then looks for `void-note-btn-<id>` but `status='voided'` suppresses the Void button.
+### Session cookie name
+The session cookie is `sos_dev_session` (singular). The `globalSetup` creates sessions via `curl -i` (inline headers) and extracts the `Set-Cookie` value directly from stdout — NOT from a Netscape cookie jar (which has an `#HttpOnly_` prefix bug). Cookie value is stored URL-encoded as received.
 
-**How to apply:** Any time a test mutates a fixture row's `status`, the seed must unconditionally reset it via DELETE + INSERT, not via upsert.
+### `trace: "on"` OOM on full 17-test suite
+Running all 17 tests with `trace: "on"` hangs (OOM-kills the browser with no output). The config uses `retain-on-failure`. To trace a specific test: `playwright test --grep "E-1"`.
 
-## 2. IP-based rate limiter exhausted mid-suite (D-1 through E-1 failure)
+### Playwright runner and the sunrise-os workflow
+Running `pnpm --filter @workspace/sunrise-os exec playwright test` while the `artifacts/sunrise-os: web` workflow is active hangs with no output. Use `node_modules/.bin/playwright test --config artifacts/sunrise-os/playwright.config.ts` from workspace root instead, or stop the workflow first.
 
-**Rule:** The Playwright `webServer` env in `playwright.config.ts` must include `PHASE2D_RATE_LIMIT_MAX: "1000"`.
-
-**Why:** The test API server runs `dev` which hardcodes `NODE_ENV=development`, so the rate limiter skip condition (`NODE_ENV === "test"`) is never true. Default max=10 per 15-min window is exhausted by ~11 logins (A-1 through C-3). D-1 onward see "Too many login attempts" and the login form never dismisses.
-
-**How to apply:** The `pnpm run dev` script sets `NODE_ENV=development`. Always set `PHASE2D_RATE_LIMIT_MAX` (or `PHASE2D_RATE_LIMIT_WINDOW_MS`) explicitly when running the API for Playwright. Do not rely on `NODE_ENV=test` to skip rate limiting — it will be overridden.
-
-## 3. Tab-click dropped during concurrent API re-render (A-6, second openProgressNotesTab call)
-
-**Rule:** `openProgressNotesTab` must confirm the tab switch via `waitForSelector('[data-testid="new-note-btn"]')`, retrying the click up to 3 times.
-
-**Why:** A single `click({ force: true }) + waitForNetworkIdle` is sufficient for the first navigation to PatientDetail (clean state). On the second navigation (navigate-away-and-back), the patient API response arrives concurrently with the React `setActiveTab` call, silently swallowing the click. The `new-note-btn` never appears and `[data-testid="note-content"]` times out.
-
-**How to apply:** Any spec helper that switches a React tab must confirm the destination state is reached, not just fire the click.
-
-## 4. PermissionCode union missing Phase 3 clinical codes (TypeScript build error)
-
-**Rule:** `src/lib/permissions.ts` must include all codes referenced in `RoleContext.tsx`'s `deriveScreenPermissionFromServerCodes`.
-
-**Why:** Phase 3 added `clinical_note.create`, `clinical_note.view`, `clinical_note.sign`, `clinical_note.void`, `clinical_note.export` to the server policy but forgot to add them to the frontend `PERMISSION_CODES` array. TypeScript build passes only when both lists are in sync.
-
-**How to apply:** Whenever a new permission code is added to `artifacts/api-server/src/lib/permissionPolicy.ts`, also add it to `artifacts/sunrise-os/src/lib/permissions.ts`.
-
-## 5. vitest step-15 one-time flake (not a regression)
-
-`auth-p2d-rate-limit.test.ts step-15` uses a real PgRateLimitStore and is sensitive to leftover `sos_rate_limit_windows` rows from Playwright runs in the same DB. Step-15 has its own cleanup at start and finish; the flake is resolved on the second vitest run. Not caused by any code change — it's a shared-DB ordering artefact.
+## Stability evidence
+- api-server vitest: 568/568 × 4 clean runs
+- sunrise-os vitest: 136/136 × 4 clean runs  
+- Playwright: 17/17 × 3 clean full-suite runs
+- 25 screenshots in `e2e/screenshots/`
+- Closure ZIP: `readiness/phase-3-browser-hardening-closure-review.zip`
+- SHA-256: `c9ae9a8c302a96c530450c58f044a5e933544ea1582f6ae9c12b965a8e02677c`

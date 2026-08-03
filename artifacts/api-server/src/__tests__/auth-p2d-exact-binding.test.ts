@@ -168,7 +168,11 @@ describe("Phase 2D — 18-Step Exact Assignment Binding", { timeout: 240_000 }, 
     } else {
       process.env.DISABLE_AUTH_FALLBACK = _savedDisableAuthFallback_p2d;
     }
-    await pool.end().catch(() => {});
+    // Note: do NOT call pool.end() here.  Each vitest fork runs in its own OS
+    // process; the pool is garbage-collected when the process exits.  Calling
+    // pool.end() while an AuditOutboxWorker prune-interval is still ticking
+    // generates "Failed query" errors that pollute test output.
+    // (Removed pool.end() — fork process exit handles cleanup.)
   });
 
   // ── Step 1: BHT user + Role Assignment A exist ───────────────────────────

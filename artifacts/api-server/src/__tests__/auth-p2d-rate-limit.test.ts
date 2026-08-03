@@ -60,6 +60,38 @@ async function pruneTestKeys() {
   );
 }
 
+// ── Helper: guard against window-boundary flip ────────────────────────────────
+//
+// PgRateLimitStore keys rows on (key, window_end) where
+//   window_end = Math.ceil(Date.now() / windowMs) * windowMs
+//
+// If the wall clock crosses a window boundary between two sequential increment()
+// calls (or between seeding a row and reading it back), the two calls land in
+// DIFFERENT windows and the counter resets to 1 instead of accumulating.
+//
+// The guard sleeps until we are at least SAFE_MS past the most-recent boundary
+// (i.e. at least SAFE_MS into the new window), giving every test body enough
+// runway to complete its increment sequence well within a single window.
+//
+// With TEST_WINDOW_MS = 8 000 ms and SAFE_MS = 600 ms the guard sleeps at most
+// ~600 ms and leaves ≥ 7 400 ms of runway — far more than any test needs.
+//
+// This is the same pattern used inline by step-13; centralising it in beforeEach
+// makes every test in the suite deterministic without changing any assertion.
+const SAFE_MS = 600; // minimum ms we require into the current window
+
+async function guardWindowBoundary(): Promise<void> {
+  const nowMs       = Date.now();
+  const windowEndMs = Math.ceil(nowMs / TEST_WINDOW_MS) * TEST_WINDOW_MS;
+  const msIntoWindow = TEST_WINDOW_MS - (windowEndMs - nowMs);
+  if (msIntoWindow < SAFE_MS) {
+    // We are too close to (or just past) the previous boundary.
+    // Sleep until we are SAFE_MS past the current window start.
+    const sleepMs = SAFE_MS - msIntoWindow;
+    await new Promise<void>(resolve => setTimeout(resolve, sleepMs));
+  }
+}
+
 // ── Build a minimal test app with real PgRateLimitStore ───────────────────────
 function makeTestApp(store: PgRateLimitStore) {
   const testApp = express();
@@ -102,6 +134,11 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
   });
 
   beforeEach(async () => {
+    // Guard against window-boundary flip: ensure we are SAFE_MS into the
+    // current 8-second window before each test so that all increment() calls
+    // within the test body land in the same window and counters accumulate
+    // correctly.  See guardWindowBoundary() above for the full rationale.
+    await guardWindowBoundary();
     await storeA.resetKey(TEST_KEY);
     await storeA.resetKey(TEST_KEY_B);
   });

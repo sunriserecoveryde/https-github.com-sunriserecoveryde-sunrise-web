@@ -31,6 +31,16 @@ export default defineConfig({
     strictPort: true,
     host:        "0.0.0.0",
     allowedHosts: true,
+    watch: {
+      // Prevent HMR storm: session files written by globalSetup and test
+      // result artefacts live inside the project root.  Without this Vite
+      // detects every write, fires an HMR update, and the app never finishes
+      // loading — causing a blank white page on every test run.
+      ignored: [
+        "**/e2e/**",
+        "**/playwright-results/**",
+      ],
+    },
     proxy: {
       // Proxy /api/* → dedicated test API (DISABLE_AUTH_FALLBACK=true).
       // Keep the /api prefix intact — the API server mounts routes at

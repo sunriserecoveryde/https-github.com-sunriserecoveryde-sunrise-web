@@ -5,11 +5,21 @@
  * test API process that has DISABLE_AUTH_FALLBACK=true so every request must
  * carry a real session cookie.
  *
- * Process layout:
- *   webServer[0]  Vite dev server   localhost:23456  (frontend, VITE_SUNRISE_DATA_MODE=production)
- *   webServer[1]  API server        localhost:8081   (DISABLE_AUTH_FALLBACK=true, no dev identity)
+ * ── Browser compatibility ─────────────────────────────────────────────────────
+ * Package:    playwright@1.38.0  (pinned — not ^1.38)
+ * Chromium:   revision 1080  (NixOS-patched build)
+ * Pair basis: Playwright 1.38.0 shipped with Chromium at revision 1080.
+ *             The CDP protocol versions match by design: traces, HAR capture,
+ *             and standard locator.click() all work without workarounds.
+ *             A later Playwright (1.62.0) expects revision 1234; that binary
+ *             requires glibc/libgobject/libnss absent from NixOS and cannot
+ *             launch.  Pinning to 1.38.0 restores the correct pairing.
  *
- * Pre-conditions:
+ * ── Process layout ───────────────────────────────────────────────────────────
+ *   webServer[0]  Vite dev server   localhost:23456  (VITE_SUNRISE_DATA_MODE=production)
+ *   webServer[1]  API server        localhost:8099   (DISABLE_AUTH_FALLBACK=true)
+ *
+ * ── Pre-conditions ────────────────────────────────────────────────────────────
  *   - DATABASE_URL env var must be set.
  *   - PHASE2D_TEST_PASSWORD env var must be set (used by globalSetup seed).
  *   - authSeed must have been run at least once against the target database.
@@ -20,20 +30,21 @@
 import { defineConfig, devices } from "playwright/test";
 import path from "path";
 
-const PLAYWRIGHT_PORT    = 23456;
-const TEST_API_PORT      = 8099;  // 8081 is taken by the mockup-sandbox workflow
+const PLAYWRIGHT_PORT = 23456;
+const TEST_API_PORT   = 8099;
 
 export default defineConfig({
-  testDir: path.join(import.meta.dirname, "e2e"),
-  testMatch: "**/clinical-notes-p3-browser.spec.ts",
-  globalSetup: path.join(import.meta.dirname, "e2e", "global-setup.ts"),
-  tsconfig:    path.join(import.meta.dirname, "e2e", "tsconfig.json"),
+  testDir:    path.join(import.meta.dirname, "e2e"),
+  testMatch:  "**/clinical-notes-p3-browser.spec.ts",
+  globalSetup:    path.join(import.meta.dirname, "e2e", "global-setup.ts"),
+  globalTeardown: path.join(import.meta.dirname, "e2e", "global-teardown.ts"),
+  tsconfig:   path.join(import.meta.dirname, "e2e", "tsconfig.json"),
 
-  timeout:          120_000,   // long for full login+navigate flows
-  expect:           { timeout: 15_000 },
-  fullyParallel:    false,     // sequential — shared DB state
-  workers:          1,
-  retries:          0,
+  timeout:       120_000,  // per-test timeout including login + navigation
+  expect:        { timeout: 15_000 },
+  fullyParallel: false,    // sequential — shared DB state
+  workers:       1,
+  retries:       0,
 
   reporter: [
     ["list"],
@@ -45,39 +56,20 @@ export default defineConfig({
     baseURL:    `http://localhost:${PLAYWRIGHT_PORT}`,
     headless:   true,
     screenshot: "on",
-    // trace: "on" deadlocks fetch() with chromium-1080 + Playwright 1.62.0 due
-    // to CDP Network.enable mismatch; screenshots provide equivalent visual evidence.
-    trace:      "off",
-    video:      "off",
 
-    // ── Chromium stability flags (no --single-process — crashes on React SPA) ──
+    // Traces: Playwright 1.38.0 + chromium-1080 are a matched pair (CDP aligns),
+    // so tracing works without deadlock.  Use retain-on-failure to reduce
+    // per-test overhead.  Note: trace "on" for all 17 tests simultaneously
+    // exhausts available memory — use --grep to trace individual tests.
+    trace: "retain-on-failure",
+
+    // Video: off during stability proof runs to avoid ffmpeg encoding overhead.
+    video: "off",
+
+    // ── Chromium launch options ───────────────────────────────────────────────
     launchOptions: {
-      // Use the NixOS-patched Chromium 138 (unwrapped binary, no bash wrapper).
-      // Playwright 1.62.0 expects Chrome 138 (chromium-1234).
-      //
-      // NixOS provides two forms:
-      //   • /bin/chromium     — a bash wrapper that sets LD_LIBRARY_PATH, then execs
-      //   • libexec/chromium/chromium — the actual ELF binary with bundled libs
-      //
-      // The wrapper script is NOT suitable as executablePath because Playwright's
-      // --remote-debugging-pipe passes FD 3/4 to the child; the bash wrapper may
-      // alter the FD set before exec.  Use the raw binary instead — all required
-      // shared libs (libEGL, libGLESv2, libnspr4, libnss3 …) are bundled in the
-      // same libexec directory so no extra LD_LIBRARY_PATH is needed.
-      //
-      // To update: find /nix/store -maxdepth 1 -name "chromium-unwrapped-*" 2>/dev/null
-      //
-      // NOTE: --single-process is intentionally omitted — it crashes Chromium
-      //       when loading large React SPA bundles in a container environment.
-      // NOTE: --no-zygote is intentionally omitted — it prevents renderer
-      //       processes from being spawned, causing "page closed" crashes.
-      // NOTE: --disable-features=VizDisplayCompositor is intentionally omitted —
-      //       it conflicts with the compositor in newer Chromium and causes blank pages.
-      // chromium-1080 is the Playwright-browser NixOS build for this environment.
-      // Playwright 1.62.0 bundles chromium-1234, but the standard Linux build
-      // requires glibc/standard libs not present on NixOS. The NixOS unwrapped
-      // chromium-138 crashes the renderer process. chromium-1080 renders pages
-      // correctly (verified in prior runs) and accepts CDP protocol from 1.62.0.
+      // NixOS-patched Playwright-managed Chromium revision 1080.
+      // Playwright 1.38.0 shipped this exact revision — CDP matches.
       executablePath:
         process.env.CHROMIUM_PATH ??
         "/nix/store/0n9rl5l9syy808xi9bk4f6dhnfrvhkww-playwright-browsers-chromium/chromium-1080/chrome-linux/chrome",
@@ -112,7 +104,7 @@ export default defineConfig({
   ],
 
   webServer: [
-    // ── Frontend — Vite dev server ────────────────────────────────────────────
+    // ── Frontend — Vite dev server ──────────────────────────────────────────
     {
       command: "pnpm --filter @workspace/sunrise-os exec vite --config vite.playwright.config.ts",
       env: {
@@ -128,25 +120,29 @@ export default defineConfig({
       cwd:                 path.join(import.meta.dirname, "..", ".."),
     },
 
-    // ── Test API — DISABLE_AUTH_FALLBACK=true (scoped to this process only) ──
+    // ── Test API — DISABLE_AUTH_FALLBACK=true ───────────────────────────────
+    // Uses `run start` (prebuilt dist) rather than `run dev` so server startup
+    // is ~5 s instead of ~35 s (build + start).  Build the dist before running
+    // playwright: `pnpm --filter @workspace/api-server run build && playwright test`
+    // PHASE2D_RATE_LIMIT_INTEGRATION=true activates PgRateLimitStore so
+    // every login attempt is counted in sos_rate_limit_windows.  Without it
+    // the limiter uses MemoryStore (no DB writes).
+    // PHASE2D_RATE_LIMIT_MAX is intentionally NOT set — the default (10) is
+    // used.  globalSetup clears loopback IP rows before each persona login so
+    // the 8 setup logins + 2 test logins (A-2, B-1) never exhaust the window.
     {
-      command: "pnpm --filter @workspace/api-server run dev",
+      command: "pnpm --filter @workspace/api-server run start",
       env: {
-        PORT:                    String(TEST_API_PORT),
-        DISABLE_AUTH_FALLBACK:   "true",
-        SUNRISE_DEFAULT_ORG_SLUG: "sunrise",
-        PLAYWRIGHT_ORIGIN:       `http://localhost:${PLAYWRIGHT_PORT}`,
-        // NODE_ENV=test activates the rate-limiter skip guard:
-        //   skip: () => process.env.NODE_ENV === "test" && !RL_INTEGRATION
-        // Without this, the 10-attempt / 15-min IP limit is hit after ~11 tests.
-        NODE_ENV:                "test",
-        // Belt-and-suspenders: raise the per-IP limit high so even if NODE_ENV
-        // is overridden by the npm script the window is not exhausted.
-        PHASE2D_RATE_LIMIT_MAX:  "1000",
+        PORT:                             String(TEST_API_PORT),
+        NODE_ENV:                         "development",
+        DISABLE_AUTH_FALLBACK:            "true",
+        SUNRISE_DEFAULT_ORG_SLUG:         "sunrise",
+        PLAYWRIGHT_ORIGIN:                `http://localhost:${PLAYWRIGHT_PORT}`,
+        PHASE2D_RATE_LIMIT_INTEGRATION:   "true",
       },
       port:                TEST_API_PORT,
       timeout:             120_000,
-      reuseExistingServer: false,  // always start fresh with DISABLE_AUTH_FALLBACK=true
+      reuseExistingServer: false,
       stdout:              "pipe",
       stderr:              "pipe",
       cwd:                 path.join(import.meta.dirname, "..", ".."),

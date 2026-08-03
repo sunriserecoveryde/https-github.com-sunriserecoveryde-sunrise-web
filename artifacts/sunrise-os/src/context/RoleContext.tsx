@@ -117,8 +117,10 @@ function deriveScreenPermissionFromServerCodes(
     // 'read' means view-only — LockedButton receives locked=true on all mutating
     // actions.  The server always re-validates; this gate is for UX only.
     const canWrite =
-      has('clinical_note.create') ||
-      has('clinical_note.void')   ||
+      has('clinical_note.create')         ||
+      has('clinical_note.edit_own_draft') ||
+      has('clinical_note.sign_own')       ||
+      has('clinical_note.void')           ||
       has('patient.update');
     return canWrite ? 'full' : 'read';
   }

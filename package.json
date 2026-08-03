@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "pdfkit": "^0.19.1",
-    "playwright": "^1.62.0",
+    "playwright": "1.38.0",
     "prettier": "^3.9.5",
     "typescript": "~5.9.3"
   },

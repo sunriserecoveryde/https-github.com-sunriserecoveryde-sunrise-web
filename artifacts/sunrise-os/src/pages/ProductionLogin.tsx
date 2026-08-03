@@ -79,7 +79,11 @@ export function ProductionLogin({ onSuccess }: ProductionLoginProps) {
           'Content-Type': 'application/json',
           ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
-        body:        JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        body:        JSON.stringify({
+          orgSlug: (import.meta.env.VITE_SUNRISE_ORG_SLUG as string | undefined) ?? "sunrise",
+          email:   email.trim().toLowerCase(),
+          password,
+        }),
       });
 
       if (res.status === 429) {

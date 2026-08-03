@@ -4,6 +4,75 @@ settings:
   autoInstallPeers: false
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@replit/vite-plugin-cartographer':
+      specifier: ^0.5.21
+      version: 0.5.21
+    '@replit/vite-plugin-dev-banner':
+      specifier: ^0.1.1
+      version: 0.1.2
+    '@replit/vite-plugin-runtime-error-modal':
+      specifier: ^0.0.6
+      version: 0.0.6
+    '@tailwindcss/vite':
+      specifier: ^4.1.14
+      version: 4.3.2
+    '@tanstack/react-query':
+      specifier: ^5.90.21
+      version: 5.101.2
+    '@types/node':
+      specifier: ^25.3.3
+      version: 25.9.5
+    '@types/react':
+      specifier: ^19.2.0
+      version: 19.2.17
+    '@types/react-dom':
+      specifier: ^19.2.0
+      version: 19.2.3
+    '@vitejs/plugin-react':
+      specifier: ^5.0.4
+      version: 5.2.0
+    class-variance-authority:
+      specifier: ^0.7.1
+      version: 0.7.1
+    clsx:
+      specifier: ^2.1.1
+      version: 2.1.1
+    drizzle-orm:
+      specifier: ^0.45.2
+      version: 0.45.2
+    framer-motion:
+      specifier: ^12.23.24
+      version: 12.42.2
+    lucide-react:
+      specifier: ^0.545.0
+      version: 0.545.0
+    react:
+      specifier: 19.1.0
+      version: 19.1.0
+    react-dom:
+      specifier: 19.1.0
+      version: 19.1.0
+    tailwind-merge:
+      specifier: ^3.3.1
+      version: 3.6.0
+    tailwindcss:
+      specifier: ^4.1.14
+      version: 4.3.2
+    tsx:
+      specifier: ^4.21.0
+      version: 4.23.0
+    vite:
+      specifier: ^7.3.2
+      version: 7.3.6
+    wouter:
+      specifier: ^3.3.5
+      version: 3.10.0
+    zod:
+      specifier: 3.25.76
+      version: 3.25.76
+
 overrides:
   esbuild>@esbuild/darwin-arm64: '-'
   esbuild>@esbuild/darwin-x64: '-'
@@ -105,8 +174,8 @@ importers:
         version: 0.35.3
     devDependencies:
       playwright:
-        specifier: ^1.62.0
-        version: 1.62.0
+        specifier: 1.38.0
+        version: 1.38.0
       prettier:
         specifier: ^3.9.5
         version: 3.9.5
@@ -7773,14 +7842,14 @@ packages:
     resolution: {integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==}
     engines: {node: '>=8'}
 
-  playwright-core@1.62.0:
-    resolution: {integrity: sha512-nsNRyq0r2zsG8AcRHWknc9QRA5XCueC7gWMrs+Gx2tlZn9hcl8zudfh00lhJPY1DE7NmZ6bDsT9g2yey8mXljA==}
-    engines: {node: '>=20'}
+  playwright-core@1.38.0:
+    resolution: {integrity: sha512-f8z1y8J9zvmHoEhKgspmCvOExF2XdcxMW8jNRuX4vkQFrzV4MlZ55iwb5QeyiFQgOFCUolXiRHgpjSEnqvO48g==}
+    engines: {node: '>=16'}
     hasBin: true
 
-  playwright@1.62.0:
-    resolution: {integrity: sha512-Z14dG305dgaLu6foB1TXQagFiW8JfSUIUaUuPaKQ6NtBPKF1P/qXcqfh6c6K/icPqdy37JmjbiBXf6JNg6Sylw==}
-    engines: {node: '>=20'}
+  playwright@1.38.0:
+    resolution: {integrity: sha512-fJGw+HO0YY+fU/F1N57DMO+TmXHTrmr905J05zwAQE9xkuwP/QLDk63rVhmyxh03dYnEhnRbsdbH9B0UVVRB3A==}
+    engines: {node: '>=16'}
     hasBin: true
 
   plist@3.1.1:
@@ -10552,6 +10621,7 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
+    optional: true
 
   '@expo/code-signing-certificates@0.0.6':
     dependencies:
@@ -10616,6 +10686,7 @@ snapshots:
     optionalDependencies:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)
+    optional: true
 
   '@expo/env@2.0.12':
     dependencies:
@@ -10695,7 +10766,7 @@ snapshots:
       postcss: 8.4.49
       resolve-from: 5.0.0
     optionalDependencies:
-      expo: 54.0.36(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
+      expo: 54.0.36(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -10789,7 +10860,7 @@ snapshots:
       '@expo/json-file': 10.2.0
       '@react-native/normalize-colors': 0.81.5
       debug: 4.4.3
-      expo: 54.0.36(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
+      expo: 54.0.36(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
       resolve-from: 5.0.0
       semver: 7.8.5
       xml2js: 0.6.0
@@ -10828,6 +10899,7 @@ snapshots:
       expo-font: 14.0.12(expo@54.0.36)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0))(react@19.1.0)
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)
+    optional: true
 
   '@expo/ws-tunnel@1.0.6': {}
 
@@ -12399,6 +12471,7 @@ snapshots:
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)
     optionalDependencies:
       '@types/react': 19.2.17
+    optional: true
 
   '@react-navigation/bottom-tabs@7.18.11(@react-navigation/native@7.3.11(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native-safe-area-context@5.6.2(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native-screens@4.16.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)':
     dependencies:
@@ -13528,7 +13601,7 @@ snapshots:
       resolve-from: 5.0.0
     optionalDependencies:
       '@babel/runtime': 7.29.7
-      expo: 54.0.36(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
+      expo: 54.0.36(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color
@@ -14385,6 +14458,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
   expo-av@16.0.8(expo@54.0.36)(react-native-web@0.21.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
     dependencies:
@@ -14417,6 +14491,7 @@ snapshots:
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   expo-file-system@19.0.23(expo@54.0.36)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)):
     dependencies:
@@ -14427,6 +14502,7 @@ snapshots:
     dependencies:
       expo: 54.0.36(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)
+    optional: true
 
   expo-font@14.0.12(expo@54.0.36)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
     dependencies:
@@ -14441,6 +14517,7 @@ snapshots:
       fontfaceobserver: 2.3.0
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)
+    optional: true
 
   expo-glass-effect@0.1.10(expo@54.0.36)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
     dependencies:
@@ -14471,7 +14548,7 @@ snapshots:
 
   expo-keep-awake@15.0.8(expo@54.0.36)(react@19.1.0):
     dependencies:
-      expo: 54.0.36(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
+      expo: 54.0.36(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
       react: 19.1.0
 
   expo-linear-gradient@15.0.8(expo@54.0.36)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
@@ -14524,6 +14601,7 @@ snapshots:
       invariant: 2.2.4
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)
+    optional: true
 
   expo-notifications@0.32.17(expo@54.0.36)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3):
     dependencies:
@@ -14737,6 +14815,7 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
+    optional: true
 
   exponential-backoff@3.1.3: {}
 
@@ -16819,11 +16898,11 @@ snapshots:
     dependencies:
       find-up: 4.1.0
 
-  playwright-core@1.62.0: {}
+  playwright-core@1.38.0: {}
 
-  playwright@1.62.0:
+  playwright@1.38.0:
     dependencies:
-      playwright-core: 1.62.0
+      playwright-core: 1.38.0
     optionalDependencies:
       fsevents: 2.3.2
 
@@ -17379,6 +17458,7 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+    optional: true
 
   react-refresh@0.14.2: {}
 
