@@ -109,7 +109,14 @@ async function navigateToPatient(
     },
     { screen: "PatientDetail", patientId },
   );
-  await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+  // ── Wait for the patient-detail API calls to complete ────────────────────
+  // With trace:on the CDP overhead delays React's popstate handler.  A 500 ms
+  // networkidle ceiling was enough for untraced runs but left the tab bar
+  // unrendered by the time openProgressNotesTab ran.  5 000 ms gives the
+  // patient-detail component time to mount and fetch its data under any
+  // reasonable tracing overhead while still catching quickly when the network
+  // goes idle (typically < 500 ms after the data loads).
+  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
 
   // Dismiss FlagChartAlert if it appears (AMA-risk patient shows it on every visit).
   const acknowledge = page.locator('[data-testid="chart-alert-acknowledge"]');
