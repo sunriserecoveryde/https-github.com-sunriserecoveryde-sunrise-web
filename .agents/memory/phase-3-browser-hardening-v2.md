@@ -1,6 +1,6 @@
 ---
 name: Phase 3 browser test hardening v2
-description: Three root causes for Playwright stability failures in the Sunrise OS Phase 3 suite, and the permanent fixes. Supersedes earlier phase-3-browser-hardening entry.
+description: Three root causes for Playwright stability failures in the Sunrise OS Phase 3 suite; permanent fixes; independent review blockers and how each was resolved.
 ---
 
 # Phase 3 Browser Test Hardening — Final Root Causes
@@ -9,7 +9,7 @@ description: Three root causes for Playwright stability failures in the Sunrise 
 
 **Pattern:** Hundreds of `/api/v1/auth/csrf-token` + `/api/v1/auth/session` pairs every ~0.5 s for the entire 120 s test window.
 
-**Cause:** `vite.playwright.config.ts` had `watch.ignored` but did NOT cover `readiness/` (where stability logs are written). Each log line write triggered a Vite HMR update → the SPA remounted → AuthContext's mount effect re-ran → csrf+session fired again.
+**Cause:** `vite.playwright.config.ts` had `watch.ignored` but did NOT cover `readiness/` (where stability logs are written). Each log line write triggered a Vite HMR update → AuthContext remounted → csrf+session fired again.
 
 **Fix:** `server.hmr: false` in `vite.playwright.config.ts`. Tests never need HMR. Extended `watch.ignored` to also cover `readiness/**` and `playwright-report/**`.
 
@@ -33,10 +33,20 @@ description: Three root causes for Playwright stability failures in the Sunrise 
 
 Only after BOTH gates resolve is `navigateToPatient` safe to call.
 
-## Why CDP 'load' hangs with warm Vite cache + hmr:false
+## Independent reviewer blockers resolved (Phase 3 v2 archive)
 
-When Vite's module cache is warm and `hmr:false`, it serves 304 responses for JS chunks. Playwright 1.38.0's CDP implementation does not fire `Page.loadEventFired` for 304 navigations. Always use `waitUntil: 'domcontentloaded'` for page.goto in Playwright tests against a warm Vite dev server.
+**Blocker 1 (no trace.zip):** Run `--trace on` + immediately copy trace.zip before next run overwrites them. playwright-results/ is overwritten by each run; capture before any subsequent run.
+
+**Blocker 2 (demo-mode screenshots):** playwright.config.ts sets `VITE_SUNRISE_DATA_MODE=production`. Screenshots from that run are production mode. A-1 asserts DemoBanner is absent.
+
+**Blocker 6 (manual SQL upgrade proof):** Drizzle-kit skips 0006 when DB `created_at` for applied migrations is HIGHER than 0006's `_journal.json` "when" value. This happens when the reconcile script (which sets Aug 2026 created_at) is used. Proof with normal-runner: set `created_at = journal "when"` values for 0000-0005, then run `drizzle-kit migrate` — correctly applies 0006 since 0005's "when" < 0006's "when".
+
+**Blocker 11 (swallowed assertion catches):** `.catch(() => {})` on `expect(x).not.toBeVisible()` lines must be removed. `waitForLoadState("networkidle", ...).catch(() => {})` should be replaced with `waitForTimeout(300)` — the SPA has continuous polling; networkidle never completes. `.catch(() => false)` on `.isVisible()` (used in conditional if-blocks) is safe and not the same as swallowing an assertion.
 
 ## Key file: vite.playwright.config.ts
 
 The Playwright webServer uses `vite.playwright.config.ts` (NOT `vite.config.ts`). Changes to `vite.config.ts` do NOT affect Playwright tests. Always edit `vite.playwright.config.ts` for test-server behavior.
+
+## drizzle-kit migration upgrade proof note
+
+On a clean Phase 2 install (drizzle-kit applied all migrations, created_at = journal "when" values), migration 0006 applies normally via drizzle-kit because 0006's "when" (1754438400000) > 0005's "when" (1754352000000). The issue only arises when `created_at` for earlier rows is set to a LATER timestamp (e.g., by a reconcile script using CURRENT_TIMESTAMP).
