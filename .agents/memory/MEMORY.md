@@ -19,4 +19,4 @@
 - [Phase 3 Clinical Documentation](phase-3-clinical-documentation.md) — signed_consistency constraint implication vs biconditional, append-only audit table, 401 design invariant pattern, 19 permission codes
 - [Phase 3 closure state](phase-3-closure.md) — 550/550 vitest × 2 clean runs, 17/17 Playwright × 3 clean runs (true browser), all gate reqs met
 - [Phase 3 browser test hardening](phase-3-browser-hardening.md) — Vite HMR storm fix (watch.ignored), E-1 timeout fix, orgSlug login fix, sos_dev_session cookie; 568+136 vitest×4, 17/17 PW×3
-- [Phase 3 browser test hardening v2](phase-3-browser-hardening-v2.md) — 3 root causes: HMR storm (hmr:false), page.goto 304 hang (domcontentloaded), AppInner key race (two-gate gotoAndAwaitReady); 17/17×3 clean
+- [Phase 3 browser test hardening v2](phase-3-browser-hardening-v2.md) — 3 root causes + independent reviewer blockers resolved; trace.zip capture pattern; drizzle-kit upgrade proof methodology
