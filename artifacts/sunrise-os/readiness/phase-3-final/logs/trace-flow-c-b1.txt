@@ -1,0 +1,399 @@
+[2m[WebServer] [22m
+  [32m[1mVITE[22m v7.3.6[39m  [2mready in [0m[1m206[22m[2m[0m ms[22m
+
+[2m[WebServer] [22m  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m23456[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.24.0.2:[1m23456[22m/[39m
+[2m[WebServer] [22m
+> @workspace/api-server@0.0.0 start /home/runner/workspace/artifacts/api-server
+> node --enable-source-maps ./dist/index.mjs
+
+[2m[WebServer] [22m[00:16:24.365] [32mINFO[39m (72788): [36mServer listening[39m
+    [35mport[39m: 8099
+[2m[WebServer] [22m[00:16:24.366] [32mINFO[39m (72788): [36mauditOutboxWorker: starting[39m
+    [35mpollIntervalMs[39m: 5000
+    [35mbatchSize[39m: 20
+[browser-seed] Starting browser test fixture seed…
+[browser-seed] Old fixture notes deleted (if any).
+[browser-seed] Signed note ready: 00000000-0000-4000-b000-000000000001 (status=signed, version=2)
+[browser-seed] Draft note ready: 00000000-0000-4000-b000-000000000002 (status=draft, version=1)
+[browser-seed] Browser test fixture seed complete.
+[global-setup] Auth enforcement verified: GET http://localhost:8099/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes → 401 ✓
+[global-setup] Session saved: clinician@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/clinician.json
+[global-setup] Rate limiter confirmed active (default threshold, no bypass): 1 row(s) in sos_rate_limit_windows ✓
+[global-setup] Session saved: nurse@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/nurse.json
+[global-setup] Session saved: org-admin@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/supervisor.json
+[global-setup] Session saved: other-facility@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/other-facility.json
+[global-setup] Session saved: security-admin@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/security-admin.json
+[global-setup] Session saved: hr@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/hr.json
+[global-setup] Session saved: billing@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/billing.json
+[global-setup] Session saved: multi-facility@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/multi-facility.json
+[global-setup] All persona sessions created. Tests may proceed.
+[2m[WebServer] [22m[00:16:25.325] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 7
+[00:16:25.393] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 23
+[00:16:25.607] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 197
+[00:16:25.687] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+[00:16:25.882] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 5,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 182
+[00:16:25.948] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 6,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+[00:16:26.176] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 7,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 211
+[00:16:26.241] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 8,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+[00:16:26.446] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 9,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 191
+[00:16:26.510] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 10,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[00:16:26.703] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 11,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 179
+[00:16:26.767] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 12,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[00:16:26.963] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 13,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 183
+[00:16:27.026] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 14,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[00:16:27.220] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 15,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 181
+[00:16:27.280] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 16,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+
+[2mRunning [22m3[2m tests using [22m1[2m worker[22m
+
+[2m[WebServer] [22m[00:16:27.464] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 17,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 169
+[2m[WebServer] [22m[00:16:30.628] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 18,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[2m[WebServer] [22m[00:16:30.630] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 19,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[00:16:30.955] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 20,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[00:16:31.569] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 21,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/01-supervisor-void-button-visible.png
+[2m[WebServer] [22m[00:16:32.156] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 22,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+  [32m✓[39m  [2m1 [22m[chromium] › clinical-notes-p3-browser.spec.ts:396:3 › Flow C — Supervisor: void a signed note with validation › C-1: supervisor sees Void button on pre-seeded signed note[2m (4.8s)[22m
+[2m[WebServer] [22m[00:16:33.925] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 23,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 28
+[2m[WebServer] [22m[00:16:33.928] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 24,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 13
+[00:16:34.245] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 25,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[2m[WebServer] [22m[00:16:34.753] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 26,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/02-void-modal-open-empty.png
+[2m[WebServer] [22m[00:16:35.325] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 27,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 21
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/03-void-confirm-btn-disabled-short-reason.png
+  [32m✓[39m  [2m2 [22m[chromium] › clinical-notes-p3-browser.spec.ts:406:3 › Flow C — Supervisor: void a signed note with validation › C-2: void modal opens; short reason is rejected[2m (3.4s)[22m
+[2m[WebServer] [22m[00:16:37.231] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 28,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[2m[WebServer] [22m[00:16:37.233] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 29,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[00:16:37.527] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 30,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[2m[WebServer] [22m[00:16:38.046] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 31,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[2m[WebServer] [22m[00:16:38.596] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 32,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 23
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/04-void-reason-entered-confirm-enabled.png
+[2m[WebServer] [22m[00:16:39.142] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 33,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[2m[WebServer] [22m[00:16:39.183] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 34,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/00000000-0000-4000-b000-000000000001/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 33
+[2m[WebServer] [22m[00:16:39.197] [32mINFO[39m (72788): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 35,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/05-note-voided-status-shown.png
+  [32m✓[39m  [2m3 [22m[chromium] › clinical-notes-p3-browser.spec.ts:423:3 › Flow C — Supervisor: void a signed note with validation › C-3: valid void reason enables Confirm; submitting voids the note[2m (3.6s)[22m
+[global-teardown] Browser-test rate-limit rows removed.
+
+[32m  3 passed[39m[2m (17.4s)[22m
+
+To open last HTML report run:
+[36m[39m
+[36m  pnpm exec playwright show-report[39m
+[36m[39m

@@ -1,0 +1,428 @@
+# Sunrise OS — Resume Phase 3 Final Closure From Current State
+
+Continue from the current working branch and current HEAD.
+
+Do not restart the Phase 3 implementation.
+
+Do not merge into `main`.
+
+Do not begin another phase.
+
+The latest task stopped while running Stability A after adding Vite watch exclusions. Complete and report the unfinished closure work.
+
+## 1. Preserve the confirmed rate-limit correction
+
+Retain and verify:
+
+* `guardWindowBoundary()` or its final equivalent
+* Boundary protection for every rate-limit accumulation scenario
+* Removal of inappropriate shared `pool.end()` calls from test-file cleanup
+* Per-test rate-limit database cleanup
+* Environment restoration
+* Singleton and timer cleanup
+
+Run:
+
+* `auth-p2d-rate-limit.test.ts` alone
+* Rate limiter after clinical-note tests
+* Clinical-note tests after rate limiter
+* Rate limiter after Playwright
+
+All must pass without retries.
+
+---
+
+## 2. Stop writing Playwright artifacts inside the Vite source tree
+
+The browser instability is caused by Vite observing files generated during Playwright execution and repeatedly remounting the application.
+
+Do not rely solely on adding an expanding list of watch-ignore patterns.
+
+Move all generated Playwright files outside the Sunrise OS Vite project root, including:
+
+* Session storage-state JSON
+* Screenshots
+* Traces
+* HAR files
+* Videos
+* Test results
+* Readiness evidence generated during execution
+* Temporary logs
+
+Use a dedicated location such as:
+
+```text
+/tmp/sunrise-phase3-playwright/
+```
+
+or a repository directory outside the Vite application root.
+
+The final evidence packaging step may copy completed, immutable artifacts into the readiness directory only after the frontend server has stopped.
+
+Also retain explicit Vite watch exclusions for:
+
+* `e2e/**`
+* `playwright-results/**`
+* `screenshots/**`
+* `traces/**`
+* `sessions/**`
+* `readiness/**`
+
+Verify through browser-console and API logs that no HMR event occurs when a screenshot or trace is written.
+
+---
+
+## 3. Remove timing races rather than adding sleeps
+
+Keep the readiness helper that proves:
+
+* React has mounted
+* The authentication session check completed
+* The application router registered its navigation handlers
+* Patient data loaded
+* The chart tabs are present
+
+Use explicit UI conditions, not arbitrary delays.
+
+For patient navigation, wait for one of these final states:
+
+* Chart-alert dialog visible
+* Patient tabs visible
+* Authorization-denied state visible
+* Patient-not-found state visible
+
+Then dismiss the chart alert where applicable.
+
+Do not:
+
+* Dispatch navigation before React is ready
+* Depend on a 500 ms delay
+* Depend on `networkidle` for an application with polling
+* Retry clicks without verifying the final UI state
+* conceal failures with `.catch(() => {})`
+
+---
+
+## 4. Run tests sequentially
+
+Do not run Playwright and API Vitest concurrently against the same database.
+
+The prior concurrent run caused rate-limit rows from the browser API process to collide with the rate-limit integration test.
+
+Use this exact sequential order:
+
+1. API Vitest A
+2. Sunrise OS Vitest A
+3. Playwright A
+4. API Vitest B
+5. Sunrise OS Vitest B
+6. Playwright B
+7. API Vitest C
+8. Sunrise OS Vitest C
+9. Playwright C
+10. API Vitest D
+11. Sunrise OS Vitest D
+
+Each process must fully exit before the next starts.
+
+After each Playwright run:
+
+* Stop its API server
+* Stop its Vite server
+* Close Chromium
+* Close all browser contexts
+* Close database pools
+* Remove browser-test rate-limit rows
+* Remove temporary browser fixtures
+* Confirm no ports remain open
+
+Report every run, including failures.
+
+Do not describe later green reruns as erasing an earlier failure.
+
+---
+
+## 5. Complete Stability A before proceeding
+
+The current transcript ends during Stability A.
+
+Finish that run and preserve:
+
+* Full command
+* Exit code
+* Test count
+* Passed
+* Failed
+* Skipped
+* Start and finish timestamps
+* API-server log
+* Vite log
+* Browser-console log
+* Page-error log
+
+When Stability A fails:
+
+1. Stop.
+2. Identify the exact test and exact failure.
+3. Correct its root cause.
+4. Restart the complete sequential stability sequence from API Vitest A.
+
+Do not continue from the middle after changing code.
+
+---
+
+## 6. Generate authentic traces one test at a time
+
+A full trace-enabled 17-test run exceeds available resources.
+
+Run each Playwright scenario separately with trace enabled.
+
+For each test:
+
+1. Reset browser fixtures.
+2. Reset only its rate-limit keys.
+3. Start fresh API and frontend processes.
+4. Execute the test.
+5. Confirm it passed.
+6. Save its trace outside the Vite root.
+7. Save its screenshots outside the Vite root.
+8. Save sanitized network or HAR evidence.
+9. Save browser-console and page-error logs.
+10. Shut down all processes.
+
+Required final count:
+
+* 17 Playwright tests
+* 17 passing individual trace runs
+* 17 authentic trace archives
+* Zero skipped scenarios
+
+Do not count a trace from a failed or incomplete execution.
+
+---
+
+## 7. Verify the exact browser environment
+
+Record:
+
+* Playwright version
+* Chromium version
+* Chromium revision
+* Chromium executable path
+* Compatibility rationale
+* Frontend origin
+* API origin
+* Database name
+* Data mode
+* Auth-fallback state
+* Rate-limit configuration
+
+Required browser environment:
+
+```text
+VITE_SUNRISE_DATA_MODE=production
+DISABLE_AUTH_FALLBACK=true
+```
+
+The environment must prove:
+
+* Development identity unavailable
+* Demo banner absent
+* Real login required
+* Real CSRF required
+* Real session cookie used
+* Real PostgreSQL authorization used
+* Real PostgreSQL rate limiter active
+
+Do not use an inflated rate-limit maximum as the final configuration.
+
+---
+
+## 8. Verify the exact Phase 3 permission set
+
+Prove exact equality across database, server, frontend, policy, session response, tests, and documentation.
+
+The only clinical-note permissions are:
+
+```text
+clinical_note.create
+clinical_note.view
+clinical_note.edit_own_draft
+clinical_note.sign_own
+clinical_note.void
+```
+
+Confirm these are absent:
+
+```text
+clinical_note.sign
+clinical_note.export
+clinical_note.audit_view
+```
+
+Include the exact role matrix.
+
+---
+
+## 9. Run final TypeScript and production builds
+
+Run after all test and browser corrections:
+
+* Database package TypeScript/build
+* API TypeScript
+* API production build
+* Sunrise OS TypeScript
+* Sunrise OS production build
+* Playwright TypeScript validation
+
+Required:
+
+* Zero errors
+* Zero unapproved permission codes
+* Clean working tree except final evidence files
+
+---
+
+## 10. Build the canonical Phase 3 review ZIP
+
+Do not produce another supplemental browser-only ZIP.
+
+Create exactly:
+
+`artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip`
+
+Include:
+
+* Migrations `0000` through `0006`
+* Migration metadata
+* Journal reconciliation and proof
+* Clean migration proof
+* Phase 2 upgrade proof
+* Database schema
+* Repository and service code
+* Routes
+* Authorization and role policy
+* Exact permission evidence
+* Frontend implementation
+* All API tests
+* All Sunrise OS tests
+* All Playwright tests
+* Complete sequential stability logs
+* Seventeen individual authentic Playwright traces
+* Screenshots
+* Sanitized HAR/network evidence
+* Browser-console logs
+* Page-error logs
+* TypeScript logs
+* Production-build logs
+* Secret-scan report
+* Evidence manifest
+* Complete SHA-256 manifest
+
+The SHA manifest must cover every ZIP entry except itself.
+
+Do not include:
+
+* Previous ZIPs
+* Temporary browser directories
+* Failed-run traces represented as passing
+* Passwords
+* Cookies
+* Session identifiers
+* CSRF values
+* Environment files
+* Database dumps
+* Real patient data
+* Real clinical-note content
+
+---
+
+## 11. Verify and expose the ZIP
+
+Run:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+```
+
+Verify:
+
+* ZIP integrity
+* SHA-manifest coverage
+* Exactly 17 authentic traces
+* Required screenshots
+* Sanitized network evidence
+* No prior ZIP nested inside
+* Secret scan clean
+
+Make the actual ZIP available for download.
+
+---
+
+# Required final response
+
+Provide:
+
+1. Branch
+2. Starting HEAD
+3. Final correction commits
+4. Final HEAD
+5. Rate-limit flake root cause
+6. Rate-limit correction
+7. Shared-pool correction
+8. Vite HMR root cause
+9. Artifact-output location
+10. HMR-after-artifact-write result
+11. API Vitest A
+12. Sunrise OS Vitest A
+13. Playwright A
+14. API Vitest B
+15. Sunrise OS Vitest B
+16. Playwright B
+17. API Vitest C
+18. Sunrise OS Vitest C
+19. Playwright C
+20. API Vitest D
+21. Sunrise OS Vitest D
+22. Rate limiter alone
+23. Clinical notes → rate limiter
+24. Rate limiter → clinical notes
+25. Playwright → rate limiter
+26. Outbox → clinical notes
+27. Clinical notes → outbox
+28. API tests discovered
+29. API tests passed
+30. API tests failed
+31. API tests skipped
+32. Sunrise OS tests discovered
+33. Sunrise OS tests passed
+34. Sunrise OS tests failed
+35. Sunrise OS tests skipped
+36. Playwright tests discovered
+37. Playwright tests passed
+38. Playwright tests failed
+39. Playwright tests skipped
+40. Authentic trace count
+41. Screenshot count
+42. HAR/network count
+43. Exact permission set
+44. Demo-banner production result
+45. Development-auth fallback result
+46. TypeScript result
+47. Production-build result
+48. Secret-scan result
+49. Canonical ZIP path
+50. ZIP size
+51. ZIP SHA-256
+52. ZIP entry count
+53. SHA-manifest coverage
+54. Known limitations
+55. Explicit answer: `PHASE 3 APPROVED FOR MERGE` or `PHASE 3 NOT APPROVED`
+
+Do not merge automatically.
+
+Do not begin another phase.
+
+Stop only after the canonical ZIP is available.

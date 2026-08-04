@@ -1,0 +1,448 @@
+[2m[WebServer] [22m
+  [32m[1mVITE[22m v7.3.6[39m  [2mready in [0m[1m228[22m[2m[0m ms[22m
+
+[2m[WebServer] [22m  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m23456[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.24.0.2:[1m23456[22m/[39m
+[2m[WebServer] [22m
+> @workspace/api-server@0.0.0 start /home/runner/workspace/artifacts/api-server
+> node --enable-source-maps ./dist/index.mjs
+
+[2m[WebServer] [22m[00:16:47.486] [32mINFO[39m (73116): [36mServer listening[39m
+    [35mport[39m: 8099
+[2m[WebServer] [22m[00:16:47.486] [32mINFO[39m (73116): [36mauditOutboxWorker: starting[39m
+    [35mpollIntervalMs[39m: 5000
+    [35mbatchSize[39m: 20
+[browser-seed] Starting browser test fixture seed…
+[browser-seed] Old fixture notes deleted (if any).
+[browser-seed] Signed note ready: 00000000-0000-4000-b000-000000000001 (status=signed, version=2)
+[browser-seed] Draft note ready: 00000000-0000-4000-b000-000000000002 (status=draft, version=1)
+[browser-seed] Browser test fixture seed complete.
+[global-setup] Auth enforcement verified: GET http://localhost:8099/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes → 401 ✓
+[global-setup] Session saved: clinician@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/clinician.json
+[global-setup] Rate limiter confirmed active (default threshold, no bypass): 1 row(s) in sos_rate_limit_windows ✓
+[global-setup] Session saved: nurse@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/nurse.json
+[global-setup] Session saved: org-admin@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/supervisor.json
+[global-setup] Session saved: other-facility@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/other-facility.json
+[global-setup] Session saved: security-admin@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/security-admin.json
+[global-setup] Session saved: hr@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/hr.json
+[global-setup] Session saved: billing@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/billing.json
+[global-setup] Session saved: multi-facility@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/multi-facility.json
+[global-setup] All persona sessions created. Tests may proceed.
+[2m[WebServer] [22m[00:16:48.378] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 9
+[00:16:48.427] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[00:16:48.646] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 205
+[00:16:48.731] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3
+[00:16:48.949] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 5,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 204
+[00:16:49.013] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 6,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+[00:16:49.209] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 7,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 181
+[00:16:49.273] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 8,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[00:16:49.497] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 9,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 211
+[00:16:49.562] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 10,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[00:16:49.757] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 11,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 181
+[00:16:49.815] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 12,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+[00:16:50.070] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 13,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 240
+[00:16:50.133] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 14,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3
+[00:16:50.332] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 15,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 183
+[00:16:50.392] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 16,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+
+[2mRunning [22m5[2m tests using [22m1[2m worker[22m
+
+[2m[WebServer] [22m[00:16:50.587] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 17,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 183
+[2m[WebServer] [22m[00:16:53.184] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 18,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 11
+[2m[WebServer] [22m[00:16:53.189] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 19,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[00:16:53.533] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 20,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[2m[WebServer] [22m[00:16:54.100] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 21,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099"
+    }
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 20
+[2m[WebServer] [22m[00:16:54.104] [31mERROR[39m (73116): [36mauthorizationService: drain failed for outbox entry[39m
+    [35moutboxId[39m: "619833d4-e7d0-4927-a6b7-cdd5314a2203"
+    err: {
+      "type": "_DrizzleQueryError",
+      "message": "Failed query: insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)\nparams: ,,,p2d_restart_proof,success,,,,,{\"proof\":\"startup-recovery-after-restart\"}: new row for relation \"sos_auth_audit\" violates check constraint \"ck_sos_auth_audit_event_type\"",
+      "stack":
+          Error: Failed query: insert into "sos_auth_audit" ("id", "org_id", "user_id", "staff_id", "session_id", "event_type", "outcome", "reason_code", "target_user_id", "ip_address", "user_agent_summary", "metadata", "created_at") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)
+          params: ,,,p2d_restart_proof,success,,,,,{"proof":"startup-recovery-after-restart"}
+              at NodePgPreparedQuery.queryWithCache (/home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/pg-core/session.ts:73:11)
+              at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at async <anonymous> (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11)
+              at async _NodePgSession.transaction (/home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/node-postgres/session.ts:259:19)
+              at async drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+          caused by: error: new row for relation "sos_auth_audit" violates check constraint "ck_sos_auth_audit_event_type"
+              at <anonymous> (/home/runner/workspace/node_modules/.pnpm/pg@8.22.0/node_modules/pg/lib/client.js:652:17)
+              at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at async <anonymous> (/home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/node-postgres/session.ts:149:14)
+              at async NodePgPreparedQuery.queryWithCache (/home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/pg-core/session.ts:71:12)
+              at async <anonymous> (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11)
+              at async _NodePgSession.transaction (/home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/src/node-postgres/session.ts:259:19)
+              at async drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+      "query": "insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)",
+      "params": [
+        null,
+        null,
+        null,
+        "p2d_restart_proof",
+        "success",
+        null,
+        null,
+        null,
+        null,
+        "{\"proof\":\"startup-recovery-after-restart\"}"
+      ]
+    }
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/01-other-facility-patient-access-denied.png
+  [32m✓[39m  [2m1 [22m[chromium] › clinical-notes-p3-browser.spec.ts:457:5 › Flow D — Authorization denials › D-1: other-facility clinician (cross-facility access) › D-1: other-facility clinician cannot access Facility-1 patient chart[2m (13.1s)[22m
+[2m[WebServer] [22m[00:17:05.311] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 22,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[2m[WebServer] [22m[00:17:05.331] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 23,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 30
+[00:17:05.538] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 24,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/02-security-admin-patient-access-denied.png
+  [32m✓[39m  [2m2 [22m[chromium] › clinical-notes-p3-browser.spec.ts:469:5 › Flow D — Authorization denials › D-2: security-admin (no patient.chart.view) › D-2: security-admin has no patient.chart.view — PatientDetail shows AccessDenied[2m (11.7s)[22m
+[2m[WebServer] [22m[00:17:17.306] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 25,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 11
+[2m[WebServer] [22m[00:17:17.324] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 26,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 28
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/03-hr-patient-access-denied.png
+  [32m✓[39m  [2m3 [22m[chromium] › clinical-notes-p3-browser.spec.ts:481:5 › Flow D — Authorization denials › D-3: HR (no patient.chart.view) › D-3: HR has no patient.chart.view — PatientDetail shows AccessDenied[2m (21.6s)[22m
+[2m[WebServer] [22m[00:17:38.701] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 27,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 52
+[2m[WebServer] [22m[00:17:38.712] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 28,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 62
+[00:17:38.908] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 29,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/04-billing-patient-access-denied.png
+  [32m✓[39m  [2m4 [22m[chromium] › clinical-notes-p3-browser.spec.ts:493:5 › Flow D — Authorization denials › D-4: billing staff (no Progress Notes compose) › D-4: billing staff cannot access Progress Notes compose[2m (12.0s)[22m
+[2m[WebServer] [22m[00:17:50.619] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 30,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 11
+[2m[WebServer] [22m[00:17:50.630] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 31,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 21
+[00:17:50.919] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 32,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[00:17:51.422] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 33,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 13
+[2m[WebServer] [22m[00:17:51.936] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 34,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/05-multi-facility-edit-another-author-denied.png
+[2m[WebServer] [22m[00:17:52.657] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 35,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[2m[WebServer] [22m[00:17:52.690] [32mINFO[39m (73116): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 36,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/00000000-0000-4000-b000-000000000002"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 18
+  [32m✓[39m  [2m5 [22m[chromium] › clinical-notes-p3-browser.spec.ts:505:5 › Flow D — Authorization denials › D-5: multi-facility clinician (cannot edit another author's draft) › D-5: multi-facility clinician cannot edit another author's draft via API[2m (3.7s)[22m
+[global-teardown] Browser-test rate-limit rows removed.
+
+[33m  Slow test file: [39m[chromium] › clinical-notes-p3-browser.spec.ts[33m (1.0m)[39m
+[33m  Consider splitting slow test files to speed up parallel execution[39m
+[32m  5 passed[39m[2m (1.1m)[22m
+
+To open last HTML report run:
+[36m[39m
+[36m  pnpm exec playwright show-report[39m
+[36m[39m
