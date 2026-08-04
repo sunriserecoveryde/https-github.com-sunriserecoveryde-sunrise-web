@@ -83,6 +83,79 @@ async function loginViaUI(
   });
 }
 
+// ── SPA-ready helper ──────────────────────────────────────────────────────────
+
+/**
+ * Navigate to the SPA root and wait until React has fully bootstrapped.
+ *
+ * The SPA loads 50+ TypeScript modules via Vite's dev server.  When this is
+ * the first (or warm-but-not-hot) load in a test-suite run, dynamic imports
+ * can take 2–3 s.  `page.goto("/")` with the default waitUntil:"load" can
+ * hang indefinitely in sequential test runs: Playwright's CDP "load" gate
+ * never fires because the Vite dev server (running with hmr:false) does not
+ * emit the right CDP lifecycle event after the initial load warms the module
+ * cache.  React is running and making API calls (Dashboard → /api/alerts)
+ * but the CDP "load" checkpoint stalls.
+ *
+ * Fix (two-part):
+ *  1. Use waitUntil:"domcontentloaded" so page.goto resolves as soon as
+ *     the HTML is fully parsed.  This fires long before all JS modules are
+ *     fetched, but crucially it fires *after* the browser has received the
+ *     response body and committed the navigation.  It never hangs (unlike
+ *     "load", which stalls indefinitely when Vite's warm module cache
+ *     returns 304 responses that don't re-trigger the CDP "load" lifecycle
+ *     event in subsequent test contexts).
+ *  2. Wait for the first successful /api/v1/auth/session response, which
+ *     AuthContext only fires AFTER ALL dynamic imports have resolved and
+ *     React has mounted.  Once this resolves, App.tsx's popstate listener
+ *     is guaranteed to be registered before navigateToPatient fires.
+ *
+ * vite.playwright.config.ts: hmr:false ensures Vite never pushes a hot
+ * update that would remount AuthContext mid-test, which previously caused
+ * hundreds of csrf-token + auth/session pairs per second for the entire
+ * 120 s test window (the "HMR storm").
+ */
+async function gotoAndAwaitReady(page: Page): Promise<void> {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  // Gate 1 — React is mounted and has fired its auth check.
+  // AuthContext only calls /auth/session after ALL dynamic imports have
+  // resolved and the component has mounted.
+  await page.waitForResponse(
+    resp =>
+      resp.url().includes("/api/v1/auth/session") && resp.status() < 400,
+    { timeout: 15_000 },
+  );
+
+  // Gate 2 — productionSession is committed to React state.
+  //
+  // After /auth/session responds, AuthContext calls setProductionSession(data).
+  // This triggers a key change on AppInner (keyed by productionSession.userId).
+  // AppInner remounts, resetting selectedPatientId and activeScreen to their
+  // defaults.  If navigateToPatient fires before this remount, the popstate
+  // is silently discarded and PatientDetail never opens.
+  //
+  // /api/alerts/vitals is Dashboard's first useEffect call.  It only fires
+  // after productionSession is fully committed, AppInner has remounted with
+  // the real userId key, AND the Dashboard has rendered.  Waiting for it
+  // guarantees the SPA is stable before we dispatch the popstate.
+  //
+  // .catch(): for tests that load an unauthenticated page (e.g. login-form
+  // tests) gotoAndAwaitReady is not called, so this branch is unreachable
+  // in practice; the catch is a safety net for future edge cases.
+  await page
+    .waitForResponse(
+      resp =>
+        resp.url().includes("/api/alerts/vitals") && resp.status() < 400,
+      { timeout: 10_000 },
+    )
+    .catch(() => {
+      // Non-fatal: if alerts/vitals never fires (session check returned a
+      // non-Dashboard screen, or rate-limit returned 429) the auth/session
+      // gate above is sufficient.
+    });
+}
+
 // ── Navigation helper ─────────────────────────────────────────────────────────
 
 /**
@@ -195,8 +268,7 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
   test.use({ storageState: SESSION_PATHS.clinician });
 
   test("A-3: Progress Notes tab shows empty state for new patient session", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    await gotoAndAwaitReady(page);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
     await snap(page, "progress-notes-tab-initial-state");
@@ -204,8 +276,7 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
   });
 
   test("A-4: clinician opens compose panel with '+ New Note'", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    await gotoAndAwaitReady(page);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
     await page.locator('[data-testid="new-note-btn"]').click();
@@ -214,8 +285,7 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
   });
 
   test("A-5: clinician types content and saves as draft", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    await gotoAndAwaitReady(page);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
     await page.locator('[data-testid="new-note-btn"]').click();
@@ -234,8 +304,7 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
   });
 
   test("A-6: clinician reloads and draft persists; can edit and sign", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    await gotoAndAwaitReady(page);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
     await page.locator('[data-testid="new-note-btn"]').click();
@@ -296,8 +365,7 @@ test.describe("Flow B — Nurse: create and sign a nursing note", () => {
   test.use({ storageState: SESSION_PATHS.nurse });
 
   test("B-2: nurse creates a nursing note and signs it", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    await gotoAndAwaitReady(page);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
     await page.locator('[data-testid="new-note-btn"]').click();
@@ -326,8 +394,7 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
   test.use({ storageState: SESSION_PATHS.supervisor });
 
   test("C-1: supervisor sees Void button on pre-seeded signed note", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    await gotoAndAwaitReady(page);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
 
@@ -337,8 +404,7 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
   });
 
   test("C-2: void modal opens; short reason is rejected", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    await gotoAndAwaitReady(page);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
 
@@ -355,8 +421,7 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
   });
 
   test("C-3: valid void reason enables Confirm; submitting voids the note", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    await gotoAndAwaitReady(page);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
 
@@ -390,8 +455,7 @@ test.describe("Flow D — Authorization denials", () => {
     test.use({ storageState: SESSION_PATHS.otherFacility });
 
     test("D-1: other-facility clinician cannot access Facility-1 patient chart", async ({ page }) => {
-      await page.goto("/");
-      await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      await gotoAndAwaitReady(page);
       await navigateToPatient(page);
       await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
       await snap(page, "other-facility-patient-access-denied");
@@ -403,8 +467,7 @@ test.describe("Flow D — Authorization denials", () => {
     test.use({ storageState: SESSION_PATHS.securityAdmin });
 
     test("D-2: security-admin has no patient.chart.view — PatientDetail shows AccessDenied", async ({ page }) => {
-      await page.goto("/");
-      await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      await gotoAndAwaitReady(page);
       await navigateToPatient(page);
       await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
       await snap(page, "security-admin-patient-access-denied");
@@ -416,8 +479,7 @@ test.describe("Flow D — Authorization denials", () => {
     test.use({ storageState: SESSION_PATHS.hr });
 
     test("D-3: HR has no patient.chart.view — PatientDetail shows AccessDenied", async ({ page }) => {
-      await page.goto("/");
-      await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      await gotoAndAwaitReady(page);
       await navigateToPatient(page);
       await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
       await snap(page, "hr-patient-access-denied");
@@ -429,8 +491,7 @@ test.describe("Flow D — Authorization denials", () => {
     test.use({ storageState: SESSION_PATHS.billing });
 
     test("D-4: billing staff cannot access Progress Notes compose", async ({ page }) => {
-      await page.goto("/");
-      await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      await gotoAndAwaitReady(page);
       await navigateToPatient(page);
       await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
       await snap(page, "billing-patient-access-denied");
@@ -442,8 +503,7 @@ test.describe("Flow D — Authorization denials", () => {
     test.use({ storageState: SESSION_PATHS.multiFac });
 
     test("D-5: multi-facility clinician cannot edit another author's draft via API", async ({ page }) => {
-      await page.goto("/");
-      await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      await gotoAndAwaitReady(page);
       await navigateToPatient(page);
       await openProgressNotesTab(page);
 
@@ -505,9 +565,11 @@ test.describe("Flow E — Concurrency: stale-version conflict on draft", () => {
 
     try {
       // Both pages navigate to the dashboard (already authenticated).
+      // gotoAndAwaitReady waits for the auth/session response which proves
+      // React has fully bootstrapped and the popstate listener is registered.
       await Promise.all([
-        pageA.goto("/").then(() => pageA.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {})),
-        pageB.goto("/").then(() => pageB.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {})),
+        gotoAndAwaitReady(pageA),
+        gotoAndAwaitReady(pageB),
       ]);
 
       // Parallelise setup so both contexts reach Progress Notes simultaneously.

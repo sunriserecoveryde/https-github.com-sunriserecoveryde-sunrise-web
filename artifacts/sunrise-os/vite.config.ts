@@ -72,6 +72,27 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    // Prevent Vite's file-watcher from triggering HMR on files written by
+    // Playwright during test runs (sessions, traces, snapshots, logs).
+    // Without these exclusions the SPA remounts in a tight loop every ~0.5 s
+    // for the entire 120 s test window, making navigateToPatient/tab clicks
+    // time out consistently.
+    watch: {
+      // Exclude every directory that Playwright writes to during a test run.
+      // Without these, Vite's chokidar watcher detects the writes (session JSON,
+      // screenshot PNGs, trace ZIPs, HAR files) and fires HMR updates.  Each
+      // HMR update causes the SPA to remount, triggering rapid AuthContext
+      // csrf-token + auth/session calls (~2/s) for the entire 120 s test window.
+      ignored: [
+        '**/e2e/sessions/**',
+        '**/e2e/screenshots/**',
+        '**/e2e/traces/**',
+        '**/playwright-results/**',
+        '**/playwright-report/**',
+        '**/readiness/**',
+        '**/.playwright-artifacts**',
+      ],
+    },
   },
   preview: {
     port,

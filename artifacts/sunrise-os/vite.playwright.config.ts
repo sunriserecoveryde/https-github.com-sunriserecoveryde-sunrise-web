@@ -31,14 +31,22 @@ export default defineConfig({
     strictPort: true,
     host:        "0.0.0.0",
     allowedHosts: true,
+    // Disable HMR entirely for the Playwright test server.
+    // Tests never need live reload.  Without this, any file written anywhere
+    // inside the project root (test logs, session JSONs, trace ZIPs, snapshot
+    // PNGs) triggers an HMR update that remounts the entire React tree,
+    // causing AuthContext to fire csrf-token + auth/session at ~2 req/s for
+    // the full 120 s test window (the "HMR storm").  Setting hmr:false is
+    // the clean, permanent fix — no allow-list needed.
+    hmr: false,
     watch: {
-      // Prevent HMR storm: session files written by globalSetup and test
-      // result artefacts live inside the project root.  Without this Vite
-      // detects every write, fires an HMR update, and the app never finishes
-      // loading — causing a blank white page on every test run.
+      // Keep the file-watcher running so Vite's transform cache stays warm,
+      // but suppress events for all directories Playwright writes to.
       ignored: [
         "**/e2e/**",
         "**/playwright-results/**",
+        "**/readiness/**",
+        "**/playwright-report/**",
       ],
     },
     proxy: {
