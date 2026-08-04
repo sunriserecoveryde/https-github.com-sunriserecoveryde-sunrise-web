@@ -200,7 +200,7 @@ async function navigateToPatient(
   const acknowledge = page.locator('[data-testid="chart-alert-acknowledge"]');
   if (await acknowledge.isVisible({ timeout: 1000 }).catch(() => false)) {
     await acknowledge.click();
-    await expect(acknowledge).not.toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(acknowledge).not.toBeVisible({ timeout: 5000 });
   }
 }
 
@@ -219,7 +219,7 @@ async function openProgressNotesTab(page: Page): Promise<void> {
   const ack = page.locator('[data-testid="chart-alert-acknowledge"]');
   if (await ack.isVisible({ timeout: 3000 }).catch(() => false)) {
     await ack.click();
-    await expect(ack).not.toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(ack).not.toBeVisible({ timeout: 5000 });
   }
 
   const tab = page.locator('[data-testid="tab-progress-notes"]');
@@ -232,7 +232,9 @@ async function openProgressNotesTab(page: Page): Promise<void> {
     if (confirmed) break;
     if (attempt < 2) await page.waitForTimeout(200);
   }
-  await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+  // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -297,7 +299,9 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
     await snap(page, "draft-note-dirty-before-save");
 
     await page.locator('[data-testid="save-draft-btn"]').click();
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
     await snap(page, "draft-saved-note-appears-in-list");
 
     await expect(page.locator('[data-status="draft"]').first()).toBeVisible();
@@ -310,14 +314,18 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
     await page.locator('[data-testid="new-note-btn"]').click();
     await page.locator('[data-testid="note-content"]').fill("Flow-A persist test draft content.");
     await page.locator('[data-testid="save-draft-btn"]').click();
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
 
     // Navigate away and back to simulate a reload.
     await page.evaluate(() => {
       window.history.pushState({ screen: "PatientList" }, "", "#PatientList");
       window.dispatchEvent(new PopStateEvent("popstate", { state: { screen: "PatientList" } }));
     });
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
 
@@ -335,7 +343,9 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
 
     await expect(page.locator('[data-testid="sign-lock-btn"]')).not.toHaveClass(/opacity-40/);
     await page.locator('[data-testid="sign-lock-btn"]').click();
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
     await snap(page, "note-signed-read-only-state");
 
     await expect(page.locator('[data-status="signed"]').first()).toBeVisible();
@@ -379,7 +389,9 @@ test.describe("Flow B — Nurse: create and sign a nursing note", () => {
     await snap(page, "nurse-nursing-note-composed");
 
     await page.locator('[data-testid="sign-lock-btn"]').click();
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
     await snap(page, "nurse-nursing-note-signed");
 
     await expect(page.locator('[data-status="signed"]').first()).toBeVisible();
@@ -438,7 +450,9 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
     await snap(page, "void-reason-entered-confirm-enabled");
 
     await confirmBtn.click();
-    await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+    // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
     await snap(page, "note-voided-status-shown");
 
     await expect(page.locator('[data-status="voided"]').first()).toBeVisible();
@@ -457,7 +471,9 @@ test.describe("Flow D — Authorization denials", () => {
     test("D-1: other-facility clinician cannot access Facility-1 patient chart", async ({ page }) => {
       await gotoAndAwaitReady(page);
       await navigateToPatient(page);
-      await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
       await snap(page, "other-facility-patient-access-denied");
       await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
     });
@@ -469,7 +485,9 @@ test.describe("Flow D — Authorization denials", () => {
     test("D-2: security-admin has no patient.chart.view — PatientDetail shows AccessDenied", async ({ page }) => {
       await gotoAndAwaitReady(page);
       await navigateToPatient(page);
-      await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
       await snap(page, "security-admin-patient-access-denied");
       await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
     });
@@ -481,7 +499,9 @@ test.describe("Flow D — Authorization denials", () => {
     test("D-3: HR has no patient.chart.view — PatientDetail shows AccessDenied", async ({ page }) => {
       await gotoAndAwaitReady(page);
       await navigateToPatient(page);
-      await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
       await snap(page, "hr-patient-access-denied");
       await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
     });
@@ -493,7 +513,9 @@ test.describe("Flow D — Authorization denials", () => {
     test("D-4: billing staff cannot access Progress Notes compose", async ({ page }) => {
       await gotoAndAwaitReady(page);
       await navigateToPatient(page);
-      await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
       await snap(page, "billing-patient-access-denied");
       await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
     });
@@ -515,7 +537,9 @@ test.describe("Flow D — Authorization denials", () => {
 
       await page.locator('[data-testid="note-content"]').fill("Multi-facility edit attempt — must fail.");
       await page.locator('[data-testid="save-draft-btn"]').click();
-      await page.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      // Brief settle wait — app has continuous polling so networkidle is never
+  // reached; a fixed pause is the honest substitute.
+  await page.waitForTimeout(300);
 
       await snap(page, "multi-facility-edit-another-author-denied");
       // API returns 403 → UI shows an error; compose panel stays visible with error.
@@ -605,7 +629,7 @@ test.describe("Flow E — Concurrency: stale-version conflict on draft", () => {
         "Context-A write — first writer wins, version should increment to 2.",
       );
       await pageA.locator('[data-testid="save-draft-btn"]').click();
-      await pageA.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      await pageA.waitForTimeout(300);
       await snap(pageA, "concurrency-context-a-saved-successfully");
 
       // Context B saves with stale version=1 → must receive 409 conflict.
@@ -613,7 +637,7 @@ test.describe("Flow E — Concurrency: stale-version conflict on draft", () => {
         "Context-B stale write — expectedVersion=1 after A already incremented to 2.",
       );
       await pageB.locator('[data-testid="save-draft-btn"]').click();
-      await pageB.waitForLoadState("networkidle", { timeout: 500 }).catch(() => {});
+      await pageB.waitForTimeout(300);
       await snap(pageB, "concurrency-context-b-conflict-shown");
 
       await expect(
