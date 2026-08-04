@@ -1,45 +1,76 @@
 ---
-name: Phase 3 browser test hardening v2
-description: Round-2 reviewer remediation (15 blockers). Covers credential rotation, trace sanitization, drizzle-kit Phase 2 proof, D-test strengthening, exact-equality permission tests, Topbar prod mode, v3 archive.
+name: Phase 3 browser test hardening v2 + v4 final closure
+description: v4 final remediation complete. Covers credential rotation, trace sanitization, drizzle-kit Phase 2 proof, D-test strengthening, exact-equality permission tests, Topbar prod mode, v3 archive, and all v4 fixes.
 ---
 
-## Key decisions
+## v4 Closure (branch feature/phase-3-clinical-documentation-foundation, commit 8733c9f)
+
+**All gates met:**
+- API Vitest: 572/572 × 3 clean runs (D, E, F)
+- Sunrise OS Vitest: 136/136 × 4 runs (A, B, C, D)
+- Playwright E2E: 19/19 × 3 clean runs (E, F, G)
+- Phase 2 upgrade proof: PASS (phase-2-upgrade-proof-v2.txt)
+- All combination runs: rate-alone, clinical→rate, rate→clinical, PW→rate, outbox→clinical, clinical→outbox — all passing
+- Secret scan: 0 confirmed secrets
+- Archive: `readiness/phase-3-clinical-documentation-foundation-review-v4.zip` (11.74 MB, 202 files)
+- SHA256: `4ee7914f94cb49fb6c0693e0e79131a481e1e9a71280c501fe2c60caaa7416cc`
+
+## v4 Root cause fixes (this session)
+
+**D-7 void denial — `expectedVersion` missing:**
+- `voidNoteSchema` requires BOTH `voidReason` AND `expectedVersion`
+- Prior test only sent `voidReason` → 400. Fix: add `expectedVersion: 1` to void payload
+
+**D-6/D-7 — Playwright `data` + explicit `Content-Type` conflict:**
+- When `page.request.post()` receives both `headers: { "Content-Type": "application/json" }` AND `data: { ... }`, Playwright does NOT JSON-serialize the object
+- Fix: remove the explicit `Content-Type` header; Playwright auto-sets it when `data` is a plain object
+- **Why:** Playwright's `APIRequestContext` only auto-serializes when it controls the Content-Type. An explicit header overrides auto-detection and skips serialization.
+
+**D-6 signed-card assertion false positive:**
+- `[data-status="signed"]` matched a DIFFERENT note signed by Flow A (which stays visible)
+- Fix: check only the specific `BROWSER_DRAFT_NOTE_ID` card's status attribute
+
+**DB test isolation — billing_staff extra permissions:**
+- `auth-p2c-security.test.ts §1-C` creates a `certified_clinician` role assignment for billing user in facility B
+- If the test fails or is interrupted mid-run, the certified_clinician assignment is NOT cleaned up
+- This causes subsequent runs to see billing_staff with `patient.create` / `patient.chart.view` → test failures
+- Fix: manually `DELETE FROM sos_role_assignments WHERE user_id='...' AND role_id='certified_clinician'` between runs
+- **Prevention:** The test HAS `afterAll` cleanup at line 1016 — it only leaks when test itself fails
+
+**Billing user lookup:**
+- Email: `billing@test.sunrise`
+- User ID: `e123df74-81f1-4e2c-8013-d62da0c6130b`
+- Table: `sos_user_accounts` (NOT `sos_users`) + `sos_user_identity_refs` (no email column — uses `ext_auth_ref`)
+
+**e2e/tsconfig.json — allowImportingTsExtensions:**
+- Global-setup.ts and browser spec use `.ts` extension imports (e.g. `import ... from "./sessions.ts"`)
+- Fix: add `"allowImportingTsExtensions": true` to `e2e/tsconfig.json`
+- Also exclude old API-only spec: `"exclude": ["clinical-notes-p3.spec.ts"]`
+
+## Key decisions from v3 (preserved)
 
 **Credential rotation flow:**
-- `authSeed.ts` seeds ALL browser test users (including clinician@test.sunrise) — run with `pnpm exec tsx src/seed/authSeed.ts` from api-server dir, not ts-node
-- When authSeed is run with a different password than what's in the secret, browser tests fail login (401). Always run authSeed WITHOUT env var override to use the current PHASE2D_TEST_PASSWORD secret
-- Session table: `sos_sessions` (not `session`). `DELETE FROM sos_sessions` to revoke all
+- `authSeed.ts` seeds ALL browser test users — run with `pnpm exec tsx src/seed/authSeed.ts` from api-server dir
+- Always run authSeed WITHOUT env var override to use the current PHASE2D_TEST_PASSWORD secret
 
 **Phase 2 upgrade proof (drizzle-kit only, no psql):**
 - Create `lib/db/drizzle/phase2-proof/` with 0000-0005 SQL + `meta/_journal.json` (6 entries only)
 - Create `lib/db/drizzle.phase2.config.ts` pointing to `drizzle/phase2-proof/`
-- Run: `DATABASE_URL=<upgrade_url> pnpm --filter @workspace/db exec drizzle-kit migrate --config ./drizzle.phase2.config.ts` → applies 0000-0005
-- Run full migrate → applies 0006 only (7 rows total)
-- sos_clinical_notes: 24 constraints, 5 indexes, 1 trigger after 0006
-
-**SHA256SUMS self-exclusion:**
-- `build-sha256sums.sh` at `readiness/scripts/` — uses `find -! -name SHA256SUMS.txt`
-- `manifest_entries = total_files - 1`
+- Run migrate → applies 0006 only (7 rows total); sos_clinical_notes: 24 constraints, 5 indexes, 1 trigger
 
 **Rate-limit test flakiness:**
-- step-15 (auth-p2d-rate-limit.test.ts) flaky if run after Playwright (rate limit state bleeds)
-- Fix: `DELETE FROM sos_rate_limit_windows` before each API vitest run
-- The global-teardown only clears loopback IPs, not all keys
+- `DELETE FROM sos_rate_limit_windows` before each API vitest run (global-teardown only clears loopback IPs)
+- NEVER set PHASE2D_RATE_LIMIT_INTEGRATION externally when running full suite
 
 **Playwright D-test specifics:**
-- D-1 (cross-facility): does NOT render `[data-testid="access-denied"]` — just hides note controls
-- D-2, D-3 (security-admin, HR): DO render access-denied testid (proper AccessDenied component)
-- D-6 (sign denial): `sign-lock-btn` may not be visible for non-owners — use `{ timeout: 5_000 }` on click
-- Test count: 19 (was 17 before D-6 and D-7 were added)
-- Trace capture: `--trace=on --output <dir>` to force all traces; default `retain-on-failure` doesn't save passing traces
+- D-1 (cross-facility): hides note controls but does NOT render `[data-testid="access-denied"]`
+- D-6 (sign denial): `sign-lock-btn` may not be visible — use `{ timeout: 5_000 }` on click
+- Test count: 19 (Flow A–E: A=6, B=2, C=3, D=8-ish with auth, E=1 concurrency)
 
-**Production mode Topbar:**
-- `VITE_SUNRISE_DATA_MODE=production` → renders static `data-testid="role-display"` instead of role-switcher dropdown
-- `data-testid="role-switcher-btn"` only in demo mode
+**lib/db pre-existing failures:**
+- `constraints.test.ts` and `integration.test.ts`: `createOrganization` called without slug field
+- 18 pass / 51 skip / 2 fail — pre-existing, do NOT fix for Phase 3
 
-**v3 archive:**
-- Path: `readiness/phase-3-clinical-documentation-foundation-review-v3.zip`
-- SHA256: `9c6f0519b52b31ee8625298ba1ef8c56fa30c10d473ec0e8a4d1da321e7cf1a7`
-- 126 entries in SHA256SUMS.txt (127 total files - 1 self-exclusion)
-- Scripts: `readiness/scripts/build-sha256sums.sh`, `readiness/scripts/build-v3-archive.sh`
-- Trace sanitizer: `e2e/sanitize-traces.py` (redacts cookies, session values, CSRF tokens from .trace/.network NDJSON files)
+**SOS typecheck pre-existing failures:**
+- `calendar.tsx` / `spinner.tsx`: React@19 dual-type conflict from pnpm hoisting
+- Does NOT block SOS production build (EXIT:0) or Vitest (136/136)
