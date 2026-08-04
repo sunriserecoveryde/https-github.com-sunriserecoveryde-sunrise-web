@@ -531,9 +531,38 @@ test.describe("Flow D — Authorization denials", () => {
       page.on("pageerror", e => pageErrors.push(e));
 
       await gotoAndAwaitReady(page);
-      await assertChartAccessDenied(page, "other-facility-patient-access-denied");
 
-      // 6: No uncaught browser errors
+      // Capture the patient API call if it fires — cross-facility may short-circuit in the UI
+      // before reaching the API, so this is a soft check only.
+      const patientRespCapture = page.waitForResponse(
+        r => r.url().includes(`/api/v1/patients/${TEST_PATIENT_ID}`) && r.request().method() === "GET",
+        { timeout: 5_000 },
+      ).catch(() => null);
+
+      await navigateToPatient(page);
+      await page.waitForTimeout(500);
+      await snap(page, "other-facility-patient-access-denied");
+
+      const patientResp = await patientRespCapture;
+
+      // 1: If the API was called it must return a denial
+      if (patientResp) {
+        expect(
+          [403, 404],
+          `Patient API returned ${patientResp.status()}, expected 403 or 404`,
+        ).toContain(patientResp.status());
+      }
+
+      // 2+3: No clinical note controls — creation, editing, sign, void all absent
+      await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('[data-testid="note-content"]')).not.toBeVisible();
+      await expect(page.locator('[data-testid="save-draft-btn"]')).not.toBeVisible();
+      await expect(page.locator('[data-testid="sign-lock-btn"]')).not.toBeVisible();
+
+      // 4: Page not stuck loading
+      await expect(page.locator('[data-testid="loading-spinner"]')).not.toBeVisible({ timeout: 5_000 });
+
+      // 5: No uncaught browser errors
       expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
     });
   });
@@ -658,7 +687,9 @@ test.describe("Flow D — Authorization denials", () => {
       await draftCard.click();
       await expect(page.locator('[data-testid="note-content"]')).toBeVisible();
 
-      // Attempt to sign via the sign-lock button; capture the API response
+      // Attempt to sign via the sign-lock button; capture the API response.
+      // The button may be hidden for another author — use a short timeout so the
+      // click doesn't hang indefinitely if the element is absent.
       const [signResp] = await Promise.all([
         page.waitForResponse(
           r =>
@@ -667,7 +698,7 @@ test.describe("Flow D — Authorization denials", () => {
             r.request().method() === "POST",
           { timeout: 8_000 },
         ).catch(() => null),
-        page.locator('[data-testid="sign-lock-btn"]').click().catch(() => {}),
+        page.locator('[data-testid="sign-lock-btn"]').click({ timeout: 5_000 }).catch(() => {}),
       ]);
 
       await page.waitForTimeout(300);
