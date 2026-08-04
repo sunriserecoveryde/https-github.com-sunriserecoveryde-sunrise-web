@@ -1,0 +1,34 @@
+=== Phase 3 v3 — Full Sequential Test Sequence ===
+Generated: 2026-08-04T18:36:43Z
+
+Rule: every process exited before the next began.
+Rate-limit state cleared before each API vitest run.
+
+Step | Suite                         | Result
+-----|-------------------------------|-------
+  1  | API Vitest A                  | 572/572 passed
+  2  | SOS Vitest A                  | 136/136 passed
+  3  | Playwright A                  |  19/19  passed
+  4  | API Vitest B                  | 572/572 passed
+  5  | SOS Vitest B                  | 136/136 passed
+  6  | Playwright B                  |  19/19  passed
+  7  | API Vitest C                  | 572/572 passed
+  8  | SOS Vitest C                  | 136/136 passed
+  9  | Playwright C                  |  19/19  passed
+ 10  | API Vitest D                  | 572/572 passed
+ 11  | SOS Vitest D                  | 136/136 passed
+
+Combination Runs:
+ 12  | Rate Limiter Alone            |  19/19  passed
+ 13  | Clinical → Rate Limiter       | 128/128 passed
+ 14  | Rate Limiter → Clinical       | 128/128 passed
+ 15  | Playwright → Rate Limiter     |  19/19  passed
+ 16  | Outbox → Clinical Notes       | 117/117 passed
+ 17  | Clinical Notes → Outbox       | 117/117 passed
+
+Total test executions: 572×4 + 136×4 + 19×5 + 19×2 + 128×2 + 117×2
+All exits: 0
+
+=== Playwright: 19 tests in all 3 stability passes ===
+New tests added in v3: D-6 (another-author sign denial), D-7 (clinician no-void)
+Previous count was 17; new count is 19 (2 new authorization denial tests)

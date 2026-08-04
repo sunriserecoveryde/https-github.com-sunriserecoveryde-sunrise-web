@@ -1,0 +1,10 @@
+=== PW PART (exit 0) ===
+
+[33m  Slow test file: [39m[chromium] › clinical-notes-p3-browser.spec.ts[33m (2.1m)[39m
+[33m  Consider splitting slow test files to speed up parallel execution[39m
+[32m  19 passed[39m[2m (2.2m)[22m
+=== RATE LIMITER PART (exit 0) ===
+      Tests  19 passed (19)
+   Start at  18:32:22
+   Duration  4.97s (transform 1.07s, setup 0ms, import 2.33s, tests 2.46s, environment 0ms)
+

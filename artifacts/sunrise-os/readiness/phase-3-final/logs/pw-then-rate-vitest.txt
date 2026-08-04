@@ -1,0 +1,52 @@
+
+ RUN  v4.1.10 /home/runner/workspace/artifacts/api-server
+
+[18:32:25.257] [31mERROR[39m (9438): [36mpgRateLimiter: increment failed — allowing request (fail-open)[39m
+    [35mkey[39m: "p2d-rate-limit-test:127.0.0.1"
+    err: {
+      "type": "Error",
+      "message": "simulated DB unavailability",
+      "stack":
+          Error: simulated DB unavailability
+              at BoundPool.realPool.query (/home/runner/workspace/artifacts/api-server/src/__tests__/auth-p2d-rate-limit.test.ts:312:13)
+              at PgRateLimitStore.increment (/home/runner/workspace/artifacts/api-server/src/lib/pgRateLimiter.ts:58:33)
+              at /home/runner/workspace/artifacts/api-server/src/__tests__/auth-p2d-rate-limit.test.ts:317:42
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at file:///home/runner/workspace/node_modules/.pnpm/@vitest+runner@4.1.10/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+    }
+[18:32:26.436] [32mINFO[39m (9438): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 11
+[18:32:26.830] [32mINFO[39m (9438): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 387
+[18:32:27.053] [32mINFO[39m (9438): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 218
+
+ Test Files  1 passed (1)
+      Tests  19 passed (19)
+   Start at  18:32:22
+   Duration  4.97s (transform 1.07s, setup 0ms, import 2.33s, tests 2.46s, environment 0ms)
+

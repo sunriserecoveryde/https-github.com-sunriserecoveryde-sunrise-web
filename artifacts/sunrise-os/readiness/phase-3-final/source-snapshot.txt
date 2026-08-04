@@ -1,0 +1,837 @@
+Phase 3 — Clinical Documentation Foundation
+Authoritative Source Snapshot
+Generated: 2026-08-04T18:08:04Z
+Branch: feature/phase-3-clinical-documentation-foundation
+HEAD:   e0c8b7cc9896046f5c24e83b5aadd9226fe346da
+
+============================================================
+SECTION 1: Permission Policy Files
+============================================================
+--- lib/permissionPolicy.ts ---
+/**
+ * Permission policy for Sunrise OS.
+ *
+ * Defines:
+ *  1. PermissionCode union — 18 server-side permission codes (13 core + 5 clinical_note.*).
+ *  2. ROLE_PERMISSIONS — maps every code-defined role ID to:
+ *       - permissions: the set of permission codes it grants
+ *       - facilityWide: true = role grants facility-wide patient access without
+ *         needing an individual sos_patient_access assignment
+ *       - requiresPatientAssignment: true = explicit sos_patient_access row required
+ *         (caseload-limited roles; derived from !facilityWide)
+ *       - canBeOrgWide: true = this role is valid on an org-wide assignment (facilityId=null)
+ *       - canBeFacilityScoped: true = this role is valid on a facility-scoped assignment
+ *       - maxGrantableRoles: which roles this role can grant (used by roleGrantPolicy)
+ *
+ * Architecture decision (Phase 2B):
+ *  - Role *definitions* remain code-configured (this file).
+ *  - Role *assignments* (which user holds which role at which facility) are
+ *    DB-backed in sos_role_assignments.
+ *  - Authorization is evaluated per-grant (see authorizationService.ts).
+ *    A permission from one assignment never inherits scope from another.
+ *
+ * Do NOT hardcode permissions based only on role names like "admin" or "nurse".
+ * Roles aggregate explicit permission codes declared here.
+ */
+
+export const PERMISSION_CODES = [
+  "patient.list.view",
+  "patient.chart.view",
+  "patient.demographics.view",
+  "patient.episode.view",
+  "patient.create",
+  "patient.update",
+  "patient.export",
+  "organization.admin",
+  "facility.admin",
+  "user.manage",
+  "role.manage",
+  "session.manage",
+  "audit.authentication.view",
+  // Phase 3 — Clinical Documentation Foundation
+  "clinical_note.create",
+  "clinical_note.view",
+  "clinical_note.edit_own_draft",
+  "clinical_note.sign_own",
+  "clinical_note.void",
+] as const;
+
+export type PermissionCode = (typeof PERMISSION_CODES)[number];
+
+export function isPermissionCode(s: string): s is PermissionCode {
+  return (PERMISSION_CODES as readonly string[]).includes(s);
+}
+
+// ── Role definition ──────────────────────────────────────────────────────────
+
+type RoleDefinition = {
+  permissions: PermissionCode[];
+  /** true = role grants facility-wide patient access via role assignment alone */
+  facilityWide: boolean;
+  /** true = this role can be assigned org-wide (facilityId = null) */
+  canBeOrgWide: boolean;
+  /** true = this role can be assigned to a specific facility */
+  canBeFacilityScoped: boolean;
+  /**
+   * Roles that a holder of this role is permitted to grant.
+   * Empty = cannot grant any role.
+   * Enforcement: roleGrantPolicy.ts validates this at assignment time.
+   */
+  grantableRoles: string[];
+};
+
+export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
+  clinical_supervisor: {
+    facilityWide: true,
+    canBeOrgWide: false,
+    canBeFacilityScoped: true,
+    grantableRoles: ["certified_clinician", "mh_therapist", "prescriber", "nursing", "bht", "aftercare_staff"],
+    permissions: [
+      "patient.list.view",
+      "patient.chart.view",
+      "patient.demographics.view",
+      "patient.episode.view",
+      "patient.create",
+      "patient.update",
+      "patient.export",
+      // Phase 3 — Clinical Documentation Foundation
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
+    ],
+  },
+  certified_clinician: {
+    facilityWide: true,
+    canBeOrgWide: false,
+    canBeFacilityScoped: true,
+    grantableRoles: [],
+    permissions: [
+      "patient.list.view",
+      "patient.chart.view",
+      "patient.demographics.view",
+      "patient.episode.view",
+      "patient.create",
+      "patient.update",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+    ],
+  },
+  mh_therapist: {
+    facilityWide: true,
+    canBeOrgWide: false,
+    canBeFacilityScoped: true,
+    grantableRoles: [],
+    permissions: [
+      "patient.list.view",
+      "patient.chart.view",
+      "patient.demographics.view",
+      "patient.episode.view",
+      "patient.create",
+      "patient.update",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+    ],
+  },
+  cmo: {
+    facilityWide: true,
+    canBeOrgWide: true,   // CMO is an org-level role
+    canBeFacilityScoped: false,
+    grantableRoles: [
+      "clinical_supervisor", "certified_clinician", "mh_therapist",
+      "prescriber", "nursing", "director_of_operations", "bht",
+      "ownership", "human_resources", "aftercare_staff", "security_admin",
+      "billing_staff", "facility_admin",
+    ],
+    permissions: [
+      "patient.list.view",
+      "patient.chart.view",
+      "patient.demographics.view",
+      "patient.episode.view",
+      "patient.create",
+      "patient.update",
+      "patient.export",
+      "organization.admin",
+      "facility.admin",
+      "user.manage",
+      "role.manage",
+      "session.manage",
+      "audit.authentication.view",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
+    ],
+  },
+  prescriber: {
+    facilityWide: true,
+    canBeOrgWide: false,
+    canBeFacilityScoped: true,
+    grantableRoles: [],
+    permissions: [
+      "patient.list.view",
+      "patient.chart.view",
+      "patient.demographics.view",
+      "patient.episode.view",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.sign_own",
+    ],
+  },
+  nursing: {
+    facilityWide: true,
+    canBeOrgWide: false,
+    canBeFacilityScoped: true,
+    grantableRoles: [],
+    permissions: [
+      "patient.list.view",
+      "patient.chart.view",
+      "patient.demographics.view",
+      "patient.episode.view",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+    ],
+  },
+  director_of_operations: {
+    facilityWide: true,
+    canBeOrgWide: false,
+    canBeFacilityScoped: true,
+    grantableRoles: [],
+    permissions: [
+      "patient.list.view",
+      "patient.episode.view",
+      "patient.export",
+      "facility.admin",
+    ],
+  },
+  facility_admin: {
+    facilityWide: true,
+    canBeOrgWide: false,   // facility admin is always facility-scoped
+    canBeFacilityScoped: true,
+    grantableRoles: ["certified_clinician", "mh_therapist", "prescriber", "nursing", "bht", "aftercare_staff", "billing_staff"],
+    permissions: [
+      "patient.list.view",
+      "patient.episode.view",
+      "facility.admin",
+      "user.manage",
+    ],
+  },
+  bht: {
+    facilityWide: false,  // requires explicit patient assignment (caseload-limited)
+    canBeOrgWide: false,
+    canBeFacilityScoped: true,
+    grantableRoles: [],
+    permissions: [
+      "patient.list.view",
+      "patient.chart.view",
+      "patient.demographics.view",
+      "patient.episode.view",
+      // Phase 3 — view-only clinical note access
+      "clinical_note.view",
+    ],
+  },
+  billing_staff: {
+    facilityWide: false,  // billing sees only explicitly assigned patients
+    canBeOrgWide: false,
+    canBeFacilityScoped: true,
+    grantableRoles: [],
+    permissions: [
+      "patient.list.view",
+      "patient.demographics.view",
+    ],
+  },
+  ownership: {
+    facilityWide: true,
+    canBeOrgWide: true,
+    canBeFacilityScoped: false,
+    grantableRoles: [],
+    permissions: [
+      "patient.list.view",
+      "patient.export",
+    ],
+  },
+  human_resources: {
+    facilityWide: false,
+    canBeOrgWide: true,
+    canBeFacilityScoped: false,
+    grantableRoles: [],
+    permissions: [],  // zero patient access
+  },
+  aftercare_staff: {
+    facilityWide: false,  // caseload-limited
+    canBeOrgWide: false,
+    canBeFacilityScoped: true,
+    grantableRoles: [],
+    permissions: [
+      "patient.list.view",
+    ],
+  },
+  security_admin: {
+    facilityWide: false,
+    canBeOrgWide: true,   // org-wide security role (no patient data)
+    canBeFacilityScoped: false,
+    grantableRoles: [],
+    permissions: [
+      "organization.admin",
+      "user.manage",
+      "role.manage",
+      "session.manage",
+      "audit.authentication.view",
+      // security_admin has zero clinical note permissions in Phase 3.
+    ],
+  },
+};
+
+// ── Public helpers ────────────────────────────────────────────────────────────
+
+export function getPermissionsForRole(roleId: string): PermissionCode[] {
+  return ROLE_PERMISSIONS[roleId]?.permissions ?? [];
+}
+
+export function isRoleFacilityWide(roleId: string): boolean {
+  return ROLE_PERMISSIONS[roleId]?.facilityWide ?? false;
+}
+
+export function roleCanBeOrgWide(roleId: string): boolean {
+  return ROLE_PERMISSIONS[roleId]?.canBeOrgWide ?? false;
+}
+
+export function roleCanBeFacilityScoped(roleId: string): boolean {
+  return ROLE_PERMISSIONS[roleId]?.canBeFacilityScoped ?? false;
+}
+
+export function getRoleDefinition(roleId: string): RoleDefinition | undefined {
+  return ROLE_PERMISSIONS[roleId];
+}
+
+export const KNOWN_ROLE_IDS = Object.keys(ROLE_PERMISSIONS);
+
+export function isKnownRole(roleId: string): boolean {
+  return roleId in ROLE_PERMISSIONS;
+}
+
+--- permissions.ts (SOS frontend) ---
+/**
+ * Frontend permission codes — must stay in sync with
+ * artifacts/api-server/src/lib/permissionPolicy.ts
+ *
+ * The server is always the authoritative enforcer.
+ * The frontend uses these codes only for:
+ *   - Hiding/showing navigation items
+ *   - Showing read-only banners
+ *   - Disabling action buttons
+ *
+ * Never use these codes as the sole enforcement mechanism.
+ */
+
+export const PERMISSION_CODES = [
+  "patient.list.view",
+  "patient.chart.view",
+  "patient.demographics.view",
+  "patient.episode.view",
+  "patient.create",
+  "patient.update",
+  "patient.export",
+  "organization.admin",
+  "facility.admin",
+  "user.manage",
+  "role.manage",
+  "session.manage",
+  "audit.authentication.view",
+  // Phase 3 — Clinical Documentation Foundation
+  // Exact approved set — must match server permissionPolicy.ts exactly.
+  "clinical_note.create",
+  "clinical_note.view",
+  "clinical_note.edit_own_draft",
+  "clinical_note.sign_own",
+  "clinical_note.void",
+] as const;
+
+export type PermissionCode = (typeof PERMISSION_CODES)[number];
+
+export function hasPermission(
+  permissionCodes: PermissionCode[],
+  code: PermissionCode,
+): boolean {
+  return permissionCodes.includes(code);
+}
+
+============================================================
+SECTION 2: Clinical Notes API Routes
+============================================================
+--- routes/clinical-notes.ts ---
+(not found)
+
+============================================================
+SECTION 3: Drizzle Migration Files
+============================================================
+--- lib/db/drizzle/0006_clinical_documentation_foundation.sql ---
+-- ============================================================================
+-- Migration 0006: Clinical Documentation Foundation
+-- Implementation Phase 3 — Clinical Documentation Foundation
+-- (Completes part of the product-audit "Clinical Workflow Completion" phase)
+--
+-- Adds:
+--   sos_clinical_notes          — individual progress and nursing notes
+--   sos_clinical_notes_no_edit_after_sign trigger — signed-note immutability
+--   Expands ck_sos_auth_audit_event_type to include 6 clinical note events
+--
+-- All CREATE TABLE / INDEX statements use IF NOT EXISTS for idempotency.
+-- Trigger and constraint operations are idempotent via DROP IF EXISTS.
+-- ============================================================================
+
+--> statement-breakpoint
+
+-- ── 1. sos_clinical_notes ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS sos_clinical_notes (
+    id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id              UUID        NOT NULL REFERENCES sos_organizations(id) ON DELETE CASCADE,
+    facility_id         UUID        NOT NULL,
+    patient_id          UUID        NOT NULL,
+    episode_id          UUID,
+    author_user_id      UUID        NOT NULL,
+    note_type           TEXT        NOT NULL,
+    status              TEXT        NOT NULL DEFAULT 'draft',
+    content             TEXT        NOT NULL,
+    version             INTEGER     NOT NULL DEFAULT 1,
+    signed_at           TIMESTAMPTZ,
+    signed_by_user_id   UUID,
+    voided_at           TIMESTAMPTZ,
+    voided_by_user_id   UUID,
+    void_reason         TEXT,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- Note type: exactly the two approved types; extend via future migration only.
+    CONSTRAINT ck_sos_clinical_notes_note_type
+        CHECK (note_type IN ('progress_note', 'nursing_note')),
+
+    -- Status lifecycle.
+    CONSTRAINT ck_sos_clinical_notes_status
+        CHECK (status IN ('draft', 'signed', 'voided')),
+
+    -- Version must be positive.
+    CONSTRAINT ck_sos_clinical_notes_version
+        CHECK (version > 0),
+
+    -- Signed fields required when status = 'signed'.
+    -- When status = 'voided' the signed_at/signed_by_user_id columns are preserved as-is.
+    CONSTRAINT ck_sos_clinical_notes_signed_consistency
+        CHECK (
+            status != 'signed' OR (signed_at IS NOT NULL AND signed_by_user_id IS NOT NULL)
+        ),
+
+    -- Void fields required iff status = 'voided'.
+    CONSTRAINT ck_sos_clinical_notes_void_consistency
+        CHECK (
+            (status = 'voided') = (
+                voided_at IS NOT NULL
+                AND voided_by_user_id IS NOT NULL
+                AND void_reason IS NOT NULL
+            )
+        ),
+
+    -- Facility consistency: note must belong to a facility in the same org.
+    CONSTRAINT fk_sos_clinical_notes_org_facility
+        FOREIGN KEY (org_id, facility_id)
+        REFERENCES sos_facilities(org_id, id)
+        ON DELETE RESTRICT,
+
+    -- Patient must belong to the same org.
+    CONSTRAINT fk_sos_clinical_notes_org_patient
+        FOREIGN KEY (org_id, patient_id)
+        REFERENCES sos_patients(org_id, id)
+        ON DELETE RESTRICT,
+
+    -- Episode must exist (nullable: some notes are not linked to an episode).
+    CONSTRAINT fk_sos_clinical_notes_episode
+        FOREIGN KEY (episode_id)
+        REFERENCES sos_episodes_of_care(id)
+        ON DELETE RESTRICT,
+
+    -- Author must be a valid user in the same org.
+    CONSTRAINT fk_sos_clinical_notes_author
+        FOREIGN KEY (org_id, author_user_id)
+        REFERENCES sos_user_accounts(org_id, id)
+        ON DELETE RESTRICT,
+
+    -- Signer must be a valid user in the same org (nullable until signed).
+    CONSTRAINT fk_sos_clinical_notes_signed_by
+        FOREIGN KEY (org_id, signed_by_user_id)
+        REFERENCES sos_user_accounts(org_id, id)
+        ON DELETE RESTRICT,
+
+    -- Void actor must be a valid user in the same org (nullable until voided).
+    CONSTRAINT fk_sos_clinical_notes_voided_by
+        FOREIGN KEY (org_id, voided_by_user_id)
+        REFERENCES sos_user_accounts(org_id, id)
+        ON DELETE RESTRICT
+);
+
+--> statement-breakpoint
+
+-- Primary access pattern: patient note timeline (newest first).
+CREATE INDEX IF NOT EXISTS idx_sos_clinical_notes_patient
+    ON sos_clinical_notes(org_id, patient_id, created_at DESC);
+
+-- Author's drafts lookup.
+CREATE INDEX IF NOT EXISTS idx_sos_clinical_notes_author
+    ON sos_clinical_notes(org_id, author_user_id, status);
+
+-- Episode-scoped notes.
+CREATE INDEX IF NOT EXISTS idx_sos_clinical_notes_episode
+    ON sos_clinical_notes(episode_id)
+    WHERE episode_id IS NOT NULL;
+
+-- Facility-level supervisory view.
+CREATE INDEX IF NOT EXISTS idx_sos_clinical_notes_facility_date
+    ON sos_clinical_notes(org_id, facility_id, created_at DESC);
+
+--> statement-breakpoint
+
+-- ── 2. Signed-note immutability trigger ───────────────────────────────────────
+--
+-- Once a note is signed, the following clinical fields may NEVER be modified:
+--   content, note_type, author_user_id, patient_id, facility_id, episode_id,
+--   signed_at, signed_by_user_id, org_id.
+--
+-- Voiding a signed note (status 'signed' → 'voided') IS permitted, as it adds
+-- void metadata without altering the original clinical content.
+--
+CREATE OR REPLACE FUNCTION sos_clinical_notes_immutability_check()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    -- Only applies when the previous state was 'signed'.
+    IF OLD.status <> 'signed' THEN
+        RETURN NEW;
+    END IF;
+
+    -- Voiding a signed note is the only permitted transition.
+    -- A void sets status='voided' and populates void fields; nothing else changes.
+    IF NEW.status = 'voided' THEN
+        -- Ensure content and clinical fields are unchanged during voiding.
+        IF NEW.content            IS DISTINCT FROM OLD.content           OR
+           NEW.note_type          IS DISTINCT FROM OLD.note_type          OR
+           NEW.author_user_id     IS DISTINCT FROM OLD.author_user_id     OR
+           NEW.patient_id         IS DISTINCT FROM OLD.patient_id         OR
+           NEW.facility_id        IS DISTINCT FROM OLD.facility_id        OR
+           NEW.episode_id         IS DISTINCT FROM OLD.episode_id         OR
+           NEW.org_id             IS DISTINCT FROM OLD.org_id             OR
+           NEW.signed_at          IS DISTINCT FROM OLD.signed_at          OR
+           NEW.signed_by_user_id  IS DISTINCT FROM OLD.signed_by_user_id
+        THEN
+            RAISE EXCEPTION
+                'sos_clinical_notes: cannot modify clinical fields on a signed note (id=%). '
+                'Only void metadata (voided_at, voided_by_user_id, void_reason, status) '
+                'may change during voiding.',
+                OLD.id;
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    -- Any other update to a signed note is rejected.
+    RAISE EXCEPTION
+        'sos_clinical_notes: signed note (id=%) is immutable. '
+        'status=% → % is not a permitted transition. '
+        'Only voiding (status → voided) is allowed after signing.',
+        OLD.id, OLD.status, NEW.status;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS sos_clinical_notes_no_edit_after_sign ON sos_clinical_notes;
+CREATE TRIGGER sos_clinical_notes_no_edit_after_sign
+    BEFORE UPDATE ON sos_clinical_notes
+    FOR EACH ROW EXECUTE FUNCTION sos_clinical_notes_immutability_check();
+
+--> statement-breakpoint
+
+-- ── 3. Expand sos_auth_audit event_type allowlist ─────────────────────────────
+--
+-- Six new event types for clinical-note lifecycle actions:
+--   clinical_note_created, clinical_note_viewed, clinical_note_updated,
+--   clinical_note_signed, clinical_note_voided, clinical_note_access_denied
+--
+ALTER TABLE sos_auth_audit DROP CONSTRAINT IF EXISTS ck_sos_auth_audit_event_type;
+ALTER TABLE sos_auth_audit ADD CONSTRAINT ck_sos_auth_audit_event_type CHECK (
+    event_type = ANY (ARRAY[
+        -- Authentication events
+        'login_success', 'login_failure', 'logout',
+        'session_created', 'session_expired', 'session_revoked',
+        'account_locked', 'account_unlocked',
+        'password_reset_requested', 'password_reset_completed', 'password_changed',
+        -- Role and access management
+        'role_assignment_created', 'role_assignment_revoked',
+        'facility_assignment_changed',
+        'patient_access_created', 'patient_access_revoked',
+        -- Authorization
+        'authorization_denied',
+        'admin_session_revocation', 'sessions_revoked_all',
+        -- User management
+        'user_disabled', 'user_reactivated', 'user_created',
+        -- Security events
+        'role_grant_denied', 'csrf_violation', 'rate_limit_window_cleared',
+        -- Clinical note events (Phase 3)
+        'clinical_note_created', 'clinical_note_viewed', 'clinical_note_updated',
+        'clinical_note_signed', 'clinical_note_voided', 'clinical_note_access_denied'
+    ]::text[])
+);
+
+
+============================================================
+SECTION 4: Test Files
+============================================================
+--- clinical-notes-p3.test.ts (permission policy lines 315-480) ---
+// §2 — Permission policy — clinical note codes in correct roles
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("§2 permission policy — clinical note codes", () => {
+  it("policy-01: all 5 clinical note codes are in PERMISSION_CODES", () => {
+    // clinical_note.audit_view was removed — no audit UI is implemented in Phase 3.
+    const expectedCodes = [
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
+    ];
+    for (const code of expectedCodes) {
+      expect(PERMISSION_CODES).toContain(code);
+    }
+    expect(PERMISSION_CODES as readonly string[]).not.toContain("clinical_note.audit_view");
+  });
+
+  it("policy-02: clinical_supervisor has all 5 clinical note codes", () => {
+    const perms = ROLE_PERMISSIONS["clinical_supervisor"]?.permissions ?? [];
+    expect(perms).toContain("clinical_note.create");
+    expect(perms).toContain("clinical_note.view");
+    expect(perms).toContain("clinical_note.edit_own_draft");
+    expect(perms).toContain("clinical_note.sign_own");
+    expect(perms).toContain("clinical_note.void");
+    expect(perms).not.toContain("clinical_note.audit_view");
+  });
+
+  it("policy-03: certified_clinician has create, view, edit_own_draft, sign_own", () => {
+    const perms = ROLE_PERMISSIONS["certified_clinician"]?.permissions ?? [];
+    expect(perms).toContain("clinical_note.create");
+    expect(perms).toContain("clinical_note.view");
+    expect(perms).toContain("clinical_note.edit_own_draft");
+    expect(perms).toContain("clinical_note.sign_own");
+    expect(perms).not.toContain("clinical_note.void");
+  });
+
+  it("policy-04: nursing has create, view, edit_own_draft, sign_own", () => {
+    const perms = ROLE_PERMISSIONS["nursing"]?.permissions ?? [];
+    expect(perms).toContain("clinical_note.create");
+    expect(perms).toContain("clinical_note.view");
+    expect(perms).toContain("clinical_note.edit_own_draft");
+    expect(perms).toContain("clinical_note.sign_own");
+    expect(perms).not.toContain("clinical_note.void");
+  });
+
+  it("policy-05: cmo has void (no audit_view — removed from Phase 3)", () => {
+    const perms = ROLE_PERMISSIONS["cmo"]?.permissions ?? [];
+    expect(perms).toContain("clinical_note.void");
+    expect(perms).not.toContain("clinical_note.audit_view");
+  });
+
+  it("policy-06: bht has view only", () => {
+    const perms = ROLE_PERMISSIONS["bht"]?.permissions ?? [];
+    expect(perms).toContain("clinical_note.view");
+    expect(perms).not.toContain("clinical_note.create");
+    expect(perms).not.toContain("clinical_note.void");
+  });
+
+  it("policy-07: security_admin has ZERO clinical note permissions", () => {
+    const perms = ROLE_PERMISSIONS["security_admin"]?.permissions ?? [];
+    expect(perms).not.toContain("clinical_note.audit_view");
+    expect(perms).not.toContain("clinical_note.create");
+    expect(perms).not.toContain("clinical_note.view");
+    expect(perms).not.toContain("clinical_note.void");
+  });
+
+  it("policy-08: billing_staff has no clinical note codes", () => {
+    const perms = ROLE_PERMISSIONS["billing_staff"]?.permissions ?? [];
+    expect(perms).not.toContain("clinical_note.create");
+    expect(perms).not.toContain("clinical_note.view");
+    expect(perms).not.toContain("clinical_note.void");
+  });
+
+  it("policy-09: human_resources has no clinical note codes", () => {
+    const perms = ROLE_PERMISSIONS["human_resources"]?.permissions ?? [];
+    expect(perms).not.toContain("clinical_note.create");
+    expect(perms).not.toContain("clinical_note.view");
+  });
+
+  // ── Exact-equality tests (not subset — order-independent set equality) ────
+  // The reviewer requires exact-equality assertions that prove no unapproved
+  // codes are silently present alongside the approved set.
+
+  it("policy-exact-01: PERMISSION_CODES contains exactly the 5 approved clinical-note codes (none more, none fewer)", () => {
+    const APPROVED = new Set([
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
+    ]);
+    const UNAPPROVED = [
+      "clinical_note.sign",
+      "clinical_note.export",
+      "clinical_note.audit_view",
+    ];
+
+    const clinicalCodes = (PERMISSION_CODES as readonly string[]).filter(c =>
+      c.startsWith("clinical_note."),
+    );
+
+    // Exact set equality
+    expect(new Set(clinicalCodes)).toEqual(APPROVED);
+
+    // No unapproved code exists in the full code list
+    for (const bad of UNAPPROVED) {
+      expect(PERMISSION_CODES as readonly string[], `Unapproved code present: ${bad}`).not.toContain(bad);
+    }
+  });
+
+  it("policy-exact-02: clinical_supervisor has exactly {create, view, edit_own_draft, sign_own, void} — no more", () => {
+    const perms = ROLE_PERMISSIONS["clinical_supervisor"]?.permissions ?? [];
+    const clinicalPerms = perms.filter((p: string) => p.startsWith("clinical_note."));
+    expect(new Set(clinicalPerms)).toEqual(new Set([
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
+    ]));
+    // Explicitly absent — no extra codes allowed
+    expect(clinicalPerms, "clinical_note.sign must be absent").not.toContain("clinical_note.sign");
+    expect(clinicalPerms, "clinical_note.export must be absent").not.toContain("clinical_note.export");
+    expect(clinicalPerms, "clinical_note.audit_view must be absent").not.toContain("clinical_note.audit_view");
+  });
+
+  it("policy-exact-03: certified_clinician has exactly {create, view, edit_own_draft, sign_own} — no void, no extra", () => {
+    const perms = ROLE_PERMISSIONS["certified_clinician"]?.permissions ?? [];
+    const clinicalPerms = perms.filter((p: string) => p.startsWith("clinical_note."));
+    expect(new Set(clinicalPerms)).toEqual(new Set([
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+    ]));
+    expect(clinicalPerms, "clinical_note.void must be absent for clinician").not.toContain("clinical_note.void");
+    expect(clinicalPerms, "clinical_note.sign must be absent").not.toContain("clinical_note.sign");
+    expect(clinicalPerms, "clinical_note.audit_view must be absent").not.toContain("clinical_note.audit_view");
+  });
+
+  it("policy-exact-04: security_admin, billing_staff, and human_resources have zero clinical_note.* codes", () => {
+    const nonClinicalRoles = ["security_admin", "billing_staff", "human_resources"] as const;
+    for (const role of nonClinicalRoles) {
+      const perms = ROLE_PERMISSIONS[role]?.permissions ?? [];
+      const clinicalPerms = perms.filter((p: string) => p.startsWith("clinical_note."));
+      expect(
+        clinicalPerms,
+        `${role} must have zero clinical_note.* permissions, found: ${clinicalPerms.join(", ")}`,
+      ).toHaveLength(0);
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// §3 — API — 6 endpoints — full workflow
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("§3 API — clinical notes endpoints — workflow", () => {
+  let clinicianAgent: ReturnType<typeof request.agent>;
+  let nurseAgent: ReturnType<typeof request.agent>;
+  let supervisorAgent: ReturnType<typeof request.agent>;
+  let cmoAgent: ReturnType<typeof request.agent>;
+
+  const pwd = process.env.PHASE2D_TEST_PASSWORD ?? "";
+
+--- clinical-notes-p3-browser.spec.ts (D tests) ---
+491:  async function assertChartAccessDenied(
+526:  test.describe("D-1: other-facility / unassigned clinician (cross-facility access denied)", () => {
+529:    test("D-1: other-facility clinician cannot access Facility-1 patient chart", async ({ page }) => {
+530:      const pageErrors: Error[] = [];
+531:      page.on("pageerror", e => pageErrors.push(e));
+534:      await assertChartAccessDenied(page, "other-facility-patient-access-denied");
+537:      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
+541:  test.describe("D-2: security-admin (no patient.chart.view)", () => {
+544:    test("D-2: security-admin has no patient.chart.view — PatientDetail shows AccessDenied", async ({ page }) => {
+545:      const pageErrors: Error[] = [];
+546:      page.on("pageerror", e => pageErrors.push(e));
+549:      await assertChartAccessDenied(page, "security-admin-patient-access-denied");
+552:      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
+556:  test.describe("D-3: HR (no patient.chart.view)", () => {
+559:    test("D-3: HR has no patient.chart.view — PatientDetail shows AccessDenied", async ({ page }) => {
+560:      const pageErrors: Error[] = [];
+561:      page.on("pageerror", e => pageErrors.push(e));
+564:      await assertChartAccessDenied(page, "hr-patient-access-denied");
+567:      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
+571:  test.describe("D-4: billing staff (no Progress Notes compose, no clinical_note.create)", () => {
+574:    test("D-4: billing staff cannot access Progress Notes compose", async ({ page }) => {
+575:      const pageErrors: Error[] = [];
+576:      page.on("pageerror", e => pageErrors.push(e));
+594:      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
+598:  test.describe("D-5: multi-facility clinician (cannot edit another author's draft)", () => {
+601:    test("D-5: multi-facility clinician cannot edit another author's draft via API", async ({ page }) => {
+602:      const pageErrors: Error[] = [];
+603:      page.on("pageerror", e => pageErrors.push(e));
+641:      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
+645:  test.describe("D-6: another author (multi-facility) cannot sign another author's draft", () => {
+648:    test("D-6: multi-facility clinician cannot sign another author's draft via API", async ({ page }) => {
+649:      const pageErrors: Error[] = [];
+650:      page.on("pageerror", e => pageErrors.push(e));
+689:      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
+693:  test.describe("D-7: original author without void permission (clinician, no clinical_note.void)", () => {
+696:    test("D-7: clinician (no clinical_note.void) cannot void a signed note", async ({ page }) => {
+697:      const pageErrors: Error[] = [];
+698:      page.on("pageerror", e => pageErrors.push(e));
+717:      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
+
+============================================================
+SECTION 5: Key Component Changes
+============================================================
+--- Topbar.tsx (IS_PRODUCTION gate) ---
+14:const IS_PRODUCTION = DATA_MODE === 'production';
+116:          {IS_PRODUCTION ? (
+120:              data-testid="role-display"
+123:              <span className={`text-sm font-semibold ${role.textColor}`} data-testid="role-display-label">{role.shortLabel}</span>
+130:                data-testid="role-switcher-btn"
+
+--- AccessDenied.tsx (data-testid) ---
+54:    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6" data-testid="access-denied">
+
+--- global-setup.ts (no fallback) ---
+47:const _rawTestPwd = process.env.PHASE2D_TEST_PASSWORD;
+50:    "[global-setup] ABORT: PHASE2D_TEST_PASSWORD environment variable is required.\n" +
+53:    "Example: PHASE2D_TEST_PASSWORD=<secret> pnpm exec playwright test ...",
+285:          "[global-setup] ABORT: Rate limiter is NOT active. " +
+325:      `[global-setup] ABORT: test API at ${url} returned ${status}, expected 401. ` +
+
+============================================================
+SECTION 6: File Inventory
+============================================================
+  a215449995250bbd...    9577B  artifacts/api-server/src/lib/permissionPolicy.ts
+  3e866bf62ad42e97...   88221B  artifacts/api-server/src/__tests__/clinical-notes-p3.test.ts
+  e69a860967761994...   39650B  artifacts/sunrise-os/e2e/clinical-notes-p3-browser.spec.ts
+  e64290bba713c3e1...   15140B  artifacts/sunrise-os/e2e/global-setup.ts
+  ba6037f171aad61a...    1881B  artifacts/sunrise-os/e2e/global-teardown.ts
+  9b7d04c78e89daf0...   18248B  artifacts/sunrise-os/src/components/layout/Topbar.tsx
+  5a71c19c046903c4...    5422B  artifacts/sunrise-os/src/components/common/AccessDenied.tsx
+  83072a363b079a40...    9232B  lib/db/drizzle/0006_clinical_documentation_foundation.sql
+  c574da7a47bde5d5...    1016B  lib/db/drizzle.phase2.config.ts
+  430a2532a0068c68...     976B  lib/db/drizzle/phase2-proof/meta/_journal.json

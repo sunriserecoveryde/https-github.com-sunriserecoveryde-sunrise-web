@@ -1,0 +1,3692 @@
+
+ RUN  v4.1.10 /home/runner/workspace/artifacts/api-server
+
+[18:27:02.559] [31mERROR[39m (8147): [36mpgRateLimiter: increment failed — allowing request (fail-open)[39m
+    [35mkey[39m: "p2d-rate-limit-test:127.0.0.1"
+    err: {
+      "type": "Error",
+      "message": "simulated DB unavailability",
+      "stack":
+          Error: simulated DB unavailability
+              at BoundPool.realPool.query (/home/runner/workspace/artifacts/api-server/src/__tests__/auth-p2d-rate-limit.test.ts:312:13)
+              at PgRateLimitStore.increment (/home/runner/workspace/artifacts/api-server/src/lib/pgRateLimiter.ts:58:33)
+              at /home/runner/workspace/artifacts/api-server/src/__tests__/auth-p2d-rate-limit.test.ts:317:42
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at file:///home/runner/workspace/node_modules/.pnpm/@vitest+runner@4.1.10/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+    }
+[18:27:02.807] [32mINFO[39m (8147): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:03.114] [32mINFO[39m (8147): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 304
+[18:27:03.294] [32mINFO[39m (8147): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 176
+[18:27:03.176] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[18:27:03.471] [32mINFO[39m (8147): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 174
+[18:27:03.479] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 296
+[18:27:03.485] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3
+[18:27:03.487] [32mINFO[39m (8147): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 5,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 13
+[18:27:03.678] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 189
+[18:27:03.684] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 5,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3
+[18:27:03.871] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 6,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 184
+[18:27:03.880] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 7,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+[18:27:04.065] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 8,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 182
+[18:27:04.086] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 9,
+      "method": "GET",
+      "url": "/api/v1/patients/not-a-uuid/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 13
+[18:27:04.099] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 10,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.127] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 11,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 25
+[18:27:04.143] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 12,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.164] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 13,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 18
+[18:27:04.184] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 14,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[18:27:04.197] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 15,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 11
+[18:27:04.210] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 16,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.223] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 17,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 10
+[18:27:04.235] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 18,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.255] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 19,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 17
+[18:27:04.288] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 20,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 30
+[18:27:04.305] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 21,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.326] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 22,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 18
+[18:27:04.343] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 23,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/b245a5f1-2e00-4264-9189-7625da74808d"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[18:27:04.363] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 24,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[18:27:04.373] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 25,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:04.391] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 26,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:04.404] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 27,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 11
+[18:27:04.425] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 28,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/125ab050-5da0-4d08-b315-c4aec1238fa5"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 18
+[18:27:04.440] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 29,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.458] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 30,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:04.467] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 31,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:04.480] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 32,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/8d2b5e37-e2b1-4bb3-8982-40ed02d7c09f"
+    }
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.502] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 33,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:04.531] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 34,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 21
+[18:27:04.539] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 35,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[18:27:04.559] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 36,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/c898bc8e-1322-4a00-832b-4a3e724b8371/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:04.575] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 37,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.592] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 38,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 14
+[18:27:04.601] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 39,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:04.623] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 40,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/27f67f2f-097b-4cf8-8d6d-0e8d2ae242d9/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 19
+[18:27:04.632] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 41,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:04.646] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 42,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/27f67f2f-097b-4cf8-8d6d-0e8d2ae242d9"
+    }
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 11
+[18:27:04.660] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 43,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:04.677] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 44,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 14
+[18:27:04.687] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 45,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:04.706] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 46,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/d5fb4f9b-2dae-47c4-9ad7-de104f4c55af/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:04.718] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 47,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.734] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 48,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/d5fb4f9b-2dae-47c4-9ad7-de104f4c55af/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 12
+[18:27:04.748] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 49,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.766] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 50,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:04.775] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 51,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:04.793] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 52,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/dd61325d-e948-4d2f-a1ca-e8959d1407ac/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:04.804] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 53,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.821] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 54,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/dd61325d-e948-4d2f-a1ca-e8959d1407ac/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:04.835] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 55,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.854] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 56,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 17
+[18:27:04.864] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 57,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:04.881] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 58,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/f0a2a79b-7ee2-4d3f-8176-ac7c3ff86a81/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:04.891] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 59,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:04.908] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 60,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/f0a2a79b-7ee2-4d3f-8176-ac7c3ff86a81/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:04.922] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 61,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/f0a2a79b-7ee2-4d3f-8176-ac7c3ff86a81"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[18:27:04.941] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 62,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:04.958] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 63,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 14
+[18:27:04.967] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 64,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:04.986] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 65,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/74444555-f0fb-4473-b85b-6f438429a642/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:04.996] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 66,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:05.009] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 67,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/74444555-f0fb-4473-b85b-6f438429a642/void"
+    }
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 11
+[18:27:05.022] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 68,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:05.040] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 69,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 14
+[18:27:05.049] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 70,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:05.067] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 71,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/1fe58d7e-eca1-402a-bd4d-644e4cebf84f/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:05.076] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 72,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:05.145] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 73,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/1fe58d7e-eca1-402a-bd4d-644e4cebf84f/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 65
+[18:27:05.161] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 74,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:05.178] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 75,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/1fe58d7e-eca1-402a-bd4d-644e4cebf84f/void"
+    }
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 15
+[18:27:05.194] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 76,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:05.214] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 77,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 18
+[18:27:05.246] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 78,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:05.267] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 79,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 18
+[18:27:05.279] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 80,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[18:27:05.294] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 81,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:05.315] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 82,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 19
+[18:27:05.324] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 83,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:05.347] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 84,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 21
+[18:27:05.354] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 85,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[18:27:05.544] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 86,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 187
+[18:27:05.553] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 87,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[18:27:05.738] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 88,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 183
+[18:27:05.749] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 89,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:05.765] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 90,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 13
+[18:27:05.781] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 91,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[18:27:05.798] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 92,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/e2ac0364-578e-436f-b664-d737034b6fcb"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[18:27:05.809] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 93,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:05.823] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 94,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/e2ac0364-578e-436f-b664-d737034b6fcb"
+    }
+    [35mres[39m: {
+      "statusCode": 409
+    }
+    [35mresponseTime[39m: 12
+[18:27:05.835] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 95,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:05.851] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 96,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 14
+[18:27:05.862] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 97,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:05.878] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 98,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/bd5bb931-470a-4ad4-bb2e-17eb9f932b9b"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 13
+[18:27:05.888] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 99,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:05.903] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 100,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/bd5bb931-470a-4ad4-bb2e-17eb9f932b9b"
+    }
+    [35mres[39m: {
+      "statusCode": 409
+    }
+    [35mresponseTime[39m: 12
+[18:27:05.914] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 101,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:05.930] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 102,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 14
+[18:27:05.938] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 103,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[18:27:05.953] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 104,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/2945f8f0-e9be-4d97-981f-e2d260a03b49"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 13
+[18:27:05.963] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 105,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:05.978] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 106,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/2945f8f0-e9be-4d97-981f-e2d260a03b49/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 409
+    }
+    [35mresponseTime[39m: 13
+[18:27:05.996] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 107,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:06.015] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 108,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 17
+[18:27:06.033] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 109,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:06.059] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 110,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/c659a4b6-e795-452a-80cf-5a2c7fcaaae1"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 23
+[18:27:06.075] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 111,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[18:27:06.094] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 112,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/c659a4b6-e795-452a-80cf-5a2c7fcaaae1"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:06.103] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 113,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[18:27:06.124] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 114,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/c659a4b6-e795-452a-80cf-5a2c7fcaaae1"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 18
+[18:27:06.135] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 115,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[18:27:06.153] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 116,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/c659a4b6-e795-452a-80cf-5a2c7fcaaae1"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:06.172] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 117,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 11
+[18:27:06.192] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 118,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 18
+[18:27:06.543] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 119,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:06.545] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 120,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:06.559] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 123,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 19
+[18:27:06.562] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 124,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 21
+[18:27:06.566] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 122,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 27
+[18:27:06.567] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 121,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 29
+[18:27:06.749] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 125,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 201
+[18:27:06.751] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 126,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 203
+[18:27:06.770] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 130,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 195
+[18:27:06.780] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 127,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 214
+[18:27:06.921] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 128,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 348
+[18:27:06.924] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 129,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 350
+[18:27:06.933] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 131,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[18:27:06.948] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 132,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 13
+[18:27:06.958] [31mERROR[39m (8146): [36mauthorizationService: drain failed for outbox entry[39m
+    [35moutboxId[39m: "619833d4-e7d0-4927-a6b7-cdd5314a2203"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)\nparams: ,,,p2d_restart_proof,success,,,,,{\"proof\":\"startup-recovery-after-restart\"}: new row for relation \"sos_auth_audit\" violates check constraint \"ck_sos_auth_audit_event_type\"",
+      "stack":
+          Error: Failed query: insert into "sos_auth_audit" ("id", "org_id", "user_id", "staff_id", "session_id", "event_type", "outcome", "reason_code", "target_user_id", "ip_address", "user_agent_summary", "metadata", "created_at") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)
+          params: ,,,p2d_restart_proof,success,,,,,{"proof":"startup-recovery-after-restart"}
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+          caused by: error: new row for relation "sos_auth_audit" violates check constraint "ck_sos_auth_audit_event_type"
+              at /home/runner/workspace/node_modules/.pnpm/pg@8.22.0/node_modules/pg/lib/client.js:652:17
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:113:20
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+      "query": "insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)",
+      "params": [
+        null,
+        null,
+        null,
+        "p2d_restart_proof",
+        "success",
+        null,
+        null,
+        null,
+        null,
+        "{\"proof\":\"startup-recovery-after-restart\"}"
+      ]
+    }
+[18:27:06.961] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 133,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:06.977] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 134,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 14
+[18:27:06.979] [31mERROR[39m (8146): [36mauthorizationService: drain failed for outbox entry[39m
+    [35moutboxId[39m: "619833d4-e7d0-4927-a6b7-cdd5314a2203"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)\nparams: ,,,p2d_restart_proof,success,,,,,{\"proof\":\"startup-recovery-after-restart\"}: new row for relation \"sos_auth_audit\" violates check constraint \"ck_sos_auth_audit_event_type\"",
+      "stack":
+          Error: Failed query: insert into "sos_auth_audit" ("id", "org_id", "user_id", "staff_id", "session_id", "event_type", "outcome", "reason_code", "target_user_id", "ip_address", "user_agent_summary", "metadata", "created_at") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)
+          params: ,,,p2d_restart_proof,success,,,,,{"proof":"startup-recovery-after-restart"}
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+          caused by: error: new row for relation "sos_auth_audit" violates check constraint "ck_sos_auth_audit_event_type"
+              at /home/runner/workspace/node_modules/.pnpm/pg@8.22.0/node_modules/pg/lib/client.js:652:17
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:113:20
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+      "query": "insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)",
+      "params": [
+        null,
+        null,
+        null,
+        "p2d_restart_proof",
+        "success",
+        null,
+        null,
+        null,
+        null,
+        "{\"proof\":\"startup-recovery-after-restart\"}"
+      ]
+    }
+[18:27:06.995] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 135,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 15
+[18:27:06.998] [31mERROR[39m (8146): [36mauthorizationService: drain failed for outbox entry[39m
+    [35moutboxId[39m: "619833d4-e7d0-4927-a6b7-cdd5314a2203"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)\nparams: ,,,p2d_restart_proof,success,,,,,{\"proof\":\"startup-recovery-after-restart\"}: new row for relation \"sos_auth_audit\" violates check constraint \"ck_sos_auth_audit_event_type\"",
+      "stack":
+          Error: Failed query: insert into "sos_auth_audit" ("id", "org_id", "user_id", "staff_id", "session_id", "event_type", "outcome", "reason_code", "target_user_id", "ip_address", "user_agent_summary", "metadata", "created_at") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)
+          params: ,,,p2d_restart_proof,success,,,,,{"proof":"startup-recovery-after-restart"}
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+          caused by: error: new row for relation "sos_auth_audit" violates check constraint "ck_sos_auth_audit_event_type"
+              at /home/runner/workspace/node_modules/.pnpm/pg@8.22.0/node_modules/pg/lib/client.js:652:17
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:113:20
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+      "query": "insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)",
+      "params": [
+        null,
+        null,
+        null,
+        "p2d_restart_proof",
+        "success",
+        null,
+        null,
+        null,
+        null,
+        "{\"proof\":\"startup-recovery-after-restart\"}"
+      ]
+    }
+[18:27:07.009] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 136,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[18:27:07.024] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 137,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 12
+[18:27:07.031] [31mERROR[39m (8146): [36mauthorizationService: drain failed for outbox entry[39m
+    [35moutboxId[39m: "619833d4-e7d0-4927-a6b7-cdd5314a2203"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)\nparams: ,,,p2d_restart_proof,success,,,,,{\"proof\":\"startup-recovery-after-restart\"}: new row for relation \"sos_auth_audit\" violates check constraint \"ck_sos_auth_audit_event_type\"",
+      "stack":
+          Error: Failed query: insert into "sos_auth_audit" ("id", "org_id", "user_id", "staff_id", "session_id", "event_type", "outcome", "reason_code", "target_user_id", "ip_address", "user_agent_summary", "metadata", "created_at") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)
+          params: ,,,p2d_restart_proof,success,,,,,{"proof":"startup-recovery-after-restart"}
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+          caused by: error: new row for relation "sos_auth_audit" violates check constraint "ck_sos_auth_audit_event_type"
+              at /home/runner/workspace/node_modules/.pnpm/pg@8.22.0/node_modules/pg/lib/client.js:652:17
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:113:20
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+      "query": "insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)",
+      "params": [
+        null,
+        null,
+        null,
+        "p2d_restart_proof",
+        "success",
+        null,
+        null,
+        null,
+        null,
+        "{\"proof\":\"startup-recovery-after-restart\"}"
+      ]
+    }
+[18:27:07.042] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 138,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 14
+[18:27:07.047] [31mERROR[39m (8146): [36mauthorizationService: drain failed for outbox entry[39m
+    [35moutboxId[39m: "619833d4-e7d0-4927-a6b7-cdd5314a2203"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)\nparams: ,,,p2d_restart_proof,success,,,,,{\"proof\":\"startup-recovery-after-restart\"}: new row for relation \"sos_auth_audit\" violates check constraint \"ck_sos_auth_audit_event_type\"",
+      "stack":
+          Error: Failed query: insert into "sos_auth_audit" ("id", "org_id", "user_id", "staff_id", "session_id", "event_type", "outcome", "reason_code", "target_user_id", "ip_address", "user_agent_summary", "metadata", "created_at") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)
+          params: ,,,p2d_restart_proof,success,,,,,{"proof":"startup-recovery-after-restart"}
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+          caused by: error: new row for relation "sos_auth_audit" violates check constraint "ck_sos_auth_audit_event_type"
+              at /home/runner/workspace/node_modules/.pnpm/pg@8.22.0/node_modules/pg/lib/client.js:652:17
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:113:20
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+      "query": "insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)",
+      "params": [
+        null,
+        null,
+        null,
+        "p2d_restart_proof",
+        "success",
+        null,
+        null,
+        null,
+        null,
+        "{\"proof\":\"startup-recovery-after-restart\"}"
+      ]
+    }
+[18:27:07.055] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 139,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[18:27:07.072] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 140,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 14
+[18:27:07.082] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 141,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:07.209] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 142,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/49e0d1cf-0dd9-4182-9d7a-eaa1d034ff25/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 125
+[18:27:07.219] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 143,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:07.234] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 144,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/49e0d1cf-0dd9-4182-9d7a-eaa1d034ff25/void"
+    }
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 13
+[18:27:07.238] [31mERROR[39m (8146): [36mauthorizationService: drain failed for outbox entry[39m
+    [35moutboxId[39m: "619833d4-e7d0-4927-a6b7-cdd5314a2203"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)\nparams: ,,,p2d_restart_proof,success,,,,,{\"proof\":\"startup-recovery-after-restart\"}: new row for relation \"sos_auth_audit\" violates check constraint \"ck_sos_auth_audit_event_type\"",
+      "stack":
+          Error: Failed query: insert into "sos_auth_audit" ("id", "org_id", "user_id", "staff_id", "session_id", "event_type", "outcome", "reason_code", "target_user_id", "ip_address", "user_agent_summary", "metadata", "created_at") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)
+          params: ,,,p2d_restart_proof,success,,,,,{"proof":"startup-recovery-after-restart"}
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+          caused by: error: new row for relation "sos_auth_audit" violates check constraint "ck_sos_auth_audit_event_type"
+              at /home/runner/workspace/node_modules/.pnpm/pg@8.22.0/node_modules/pg/lib/client.js:652:17
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:113:20
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+      "query": "insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)",
+      "params": [
+        null,
+        null,
+        null,
+        "p2d_restart_proof",
+        "success",
+        null,
+        null,
+        null,
+        null,
+        "{\"proof\":\"startup-recovery-after-restart\"}"
+      ]
+    }
+[18:27:07.251] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 145,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:07.269] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 146,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:07.281] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 147,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[18:27:07.294] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 148,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/4205140a-535f-4e0f-8774-afd3420bfeee"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 11
+[18:27:07.308] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 149,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:07.328] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 150,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 18
+[18:27:07.341] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 151,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[18:27:07.354] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 152,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/755b2e69-5b11-478d-ba2d-4a7709779e96/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 9
+[18:27:07.370] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 153,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:07.387] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 154,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:07.398] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 155,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:07.415] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 156,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[18:27:07.426] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 157,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:07.444] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 158,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:07.455] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 159,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:07.475] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 160,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 18
+[18:27:07.487] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 161,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:07.507] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 162,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:07.517] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 163,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:07.537] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 164,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:07.883] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 165,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[18:27:08.062] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 166,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 176
+[18:27:08.069] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 167,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[18:27:08.240] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 168,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 168
+[18:27:08.252] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 169,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:08.270] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 170,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:08.388] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 171,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:08.407] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 172,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:08.525] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 173,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:08.542] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 174,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 15
+[18:27:08.552] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 175,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:08.570] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 176,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/6f3af9ad-c25e-4031-9b7c-e4d6724e7773/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:08.687] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 177,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:08.706] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 178,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 17
+[18:27:08.717] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 179,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:08.734] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 180,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/87991eb6-36ce-46d4-8038-3dc5b8aee695/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:08.743] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 181,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:08.763] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 182,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/87991eb6-36ce-46d4-8038-3dc5b8aee695/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 18
+[18:27:08.902] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 183,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:08.922] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 184,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:08.930] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 185,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[18:27:08.949] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 186,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:09.282] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 187,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+[18:27:09.285] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 188,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:09.490] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 189,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 206
+[18:27:09.505] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 190,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 216
+[18:27:09.517] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 191,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:09.542] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 192,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 20
+[18:27:09.558] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 193,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[18:27:09.578] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 194,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/e96244e6-ee1d-4981-8bda-1ea05d77f18e/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:09.594] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 195,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:09.612] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 196,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:09.621] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 197,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:09.638] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 198,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/5863d172-97aa-4835-905a-5c9948455372/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:09.653] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 199,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:09.671] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 200,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 15
+[18:27:09.682] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 201,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:09.700] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 202,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/d10bd9cb-3bd2-42d1-aae3-60ebbe1c9562/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:09.715] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 203,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:09.734] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 204,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:09.744] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 205,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:09.770] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 206,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/887cbe4e-9d1c-4f10-8f35-15cc04ef82da/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 24
+[18:27:09.780] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 207,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:09.792] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 208,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/887cbe4e-9d1c-4f10-8f35-15cc04ef82da"
+    }
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 10
+[18:27:09.806] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 209,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:09.829] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 210,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 20
+[18:27:09.840] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 211,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:09.861] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 212,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/fa343515-2f5a-43a0-9498-e597dce5ebf0/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 19
+[18:27:09.876] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 213,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 13
+[18:27:09.898] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 214,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/fa343515-2f5a-43a0-9498-e597dce5ebf0/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 19
+[18:27:09.915] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 215,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:09.934] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 216,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:09.944] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 217,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:09.963] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 218,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:10.307] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 219,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[18:27:10.310] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 220,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6
+[18:27:10.488] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 222,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 176
+[18:27:10.508] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 221,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 196
+[18:27:10.519] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 223,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:10.539] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 224,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 17
+[18:27:10.549] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 225,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:10.567] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 226,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/ef699475-d517-4702-8fb2-5fffda13e3c9/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:10.583] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 227,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:10.602] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 228,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/ef699475-d517-4702-8fb2-5fffda13e3c9/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:10.615] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 229,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:10.632] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 230,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 14
+[18:27:10.641] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 231,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:10.661] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 232,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/5439cacd-3ede-450d-abfd-2b628584142c/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 18
+[18:27:10.672] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 233,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:10.689] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 234,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/5439cacd-3ede-450d-abfd-2b628584142c/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:10.704] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 235,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:10.720] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 236,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 14
+[18:27:10.729] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 237,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:10.750] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 238,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/7ab2d8b1-a3a2-4ccd-aec1-08dc687c8d87/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 18
+[18:27:10.760] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 239,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:10.880] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 240,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/7ab2d8b1-a3a2-4ccd-aec1-08dc687c8d87/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 118
+[18:27:10.899] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 241,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:10.920] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 242,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 18
+[18:27:10.930] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 243,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:10.952] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 244,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/38ab10f6-8698-4ec8-b9a4-949d52487002/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 19
+[18:27:10.967] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 245,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 13
+[18:27:10.987] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 246,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/38ab10f6-8698-4ec8-b9a4-949d52487002/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 18
+[18:27:11.006] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 247,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[18:27:11.025] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 248,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 17
+[18:27:11.041] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 249,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:11.061] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 250,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/4afe9d12-496d-4fd1-9406-0fb1fe0a9ff0/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:11.075] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 251,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[18:27:11.094] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 252,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/4afe9d12-496d-4fd1-9406-0fb1fe0a9ff0/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:11.116] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 253,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[18:27:11.136] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 254,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 18
+[18:27:11.150] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 255,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 12
+[18:27:11.183] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 256,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/e09b4cb6-d4e7-4c61-bd32-592f0b54d957/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 24
+[18:27:11.195] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 257,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:11.214] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 258,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/e09b4cb6-d4e7-4c61-bd32-592f0b54d957/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:11.234] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 259,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:11.255] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 260,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 19
+[18:27:11.265] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 261,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:11.285] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 262,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/f5a5d95c-3929-4797-839e-1e94ae28433f/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:11.297] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 263,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[18:27:11.317] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 264,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/f5a5d95c-3929-4797-839e-1e94ae28433f/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 17
+[18:27:11.436] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 265,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:11.457] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 266,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 19
+[18:27:11.474] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 267,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:11.500] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 268,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 23
+[18:27:11.910] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 269,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[18:27:12.100] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 270,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 187
+[18:27:12.109] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 271,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:12.125] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 272,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 14
+[18:27:12.142] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 273,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 13
+[18:27:12.157] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 274,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/583d0866-c38e-4b64-a437-c7a350473c6b"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 11
+[18:27:12.176] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 275,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 15
+[18:27:12.189] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 276,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/583d0866-c38e-4b64-a437-c7a350473c6b"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[18:27:12.203] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 277,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:12.227] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 278,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 21
+[18:27:12.556] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 279,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5
+[18:27:12.559] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 280,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:12.755] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 282,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 193
+[18:27:12.764] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 281,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 206
+[18:27:12.778] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 283,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[18:27:12.804] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 284,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 22
+[18:27:12.825] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 285,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:12.846] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 286,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 18
+[18:27:12.857] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 287,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:12.876] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 288,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/2739f793-dd7e-4598-9317-93dc0bf65797/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:12.893] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 289,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:12.914] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 290,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 18
+[18:27:12.925] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 291,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:12.948] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 292,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/14aad0a0-d731-459c-af58-81d61958f967/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 21
+[18:27:12.959] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 293,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:12.990] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 294,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/14aad0a0-d731-459c-af58-81d61958f967/void"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 29
+[18:27:13.021] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 295,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 21
+[18:27:13.044] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 296,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 20
+[18:27:13.056] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 297,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:13.081] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 298,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/1cd7028e-4d33-4231-ba6b-9ec9fb0046ab/sign"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 22
+[18:27:13.101] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 299,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10
+[18:27:13.126] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 300,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 22
+[18:27:13.138] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 301,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:13.169] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 302,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 27
+[18:27:13.533] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 303,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[18:27:13.719] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 304,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 184
+[18:27:13.727] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 305,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[18:27:13.919] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 306,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 190
+[18:27:13.925] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 307,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[18:27:14.099] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 308,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 172
+[18:27:14.111] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 309,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:14.130] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 310,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:14.151] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 311,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 14
+[18:27:14.169] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 312,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:14.189] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 313,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:14.205] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 314,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 13
+[18:27:14.222] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 315,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:14.240] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 316,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 16
+[18:27:14.373] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 317,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:14.385] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 318,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 10
+[18:27:14.399] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 319,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:14.412] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 320,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 11
+[18:27:14.428] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 321,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:14.446] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 322,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 16
+[18:27:14.463] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 323,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:14.476] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 324,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 422
+    }
+    [35mresponseTime[39m: 10
+[18:27:14.494] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 325,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:14.509] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 326,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 13
+[18:27:14.513] [31mERROR[39m (8146): [36mauthorizationService: drain failed for outbox entry[39m
+    [35moutboxId[39m: "619833d4-e7d0-4927-a6b7-cdd5314a2203"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)\nparams: ,,,p2d_restart_proof,success,,,,,{\"proof\":\"startup-recovery-after-restart\"}: new row for relation \"sos_auth_audit\" violates check constraint \"ck_sos_auth_audit_event_type\"",
+      "stack":
+          Error: Failed query: insert into "sos_auth_audit" ("id", "org_id", "user_id", "staff_id", "session_id", "event_type", "outcome", "reason_code", "target_user_id", "ip_address", "user_agent_summary", "metadata", "created_at") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)
+          params: ,,,p2d_restart_proof,success,,,,,{"proof":"startup-recovery-after-restart"}
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+          caused by: error: new row for relation "sos_auth_audit" violates check constraint "ck_sos_auth_audit_event_type"
+              at /home/runner/workspace/node_modules/.pnpm/pg@8.22.0/node_modules/pg/lib/client.js:652:17
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:113:20
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+      "query": "insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)",
+      "params": [
+        null,
+        null,
+        null,
+        "p2d_restart_proof",
+        "success",
+        null,
+        null,
+        null,
+        null,
+        "{\"proof\":\"startup-recovery-after-restart\"}"
+      ]
+    }
+[18:27:14.530] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 327,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:14.547] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 328,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 15
+[18:27:14.549] [31mERROR[39m (8146): [36mauthorizationService: drain failed for outbox entry[39m
+    [35moutboxId[39m: "619833d4-e7d0-4927-a6b7-cdd5314a2203"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)\nparams: ,,,p2d_restart_proof,success,,,,,{\"proof\":\"startup-recovery-after-restart\"}: new row for relation \"sos_auth_audit\" violates check constraint \"ck_sos_auth_audit_event_type\"",
+      "stack":
+          Error: Failed query: insert into "sos_auth_audit" ("id", "org_id", "user_id", "staff_id", "session_id", "event_type", "outcome", "reason_code", "target_user_id", "ip_address", "user_agent_summary", "metadata", "created_at") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)
+          params: ,,,p2d_restart_proof,success,,,,,{"proof":"startup-recovery-after-restart"}
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+          caused by: error: new row for relation "sos_auth_audit" violates check constraint "ck_sos_auth_audit_event_type"
+              at /home/runner/workspace/node_modules/.pnpm/pg@8.22.0/node_modules/pg/lib/client.js:652:17
+              at processTicksAndRejections (node:internal/process/task_queues:103:5)
+              at file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:113:20
+              at NodePgPreparedQuery.queryWithCache (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at /home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:237:11
+              at NodePgSession.transaction (file:///home/runner/workspace/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at drainAuditOutbox (/home/runner/workspace/artifacts/api-server/src/lib/authorizationService.ts:236:9)
+      "query": "insert into \"sos_auth_audit\" (\"id\", \"org_id\", \"user_id\", \"staff_id\", \"session_id\", \"event_type\", \"outcome\", \"reason_code\", \"target_user_id\", \"ip_address\", \"user_agent_summary\", \"metadata\", \"created_at\") values (default, $1, $2, default, $3, $4, $5, $6, $7, $8, $9, $10, default)",
+      "params": [
+        null,
+        null,
+        null,
+        "p2d_restart_proof",
+        "success",
+        null,
+        null,
+        null,
+        null,
+        "{\"proof\":\"startup-recovery-after-restart\"}"
+      ]
+    }
+[18:27:14.558] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 329,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7
+[18:27:14.578] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 330,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 18
+[18:27:14.589] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 331,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9
+[18:27:14.607] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 332,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 16
+[18:27:14.617] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 333,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[18:27:14.638] [32mINFO[39m (8146): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 334,
+      "method": "POST",
+      "url": "/api/v1/auth/logout"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 19
+
+ Test Files  2 passed (2)
+      Tests  128 passed (128)
+   Start at  18:27:01
+   Duration  13.53s (transform 707ms, setup 0ms, import 2.25s, tests 13.41s, environment 0ms)
+
