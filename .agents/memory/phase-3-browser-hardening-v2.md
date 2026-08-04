@@ -1,52 +1,45 @@
 ---
 name: Phase 3 browser test hardening v2
-description: Three root causes for Playwright stability failures in the Sunrise OS Phase 3 suite; permanent fixes; independent review blockers and how each was resolved.
+description: Round-2 reviewer remediation (15 blockers). Covers credential rotation, trace sanitization, drizzle-kit Phase 2 proof, D-test strengthening, exact-equality permission tests, Topbar prod mode, v3 archive.
 ---
 
-# Phase 3 Browser Test Hardening — Final Root Causes
+## Key decisions
 
-## Root Cause 1: Vite HMR storm
+**Credential rotation flow:**
+- `authSeed.ts` seeds ALL browser test users (including clinician@test.sunrise) — run with `pnpm exec tsx src/seed/authSeed.ts` from api-server dir, not ts-node
+- When authSeed is run with a different password than what's in the secret, browser tests fail login (401). Always run authSeed WITHOUT env var override to use the current PHASE2D_TEST_PASSWORD secret
+- Session table: `sos_sessions` (not `session`). `DELETE FROM sos_sessions` to revoke all
 
-**Pattern:** Hundreds of `/api/v1/auth/csrf-token` + `/api/v1/auth/session` pairs every ~0.5 s for the entire 120 s test window.
+**Phase 2 upgrade proof (drizzle-kit only, no psql):**
+- Create `lib/db/drizzle/phase2-proof/` with 0000-0005 SQL + `meta/_journal.json` (6 entries only)
+- Create `lib/db/drizzle.phase2.config.ts` pointing to `drizzle/phase2-proof/`
+- Run: `DATABASE_URL=<upgrade_url> pnpm --filter @workspace/db exec drizzle-kit migrate --config ./drizzle.phase2.config.ts` → applies 0000-0005
+- Run full migrate → applies 0006 only (7 rows total)
+- sos_clinical_notes: 24 constraints, 5 indexes, 1 trigger after 0006
 
-**Cause:** `vite.playwright.config.ts` had `watch.ignored` but did NOT cover `readiness/` (where stability logs are written). Each log line write triggered a Vite HMR update → AuthContext remounted → csrf+session fired again.
+**SHA256SUMS self-exclusion:**
+- `build-sha256sums.sh` at `readiness/scripts/` — uses `find -! -name SHA256SUMS.txt`
+- `manifest_entries = total_files - 1`
 
-**Fix:** `server.hmr: false` in `vite.playwright.config.ts`. Tests never need HMR. Extended `watch.ignored` to also cover `readiness/**` and `playwright-report/**`.
+**Rate-limit test flakiness:**
+- step-15 (auth-p2d-rate-limit.test.ts) flaky if run after Playwright (rate limit state bleeds)
+- Fix: `DELETE FROM sos_rate_limit_windows` before each API vitest run
+- The global-teardown only clears loopback IPs, not all keys
 
-## Root Cause 2: page.goto('load') hang after warm Vite cache
+**Playwright D-test specifics:**
+- D-1 (cross-facility): does NOT render `[data-testid="access-denied"]` — just hides note controls
+- D-2, D-3 (security-admin, HR): DO render access-denied testid (proper AccessDenied component)
+- D-6 (sign denial): `sign-lock-btn` may not be visible for non-owners — use `{ timeout: 5_000 }` on click
+- Test count: 19 (was 17 before D-6 and D-7 were added)
+- Trace capture: `--trace=on --output <dir>` to force all traces; default `retain-on-failure` doesn't save passing traces
 
-**Pattern:** With HMR disabled, tests after the first one hang for 120 s at `gotoAndAwaitReady`. Dashboard rendered (alerts/vitals polling) but `page.goto` Promise never resolved.
+**Production mode Topbar:**
+- `VITE_SUNRISE_DATA_MODE=production` → renders static `data-testid="role-display"` instead of role-switcher dropdown
+- `data-testid="role-switcher-btn"` only in demo mode
 
-**Cause:** `hmr: false` causes Vite to return 304 Not Modified for JS chunks. Playwright 1.38.0 + Chromium-1080 does NOT fire the CDP `Page.loadEventFired` event for 304 responses. `page.goto(waitUntil:'load')` stalls indefinitely.
-
-**Fix:** `page.goto('/', { waitUntil: 'domcontentloaded' })`. DOMContentLoaded fires after HTML parse regardless of 304 status.
-
-## Root Cause 3: navigateToPatient fires before AppInner has the real userId key
-
-**Pattern:** Intermittent (every 10–20 tests): PatientDetail never opens, zero patient-fetch API calls, only 60 s session polls. Test timeout.
-
-**Cause:** `App.tsx` keys AppInner by `productionSession?.userId ?? 'prod-guest'`. `waitForResponse(auth/session)` resolves at the CDP layer (response received) BEFORE React has called `setProductionSession(data)`. `navigateToPatient` dispatches its popstate while AppInner is still on the `'prod-guest'` key. When `setProductionSession` commits, AppInner remounts (new key) and ALL routing state (selectedPatientId, activeScreen) resets to defaults. The popstate is silently lost.
-
-**Fix:** Two-gate `gotoAndAwaitReady`:
-1. `waitForResponse(auth/session)` — React is mounted
-2. `waitForResponse(alerts/vitals)` — productionSession is committed, AppInner has remounted with real userId key, Dashboard is rendered
-
-Only after BOTH gates resolve is `navigateToPatient` safe to call.
-
-## Independent reviewer blockers resolved (Phase 3 v2 archive)
-
-**Blocker 1 (no trace.zip):** Run `--trace on` + immediately copy trace.zip before next run overwrites them. playwright-results/ is overwritten by each run; capture before any subsequent run.
-
-**Blocker 2 (demo-mode screenshots):** playwright.config.ts sets `VITE_SUNRISE_DATA_MODE=production`. Screenshots from that run are production mode. A-1 asserts DemoBanner is absent.
-
-**Blocker 6 (manual SQL upgrade proof):** Drizzle-kit skips 0006 when DB `created_at` for applied migrations is HIGHER than 0006's `_journal.json` "when" value. This happens when the reconcile script (which sets Aug 2026 created_at) is used. Proof with normal-runner: set `created_at = journal "when"` values for 0000-0005, then run `drizzle-kit migrate` — correctly applies 0006 since 0005's "when" < 0006's "when".
-
-**Blocker 11 (swallowed assertion catches):** `.catch(() => {})` on `expect(x).not.toBeVisible()` lines must be removed. `waitForLoadState("networkidle", ...).catch(() => {})` should be replaced with `waitForTimeout(300)` — the SPA has continuous polling; networkidle never completes. `.catch(() => false)` on `.isVisible()` (used in conditional if-blocks) is safe and not the same as swallowing an assertion.
-
-## Key file: vite.playwright.config.ts
-
-The Playwright webServer uses `vite.playwright.config.ts` (NOT `vite.config.ts`). Changes to `vite.config.ts` do NOT affect Playwright tests. Always edit `vite.playwright.config.ts` for test-server behavior.
-
-## drizzle-kit migration upgrade proof note
-
-On a clean Phase 2 install (drizzle-kit applied all migrations, created_at = journal "when" values), migration 0006 applies normally via drizzle-kit because 0006's "when" (1754438400000) > 0005's "when" (1754352000000). The issue only arises when `created_at` for earlier rows is set to a LATER timestamp (e.g., by a reconcile script using CURRENT_TIMESTAMP).
+**v3 archive:**
+- Path: `readiness/phase-3-clinical-documentation-foundation-review-v3.zip`
+- SHA256: `9c6f0519b52b31ee8625298ba1ef8c56fa30c10d473ec0e8a4d1da321e7cf1a7`
+- 126 entries in SHA256SUMS.txt (127 total files - 1 self-exclusion)
+- Scripts: `readiness/scripts/build-sha256sums.sh`, `readiness/scripts/build-v3-archive.sh`
+- Trace sanitizer: `e2e/sanitize-traces.py` (redacts cookies, session values, CSRF tokens from .trace/.network NDJSON files)
