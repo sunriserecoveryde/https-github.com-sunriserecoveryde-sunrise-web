@@ -51,7 +51,7 @@ export function AccessDenied({ screen, onSwitchRole }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6" data-testid="access-denied">
       <div className="max-w-lg w-full text-center space-y-6">
         {/* Lock icon */}
         <div className="w-20 h-20 rounded-full bg-navy/10 flex items-center justify-center mx-auto">

@@ -392,6 +392,79 @@ describe("§2 permission policy — clinical note codes", () => {
     expect(perms).not.toContain("clinical_note.create");
     expect(perms).not.toContain("clinical_note.view");
   });
+
+  // ── Exact-equality tests (not subset — order-independent set equality) ────
+  // The reviewer requires exact-equality assertions that prove no unapproved
+  // codes are silently present alongside the approved set.
+
+  it("policy-exact-01: PERMISSION_CODES contains exactly the 5 approved clinical-note codes (none more, none fewer)", () => {
+    const APPROVED = new Set([
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
+    ]);
+    const UNAPPROVED = [
+      "clinical_note.sign",
+      "clinical_note.export",
+      "clinical_note.audit_view",
+    ];
+
+    const clinicalCodes = (PERMISSION_CODES as readonly string[]).filter(c =>
+      c.startsWith("clinical_note."),
+    );
+
+    // Exact set equality
+    expect(new Set(clinicalCodes)).toEqual(APPROVED);
+
+    // No unapproved code exists in the full code list
+    for (const bad of UNAPPROVED) {
+      expect(PERMISSION_CODES as readonly string[], `Unapproved code present: ${bad}`).not.toContain(bad);
+    }
+  });
+
+  it("policy-exact-02: clinical_supervisor has exactly {create, view, edit_own_draft, sign_own, void} — no more", () => {
+    const perms = ROLE_PERMISSIONS["clinical_supervisor"]?.permissions ?? [];
+    const clinicalPerms = perms.filter((p: string) => p.startsWith("clinical_note."));
+    expect(new Set(clinicalPerms)).toEqual(new Set([
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
+    ]));
+    // Explicitly absent — no extra codes allowed
+    expect(clinicalPerms, "clinical_note.sign must be absent").not.toContain("clinical_note.sign");
+    expect(clinicalPerms, "clinical_note.export must be absent").not.toContain("clinical_note.export");
+    expect(clinicalPerms, "clinical_note.audit_view must be absent").not.toContain("clinical_note.audit_view");
+  });
+
+  it("policy-exact-03: certified_clinician has exactly {create, view, edit_own_draft, sign_own} — no void, no extra", () => {
+    const perms = ROLE_PERMISSIONS["certified_clinician"]?.permissions ?? [];
+    const clinicalPerms = perms.filter((p: string) => p.startsWith("clinical_note."));
+    expect(new Set(clinicalPerms)).toEqual(new Set([
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+    ]));
+    expect(clinicalPerms, "clinical_note.void must be absent for clinician").not.toContain("clinical_note.void");
+    expect(clinicalPerms, "clinical_note.sign must be absent").not.toContain("clinical_note.sign");
+    expect(clinicalPerms, "clinical_note.audit_view must be absent").not.toContain("clinical_note.audit_view");
+  });
+
+  it("policy-exact-04: security_admin, billing_staff, and human_resources have zero clinical_note.* codes", () => {
+    const nonClinicalRoles = ["security_admin", "billing_staff", "human_resources"] as const;
+    for (const role of nonClinicalRoles) {
+      const perms = ROLE_PERMISSIONS[role]?.permissions ?? [];
+      const clinicalPerms = perms.filter((p: string) => p.startsWith("clinical_note."));
+      expect(
+        clinicalPerms,
+        `${role} must have zero clinical_note.* permissions, found: ${clinicalPerms.join(", ")}`,
+      ).toHaveLength(0);
+    }
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════

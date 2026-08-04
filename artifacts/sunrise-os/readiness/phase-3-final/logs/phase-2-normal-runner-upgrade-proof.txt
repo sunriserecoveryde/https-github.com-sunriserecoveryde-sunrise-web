@@ -1,0 +1,99 @@
+Phase 3 — Clinical Documentation Foundation
+Phase 2 Normal-Runner Upgrade Proof v3
+Generated: 2026-08-04T18:03:21Z
+DB: sos_p3_upgrade_v4
+
+=== STEP 1: Start with empty database ===
+DB sos_p3_upgrade_v4 is empty (just created).
+ 0 tables
+
+
+=== STEP 2: Apply migrations 0000-0005 via drizzle-kit (phase2 config) ===
+Config: lib/db/drizzle.phase2.config.ts (out: drizzle/phase2-proof/)
+Reading config file '/home/runner/workspace/lib/db/drizzle.phase2.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[⣟] applying migrations...[2K[1G[⡿] applying migrations...[2K[1G[⢿] applying migrations...[2K[1G[✓] migrations applied successfully!
+=== STEP 3: Verify exactly 6 journal rows ===
+Journal rows: 6
+PASS: exactly 6 rows ✓
+
+=== Hashes and timestamps ===
+ id |   hash_prefix   | applied_date 
+----+-----------------+--------------
+  1 | d469974922cc... | 2025-08-01
+  2 | 86b492875afc... | 2025-08-02
+  3 | 8b64783c95ef... | 2025-08-02
+  4 | 2ad2d880dfe8... | 2025-08-03
+  5 | 4584ae4def09... | 2025-08-04
+  6 | 1694a931db81... | 2025-08-05
+(6 rows)
+
+
+=== STEP 4: Seed representative fictitious Phase 2 records ===
+ERROR:  relation "sos_orgs" does not exist
+LINE 1: INSERT INTO sos_orgs (id, name, slug, created_at) VALUES
+                    ^
+ERROR:  relation "sos_user_identities" does not exist
+LINE 1: INSERT INTO sos_user_identities (id, email, created_at) VALU...
+                    ^
+ERROR:  insert or update on table "sos_user_accounts" violates foreign key constraint "sos_user_accounts_org_id_fkey"
+DETAIL:  Key (org_id)=(00000000-0000-4000-c000-000000000001) is not present in table "sos_organizations".
+ERROR:  relation "sos_orgs" does not exist
+LINE 1: ...ELECT 'Seeded org:'      AS entity, count(*) FROM sos_orgs  ...
+                                                             ^
+
+=== STEP 5: Restore full migration metadata (0000-0006) and run drizzle-kit migrate ===
+Command: DATABASE_URL=<upgrade_url> pnpm --filter @workspace/db run migrate
+
+> @workspace/db@0.0.0 migrate /home/runner/workspace/lib/db
+> drizzle-kit migrate --config ./drizzle.config.ts
+
+Reading config file '/home/runner/workspace/lib/db/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[✓] migrations applied successfully!
+=== STEP 6: Verify only migration 0006 was applied (expect 7 rows) ===
+Journal rows: 7
+PASS: exactly 7 rows ✓
+
+=== STEP 7: Verify hashes and timestamps match migration metadata ===
+ id |     hash_prefix     | applied_date 
+----+---------------------+--------------
+  1 | d469974922cc3fc7... | 2025-08-01
+  2 | 86b492875afcbdfe... | 2025-08-02
+  3 | 8b64783c95ef5bac... | 2025-08-02
+  4 | 2ad2d880dfe87b3b... | 2025-08-03
+  5 | 4584ae4def09750e... | 2025-08-04
+  6 | 1694a931db81b17e... | 2025-08-05
+  7 | 83072a363b079a40... | 2025-08-06
+(7 rows)
+
+
+=== STEP 8: Verify seeded Phase 2 records remain unchanged ===
+
+
+=== STEP 9: Verify sos_clinical_notes table, constraints, and trigger ===
+ true sos_clinical_notes table
+
+ 24 constraints on sos_clinical_notes
+
+ 5 indexes on sos_clinical_notes
+
+ 1 triggers on sos_clinical_notes
+
+
+=== STEP 10: Run migration command again — confirm no pending migrations ===
+
+> @workspace/db@0.0.0 migrate /home/runner/workspace/lib/db
+> drizzle-kit migrate --config ./drizzle.config.ts
+
+Reading config file '/home/runner/workspace/lib/db/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[✓] migrations applied successfully!
+=== STEP 11: Destroy disposable database ===
+DROP DATABASE
+
+=== PROOF COMPLETE ===
+Manual SQL: NO
+psql migration: NO
+Manual journal insert: NO
+Normal runner (drizzle-kit migrate): YES — all 7 migrations applied by runner

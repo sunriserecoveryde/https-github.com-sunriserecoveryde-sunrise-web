@@ -24,12 +24,23 @@ export default async function globalTeardown(): Promise<void> {
     return;
   }
 
+  const LOOPBACK_KEYS = "('::1', '127.0.0.1', '::ffff:127.0.0.1')";
   try {
+    // Count before deletion for audit log
+    const countOut = execSync(
+      `psql "${databaseUrl}" -t -c "SELECT count(*) FROM sos_rate_limit_windows WHERE key IN ${LOOPBACK_KEYS}"`,
+      { stdio: "pipe" },
+    ).toString().trim();
+    const rowCount = parseInt(countOut, 10) || 0;
+
     execSync(
-      `psql "${databaseUrl}" -c "DELETE FROM sos_rate_limit_windows WHERE key IN ('::1', '127.0.0.1', '::ffff:127.0.0.1')"`,
+      `psql "${databaseUrl}" -c "DELETE FROM sos_rate_limit_windows WHERE key IN ${LOOPBACK_KEYS}"`,
       { stdio: "pipe" },
     );
-    console.log("[global-teardown] Browser-test rate-limit rows removed.");
+    console.log(
+      `[global-teardown] Removed ${rowCount} browser-test rate-limit row(s) ` +
+      `(keys: ::1, 127.0.0.1, ::ffff:127.0.0.1). No identity or session values logged.`,
+    );
   } catch (err) {
     // Non-fatal: log and continue so CI does not fail on cleanup.
     console.warn(

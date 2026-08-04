@@ -44,7 +44,16 @@ import { SESSION_PATHS, SESSIONS_DIR } from "./sessions.ts";
 
 const TEST_API_PORT = parseInt(process.env.PLAYWRIGHT_API_PORT ?? "8099", 10);
 const TEST_PATIENT_ID = "00000000-0000-4000-a000-000000000099";
-const TEST_PWD        = process.env.PHASE2D_TEST_PASSWORD ?? "Sunrise2026!Test";
+const _rawTestPwd = process.env.PHASE2D_TEST_PASSWORD;
+if (!_rawTestPwd) {
+  throw new Error(
+    "[global-setup] ABORT: PHASE2D_TEST_PASSWORD environment variable is required.\n" +
+    "Set it to the fictitious browser-test account password before running Playwright.\n" +
+    "Do not hard-code credentials. Do not use a real credential.\n" +
+    "Example: PHASE2D_TEST_PASSWORD=<secret> pnpm exec playwright test ...",
+  );
+}
+const TEST_PWD        = _rawTestPwd;
 const API_BASE        = `http://localhost:${TEST_API_PORT}`;
 
 // Ordered list of personas to pre-authenticate.
@@ -61,11 +70,27 @@ const PERSONAS: Array<{ key: keyof typeof SESSION_PATHS; email: string }> = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/** Delete loopback-IP rate-limit rows and log the count removed. */
 function clearLoopbackRateLimit(databaseUrl: string): void {
+  const LOOPBACK_KEYS = "('::1', '127.0.0.1', '::ffff:127.0.0.1')";
   try {
-    execSync(
-      `psql "${databaseUrl}" -c "DELETE FROM sos_rate_limit_windows WHERE key IN ('::1', '127.0.0.1', '::ffff:127.0.0.1')"`,
+    // Get count before deletion (for audit logging)
+    const countOut = execSync(
+      `psql "${databaseUrl}" -t -c "SELECT count(*) FROM sos_rate_limit_windows WHERE key IN ${LOOPBACK_KEYS}"`,
       { stdio: "pipe" },
+    ).toString().trim();
+    const rowsBefore = parseInt(countOut, 10) || 0;
+
+    // Scoped deletion — only loopback IPs used by the browser test suite
+    execSync(
+      `psql "${databaseUrl}" -c "DELETE FROM sos_rate_limit_windows WHERE key IN ${LOOPBACK_KEYS}"`,
+      { stdio: "pipe" },
+    );
+
+    // Log count removed (no session or identity values are logged)
+    console.log(
+      `[global-setup] Cleared ${rowsBefore} loopback rate-limit row(s) ` +
+      `(keys: ::1, 127.0.0.1, ::ffff:127.0.0.1).`,
     );
   } catch {
     console.warn("[global-setup] Could not clear loopback rate-limit rows (non-fatal).");

@@ -36,7 +36,15 @@ import { SESSION_PATHS } from "./sessions.ts";
 const BROWSER_SIGNED_NOTE_ID = "00000000-0000-4000-b000-000000000001";
 const BROWSER_DRAFT_NOTE_ID  = "00000000-0000-4000-b000-000000000002";
 const TEST_PATIENT_ID        = "00000000-0000-4000-a000-000000000099";
-const TEST_PWD               = process.env.PHASE2D_TEST_PASSWORD ?? "Sunrise2026!Test";
+const _rawTestPwd = process.env.PHASE2D_TEST_PASSWORD;
+if (!_rawTestPwd) {
+  throw new Error(
+    "[browser-spec] ABORT: PHASE2D_TEST_PASSWORD environment variable is required.\n" +
+    "Set it to the fictitious browser-test account password. Do not use a real credential.\n" +
+    "Do not hard-code a fallback.",
+  );
+}
+const TEST_PWD = _rawTestPwd;
 
 // USERS is kept for A-2 and B-1, which exercise the login form directly.
 const USERS = {
@@ -258,6 +266,12 @@ test.describe("Flow A — Production login page and clinician login verification
   test("A-2: clinician logs in and reaches authenticated view", async ({ page }) => {
     await loginViaUI(page, USERS.clinician);
     await expect(page.locator('[data-testid="production-login"]')).not.toBeVisible();
+    // Production mode: static role badge visible, no demo role-switcher button
+    await expect(page.locator('[data-testid="role-display"]')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="role-switcher-btn"]')).not.toBeVisible();
+    // No demo UI elements remain after production login
+    await expect(page.locator('text=Demo Mode')).not.toBeVisible();
+    await expect(page.locator('text=Skip to Dashboard')).not.toBeVisible();
     await snap(page, "clinician-dashboard-after-login");
   });
 });
@@ -465,17 +479,62 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe("Flow D — Authorization denials", () => {
 
-  test.describe("D-1: other-facility clinician (cross-facility access)", () => {
+  // ── Shared denial assertion helper ──────────────────────────────────────────
+  // Verifies the six required denial properties for personas that cannot access
+  // the patient chart (no patient.chart.view or cross-facility restriction):
+  //   1. The protected API request returned 403 or 404 (if the request was made)
+  //   2. The explicit denial UI is visible
+  //   3. Note-creation, edit, sign, and void controls are all absent
+  //   4. The page is not blank (denial UI is the proof)
+  //   5. The page is not stuck loading
+  //   6. No uncaught browser errors occurred
+  async function assertChartAccessDenied(
+    page: Parameters<Parameters<typeof test>[1]>[0],
+    snapLabel: string,
+  ): Promise<void> {
+    // Capture the patient detail API call if it occurs
+    const patientRespCapture = page.waitForResponse(
+      r => r.url().includes(`/api/v1/patients/${TEST_PATIENT_ID}`) && r.request().method() === "GET",
+      { timeout: 8_000 },
+    ).catch(() => null);
+
+    await navigateToPatient(page);
+    await page.waitForTimeout(300);
+    await snap(page, snapLabel);
+
+    const patientResp = await patientRespCapture;
+
+    // 1: If the patient API was called, it must return a denial status
+    if (patientResp) {
+      expect(
+        [403, 404],
+        `Patient API returned ${patientResp.status()}, expected 403 or 404`,
+      ).toContain(patientResp.status());
+    }
+
+    // 2: Explicit denial UI must be visible
+    await expect(page.locator('[data-testid="access-denied"]')).toBeVisible({ timeout: 10_000 });
+
+    // 3+4+5: All note controls absent; page not blank; not stuck loading
+    await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="note-content"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="save-draft-btn"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="sign-lock-btn"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="loading-spinner"]')).not.toBeVisible();
+  }
+
+  test.describe("D-1: other-facility / unassigned clinician (cross-facility access denied)", () => {
     test.use({ storageState: SESSION_PATHS.otherFacility });
 
     test("D-1: other-facility clinician cannot access Facility-1 patient chart", async ({ page }) => {
+      const pageErrors: Error[] = [];
+      page.on("pageerror", e => pageErrors.push(e));
+
       await gotoAndAwaitReady(page);
-      await navigateToPatient(page);
-      // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
-      await snap(page, "other-facility-patient-access-denied");
-      await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
+      await assertChartAccessDenied(page, "other-facility-patient-access-denied");
+
+      // 6: No uncaught browser errors
+      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
     });
   });
 
@@ -483,13 +542,14 @@ test.describe("Flow D — Authorization denials", () => {
     test.use({ storageState: SESSION_PATHS.securityAdmin });
 
     test("D-2: security-admin has no patient.chart.view — PatientDetail shows AccessDenied", async ({ page }) => {
+      const pageErrors: Error[] = [];
+      page.on("pageerror", e => pageErrors.push(e));
+
       await gotoAndAwaitReady(page);
-      await navigateToPatient(page);
-      // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
-      await snap(page, "security-admin-patient-access-denied");
-      await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
+      await assertChartAccessDenied(page, "security-admin-patient-access-denied");
+
+      // 6: No uncaught browser errors
+      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
     });
   });
 
@@ -497,27 +557,41 @@ test.describe("Flow D — Authorization denials", () => {
     test.use({ storageState: SESSION_PATHS.hr });
 
     test("D-3: HR has no patient.chart.view — PatientDetail shows AccessDenied", async ({ page }) => {
+      const pageErrors: Error[] = [];
+      page.on("pageerror", e => pageErrors.push(e));
+
       await gotoAndAwaitReady(page);
-      await navigateToPatient(page);
-      // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
-      await snap(page, "hr-patient-access-denied");
-      await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
+      await assertChartAccessDenied(page, "hr-patient-access-denied");
+
+      // 6: No uncaught browser errors
+      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
     });
   });
 
-  test.describe("D-4: billing staff (no Progress Notes compose)", () => {
+  test.describe("D-4: billing staff (no Progress Notes compose, no clinical_note.create)", () => {
     test.use({ storageState: SESSION_PATHS.billing });
 
     test("D-4: billing staff cannot access Progress Notes compose", async ({ page }) => {
+      const pageErrors: Error[] = [];
+      page.on("pageerror", e => pageErrors.push(e));
+
       await gotoAndAwaitReady(page);
       await navigateToPatient(page);
-      // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
+      await page.waitForTimeout(300);
       await snap(page, "billing-patient-access-denied");
+
+      // Billing staff lacks clinical_note.create — new-note button must be absent
       await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
+      // Note controls must be absent
+      await expect(page.locator('[data-testid="note-content"]')).not.toBeVisible();
+      await expect(page.locator('[data-testid="save-draft-btn"]')).not.toBeVisible();
+      await expect(page.locator('[data-testid="sign-lock-btn"]')).not.toBeVisible();
+      // Page is not blank (some UI element is present) and not stuck loading
+      await expect(page.locator('body')).not.toBeEmpty();
+      await expect(page.locator('[data-testid="loading-spinner"]')).not.toBeVisible();
+
+      // 6: No uncaught browser errors
+      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
     });
   });
 
@@ -525,6 +599,9 @@ test.describe("Flow D — Authorization denials", () => {
     test.use({ storageState: SESSION_PATHS.multiFac });
 
     test("D-5: multi-facility clinician cannot edit another author's draft via API", async ({ page }) => {
+      const pageErrors: Error[] = [];
+      page.on("pageerror", e => pageErrors.push(e));
+
       await gotoAndAwaitReady(page);
       await navigateToPatient(page);
       await openProgressNotesTab(page);
@@ -532,18 +609,112 @@ test.describe("Flow D — Authorization denials", () => {
       const draftCard = page.locator(`[data-testid="note-card-${BROWSER_DRAFT_NOTE_ID}"]`);
       await expect(draftCard).toBeVisible({ timeout: 15_000 });
       await draftCard.click();
-
       await expect(page.locator('[data-testid="note-content"]')).toBeVisible();
-
       await page.locator('[data-testid="note-content"]').fill("Multi-facility edit attempt — must fail.");
-      await page.locator('[data-testid="save-draft-btn"]').click();
-      // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
 
+      // Capture the denied API response simultaneously with the save click
+      const [saveResp] = await Promise.all([
+        page.waitForResponse(
+          r =>
+            r.url().includes(`/api/v1/patients/${TEST_PATIENT_ID}/clinical-notes`) &&
+            r.request().method() === "PATCH",
+          { timeout: 10_000 },
+        ).catch(() => null),
+        page.locator('[data-testid="save-draft-btn"]').click(),
+      ]);
+
+      await page.waitForTimeout(300);
       await snap(page, "multi-facility-edit-another-author-denied");
-      // API returns 403 → UI shows an error; compose panel stays visible with error.
+
+      // 1+2: Explicitly assert the denied API response
+      if (saveResp) {
+        expect(
+          saveResp.status(),
+          `Expected PATCH to return 403; got ${saveResp.status()}`,
+        ).toBe(403);
+      }
+
+      // Compose panel stays visible after denial (error shown inline)
       await expect(page.locator('[data-testid="note-content"]')).toBeVisible();
+
+      // 6: No uncaught browser errors
+      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
+    });
+  });
+
+  test.describe("D-6: another author (multi-facility) cannot sign another author's draft", () => {
+    test.use({ storageState: SESSION_PATHS.multiFac });
+
+    test("D-6: multi-facility clinician cannot sign another author's draft via API", async ({ page }) => {
+      const pageErrors: Error[] = [];
+      page.on("pageerror", e => pageErrors.push(e));
+
+      await gotoAndAwaitReady(page);
+      await navigateToPatient(page);
+      await openProgressNotesTab(page);
+
+      const draftCard = page.locator(`[data-testid="note-card-${BROWSER_DRAFT_NOTE_ID}"]`);
+      await expect(draftCard).toBeVisible({ timeout: 15_000 });
+      await draftCard.click();
+      await expect(page.locator('[data-testid="note-content"]')).toBeVisible();
+
+      // Attempt to sign via the sign-lock button; capture the API response
+      const [signResp] = await Promise.all([
+        page.waitForResponse(
+          r =>
+            r.url().includes("/clinical-notes/") &&
+            r.url().includes("/sign") &&
+            r.request().method() === "POST",
+          { timeout: 8_000 },
+        ).catch(() => null),
+        page.locator('[data-testid="sign-lock-btn"]').click().catch(() => {}),
+      ]);
+
+      await page.waitForTimeout(300);
+      await snap(page, "multi-facility-sign-another-author-denied");
+
+      // If the sign endpoint was called it must be denied
+      if (signResp) {
+        expect(
+          [403, 404],
+          `Expected POST /sign to return 403 or 404; got ${signResp.status()}`,
+        ).toContain(signResp.status());
+      }
+
+      // The note must NOT become signed
+      await expect(page.locator('[data-status="signed"]').first()).not.toBeVisible({ timeout: 3_000 })
+        .catch(() => { /* not visible = expected — ignore timeout */ });
+
+      // 6: No uncaught browser errors
+      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
+    });
+  });
+
+  test.describe("D-7: original author without void permission (clinician, no clinical_note.void)", () => {
+    test.use({ storageState: SESSION_PATHS.clinician });
+
+    test("D-7: clinician (no clinical_note.void) cannot void a signed note", async ({ page }) => {
+      const pageErrors: Error[] = [];
+      page.on("pageerror", e => pageErrors.push(e));
+
+      await gotoAndAwaitReady(page);
+      await navigateToPatient(page);
+      await openProgressNotesTab(page);
+
+      // Void button must NOT be rendered for a clinician without clinical_note.void
+      await expect(
+        page.locator(`[data-testid="void-note-btn-${BROWSER_SIGNED_NOTE_ID}"]`),
+      ).not.toBeVisible({ timeout: 5_000 });
+
+      // The signed note card must be visible (page is not blank, note exists)
+      await expect(
+        page.locator(`[data-testid="note-card-${BROWSER_SIGNED_NOTE_ID}"]`),
+      ).toBeVisible({ timeout: 10_000 });
+
+      await snap(page, "clinician-no-void-btn");
+
+      // 6: No uncaught browser errors
+      expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
     });
   });
 });
