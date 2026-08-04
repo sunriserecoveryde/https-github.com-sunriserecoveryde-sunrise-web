@@ -2,7 +2,10 @@ import React from 'react';
 import { Lock, ChevronRight } from 'lucide-react';
 import { useRole } from '../../context/RoleContext';
 import { ROLES, ROLE_CATEGORIES, RoleCategory } from '../../data/mockRoles';
+import { DATA_MODE } from '../../lib/dataMode';
 import type { Screen } from '../../App';
+
+const IS_PRODUCTION = DATA_MODE === 'production';
 
 interface Props {
   screen: Screen;
@@ -91,16 +94,22 @@ export function AccessDenied({ screen, onSwitchRole }: Props) {
           </div>
         )}
 
-        {/* Switch role CTA */}
-        {onSwitchRole && (
+        {/* Switch role CTA — demo mode only */}
+        {!IS_PRODUCTION && onSwitchRole && (
           <button onClick={onSwitchRole} className="btn-primary text-sm px-6 py-2.5 flex items-center gap-2 mx-auto">
             Switch Role <ChevronRight className="w-4 h-4" />
           </button>
         )}
-        <p className="text-xs text-slate">
-          In a live system, access is enforced by server-side authentication.
-          This demo uses role switching to illustrate permission boundaries.
-        </p>
+        {/* Production: plain authorization message — no demo references */}
+        {IS_PRODUCTION ? (
+          <p className="text-xs text-slate">
+            You do not have permission to access this content. Contact your system administrator if you believe this is an error.
+          </p>
+        ) : (
+          <p className="text-xs text-slate">
+            In a live system, access is enforced by server-side authentication.
+          </p>
+        )}
       </div>
     </div>
   );

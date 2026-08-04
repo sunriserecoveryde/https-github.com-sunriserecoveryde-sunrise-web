@@ -75,16 +75,30 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   const [serverPatient, setServerPatient] = useState<Patient | null>(null);
   // Explicit fetch-failure flag — no silent fallback to mock data in production mode.
   const [serverPatientError, setServerPatientError] = useState(false);
+  // Distinct flag for 403 / 404 authorization denials — rendered with data-testid="access-denied"
+  // so browser tests (and the access-denied assertion helper) can detect the denial UI.
+  const [serverPatientForbidden, setServerPatientForbidden] = useState(false);
   useEffect(() => {
     if (DATA_MODE !== 'production' || !patientId) return;
     setServerPatient(null);
     setServerPatientError(false);
+    setServerPatientForbidden(false);
     fetch(`${API_BASE}/v1/patients/${patientId}`, { headers: DEV_HEADERS })
-      .then(r => r.ok ? r.json() as Promise<ServerPatientDetailRecord> : Promise.reject(r.status))
+      .then(r => {
+        if (r.status === 403 || r.status === 404) {
+          setServerPatientForbidden(true);
+          throw new Error(`${r.status}`);
+        }
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json() as Promise<ServerPatientDetailRecord>;
+      })
       .then(data => setServerPatient(adaptForDetail(data)))
-      .catch(() => {
+      .catch((err) => {
         // Production mode: surface the failure explicitly — never fall back to mock data.
-        setServerPatientError(true);
+        // serverPatientForbidden is already set for 403/404; all other failures go here.
+        if (!(err instanceof Error && (err.message === '403' || err.message === '404'))) {
+          setServerPatientError(true);
+        }
       });
   }, [patientId]);
 
@@ -395,6 +409,32 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   // Must come AFTER all hooks (Rules of Hooks: no conditional hook calls).
   // Prevents the full chart from rendering with stub/mock data in production.
   if (DATA_MODE === 'production' && !serverPatient) {
+    // 403/404 — access denied (cross-facility or insufficient permission)
+    if (serverPatientForbidden) {
+      return (
+        <div
+          className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6"
+          data-testid="access-denied"
+        >
+          <div className="w-20 h-20 rounded-full bg-navy/10 flex items-center justify-center mx-auto">
+            <svg className="w-10 h-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V7a4.5 4.5 0 10-9 0v3.5M5 10.5h14a1 1 0 011 1V20a1 1 0 01-1 1H5a1 1 0 01-1-1v-8.5a1 1 0 011-1z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-navy">Access Restricted</h2>
+          <p className="text-sm text-slate max-w-sm">
+            You do not have permission to access this patient record.
+            Contact your system administrator if you believe this is an error.
+          </p>
+          <button
+            onClick={() => navigate('PatientList')}
+            className="flex items-center gap-2 text-sm font-semibold text-sunrise-blue hover:underline"
+          >
+            ← Back to patient list
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
         {serverPatientError ? (

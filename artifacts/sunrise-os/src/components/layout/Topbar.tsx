@@ -7,7 +7,7 @@ import { useActiveNotifications } from '../../hooks/useActiveNotifications';
 import { CommandPalette } from './CommandPalette';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
-import { ROLES, ROLE_CATEGORIES } from '../../data/mockRoles';
+import { ROLES, ROLE_CATEGORIES, getRoleById } from '../../data/mockRoles';
 import { resetDemoData } from '../../store/demoStore';
 
 const DATA_MODE = import.meta.env.VITE_SUNRISE_DATA_MODE ?? 'demo';
@@ -28,7 +28,15 @@ export function Topbar({ navigate, currentScreen }: Props) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const { role, setRoleId } = useRole();
-  const { currentStaff, logout } = useAuth();
+  const { currentStaff, logout, productionSession } = useAuth();
+
+  // In production mode derive the displayed role from the server session's first roleId.
+  // The demo RoleContext always resolves to DEFAULT_ROLE_ID (clinical_supervisor) which does
+  // NOT reflect the authenticated user.  Using productionSession.roleIds[0] via getRoleById()
+  // gives the correct label (e.g. "Certified Clinician" for certified_clinician).
+  const productionRole = IS_PRODUCTION && productionSession?.roleIds?.length
+    ? (getRoleById(productionSession.roleIds[0]) ?? role)
+    : role;
   // Badge count — from the shared selector so Topbar and NotificationPanel
   // always agree. Reactive to the global snooze timer (useNotifNow inside hook).
   const { criticalUnreadCount: unreadCount } = useActiveNotifications();
@@ -114,13 +122,15 @@ export function Topbar({ navigate, currentScreen }: Props) {
         <div className="flex items-center gap-1">
           {/* ── Role Display / Switcher ── */}
           {IS_PRODUCTION ? (
-            /* Production mode: static read-only role badge — no switcher, no demo text */
+            /* Production mode: static read-only role badge derived from server session.
+               Shows the authenticated user's actual role (e.g. "Certified Clinician"),
+               NOT the demo role-switcher default. No switcher, no demo text. */
             <div
-              className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded border mr-2 ${role.color} ${role.borderColor}`}
+              className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded border mr-2 ${productionRole.color} ${productionRole.borderColor}`}
               data-testid="role-display"
             >
-              <div className={`w-2 h-2 rounded-full ${role.dotColor} shrink-0`} />
-              <span className={`text-sm font-semibold ${role.textColor}`} data-testid="role-display-label">{role.shortLabel}</span>
+              <div className={`w-2 h-2 rounded-full ${productionRole.dotColor} shrink-0`} />
+              <span className={`text-sm font-semibold ${productionRole.textColor}`} data-testid="role-display-label">{productionRole.shortLabel}</span>
             </div>
           ) : (
             /* Demo mode: interactive role switcher */
