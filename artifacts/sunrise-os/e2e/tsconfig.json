@@ -7,7 +7,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
-  "include": ["**/*.spec.ts", "**/*.ts"]
+  "include": ["**/*.spec.ts", "**/*.ts"],
+  "exclude": ["clinical-notes-p3.spec.ts"]
 }

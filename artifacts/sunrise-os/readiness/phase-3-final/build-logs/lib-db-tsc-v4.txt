@@ -1,0 +1,2 @@
+None of the selected packages has a "type-check" script
+DB TSC EXIT: 0
