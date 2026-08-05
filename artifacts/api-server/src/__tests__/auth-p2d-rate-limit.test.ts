@@ -245,23 +245,53 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
   it("step-08: unknown and known accounts receive equivalent 429 response structure", async () => {
     // Both "login" attempts should produce identical public error shapes.
     // The PgRateLimitStore keys on IP (not email), so both hit the same counter.
-    const testStore = new PgRateLimitStore(TEST_WINDOW_MS);
+    //
+    // Uses a 60-second window to avoid the same intermittent window-boundary
+    // failure that affected step-13 (seeded counter crosses window boundary during test).
+    // With a 60-second window, the boundary cannot flip during the ~1s test execution.
+    const STEP08_WINDOW_MS = 60_000;
+    const testStore = new PgRateLimitStore(STEP08_WINDOW_MS);
     testStore.init();
-    const testApp = makeTestApp(testStore);
 
-    for (let i = 0; i < TEST_LIMIT; i++) {
-      await request(testApp).post("/test-rate").send({});
+    // makeTestApp uses TEST_KEY_B and TEST_LIMIT (3) regardless of window size.
+    // Build a dedicated app that uses STEP08_WINDOW_MS for window calculations.
+    const step08App = express();
+    step08App.use(express.json());
+    step08App.post(
+      "/test-rate",
+      rateLimit({
+        windowMs:        STEP08_WINDOW_MS,
+        limit:           TEST_LIMIT,
+        standardHeaders: "draft-8",
+        legacyHeaders:   false,
+        keyGenerator:    () => TEST_KEY_B,
+        store:           testStore,
+        message:         { error: "Too many requests." },
+      }),
+      (_req, res) => { res.json({ ok: true }); },
+    );
+
+    try {
+      // Pre-clean to ensure no stale rows for TEST_KEY_B with this window size.
+      await pool.query(
+        `DELETE FROM sos_rate_limit_windows WHERE key = $1`,
+        [TEST_KEY_B],
+      );
+
+      for (let i = 0; i < TEST_LIMIT; i++) {
+        await request(step08App).post("/test-rate").send({});
+      }
+      const res1 = await request(step08App).post("/test-rate").send({ email: "known@example.com" });
+      const res2 = await request(step08App).post("/test-rate").send({ email: "unknown@example.com" });
+
+      expect(res1.status).toBe(429);
+      expect(res2.status).toBe(429);
+      // Response bodies must be structurally identical (no account-existence leak)
+      expect(JSON.stringify(res1.body)).toBe(JSON.stringify(res2.body));
+    } finally {
+      testStore.destroy();
+      await testStore.resetKey(TEST_KEY_B);
     }
-    const res1 = await request(testApp).post("/test-rate").send({ email: "known@example.com" });
-    const res2 = await request(testApp).post("/test-rate").send({ email: "unknown@example.com" });
-
-    expect(res1.status).toBe(429);
-    expect(res2.status).toBe(429);
-    // Response bodies must be structurally identical (no account-existence leak)
-    expect(JSON.stringify(res1.body)).toBe(JSON.stringify(res2.body));
-
-    testStore.destroy();
-    await testStore.resetKey(TEST_KEY_B);
   });
 
   // ── Step 9: resetKey clears the counter ──────────────────────────────────
