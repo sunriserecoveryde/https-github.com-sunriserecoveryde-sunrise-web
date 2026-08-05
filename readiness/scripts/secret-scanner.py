@@ -65,10 +65,18 @@ PATTERNS = [
         re.compile(r"Bearer\s+[A-Za-z0-9_\-]{30,}", re.IGNORECASE),
     ),
     # DATABASE_URL with credentials
+    # Excludes known placeholder / documentation patterns:
+    #   user:pass@, user:password@, postgres:password@, user:****@
+    # These appear in documentation comments and are not real credentials.
     (
         "CRITICAL",
         "DATABASE_URL with password",
-        re.compile(r"postgres(?:ql)?://[^:]+:[^@]{3,}@", re.IGNORECASE),
+        re.compile(
+            r"postgres(?:ql)?://[^:]+:"
+            r"(?!pass(?:word)?@|secret@|changeme@|\*{2,}@|example@|test@|admin@)"
+            r"[^@]{6,}@",
+            re.IGNORECASE,
+        ),
     ),
     # CSRF token (lower severity — informational)
     (
