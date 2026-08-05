@@ -37,15 +37,15 @@
  *      timers that would keep the test process alive after the suite finishes.
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import express, { type Request, type Response } from "express";
-import type { Express } from "express";
 import request from "supertest";
 import { pool, db } from "@workspace/db";
 import { sosAuthAudit } from "@workspace/db";
 import { and, eq, desc } from "drizzle-orm";
 import { PgRateLimitStore } from "../lib/pgRateLimiter";
 import rateLimit from "express-rate-limit";
+import app from "../app";
 
 // ── Short window for testability ──────────────────────────────────────────────
 const TEST_WINDOW_MS = 8_000;  // 8 seconds — short enough to test expiry
@@ -485,23 +485,33 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
   //   explicitly deleted in the finally block.  No loopback-IP rows are
   //   created or removed by this test.
   it("step-15 (integration): /api/v1/auth/login returns 429 after limit is exhausted on the full app", async () => {
+    // ── No vi.resetModules() needed ────────────────────────────────────────────
+    // authV1.ts evaluates skip(), limit, and keyGenerator at REQUEST TIME (not at
+    // module load time).  Setting env vars here is sufficient to activate
+    // integration mode for the ALREADY-LOADED app module.  vi.resetModules() was
+    // removed because it creates a second DB pool (fragmented from the original),
+    // causing cross-file connection contention and timeout failures.
+    //
+    // Behaviour activated by env vars set below:
+    //   skip()           → false  (rate limiter runs)
+    //   limit()          → 3      (low threshold for testability)
+    //   keyGenerator()   → STEP15_PREFIX:req.ip (unique namespace, never collides)
+    //
     // ── Unique per-run key prefix ──────────────────────────────────────────────
     // Starts with 'p2d-rate-limit-test' so pruneTestKeys() in afterAll cleans it.
     // The timestamp makes it unique across concurrent/repeated runs.
     const STEP15_PREFIX = `p2d-rate-limit-test-step15-${Date.now()}`;
 
-    // Save and override env vars before re-importing the module so that
-    // authV1.ts evaluates RL_INTEGRATION=true and creates a real PgRateLimitStore
-    // keyed with STEP15_PREFIX instead of the shared loopback IP.
+    // Save env vars before overriding so the finally block can restore them.
     const prevIntegration = process.env.PHASE2D_RATE_LIMIT_INTEGRATION;
     const prevMax         = process.env.PHASE2D_RATE_LIMIT_MAX;
-    const prevWindow      = process.env.PHASE2D_RATE_LIMIT_WINDOW_MS;
     const prevKeyPrefix   = process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX;
 
-    process.env.PHASE2D_RATE_LIMIT_INTEGRATION    = "true";
-    process.env.PHASE2D_RATE_LIMIT_MAX            = "3";              // low limit for testability
-    process.env.PHASE2D_RATE_LIMIT_WINDOW_MS      = String(TEST_WINDOW_MS);  // short window
-    process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX = STEP15_PREFIX;   // unique namespace
+    // Activate integration mode — all three env vars are read at request time
+    // by authV1.ts's authRateLimiter middleware.
+    process.env.PHASE2D_RATE_LIMIT_INTEGRATION     = "true";   // skip() → false
+    process.env.PHASE2D_RATE_LIMIT_MAX             = "3";      // limit() → 3
+    process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX = STEP15_PREFIX;
 
     // Pre-clean any leftover rows for THIS prefix (defensive; shouldn't exist).
     await pool.query(
@@ -509,23 +519,12 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
       [`${STEP15_PREFIX}%`],
     );
 
-    // Reset module registry so authV1.ts re-evaluates its module-level pgStore,
-    // keyGenerator, and skip callback with the updated env vars.
-    vi.resetModules();
-
-    let freshApp: Express | undefined;
-
     try {
-      // Dynamic import after resetModules → fresh authV1.ts with RL_INTEGRATION=true,
-      // keyGenerator returns STEP15_PREFIX:req.ip, skip() returns false.
-      const appModule = await import("../app");
-      freshApp = appModule.default as Express;
+      const STEP15_LIMIT = 3;
 
-      const RATE_LIMIT_MAX = 3;
-
-      // Use an agent so the _csrf cookie set by GET /csrf-token is automatically
-      // sent back on subsequent POST requests.
-      const agent = request.agent(freshApp);
+      // Use the ORIGINAL app module (already imported at top of this test file).
+      // No vi.resetModules() or dynamic import needed — env vars control behaviour.
+      const agent = request.agent(app);
 
       // Fetch a CSRF token — this sets the _csrf double-submit cookie on the agent.
       const csrfRes = await agent.get("/api/v1/auth/csrf-token");
@@ -534,10 +533,10 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
       expect(csrfToken.length).toBeGreaterThan(0);
 
       // Exhaust the window with bad-credential login attempts.
-      // Each attempt passes CSRF (→ authRateLimiter runs → increments counter
-      // under the unique STEP15_PREFIX key) and is rejected by the credential
-      // check (→ 401).  Must NOT return 429 before limit is reached.
-      for (let i = 0; i < RATE_LIMIT_MAX; i++) {
+      // Each attempt passes CSRF (→ authRateLimiter runs with skip()=false,
+      // increments pgStore counter under STEP15_PREFIX key) and is rejected by
+      // the credential check (→ 401).  Must NOT return 429 before limit is reached.
+      for (let i = 0; i < STEP15_LIMIT; i++) {
         const r = await agent
           .post("/api/v1/auth/login")
           .set("X-CSRF-Token", csrfToken)
@@ -546,7 +545,9 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
         expect(r.status).not.toBe(429);
       }
 
-      // The next request must be rate-limited: counter now exceeds RATE_LIMIT_MAX.
+      // The next request must be rate-limited: counter now exceeds STEP15_LIMIT.
+      // Rate limiter runs BEFORE the credential check, so this returns 429 before
+      // the Argon2 hash comparison — fast path.
       const res = await agent
         .post("/api/v1/auth/login")
         .set("X-CSRF-Token", csrfToken)
@@ -556,14 +557,15 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
       expect((res.body as { error?: string }).error).toMatch(/too many/i);
 
       // Verify that the rate-limit row in the DB uses the unique prefix key,
-      // proving the keyGenerator override was active in the fresh module.
+      // proving the pgStore (PgRateLimitStore) was active and the keyGenerator
+      // override was applied — not the in-memory fallback.
       const rlRows = await pool.query(
         `SELECT key FROM sos_rate_limit_windows WHERE key LIKE $1 LIMIT 5`,
         [`${STEP15_PREFIX}%`],
       );
       expect(rlRows.rows.length).toBeGreaterThan(0);
     } finally {
-      // Restore env vars.
+      // Restore env vars so subsequent tests run in their expected environment.
       if (prevIntegration === undefined) {
         delete process.env.PHASE2D_RATE_LIMIT_INTEGRATION;
       } else {
@@ -573,11 +575,6 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
         delete process.env.PHASE2D_RATE_LIMIT_MAX;
       } else {
         process.env.PHASE2D_RATE_LIMIT_MAX = prevMax;
-      }
-      if (prevWindow === undefined) {
-        delete process.env.PHASE2D_RATE_LIMIT_WINDOW_MS;
-      } else {
-        process.env.PHASE2D_RATE_LIMIT_WINDOW_MS = prevWindow;
       }
       if (prevKeyPrefix === undefined) {
         delete process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX;
@@ -592,10 +589,6 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
         `DELETE FROM sos_rate_limit_windows WHERE key LIKE $1`,
         [`${STEP15_PREFIX}%`],
       );
-
-      // Reset modules so subsequent dynamic imports get fresh module instances
-      // unaffected by this test's env overrides.
-      vi.resetModules();
     }
   }, 60_000);
 

@@ -80,56 +80,58 @@ const ABSOLUTE_TIMEOUT_MS = parseInt(process.env.SESSION_ABSOLUTE_TIMEOUT_MS ?? 
 // Survives API restarts. Shared across multiple API instances.
 // Fail-open: DB unavailability allows the request (see pgRateLimiter.ts).
 //
-// Phase 2D: set PHASE2D_RATE_LIMIT_INTEGRATION=true to enable the real
-// PgRateLimitStore even in test mode (used by auth-p2d-rate-limit.test.ts).
-// Set PHASE2D_RATE_LIMIT_WINDOW_MS to override the window (test: short window).
-// Set PHASE2D_RATE_LIMIT_MAX to override the limit (test: low threshold).
+// All behaviour-controlling env vars are evaluated at REQUEST TIME (not module
+// load time) so that auth-p2d-rate-limit.test.ts step-15 can activate / deactivate
+// integration mode without calling vi.resetModules() (which fragments the DB
+// connection pool and causes cross-file timeout failures).
+//
+// PHASE2D_RATE_LIMIT_INTEGRATION=true   — enable real rate limiting in test mode
+// PHASE2D_RATE_LIMIT_MAX=N              — override per-window limit (read per request)
+// PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX=P  — prepend unique prefix to req.ip key
+//
+// pgStore is created once at module load and is always available.  The skip()
+// function gates whether it is actually used in test mode.
 
 const WINDOW_MS = parseInt(
   process.env.PHASE2D_RATE_LIMIT_WINDOW_MS ?? "900000",  // 15 min default
   10,
 );
-const RATE_LIMIT_MAX = parseInt(
-  process.env.PHASE2D_RATE_LIMIT_MAX ?? "10",
-  10,
-);
-const RL_INTEGRATION = process.env.PHASE2D_RATE_LIMIT_INTEGRATION === "true";
 
-const pgStore = (process.env.NODE_ENV !== "test" || RL_INTEGRATION)
-  ? (() => {
-      const s = new PgRateLimitStore(WINDOW_MS);
-      s.init();
-      return s;
-    })()
-  : undefined;
+// pgStore is always created (even in test mode) because express-rate-limit
+// requires the store at middleware creation time.  In normal test mode skip()
+// returns true, so increment() is never called and no rate-limit rows are created.
+const pgStore = (() => {
+  const s = new PgRateLimitStore(WINDOW_MS);
+  s.init();
+  return s;
+})();
 
 const authRateLimiter = rateLimit({
   windowMs: WINDOW_MS,
-  // express-rate-limit v8 reads 'max' from passedOptions before spreading the
-  // full options object; 'limit' is the canonical v8 option name but 'max' is
-  // what the config initializer seeds from.  Set both to be unambiguous.
-  limit:    RATE_LIMIT_MAX,
-  max:      RATE_LIMIT_MAX,
+  // Read limit from env var at request time so step-15 can lower it to 3 without
+  // reloading the module.  Default is 10 (production setting).
+  limit: (): number => parseInt(process.env.PHASE2D_RATE_LIMIT_MAX ?? "10", 10),
   standardHeaders: "draft-8",
   legacyHeaders:   false,
   message: { error: "Too many requests. Please try again later." },
-  store:   pgStore,  // PostgreSQL store (undefined = MemoryStore when not in RL_INTEGRATION mode)
+  store:   pgStore,
   // Test isolation: PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX prepends a unique per-run
   // prefix to req.ip so that step-15's rate-limit rows never collide with real
   // browser logins (Playwright) or other integration tests that share the loopback IP.
   // The prefix always starts with 'p2d-rate-limit-test' so pruneTestKeys() in the
   // rate-limit test suite automatically removes it in afterAll.
-  // In production (NODE_ENV !== "test" or no prefix set) this returns req.ip as-is.
+  // In production (no prefix set) this returns ipKeyGenerator(req.ip) as-is.
+  // ipKeyGenerator satisfies the express-rate-limit v8 validation check that
+  // requires IP-based key generators to call ipKeyGenerator explicitly.
   keyGenerator: (req): string => {
     const prefix = process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX;
-    // Use ipKeyGenerator (express-rate-limit v8 helper) to normalise IPv4-mapped
-    // IPv6 addresses (e.g. ::ffff:127.0.0.1 → 127.0.0.1).  Passing the function
-    // through the helper also satisfies the express-rate-limit v8 validation check
-    // that requires IP-based key generators to use ipKeyGenerator explicitly.
     const ip = ipKeyGenerator(req.ip ?? "127.0.0.1");
     return prefix ? `${prefix}:${ip}` : ip;
   },
-  skip:    () => process.env.NODE_ENV === "test" && !RL_INTEGRATION,
+  // Evaluated at request time — no module reload required for integration tests.
+  skip: (): boolean =>
+    process.env.NODE_ENV === "test" &&
+    process.env.PHASE2D_RATE_LIMIT_INTEGRATION !== "true",
 });
 
 // ── Input schemas ─────────────────────────────────────────────────────────────
