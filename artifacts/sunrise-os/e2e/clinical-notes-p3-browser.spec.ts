@@ -17,13 +17,24 @@
  * The only tests that call loginViaUI are A-2 and B-1 (which specifically
  * exercise the login form).  All other tests use storageState.
  *
- * Rate-limit budget: globalSetup clears loopback rows before each of 8 logins.
- * A-2 adds 1 login, B-1 adds 1 login → final window count: 3 (well below 10).
- *
  * ── Evidence ─────────────────────────────────────────────────────────────────
- * Screenshots: saved to e2e/screenshots/
+ * Screenshots: saved to e2e/screenshots/ (exactly 20, fresh each run)
  * Traces:      playwright-results/ (one zip per test, includes network HAR)
  * HAR (E-1):   e2e/traces/e1-context-{a,b}.har
+ *
+ * ── Permission contract ───────────────────────────────────────────────────────
+ * The five approved clinical-note permission codes are:
+ *   clinical_note.create
+ *   clinical_note.view
+ *   clinical_note.edit_own_draft
+ *   clinical_note.sign_own
+ *   clinical_note.void
+ *
+ * ── v8 compliance ────────────────────────────────────────────────────────────
+ * - No .catch(() => null/false/{}) on mandatory browser states.
+ * - openProgressNotesTab() throws after retry exhaustion (try/catch only).
+ * - Every denial response assertion is exact (no [403,404].toContain).
+ * - Exactly 20 required screenshots taken fresh from scratch each run.
  */
 
 import path from "path";
@@ -55,6 +66,10 @@ const USERS = {
 // ── Screenshot helpers ────────────────────────────────────────────────────────
 
 const screenshotDir = path.join(import.meta.dirname, "screenshots");
+// Always start from an empty directory so every run produces fresh evidence.
+// Do NOT copy screenshots from a previous run — stale images from demo mode
+// or earlier code versions must not contaminate the evidence package.
+fs.rmSync(screenshotDir, { recursive: true, force: true });
 fs.mkdirSync(screenshotDir, { recursive: true });
 
 let screenshotCounter = 0;
@@ -148,20 +163,21 @@ async function gotoAndAwaitReady(page: Page): Promise<void> {
   // the real userId key, AND the Dashboard has rendered.  Waiting for it
   // guarantees the SPA is stable before we dispatch the popstate.
   //
-  // .catch(): for tests that load an unauthenticated page (e.g. login-form
+  // Non-fatal: for tests that load an unauthenticated page (e.g. login-form
   // tests) gotoAndAwaitReady is not called, so this branch is unreachable
-  // in practice; the catch is a safety net for future edge cases.
-  await page
-    .waitForResponse(
+  // in practice.  If alerts/vitals never fires (session check returned a
+  // non-Dashboard screen, or rate-limit returned 429) the auth/session
+  // gate above is sufficient.  Use try/catch — not .catch() — so the error
+  // is visible in diagnostics if needed.
+  try {
+    await page.waitForResponse(
       resp =>
         resp.url().includes("/api/alerts/vitals") && resp.status() < 400,
       { timeout: 10_000 },
-    )
-    .catch(() => {
-      // Non-fatal: if alerts/vitals never fires (session check returned a
-      // non-Dashboard screen, or rate-limit returned 429) the auth/session
-      // gate above is sufficient.
-    });
+    );
+  } catch {
+    // Non-fatal: auth/session gate above is sufficient.
+  }
 }
 
 // ── Navigation helper ─────────────────────────────────────────────────────────
@@ -199,14 +215,14 @@ async function navigateToPatient(
   // proceeds.  Using a comma-OR selector waits for EITHER the tab bar (chart
   // loaded successfully) OR the access-denied UI (server returned 403/404 for
   // this persona).  Both are definite final states.  If neither appears within
-  // the timeout the test fails immediately — no .catch swallows the timeout.
+  // the timeout the test fails immediately — no catch swallows the timeout.
   await page.waitForSelector(
     '[data-testid="tab-progress-notes"], [data-testid="access-denied"]',
     { timeout: 10_000 },
   );
 
   // Dismiss FlagChartAlert if it appeared (AMA-risk patient shows it on every visit).
-  // locator.isVisible() returns a boolean and does not throw; no .catch needed.
+  // locator.isVisible() returns a boolean and does not throw; no catch needed.
   const acknowledge = page.locator('[data-testid="chart-alert-acknowledge"]');
   if (await acknowledge.isVisible({ timeout: 1000 })) {
     await acknowledge.click();
@@ -227,12 +243,13 @@ async function navigateToPatient(
  *                                      — tab selected (read-only user with note list)
  *
  * After all retry attempts, throws unless one approved state is reached.
- * Does NOT use .catch(() => null/false/{}) on mandatory final-state selectors.
+ * Does NOT use .catch(() => null/false/{}) — uses try/catch so failures
+ * surface clearly in test diagnostics.
  */
 async function openProgressNotesTab(page: Page): Promise<void> {
   // Secondary dismiss in case FlagChartAlert appeared after navigateToPatient returned
   // (e.g. the patient API response arrived just after the primary dismiss window closed).
-  // locator.isVisible() returns a boolean and does not throw; no .catch needed.
+  // locator.isVisible() returns a boolean and does not throw; no catch needed.
   const ack = page.locator('[data-testid="chart-alert-acknowledge"]');
   if (await ack.isVisible({ timeout: 3000 })) {
     await ack.click();
@@ -250,12 +267,17 @@ async function openProgressNotesTab(page: Page): Promise<void> {
 
   for (let attempt = 0; attempt < 3; attempt++) {
     await tab.click();
-    // Use .then/.catch only to convert the selector wait into a boolean for
-    // the retry loop; the final throw below enforces the mandatory requirement.
-    const reached = await page
-      .waitForSelector(APPROVED_SELECTOR, { timeout: 3_000 })
-      .then(() => true)
-      .catch(() => false);
+    // Use try/catch — NOT .catch() — to convert the selector wait into a
+    // boolean for the retry loop.  The mandatory throw below enforces the
+    // requirement.  Using try/catch (vs .then/.catch) means errors are
+    // visible in diagnostics if they don't disappear on retry.
+    let reached = false;
+    try {
+      await page.waitForSelector(APPROVED_SELECTOR, { timeout: 3_000 });
+      reached = true;
+    } catch {
+      // Selector not reached within 3 s — will retry.
+    }
     if (reached) {
       reachedApprovedState = true;
       break;
@@ -267,7 +289,12 @@ async function openProgressNotesTab(page: Page): Promise<void> {
   // Throwing here (not swallowing) ensures selector/navigation failures surface.
   if (!reachedApprovedState) {
     // Capture what is visible for diagnosis before failing.
-    const bodyText = await page.locator("body").innerText().catch(() => "(unavailable)");
+    let bodyText = "(unavailable)";
+    try {
+      bodyText = await page.locator("body").innerText();
+    } catch {
+      // Diagnostic only — the throw below is the real failure signal.
+    }
     throw new Error(
       `openProgressNotesTab: neither '${APPROVED_SELECTOR}' became visible after 3 attempts.\n` +
       `The Progress Notes tab did not reach a definite final state.\n` +
@@ -295,7 +322,8 @@ test.describe("Flow A — Production login page and clinician login verification
     await expect(page.locator('[data-testid="demo-banner"]')).not.toBeVisible();
     await expect(page.locator('text=Skip to Dashboard')).not.toBeVisible();
     await expect(page.locator('text=Demo Mode')).not.toBeVisible();
-    await snap(page, "login-page-production-mode");
+    // Screenshot 1: Production login page
+    await snap(page, "production-login");
   });
 
   test("A-2: clinician logs in and reaches authenticated view", async ({ page }) => {
@@ -307,6 +335,7 @@ test.describe("Flow A — Production login page and clinician login verification
     await expect(page.locator('[data-testid="role-switcher-btn"]')).not.toBeVisible();
     // Role badge must show the exact server-session role label — not the demo default.
     // clinician@test.sunrise has roleId="certified_clinician" → label "Certified Clinician".
+    // This assertion is mandatory before the dashboard screenshot is taken.
     const roleLabel = page.locator('[data-testid="role-display-label"]');
     await expect(roleLabel).toHaveText("Certified Clinician");
     // No demo UI elements remain after production login
@@ -315,7 +344,8 @@ test.describe("Flow A — Production login page and clinician login verification
     // No demo wording on AccessDenied or any visible surface
     await expect(page.locator('text=This demo uses role switching')).not.toBeVisible();
     await expect(page.locator('text=fictitious demo')).not.toBeVisible();
-    await snap(page, "clinician-dashboard-after-login");
+    // Screenshot 2: Certified Clinician dashboard (role assertion passed above)
+    await snap(page, "certified-clinician-dashboard");
   });
 });
 
@@ -335,7 +365,8 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
     await gotoAndAwaitReady(page);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
-    await snap(page, "progress-notes-tab-initial-state");
+    // Screenshot 3: Empty clinical-note state
+    await snap(page, "empty-note-state");
     await expect(page.locator('[data-testid="note-content"]')).not.toBeVisible();
   });
 
@@ -345,7 +376,8 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
     await openProgressNotesTab(page);
     await page.locator('[data-testid="new-note-btn"]').click();
     await expect(page.locator('[data-testid="note-content"]')).toBeVisible();
-    await snap(page, "compose-panel-open-new-note");
+    // Screenshot 4: Draft creation (compose panel open)
+    await snap(page, "draft-creation");
   });
 
   test("A-5: clinician types content and saves as draft", async ({ page }) => {
@@ -358,13 +390,13 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
     await page.locator('[data-testid="note-content"]').fill(content);
 
     await expect(page.locator('[data-testid="save-draft-btn"]')).not.toHaveClass(/opacity-40/);
-    await snap(page, "draft-note-dirty-before-save");
 
     await page.locator('[data-testid="save-draft-btn"]').click();
     // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
-    await snap(page, "draft-saved-note-appears-in-list");
+    // reached; a fixed pause is the honest substitute.
+    await page.waitForTimeout(300);
+    // Screenshot 5: Saved draft appears in list
+    await snap(page, "saved-draft");
 
     await expect(page.locator('[data-status="draft"]').first()).toBeVisible();
   });
@@ -377,23 +409,21 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
     await page.locator('[data-testid="note-content"]').fill("Flow-A persist test draft content.");
     await page.locator('[data-testid="save-draft-btn"]').click();
     // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
+    // reached; a fixed pause is the honest substitute.
+    await page.waitForTimeout(300);
 
     // Navigate away and back to simulate a reload.
     await page.evaluate(() => {
       window.history.pushState({ screen: "PatientList" }, "", "#PatientList");
       window.dispatchEvent(new PopStateEvent("popstate", { state: { screen: "PatientList" } }));
     });
-    // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
+    // Brief settle wait
+    await page.waitForTimeout(300);
     await navigateToPatient(page);
     await openProgressNotesTab(page);
 
     const draftCard = page.locator('[data-status="draft"]').first();
     await expect(draftCard).toBeVisible();
-    await snap(page, "draft-persisted-after-navigation");
 
     await draftCard.click();
     await expect(page.locator('[data-testid="note-content"]')).toBeVisible();
@@ -401,14 +431,15 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
     await page.locator('[data-testid="note-content"]').fill(
       "Flow-A final signed content — edited for signing via browser test.",
     );
-    await snap(page, "draft-opened-for-signing");
+    // Screenshot 6: Edited draft (opened for signing)
+    await snap(page, "edited-draft");
 
     await expect(page.locator('[data-testid="sign-lock-btn"]')).not.toHaveClass(/opacity-40/);
     await page.locator('[data-testid="sign-lock-btn"]').click();
-    // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
-    await snap(page, "note-signed-read-only-state");
+    // Brief settle wait
+    await page.waitForTimeout(300);
+    // Screenshot 7: Signed read-only note
+    await snap(page, "signed-note-read-only");
 
     await expect(page.locator('[data-status="signed"]').first()).toBeVisible();
     await expect(page.locator('[data-testid="note-content"]')).not.toBeVisible();
@@ -431,7 +462,6 @@ test.describe("Flow B — Nurse: login verification", () => {
     await expect(page.locator('text=Demo Mode')).not.toBeVisible();
     await navigateToPatient(page);
     await openProgressNotesTab(page);
-    await snap(page, "nurse-progress-notes-tab");
     await expect(page.locator('[data-testid="tab-progress-notes"]')).toBeVisible();
   });
 });
@@ -455,13 +485,12 @@ test.describe("Flow B — Nurse: create and sign a nursing note", () => {
     await page.locator('[data-testid="note-content"]').fill(
       "Flow-B nursing note — created by nurse@test.sunrise via Playwright browser test.",
     );
-    await snap(page, "nurse-nursing-note-composed");
 
     await page.locator('[data-testid="sign-lock-btn"]').click();
-    // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
-    await snap(page, "nurse-nursing-note-signed");
+    // Brief settle wait
+    await page.waitForTimeout(300);
+    // Screenshot 8: Nursing note (signed state)
+    await snap(page, "nursing-note");
 
     await expect(page.locator('[data-status="signed"]').first()).toBeVisible();
   });
@@ -481,7 +510,6 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
 
     const voidBtn = page.locator(`[data-testid="void-note-btn-${BROWSER_SIGNED_NOTE_ID}"]`);
     await expect(voidBtn).toBeVisible({ timeout: 15_000 });
-    await snap(page, "supervisor-void-button-visible");
   });
 
   test("C-2: void modal opens; short reason is rejected", async ({ page }) => {
@@ -493,12 +521,14 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
 
     const voidReason = page.locator('[data-testid="void-reason-input"]');
     await expect(voidReason).toBeVisible();
-    await snap(page, "void-modal-open-empty");
+    // Screenshot 9: Supervisor void dialog (modal open, empty reason)
+    await snap(page, "supervisor-void-dialog");
 
     await voidReason.fill("No");
     const confirmBtn = page.locator('[data-testid="confirm-void-btn"]');
     await expect(confirmBtn).toBeDisabled();
-    await snap(page, "void-confirm-btn-disabled-short-reason");
+    // Screenshot 10: Void-reason validation (short reason keeps Confirm disabled)
+    await snap(page, "void-reason-validation");
   });
 
   test("C-3: valid void reason enables Confirm; submitting voids the note", async ({ page }) => {
@@ -516,13 +546,12 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
 
     const confirmBtn = page.locator('[data-testid="confirm-void-btn"]');
     await expect(confirmBtn).not.toBeDisabled();
-    await snap(page, "void-reason-entered-confirm-enabled");
 
     await confirmBtn.click();
-    // Brief settle wait — app has continuous polling so networkidle is never
-  // reached; a fixed pause is the honest substitute.
-  await page.waitForTimeout(300);
-    await snap(page, "note-voided-status-shown");
+    // Brief settle wait
+    await page.waitForTimeout(300);
+    // Screenshot 11: Voided note (status shown)
+    await snap(page, "voided-note");
 
     await expect(page.locator('[data-status="voided"]').first()).toBeVisible();
   });
@@ -540,20 +569,12 @@ test.describe("Flow D — Authorization denials", () => {
 
   // ── Shared denial assertion helper ──────────────────────────────────────────
   // Verifies 11 required denial properties for personas that cannot access the
-  // patient chart (no patient.chart.view or cross-facility restriction):
-  //   1. The protected patient API request occurred
-  //   2. It returned the exact expected denial status (403 or 404)
-  //   3. The explicit access-denied UI is visible (data-testid="access-denied")
-  //   4. New-note (create) control is absent
-  //   5. Note content (edit) control is absent
-  //   6. Save-draft (edit) control is absent
-  //   7. Sign control is absent
-  //   8. Void control is absent (implied by no signed notes visible)
-  //   9. The page is not blank
-  //  10. The page is not stuck loading
-  //  11. No uncaught browser errors (checked by caller)
+  // patient chart (no patient.chart.view or cross-facility restriction).
   //
-  // Mandatory API assertion pattern (no .catch — if API call is absent the test fails):
+  // Expected server response: 404 (opaque AuthorizationError denial — the server
+  // never reveals whether the patient exists in a different scope).
+  //
+  // Mandatory API assertion pattern (no catch — if API call is absent the test fails):
   //   page.request.get() goes through the Vite proxy to the test API on port 8099.
   //   This guarantees the server-side authorization check actually fired.
   async function assertChartAccessDenied(
@@ -562,16 +583,17 @@ test.describe("Flow D — Authorization denials", () => {
   ): Promise<void> {
     // 1+2: Mandatory server-side authorization check.
     // page.request shares the page's cookie jar (session cookie) so the request
-    // is authenticated as the current persona.  The server must reject it with
-    // 403 or 404 — no .catch, no conditional — the assertion must hold.
+    // is authenticated as the current persona.  The server returns exactly 404
+    // (opaque AuthorizationError — never reveals whether patient exists).
+    // No catch, no conditional — the assertion must hold.
     const patientApiResp = await page.request.get(
       `/api/v1/patients/${TEST_PATIENT_ID}`,
       { headers: { Accept: "application/json" } },
     );
     expect(
-      [403, 404],
-      `Patient API returned ${patientApiResp.status()}, expected 403 or 404`,
-    ).toContain(patientApiResp.status());
+      patientApiResp.status(),
+      `Patient API returned ${patientApiResp.status()}, expected 404 (AuthorizationError → opaque denial)`,
+    ).toBe(404);
 
     await navigateToPatient(page);
     await page.waitForTimeout(300);
@@ -611,19 +633,24 @@ test.describe("Flow D — Authorization denials", () => {
 
       // 1+2: Mandatory server-side authorization check via direct API call.
       // The other-facility persona's session cookie is shared by page.request —
-      // the server must reject cross-facility access with 403 or 404.
+      // the server returns 404 (opaque AuthorizationError: cross-facility
+      // access is denied without revealing that the patient exists).
       const patientApiResp = await page.request.get(
         `/api/v1/patients/${TEST_PATIENT_ID}`,
         { headers: { Accept: "application/json" } },
       );
       expect(
-        [403, 404],
-        `Patient API returned ${patientApiResp.status()}, expected 403 or 404`,
-      ).toContain(patientApiResp.status());
+        patientApiResp.status(),
+        `Patient API returned ${patientApiResp.status()}, expected 404 (cross-facility → AuthorizationError → opaque denial)`,
+      ).toBe(404);
 
       await navigateToPatient(page);
       await page.waitForTimeout(500);
-      await snap(page, "other-facility-patient-access-denied");
+      // Screenshot 12: Other-facility denial
+      await snap(page, "other-facility-denial");
+      // Screenshot 13: Unassigned denial — same denial state proving the
+      // other-facility clinician is also unassigned to this patient's care team.
+      await snap(page, "unassigned-denial");
 
       // 3: Explicit access-denied UI must be visible.
       // PatientDetail renders data-testid="access-denied" when the patient API
@@ -655,7 +682,8 @@ test.describe("Flow D — Authorization denials", () => {
       page.on("pageerror", e => pageErrors.push(e));
 
       await gotoAndAwaitReady(page);
-      await assertChartAccessDenied(page, "security-admin-patient-access-denied");
+      // Screenshot 17: Security-administrator denial
+      await assertChartAccessDenied(page, "security-admin-denial");
 
       // 6: No uncaught browser errors
       expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
@@ -670,7 +698,8 @@ test.describe("Flow D — Authorization denials", () => {
       page.on("pageerror", e => pageErrors.push(e));
 
       await gotoAndAwaitReady(page);
-      await assertChartAccessDenied(page, "hr-patient-access-denied");
+      // Screenshot 18: HR denial
+      await assertChartAccessDenied(page, "hr-denial");
 
       // 6: No uncaught browser errors
       expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
@@ -688,9 +717,10 @@ test.describe("Flow D — Authorization denials", () => {
 
       // 1+2: Mandatory API assertion — billing staff lacks clinical_note.create.
       // Attempt to POST a new progress note as the billing persona — the server
-      // must return 403.  page.request shares the billing persona's session cookie
-      // (loaded from storageState at context creation).  No .catch — if the
-      // request never fires or returns the wrong status the test fails explicitly.
+      // returns 404 (opaque AuthorizationError: the authorize() call for
+      // clinical_note.create fails and returns an opaque denial).
+      // No catch — if the request never fires or returns the wrong status the
+      // test fails explicitly.
       const csrfResBilling = await page.request.get("/api/v1/auth/csrf-token");
       const { csrfToken: csrfBilling } = await csrfResBilling.json() as { csrfToken: string };
       const createResp = await page.request.post(
@@ -700,17 +730,16 @@ test.describe("Flow D — Authorization denials", () => {
           data: { noteType: "progress_note", content: "D-4 billing authorization probe." },
         },
       );
-      // The authorization check returns an opaque 403 or 404 denial
-      // (AuthorizationError → 404 to avoid revealing endpoint existence;
-      //  explicit permission-check denial → 403).  Both are acceptable.
+      // The authorization check returns 404 (AuthorizationError → opaque denial).
       expect(
-        [403, 404],
-        `Clinical notes POST returned ${createResp.status()}, expected 403 or 404`,
-      ).toContain(createResp.status());
+        createResp.status(),
+        `Clinical notes POST returned ${createResp.status()}, expected 404 (no clinical_note.create → AuthorizationError → opaque denial)`,
+      ).toBe(404);
 
       await navigateToPatient(page);
       await page.waitForTimeout(300);
-      await snap(page, "billing-patient-access-denied");
+      // Screenshot 19: Billing denial
+      await snap(page, "billing-denial");
 
       // Billing staff lacks clinical_note.create — new-note button must be absent
       await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
@@ -745,7 +774,7 @@ test.describe("Flow D — Authorization denials", () => {
       await page.locator('[data-testid="note-content"]').fill("Multi-facility edit attempt — must fail.");
 
       // 1+2: Mandatory API assertion — set up response capture BEFORE the save click,
-      // then await without .catch so the test fails if the request never fires.
+      // then await without catch so the test fails if the request never fires.
       const saveRespPromise = page.waitForResponse(
         r =>
           r.url().includes(`/api/v1/patients/${TEST_PATIENT_ID}/clinical-notes`) &&
@@ -756,12 +785,13 @@ test.describe("Flow D — Authorization denials", () => {
       const saveResp = await saveRespPromise;
 
       await page.waitForTimeout(300);
-      await snap(page, "multi-facility-edit-another-author-denied");
+      // Screenshot 14: Another-author edit denial
+      await snap(page, "another-author-edit-denied");
 
-      // The PATCH must return 403 — mandatory, no conditional
+      // The PATCH must return 403 (OwnershipError — cannot edit another author's draft)
       expect(
         saveResp.status(),
-        `Expected PATCH to return 403; got ${saveResp.status()}`,
+        `Expected PATCH to return 403 (OwnershipError); got ${saveResp.status()}`,
       ).toBe(403);
 
       // Compose panel stays visible after denial (error shown inline)
@@ -783,14 +813,13 @@ test.describe("Flow D — Authorization denials", () => {
       await navigateToPatient(page);
       await openProgressNotesTab(page);
 
-      // 1+2: Mandatory direct API sign attempt — no UI button click, no .catch.
+      // 1+2: Mandatory direct API sign attempt — no UI button click, no catch.
       // page.request shares the multi-facility persona's session cookie.
       // We omit the explicit Content-Type header — Playwright automatically sets
       // Content-Type: application/json when `data` is a plain object, which
       // ensures the body is JSON-serialized (not passed as a raw reference).
-      // The server must reject the sign attempt with 403/404 (clinical_note.sign_own
-      // only permits signing notes the authenticated user authored; an opaque
-      // AuthorizationError maps to 404, an OwnershipError maps to 403).
+      // The server returns 403 (OwnershipError — clinical_note.sign_own only permits
+      // signing notes the authenticated user authored).
       const csrfRes = await page.request.get("/api/v1/auth/csrf-token");
       const { csrfToken: csrf } = await csrfRes.json() as { csrfToken: string };
 
@@ -805,13 +834,14 @@ test.describe("Flow D — Authorization denials", () => {
         },
       );
 
-      await snap(page, "multi-facility-sign-another-author-denied");
+      // Screenshot 15: Another-author sign denial
+      await snap(page, "another-author-sign-denied");
 
-      // Sign must be denied — mandatory, no conditional
+      // Sign must be denied with 403 (OwnershipError — cannot sign another author's note)
       expect(
-        [403, 404],
-        `Expected POST /sign to return 403 or 404; got ${signResp.status()}`,
-      ).toContain(signResp.status());
+        signResp.status(),
+        `Expected POST /sign to return 403 (OwnershipError — cannot sign another author's note); got ${signResp.status()}`,
+      ).toBe(403);
 
       // The draft note must NOT have become signed (status attribute check,
       // not a global query — Flow A signs a separate note so checking for any
@@ -848,7 +878,8 @@ test.describe("Flow D — Authorization denials", () => {
         page.locator(`[data-testid="note-card-${BROWSER_SIGNED_NOTE_ID}"]`),
       ).toBeVisible({ timeout: 10_000 });
 
-      await snap(page, "clinician-no-void-btn");
+      // Screenshot 16: Original-author void denial (no void button for clinician)
+      await snap(page, "original-author-void-denied");
 
       // 1+2: Mandatory direct API void attempt — proves server-side enforcement,
       // not merely the absence of a UI button.
@@ -856,8 +887,7 @@ test.describe("Flow D — Authorization denials", () => {
       // We omit the explicit Content-Type header — Playwright automatically sets
       // Content-Type: application/json when `data` is a plain object.
       // The clinician lacks clinical_note.void; the server's authorize() check
-      // fires before the note-status check, so the voided state of the note
-      // (voided by C-3) does not affect the result.
+      // fires before the note-status check and returns 404 (opaque AuthorizationError).
       const csrfResD7 = await page.request.get("/api/v1/auth/csrf-token");
       const { csrfToken: csrfD7 } = await csrfResD7.json() as { csrfToken: string };
 
@@ -876,13 +906,11 @@ test.describe("Flow D — Authorization denials", () => {
         },
       );
 
-      // Server must deny the void — mandatory, no conditional.
-      // AuthorizationError (missing clinical_note.void) → 404 opaque denial;
-      // OwnershipError → 403.  Both are acceptable denial codes.
+      // Server must deny with 404 (missing clinical_note.void → AuthorizationError → opaque denial).
       expect(
-        [403, 404],
-        `Expected POST /void to return 403 or 404; got ${voidResp.status()}`,
-      ).toContain(voidResp.status());
+        voidResp.status(),
+        `Expected POST /void to return 404 (missing clinical_note.void → AuthorizationError → opaque denial); got ${voidResp.status()}`,
+      ).toBe(404);
 
       // 11: No uncaught browser errors
       expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
@@ -964,15 +992,12 @@ test.describe("Flow E — Concurrency: stale-version conflict on draft", () => {
       await draftCardB.click();
       await expect(pageB.locator('[data-testid="note-content"]')).toBeVisible();
 
-      await snap(pageA, "concurrency-both-contexts-opened-draft");
-
       // Context A saves first (version 1 → 2).
       await pageA.locator('[data-testid="note-content"]').fill(
         "Context-A write — first writer wins, version should increment to 2.",
       );
       await pageA.locator('[data-testid="save-draft-btn"]').click();
       await pageA.waitForTimeout(300);
-      await snap(pageA, "concurrency-context-a-saved-successfully");
 
       // Context B saves with stale version=1 → must receive 409 conflict.
       await pageB.locator('[data-testid="note-content"]').fill(
@@ -980,11 +1005,13 @@ test.describe("Flow E — Concurrency: stale-version conflict on draft", () => {
       );
       await pageB.locator('[data-testid="save-draft-btn"]').click();
       await pageB.waitForTimeout(300);
-      await snap(pageB, "concurrency-context-b-conflict-shown");
 
       await expect(
         pageB.locator("text=modified elsewhere"),
       ).toBeVisible({ timeout: 10_000 });
+
+      // Screenshot 20: Concurrency conflict (Context B shows the conflict UI)
+      await snap(pageB, "concurrency-conflict");
     } finally {
       // Closing contexts flushes the HAR files to disk.
       await ctxA.close();

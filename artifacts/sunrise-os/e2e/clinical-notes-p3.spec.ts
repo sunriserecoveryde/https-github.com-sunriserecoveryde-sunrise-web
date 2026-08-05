@@ -26,7 +26,14 @@ import * as fs from "fs";
 
 const BASE_URL  = process.env.E2E_BASE_URL ?? "http://localhost:8080";
 const API_URL   = `${BASE_URL}/api`;
-const PWD       = process.env.PHASE2D_TEST_PASSWORD ?? "";
+const _rawPwd = process.env.PHASE2D_TEST_PASSWORD;
+if (!_rawPwd) {
+  throw new Error(
+    "[clinical-notes-p3.spec] ABORT: PHASE2D_TEST_PASSWORD environment variable is required.\n" +
+    "Set it to the fictitious browser-test account password. Do not hard-code a fallback.",
+  );
+}
+const PWD = _rawPwd;
 const SS_DIR    = path.join(__dirname, "../readiness/phase-3/screenshots");
 const HAR_DIR   = path.join(__dirname, "../readiness/phase-3/network-traces");
 
