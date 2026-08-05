@@ -363,6 +363,32 @@ export async function seed(): Promise<void> {
       accountId = newAccount.id;
     }
 
+    // ── Revoke stale active assignments ──────────────────────────────────────
+    // If this user was previously seeded with a different role (e.g. an older
+    // authSeed version), unexpected active assignments accumulate and corrupt
+    // productionSession.roleIds[0], causing the wrong role label to display.
+    // Revoke any active assignment whose roleId is not in the expected set.
+    {
+      const expectedRoleIds = new Set([user.roleId]);
+      if (user.secondRole) expectedRoleIds.add(user.secondRole.roleId);
+      const staleAssignments = await db
+        .select({ id: sosRoleAssignments.id, roleId: sosRoleAssignments.roleId })
+        .from(sosRoleAssignments)
+        .where(and(
+          eq(sosRoleAssignments.orgId, ORG_ID),
+          eq(sosRoleAssignments.userId, accountId),
+          eq(sosRoleAssignments.status, "active"),
+        ));
+      for (const a of staleAssignments) {
+        if (!expectedRoleIds.has(a.roleId)) {
+          await db
+            .update(sosRoleAssignments)
+            .set({ status: "revoked" })
+            .where(eq(sosRoleAssignments.id, a.id));
+        }
+      }
+    }
+
     // ── Primary role assignment ───────────────────────────────────────────────
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const tomorrow  = new Date(Date.now() + 25 * 60 * 60 * 1000); // 25h from now for stability

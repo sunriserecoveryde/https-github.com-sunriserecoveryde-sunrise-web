@@ -58,10 +58,9 @@ export default defineConfig({
     screenshot: "on",
 
     // Traces: Playwright 1.38.0 + chromium-1080 are a matched pair (CDP aligns),
-    // so tracing works without deadlock.  Use retain-on-failure to reduce
-    // per-test overhead.  Note: trace "on" for all 17 tests simultaneously
-    // exhausts available memory — use --grep to trace individual tests.
-    trace: "retain-on-failure",
+    // so tracing works without deadlock.  Use trace "on" to capture authentic
+    // traces for all 19 tests (workers: 1 = one test at a time, memory safe).
+    trace: "on",
 
     // Video: off during stability proof runs to avoid ffmpeg encoding overhead.
     video: "off",

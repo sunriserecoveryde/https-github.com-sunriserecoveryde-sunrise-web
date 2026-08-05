@@ -290,6 +290,9 @@ test.describe("Flow A — Production login page and clinician login verification
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe("Flow A — Clinician: create, save, and sign a progress note", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
+  // HAR capture for main clinician workflow evidence.
+  // Sequential run (workers: 1) → the last test's HAR is preserved (A-6: edit + sign).
+  test.use({ recordHar: { path: "e2e/har/flow-a-clinician.har", mode: "minimal" } });
 
   test("A-3: Progress Notes tab shows empty state for new patient session", async ({ page }) => {
     await gotoAndAwaitReady(page);
@@ -382,6 +385,13 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
 test.describe("Flow B — Nurse: login verification", () => {
   test("B-1: nurse logs in and can reach patient chart", async ({ page }) => {
     await loginViaUI(page, USERS.nurse);
+    // Production role label must show "Nursing" for nurse@test.sunrise.
+    // As with A-2, productionSession.roleIds[0] drives the displayed label;
+    // the demo RoleContext default must not bleed into the authenticated view.
+    const nurseRoleBadge = page.locator('[data-testid="role-display"]');
+    await expect(nurseRoleBadge).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="role-display-label"]')).toHaveText("Nursing");
+    await expect(page.locator('text=Demo Mode')).not.toBeVisible();
     await navigateToPatient(page);
     await openProgressNotesTab(page);
     await snap(page, "nurse-progress-notes-tab");
@@ -486,6 +496,9 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
 // Each sub-describe uses the appropriate persona's storageState.
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe("Flow D — Authorization denials", () => {
+  // HAR capture for authorization-denial workflow evidence.
+  // Sequential run (workers: 1) → the last test's HAR is preserved (D-7: clinician void denial).
+  test.use({ recordHar: { path: "e2e/har/flow-d-auth-denial.har", mode: "minimal" } });
 
   // ── Shared denial assertion helper ──────────────────────────────────────────
   // Verifies 11 required denial properties for personas that cannot access the
@@ -739,10 +752,11 @@ test.describe("Flow D — Authorization denials", () => {
       // The draft note must NOT have become signed (status attribute check,
       // not a global query — Flow A signs a separate note so checking for any
       // [data-status="signed"] card would be a false positive).
+      // Mandatory: the seeded draft note must be visible and must remain draft
+      // (not signed) after the cross-facility sign attempt was denied.
       const draftCard = page.locator(`[data-testid="note-card-${BROWSER_DRAFT_NOTE_ID}"]`);
-      if (await draftCard.isVisible({ timeout: 5_000 }).catch(() => false)) {
-        await expect(draftCard).not.toHaveAttribute("data-status", "signed", { timeout: 3_000 });
-      }
+      await expect(draftCard).toBeVisible({ timeout: 5_000 });
+      await expect(draftCard).not.toHaveAttribute("data-status", "signed", { timeout: 3_000 });
 
       // 11: No uncaught browser errors
       expect(pageErrors.map(e => e.message), "Unexpected browser errors").toHaveLength(0);
