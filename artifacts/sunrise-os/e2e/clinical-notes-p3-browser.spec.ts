@@ -291,9 +291,10 @@ test.describe("Flow A — Production login page and clinician login verification
 test.describe("Flow A — Clinician: create, save, and sign a progress note", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
   // HAR capture for main clinician workflow evidence.
-  // Playwright 1.38.0: use omitContent (not mode) and an absolute path resolved
-  // from import.meta.dirname (= e2e/).  Sequential run → last test's HAR preserved.
-  test.use({ recordHar: { path: path.join(import.meta.dirname, "har", "flow-a-clinician.har"), omitContent: true } });
+  // Playwright 1.38.0: recordHar must go inside contextOptions (top-level recordHar
+  // in test.use is a BrowserContextOptions key but the test fixture only reads the
+  // known PlaywrightTestOptions; contextOptions passes the rest through verbatim).
+  test.use({ contextOptions: { recordHar: { path: path.join(import.meta.dirname, "har", "flow-a-clinician.har"), omitContent: true } } });
 
   test("A-3: Progress Notes tab shows empty state for new patient session", async ({ page }) => {
     await gotoAndAwaitReady(page);
@@ -498,9 +499,9 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe("Flow D — Authorization denials", () => {
   // HAR capture for authorization-denial workflow evidence.
-  // Playwright 1.38.0: use omitContent (not mode) and an absolute path resolved
-  // from import.meta.dirname (= e2e/).  Sequential run → D-7's HAR is preserved.
-  test.use({ recordHar: { path: path.join(import.meta.dirname, "har", "flow-d-auth-denial.har"), omitContent: true } });
+  // Playwright 1.38.0: recordHar must go inside contextOptions (same reason as
+  // Flow A — the test fixture reads contextOptions and merges into the context).
+  test.use({ contextOptions: { recordHar: { path: path.join(import.meta.dirname, "har", "flow-d-auth-denial.har"), omitContent: true } } });
 
   // ── Shared denial assertion helper ──────────────────────────────────────────
   // Verifies 11 required denial properties for personas that cannot access the
