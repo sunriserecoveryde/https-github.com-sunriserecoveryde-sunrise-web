@@ -1,76 +1,41 @@
 ---
-name: Phase 3 browser test hardening v2 + v4 final closure
-description: v4 final remediation complete. Covers credential rotation, trace sanitization, drizzle-kit Phase 2 proof, D-test strengthening, exact-equality permission tests, Topbar prod mode, v3 archive, and all v4 fixes.
+name: Phase 3 browser test hardening v2
+description: v5 CLOSED — final evidence archive details, PW HAR fix, all gate results
 ---
 
-## v4 Closure (branch feature/phase-3-clinical-documentation-foundation, commit 8733c9f)
+## v5 CLOSED — All gates met
 
-**All gates met:**
-- API Vitest: 572/572 × 3 clean runs (D, E, F)
-- Sunrise OS Vitest: 136/136 × 4 runs (A, B, C, D)
-- Playwright E2E: 19/19 × 3 clean runs (E, F, G)
-- Phase 2 upgrade proof: PASS (phase-2-upgrade-proof-v2.txt)
-- All combination runs: rate-alone, clinical→rate, rate→clinical, PW→rate, outbox→clinical, clinical→outbox — all passing
-- Secret scan: 0 confirmed secrets
-- Archive: `readiness/phase-3-clinical-documentation-foundation-review-v4.zip` (11.74 MB, 202 files)
-- SHA256: `4ee7914f94cb49fb6c0693e0e79131a481e1e9a71280c501fe2c60caaa7416cc`
+**Final commit on branch `feature/phase-3-clinical-documentation-foundation`:**
+- `5f979c0` — phase3-v5: fix HAR recording via contextOptions (PW 1.38 compatible)
+- `95b1975` — phase3-v5: fix HAR recording (absolute path + omitContent for PW 1.38)
+- `813d7b8` — phase3-v5: fix role label, mandatory assertions, TypeScript, traces, HAR, authSeed cleanup
+- Evidence archive: `readiness/phase-3-clinical-documentation-foundation-review-v5.zip` (49M, 106 files)
 
-## v4 Root cause fixes (this session)
+## Gate results (v5)
+- API vitest: 572/572 × 3 ✅
+- SOS vitest: 136/136 × 3 ✅
+- Playwright: 19/19 × 5 ✅ (≥3 required)
+- Phase 2 upgrade proof: 17/17 steps, disposable DB ✅
+- TypeScript API: EXIT:0 ✅
+- TypeScript SOS: EXIT:0 ✅
+- Traces: 19 sanitized ZIPs ✅
+- HAR: 4 workflows ✅
+- Screenshots: 33 ✅
+- Secret scan: clean (3 false positives annotated) ✅
 
-**D-7 void denial — `expectedVersion` missing:**
-- `voidNoteSchema` requires BOTH `voidReason` AND `expectedVersion`
-- Prior test only sent `voidReason` → 400. Fix: add `expectedVersion: 1` to void payload
+## Critical PW 1.38.0 HAR fix
 
-**D-6/D-7 — Playwright `data` + explicit `Content-Type` conflict:**
-- When `page.request.post()` receives both `headers: { "Content-Type": "application/json" }` AND `data: { ... }`, Playwright does NOT JSON-serialize the object
-- Fix: remove the explicit `Content-Type` header; Playwright auto-sets it when `data` is a plain object
-- **Why:** Playwright's `APIRequestContext` only auto-serializes when it controls the Content-Type. An explicit header overrides auto-detection and skips serialization.
+**Why `test.use({ recordHar })` silently fails in 1.38:**
+The Playwright 1.38 test fixture only reads known `PlaywrightTestOptions` keys (storageState, viewport, etc.). `recordHar` is a `BrowserContextOptions` key but NOT in `PlaywrightTestOptions`. Passing it top-level in `test.use()` is silently ignored.
 
-**D-6 signed-card assertion false positive:**
-- `[data-status="signed"]` matched a DIFFERENT note signed by Flow A (which stays visible)
-- Fix: check only the specific `BROWSER_DRAFT_NOTE_ID` card's status attribute
+**Fix:** Use `test.use({ contextOptions: { recordHar: { path: ABSOLUTE_PATH, omitContent: true } } })`. The `contextOptions` fixture is passed verbatim to `browser.newContext()`.
 
-**DB test isolation — billing_staff extra permissions:**
-- `auth-p2c-security.test.ts §1-C` creates a `certified_clinician` role assignment for billing user in facility B
-- If the test fails or is interrupted mid-run, the certified_clinician assignment is NOT cleaned up
-- This causes subsequent runs to see billing_staff with `patient.create` / `patient.chart.view` → test failures
-- Fix: manually `DELETE FROM sos_role_assignments WHERE user_id='...' AND role_id='certified_clinician'` between runs
-- **Prevention:** The test HAS `afterAll` cleanup at line 1016 — it only leaks when test itself fails
+**Why:** `omitContent: true` is correct for 1.38 (not `content: "omit"` which came in 1.42, not `mode: "minimal"` which came in 1.44).
 
-**Billing user lookup:**
-- Email: `billing@test.sunrise`
-- User ID: `e123df74-81f1-4e2c-8013-d62da0c6130b`
-- Table: `sos_user_accounts` (NOT `sos_users`) + `sos_user_identity_refs` (no email column — uses `ext_auth_ref`)
+**Path must be absolute:** Use `path.join(import.meta.dirname, "har", "filename.har")` — relative paths resolve to `outputDir` which may be wrong.
 
-**e2e/tsconfig.json — allowImportingTsExtensions:**
-- Global-setup.ts and browser spec use `.ts` extension imports (e.g. `import ... from "./sessions.ts"`)
-- Fix: add `"allowImportingTsExtensions": true` to `e2e/tsconfig.json`
-- Also exclude old API-only spec: `"exclude": ["clinical-notes-p3.spec.ts"]`
+## authSeed role cleanup
+Before v5 runs, stale active `bht` assignments for the clinician test account caused the clinician role label to show "BHT". Fixed by adding a "revoke stale active assignments" loop in `authSeed.ts` before seeding. This is now part of the seed logic permanently.
 
-## Key decisions from v3 (preserved)
-
-**Credential rotation flow:**
-- `authSeed.ts` seeds ALL browser test users — run with `pnpm exec tsx src/seed/authSeed.ts` from api-server dir
-- Always run authSeed WITHOUT env var override to use the current PHASE2D_TEST_PASSWORD secret
-
-**Phase 2 upgrade proof (drizzle-kit only, no psql):**
-- Create `lib/db/drizzle/phase2-proof/` with 0000-0005 SQL + `meta/_journal.json` (6 entries only)
-- Create `lib/db/drizzle.phase2.config.ts` pointing to `drizzle/phase2-proof/`
-- Run migrate → applies 0006 only (7 rows total); sos_clinical_notes: 24 constraints, 5 indexes, 1 trigger
-
-**Rate-limit test flakiness:**
-- `DELETE FROM sos_rate_limit_windows` before each API vitest run (global-teardown only clears loopback IPs)
-- NEVER set PHASE2D_RATE_LIMIT_INTEGRATION externally when running full suite
-
-**Playwright D-test specifics:**
-- D-1 (cross-facility): hides note controls but does NOT render `[data-testid="access-denied"]`
-- D-6 (sign denial): `sign-lock-btn` may not be visible — use `{ timeout: 5_000 }` on click
-- Test count: 19 (Flow A–E: A=6, B=2, C=3, D=8-ish with auth, E=1 concurrency)
-
-**lib/db pre-existing failures:**
-- `constraints.test.ts` and `integration.test.ts`: `createOrganization` called without slug field
-- 18 pass / 51 skip / 2 fail — pre-existing, do NOT fix for Phase 3
-
-**SOS typecheck pre-existing failures:**
-- `calendar.tsx` / `spinner.tsx`: React@19 dual-type conflict from pnpm hoisting
-- Does NOT block SOS production build (EXIT:0) or Vitest (136/136)
+## Trace config
+`trace: "on"` (not `retain-on-failure`) ensures 19 traces always generated, even when all tests pass. Each test generates one trace.zip in `playwright-results/{test-slug}/trace.zip`. Sequential run (workers:1) means no conflicts.
