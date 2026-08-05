@@ -89,22 +89,42 @@ const ABSOLUTE_TIMEOUT_MS = parseInt(process.env.SESSION_ABSOLUTE_TIMEOUT_MS ?? 
 // PHASE2D_RATE_LIMIT_MAX=N              — override per-window limit (read per request)
 // PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX=P  — prepend unique prefix to req.ip key
 //
-// pgStore is created once at module load and is always available.  The skip()
-// function gates whether it is actually used in test mode.
+// pgStore uses a lazy singleton so no DB connection or setInterval is created at
+// module load time in test mode.  It initialises on the first request that has
+// skip()=false.  In normal test mode skip() always returns true so the store is
+// never touched.  This prevents background prune queries from competing with
+// parallel test-file DB connections and causing spurious timeouts.
 
 const WINDOW_MS = parseInt(
   process.env.PHASE2D_RATE_LIMIT_WINDOW_MS ?? "900000",  // 15 min default
   10,
 );
 
-// pgStore is always created (even in test mode) because express-rate-limit
-// requires the store at middleware creation time.  In normal test mode skip()
-// returns true, so increment() is never called and no rate-limit rows are created.
-const pgStore = (() => {
-  const s = new PgRateLimitStore(WINDOW_MS);
-  s.init();
-  return s;
-})();
+// Lazy singleton — initialised on first real use (skip()=false).
+let _pgStore: PgRateLimitStore | undefined;
+
+function getOrCreatePgStore(): PgRateLimitStore {
+  if (!_pgStore) {
+    _pgStore = new PgRateLimitStore(WINDOW_MS);
+    _pgStore.init();
+  }
+  return _pgStore;
+}
+
+// Store proxy: delegates to the lazy singleton but only when the rate limiter
+// is actually active (skip()=false).  When skip()=true, express-rate-limit does
+// not call these methods at all, so the proxy is never invoked in normal test mode.
+const lazyRateLimitStore = {
+  async increment(key: string) {
+    return getOrCreatePgStore().increment(key);
+  },
+  async decrement(key: string): Promise<void> {
+    return getOrCreatePgStore().decrement(key);
+  },
+  async resetKey(key: string): Promise<void> {
+    return getOrCreatePgStore().resetKey(key);
+  },
+};
 
 const authRateLimiter = rateLimit({
   windowMs: WINDOW_MS,
@@ -114,7 +134,7 @@ const authRateLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders:   false,
   message: { error: "Too many requests. Please try again later." },
-  store:   pgStore,
+  store:   lazyRateLimitStore as Parameters<typeof rateLimit>[0]["store"],
   // Test isolation: PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX prepends a unique per-run
   // prefix to req.ip so that step-15's rate-limit rows never collide with real
   // browser logins (Playwright) or other integration tests that share the loopback IP.
