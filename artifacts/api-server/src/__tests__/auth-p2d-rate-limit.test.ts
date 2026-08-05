@@ -340,8 +340,18 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
     const PROD_LIMIT = 10;
     const nearKey    = "p2d-rate-limit-test-near:127.0.0.1";
 
+    // ── Window sizing ──────────────────────────────────────────────────────────
+    // Use a dedicated 60-second window instead of TEST_WINDOW_MS (8 s).  This
+    // makes a boundary flip during the test essentially impossible: the test
+    // completes in well under 10 seconds, while the window spans 60 seconds.
+    // The old 8-second window caused an intermittent failure when the global
+    // beforeEach guard left only ~500 ms of runway and the seed + 3 HTTP
+    // requests consumed more than that, flipping the window mid-test and
+    // starting a fresh counter at 1 instead of continuing from 9.
+    const NEAR_WINDOW_MS = 60_000;  // 60-second window — boundary-flip proof
+
     // Build a minimal app that mirrors the production auth rate-limiter config.
-    const nearStore = new PgRateLimitStore(TEST_WINDOW_MS);
+    const nearStore = new PgRateLimitStore(NEAR_WINDOW_MS);
     nearStore.init();
 
     const nearApp = express();
@@ -349,11 +359,11 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
     nearApp.post(
       "/login",
       rateLimit({
-        windowMs:        TEST_WINDOW_MS,
+        windowMs:        NEAR_WINDOW_MS,
         limit:           PROD_LIMIT,
         standardHeaders: "draft-8",
         legacyHeaders:   false,
-        keyGenerator:    () => nearKey,
+        keyGenerator:    () => nearKey,   // fixed string — no req.ip, no ValidationError
         store:           nearStore,
         message:         { error: "Too many requests." },
       }),
@@ -361,24 +371,21 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
     );
 
     try {
+      // Pre-clean any stale row for nearKey (defensive; e.g. from a previous
+      // failed run that didn't reach the finally block).
+      await pool.query(
+        `DELETE FROM sos_rate_limit_windows WHERE key = $1`,
+        [nearKey],
+      );
+
       // Seed the counter to 8 directly in PostgreSQL so the next HTTP request
       // will be the 9th hit — one below the production limit of 10.
       // We compute window_end the same way PgRateLimitStore does so the UPSERT
       // in increment() targets the correct existing row.
       //
-      // Guard: if we are within 500 ms of the next window boundary, sleep
-      // until we are safely past it.  Otherwise, the seed row's window_end
-      // can expire between the INSERT and the HTTP request, causing the
-      // request to start a fresh counter at 1 instead of 9.
-      const guardBoundaryMs = 500;
-      const nowMs          = Date.now();
-      const windowEndMs    = Math.ceil(nowMs / TEST_WINDOW_MS) * TEST_WINDOW_MS;
-      const msUntilFlip    = windowEndMs - nowMs;
-      if (msUntilFlip < guardBoundaryMs) {
-        await new Promise<void>(resolve => setTimeout(resolve, msUntilFlip + 50));
-      }
-      // Recompute after any sleep so we use the current (non-expiring) window.
-      const windowEnd = new Date(Math.ceil(Date.now() / TEST_WINDOW_MS) * TEST_WINDOW_MS);
+      // With a 60-second window, no boundary guard is needed — the window
+      // expires in 60 seconds and the test completes in well under 10 seconds.
+      const windowEnd = new Date(Math.ceil(Date.now() / NEAR_WINDOW_MS) * NEAR_WINDOW_MS);
       await pool.query(
         `INSERT INTO sos_rate_limit_windows (key, window_end, count, updated_at)
          VALUES ($1, $2, 8, now())

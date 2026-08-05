@@ -39,7 +39,7 @@ import {
   sosAuthAudit,
 } from "@workspace/db";
 import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
-import { rateLimit } from "express-rate-limit";
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { PgRateLimitStore } from "../lib/pgRateLimiter";
 import { getPermissionsForRole, isRoleFacilityWide, isKnownRole } from "../lib/permissionPolicy";
 import { buildScopedGrant } from "../lib/authorizationService";
@@ -122,7 +122,11 @@ const authRateLimiter = rateLimit({
   // In production (NODE_ENV !== "test" or no prefix set) this returns req.ip as-is.
   keyGenerator: (req): string => {
     const prefix = process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX;
-    const ip = req.ip ?? "127.0.0.1";
+    // Use ipKeyGenerator (express-rate-limit v8 helper) to normalise IPv4-mapped
+    // IPv6 addresses (e.g. ::ffff:127.0.0.1 → 127.0.0.1).  Passing the function
+    // through the helper also satisfies the express-rate-limit v8 validation check
+    // that requires IP-based key generators to use ipKeyGenerator explicitly.
+    const ip = ipKeyGenerator(req.ip ?? "127.0.0.1");
     return prefix ? `${prefix}:${ip}` : ip;
   },
   skip:    () => process.env.NODE_ENV === "test" && !RL_INTEGRATION,
