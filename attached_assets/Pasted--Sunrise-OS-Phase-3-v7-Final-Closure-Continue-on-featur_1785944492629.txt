@@ -1,0 +1,718 @@
+# Sunrise OS — Phase 3 v7 Final Closure
+
+Continue on:
+
+`feature/phase-3-clinical-documentation-foundation`
+
+Do not merge into `main`.
+
+Do not begin another phase.
+
+Do not add unrelated functionality.
+
+The v6 archive failed independent review because the packaged evidence contained real test failures, a false-positive migration proof, incomplete source files, missing build/typecheck evidence, and inconsistent manifest claims.
+
+Fix the underlying implementation and evidence process. Do not merely repackage v6.
+
+---
+
+# 1. Fix the recurring rate-limit failure
+
+The following test still fails intermittently:
+
+```text
+auth-p2d-rate-limit.test.ts
+step-15
+expected HTTP 429
+received HTTP 401
+```
+
+Reproduce it in:
+
+* The rate-limit file alone
+* The full API suite
+* After Playwright
+* After clinical-note tests
+* After outbox tests
+
+Identify the exact remaining state leak or window-boundary problem.
+
+The correction must ensure:
+
+* Every test uses a unique rate-limit key or namespace.
+* Every test creates its own database state.
+* Every test removes only the rows it created.
+* No test relies on timing near a fixed-window boundary.
+* No test uses an unscoped `DELETE FROM sos_rate_limit_windows`.
+* Environment variables are restored after every test.
+* Timers, module state, singleton state and database pools are reset correctly.
+
+Do not fix this with retries, larger timeouts, skipped assertions, or by accepting a later green run.
+
+Add a deterministic regression test.
+
+---
+
+# 2. Fix the outbox state leak
+
+The following test still fails:
+
+```text
+outbox worker step-04
+expected 0
+received 1
+```
+
+Identify the exact leftover row, worker state, timer, pool, singleton or test-order dependency.
+
+Ensure:
+
+* Each outbox test owns its fixtures.
+* Each outbox test removes only its fixtures.
+* Workers are stopped and awaited.
+* Timers are cleared.
+* Database transactions finish before assertions.
+* Shared pools are not ended inside individual test files.
+* No previous test can leave an event visible to the next test.
+
+Add a regression test proving the outbox suite passes:
+
+* Alone
+* Before clinical notes
+* After clinical notes
+* Before rate limiter
+* After rate limiter
+
+---
+
+# 3. Make all cross-suite checks pass
+
+Run and save these as separate commands:
+
+1. Rate limiter alone
+2. Clinical notes then rate limiter
+3. Rate limiter then clinical notes
+4. Playwright then rate limiter
+5. Outbox then clinical notes
+6. Clinical notes then outbox
+
+Every command must:
+
+* Exit `0`
+* Include full raw output
+* Show discovered, passed, failed and skipped counts
+* Use fresh test state
+* Contain no dismissed or unexplained failure
+
+Do not state that these passed unless every corresponding log exits `0`.
+
+---
+
+# 4. Correct the Phase 2 migration proof
+
+The v6 proof falsely reported success after SQL errors.
+
+The trigger verification used nonexistent or incorrect schema objects, including:
+
+```text
+sos_users
+sos_patients.dob
+```
+
+Rewrite the proof using the actual Phase 2 schema.
+
+The proof script must begin with:
+
+```bash
+set -euo pipefail
+```
+
+Every `psql` invocation used only for inspection or data seeding must include:
+
+```bash
+-v ON_ERROR_STOP=1
+```
+
+Migrations themselves must still be applied only through the normal Drizzle migration runner.
+
+Required proof:
+
+1. Create a new empty disposable PostgreSQL database.
+2. Use migration metadata containing only `0000` through `0005`.
+3. Run the normal Drizzle migration command.
+4. Prove exactly six migration-journal rows exist.
+5. Inspect the real Phase 2 tables and columns.
+6. Seed valid fictitious Phase 2 organization, facility, patient, episode and user/account data using valid foreign keys.
+7. Record every seeded identifier and value.
+8. Restore migration metadata containing `0000` through `0006`.
+9. Run the same normal migration command.
+10. Prove only `0006` is applied.
+11. Prove exactly seven migration-journal rows exist.
+12. Prove `sos_clinical_notes` exists.
+13. Prove every expected index exists.
+14. Prove every expected foreign key exists.
+15. Prove every expected check constraint exists.
+16. Prove the expected immutability/clinical-note trigger exists.
+17. Insert valid related data and execute an operation that genuinely exercises the trigger.
+18. Prove the trigger produced the expected rejection or behavior.
+19. Prove every seeded Phase 2 row remains unchanged.
+20. Run the migration command again.
+21. Prove there are no pending migrations.
+22. Destroy the disposable database.
+
+Any SQL error must terminate the proof with a nonzero exit code.
+
+Do not print `PASS` after a warning or failed statement.
+
+---
+
+# 5. Remove the remaining swallowed browser failure
+
+The browser helper still uses:
+
+```ts
+.catch(() => false)
+```
+
+inside `openProgressNotesTab()` and lacks a mandatory final assertion.
+
+Replace the helper with an explicit state machine.
+
+After navigation, require one final state:
+
+* Progress Notes tab is visible and selected
+* Explicit access-denied UI is visible
+* Explicit patient-not-found UI is visible
+* Explicit approved error UI is visible
+
+After all retry attempts, throw an error unless one approved final state is reached.
+
+Do not swallow selector, navigation, request or assertion failures.
+
+Do not use `.catch(() => null)`, `.catch(() => false)` or `.catch(() => {})` for mandatory states.
+
+---
+
+# 6. Preserve mandatory denial assertions
+
+For every denied persona, require:
+
+1. The protected request occurred.
+2. The response object exists.
+3. The exact expected `403` or approved `404` is returned.
+4. Explicit denial UI is visible.
+5. The page is not blank.
+6. The page is not stuck loading.
+7. Protected clinical-note content is absent.
+8. Create controls are absent.
+9. Edit controls are absent.
+10. Sign controls are absent.
+11. Void controls are absent.
+12. No uncaught page error occurred.
+
+Required denial scenarios:
+
+* Other-facility clinician
+* Unassigned clinician
+* Another author editing a draft
+* Another author signing a draft
+* Original author attempting void
+* Security administrator
+* HR
+* Billing
+
+Do not make any HTTP assertion conditional.
+
+Do not prove denial only by hiding a button.
+
+---
+
+# 7. Keep the exact permission contract
+
+The only approved clinical-note permissions are:
+
+```text
+clinical_note.create
+clinical_note.view
+clinical_note.edit_own_draft
+clinical_note.sign_own
+clinical_note.void
+```
+
+These must not exist:
+
+```text
+clinical_note.sign
+clinical_note.export
+clinical_note.audit_view
+```
+
+Prove exact equality in:
+
+* Database permission records
+* Server permission type
+* Frontend permission type
+* Role policy
+* Seeds
+* Session/login response
+* Routes
+* Services
+* Tests
+* Documentation
+
+Use exact-set equality assertions.
+
+---
+
+# 8. Complete all source corrections before testing
+
+After fixing the implementation:
+
+```bash
+git add -A
+git commit -m "fix: complete deterministic Phase 3 closure"
+git status --short
+git rev-parse HEAD
+```
+
+`git status --short` must return no output.
+
+Record this exact final commit in every evidence file.
+
+Do not change source code after beginning the final deterministic test sequence.
+
+If any source code changes, restart the complete sequence from API Vitest A.
+
+---
+
+# 9. Run the complete deterministic sequence from the final commit
+
+Run sequentially:
+
+1. API Vitest A
+2. Sunrise OS Vitest A
+3. Playwright A
+4. API Vitest B
+5. Sunrise OS Vitest B
+6. Playwright B
+7. API Vitest C
+8. Sunrise OS Vitest C
+9. Playwright C
+10. API Vitest D
+11. Sunrise OS Vitest D
+
+Then run the six cross-suite checks listed above.
+
+Required minimums:
+
+```text
+API: 572/572 in all four runs
+Sunrise OS: 136/136 in all four runs
+Playwright: 19/19 in all three runs
+```
+
+For every run save:
+
+* Final commit SHA
+* Exact command
+* Start time
+* End time
+* Full raw output
+* Actual exit code
+* Discovered
+* Passed
+* Failed
+* Skipped
+
+Do not package reconstructed summaries.
+
+Do not omit failed attempts.
+
+---
+
+# 10. Run real TypeScript and production builds
+
+Run and save full logs for:
+
+* Database TypeScript validation
+* Database build
+* API TypeScript validation
+* API production build
+* Sunrise OS TypeScript validation
+* Sunrise OS production build
+* Playwright TypeScript validation
+
+When a package has no script, invoke TypeScript directly with the correct `tsconfig.json`.
+
+Do not mask failed exit codes.
+
+Required result:
+
+```text
+0 TypeScript errors
+All build commands EXIT:0
+```
+
+---
+
+# 11. Package the complete authoritative source tree
+
+The v6 source package was incomplete.
+
+Copy actual source files directly from the clean final commit.
+
+Include at minimum:
+
+## Database
+
+* Migrations `0000` through `0006`
+* Migration journal metadata
+* Complete schema
+* Migration configuration
+* Database package configuration
+
+## API
+
+* Clinical-note repository
+* Clinical-note service
+* Clinical-note routes
+* DTOs and validation
+* Authorization policy
+* Permission definitions
+* Session middleware
+* CSRF middleware
+* Rate-limit implementation
+* Rate-limit regression tests
+* Clinical-note tests
+* Permission exact-equality tests
+* Migration tests
+* Outbox worker and related tests
+
+## Frontend
+
+* `PatientDetail.tsx`
+* `App.tsx`
+* `AuthContext.tsx`
+* `RoleContext.tsx`
+* `ProductionLogin.tsx`
+* Clinical-note components
+* Frontend permission definitions
+* Access-denied components
+* Demo banner
+* Production data-mode configuration
+
+## Playwright
+
+* `playwright.config.ts`
+* Vite Playwright configuration
+* Complete browser specification
+* Global setup
+* Global teardown
+* `e2e/tsconfig.json`
+* Browser seeds
+* Browser helpers
+* Trace sanitizer
+* HAR sanitizer
+* Secret scanner
+
+Also include:
+
+* Workspace lockfile
+* Relevant `package.json` files
+* Source inventory
+* Clean-tree proof
+* Final commit proof
+
+Use one copy of every file.
+
+---
+
+# 12. Regenerate all browser evidence from the final commit
+
+Generate fresh:
+
+* 19 Playwright trace ZIPs
+* 4 sanitized HAR files
+* Standalone production screenshots
+* Browser-console logs
+* Page-error logs
+
+Do not reuse v6 traces or screenshots after code changes.
+
+Required screenshots:
+
+1. Production login
+2. Certified Clinician dashboard
+3. Empty note state
+4. Draft creation
+5. Saved draft
+6. Edited draft
+7. Signed read-only note
+8. Nursing note
+9. Supervisor void dialog
+10. Void validation error
+11. Voided note
+12. Other-facility denial
+13. Unassigned denial
+14. Another-author edit denial
+15. Another-author sign denial
+16. Original-author void denial
+17. Security-administrator denial
+18. HR denial
+19. Billing denial
+20. Concurrency conflict
+
+Create `SCREENSHOT-INVENTORY.md` mapping every screenshot to:
+
+* Playwright test
+* Persona
+* Expected state
+* Final commit
+* File path
+
+No screenshot may contain demo wording or the BHT clinician role.
+
+---
+
+# 13. Re-run recursive secret scanning
+
+Inspect:
+
+* Repository source
+* Final source snapshot
+* Extracted trace contents
+* Trace ZIPs
+* HAR files
+* Screenshots and metadata
+* Final staging tree
+* Final outer ZIP
+* Every nested compressed file
+
+Search actual nonempty values for:
+
+* Passwords
+* Session IDs
+* `sos_dev_session`
+* CSRF tokens
+* Cookie values
+* `Cookie`
+* `Set-Cookie`
+* Authorization headers
+* Database credentials
+* Environment secrets
+* Private keys
+
+Save:
+
+* Scanner source
+* Exact command
+* Full output
+* Actual exit code
+* Files scanned
+* Compressed files opened
+* Candidate findings
+* Final disposition
+
+Required result:
+
+```text
+0 confirmed secrets
+```
+
+---
+
+# 14. Create v7 from a new staging directory
+
+Use:
+
+```bash
+rm -rf /tmp/sunrise-phase3-v7
+mkdir -p /tmp/sunrise-phase3-v7
+```
+
+Copy only canonical final evidence.
+
+Do not copy the old readiness directory.
+
+Do not include:
+
+* v1 through v6 ZIPs
+* Historical failed logs
+* Old migration proofs
+* Stale screenshots
+* Unsanitized browser evidence
+* Multiple closure reports
+* Conflicting commit references
+* Duplicate source files
+
+Create:
+
+```text
+artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v7.zip
+```
+
+---
+
+# 15. Create an accurate evidence manifest
+
+Create:
+
+`EVIDENCE-MANIFEST.md`
+
+Include:
+
+* Branch
+* Exact final commit
+* Clean-tree result
+* Complete source inventory
+* Migration proof
+* API logs A–D
+* Sunrise OS logs A–D
+* Playwright logs A–C
+* All six cross-suite logs
+* TypeScript logs
+* Build logs
+* Trace inventory
+* HAR inventory
+* Screenshot inventory
+* Secret-scan report
+* Exact permission evidence
+* Known limitations
+
+Do not mark any item as passed unless its real log exits `0`.
+
+---
+
+# 16. Generate and verify SHA256SUMS
+
+After every other staging file is final:
+
+1. Generate `SHA256SUMS.txt`.
+2. Include every regular staging file except `SHA256SUMS.txt`.
+3. Exclude the outer ZIP.
+4. Use ASCII-only paths.
+5. Sort consistently.
+
+Create the ZIP, extract it normally and run:
+
+```bash
+sha256sum -c SHA256SUMS.txt
+```
+
+Required:
+
+```text
+Every entry: OK
+Exit code: 0
+```
+
+Required relationship:
+
+```text
+manifest entries = regular archive files - 1
+```
+
+---
+
+# 17. Final verification
+
+Verify:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v7.zip
+
+sha256sum artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v7.zip
+
+unzip -l artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v7.zip
+```
+
+Confirm:
+
+* ZIP integrity passes
+* SHA verification passes
+* All paths are ASCII
+* 19 traces are present
+* 19 traces open successfully
+* 4 HAR files parse successfully
+* Standalone screenshot inventory is complete
+* Recursive secret scan reports zero confirmed secrets
+* Phase 2 migration proof contains no SQL errors
+* Trigger enforcement is genuinely exercised
+* All six cross-suite checks exit `0`
+* Four API runs pass
+* Four Sunrise OS runs pass
+* Three Playwright runs pass
+* TypeScript and builds pass
+* Complete source files are present
+* Every artifact references one clean final commit
+
+---
+
+# Required final response
+
+Provide:
+
+1. Branch
+2. Starting HEAD
+3. Correction commits
+4. Final HEAD
+5. Clean-tree result
+6. Rate-limit root cause
+7. Rate-limit correction
+8. Outbox root cause
+9. Outbox correction
+10. Exact permission set
+11. Unapproved permission scan
+12. Migration runner result
+13. Six journal rows
+14. Seven journal rows
+15. Phase 2 data preservation
+16. Index verification
+17. Constraint verification
+18. Trigger verification
+19. Idempotent migration rerun
+20. API Vitest A
+21. Sunrise OS Vitest A
+22. Playwright A
+23. API Vitest B
+24. Sunrise OS Vitest B
+25. Playwright B
+26. API Vitest C
+27. Sunrise OS Vitest C
+28. Playwright C
+29. API Vitest D
+30. Sunrise OS Vitest D
+31. Rate limiter alone
+32. Clinical notes then rate limiter
+33. Rate limiter then clinical notes
+34. Playwright then rate limiter
+35. Outbox then clinical notes
+36. Clinical notes then outbox
+37. Database TypeScript/build
+38. API TypeScript/build
+39. Sunrise OS TypeScript/build
+40. Playwright TypeScript
+41. Trace count
+42. Trace Viewer verification
+43. HAR count
+44. HAR parse result
+45. Screenshot count
+46. Screenshot inventory result
+47. Trace secret scan
+48. HAR secret scan
+49. Final ZIP secret scan
+50. Source inventory result
+51. ZIP path
+52. ZIP size
+53. ZIP SHA-256
+54. ZIP regular-file count
+55. SHA manifest count
+56. SHA verification
+57. Known limitations
+58. Explicit answer: `PHASE 3 APPROVED FOR MERGE` or `PHASE 3 NOT APPROVED`
+
+Do not merge automatically.
+
+Do not begin another phase.
+
+Stop after generating and verifying the v7 ZIP.

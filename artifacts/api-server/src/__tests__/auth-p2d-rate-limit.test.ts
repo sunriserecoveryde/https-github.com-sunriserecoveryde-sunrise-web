@@ -459,6 +459,12 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
   // skip: () => ... condition and the pgStore conditional in authV1.ts both
   // behave correctly when PHASE2D_RATE_LIMIT_INTEGRATION=true.
   //
+  // Key isolation: authV1.ts supports PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX which
+  // prepends a test-specific prefix to req.ip so the rate-limit key is unique
+  // per run and starts with 'p2d-rate-limit-test', enabling pruneTestKeys()
+  // to clean it up automatically.  This prevents collision with loopback-IP
+  // rows left by Playwright real-browser logins or other cross-suite tests.
+  //
   // CSRF handling: the full app applies CSRF protection at the /api/v1 level,
   // before the route-level authRateLimiter runs.  This test uses supertest's
   // request.agent() to preserve cookies, fetches a real CSRF token via
@@ -468,38 +474,43 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
   // next request returns 429.
   //
   // Cleanup contract:
-  //   All loopback IP variants that supertest may produce as req.ip are deleted
-  //   in the finally block so that stale counters cannot affect later runs.
+  //   The unique test key prefix is swept by pruneTestKeys() in afterAll AND
+  //   explicitly deleted in the finally block.  No loopback-IP rows are
+  //   created or removed by this test.
   it("step-15 (integration): /api/v1/auth/login returns 429 after limit is exhausted on the full app", async () => {
+    // ── Unique per-run key prefix ──────────────────────────────────────────────
+    // Starts with 'p2d-rate-limit-test' so pruneTestKeys() in afterAll cleans it.
+    // The timestamp makes it unique across concurrent/repeated runs.
+    const STEP15_PREFIX = `p2d-rate-limit-test-step15-${Date.now()}`;
+
     // Save and override env vars before re-importing the module so that
-    // authV1.ts evaluates RL_INTEGRATION=true and creates a real PgRateLimitStore.
+    // authV1.ts evaluates RL_INTEGRATION=true and creates a real PgRateLimitStore
+    // keyed with STEP15_PREFIX instead of the shared loopback IP.
     const prevIntegration = process.env.PHASE2D_RATE_LIMIT_INTEGRATION;
     const prevMax         = process.env.PHASE2D_RATE_LIMIT_MAX;
     const prevWindow      = process.env.PHASE2D_RATE_LIMIT_WINDOW_MS;
+    const prevKeyPrefix   = process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX;
 
-    process.env.PHASE2D_RATE_LIMIT_INTEGRATION = "true";
-    process.env.PHASE2D_RATE_LIMIT_MAX         = "3";  // low limit for testability
-    process.env.PHASE2D_RATE_LIMIT_WINDOW_MS   = String(TEST_WINDOW_MS);  // short window
+    process.env.PHASE2D_RATE_LIMIT_INTEGRATION    = "true";
+    process.env.PHASE2D_RATE_LIMIT_MAX            = "3";              // low limit for testability
+    process.env.PHASE2D_RATE_LIMIT_WINDOW_MS      = String(TEST_WINDOW_MS);  // short window
+    process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX = STEP15_PREFIX;   // unique namespace
 
-    // Pre-clean loopback-IP rate-limit windows that may exist from earlier tests
-    // in the same run (e.g., from a previous step-15 invocation or shared-IP runs).
-    // Uses the top-level pool reference (before vi.resetModules clears the registry)
-    // so the fresh module's pool doesn't compete for DB connections with stale state.
-    const LOOPBACK_KEYS = ["127.0.0.1", "::1", "::ffff:127.0.0.1"];
+    // Pre-clean any leftover rows for THIS prefix (defensive; shouldn't exist).
     await pool.query(
-      `DELETE FROM sos_rate_limit_windows WHERE key = ANY($1::text[])`,
-      [LOOPBACK_KEYS],
+      `DELETE FROM sos_rate_limit_windows WHERE key LIKE $1`,
+      [`${STEP15_PREFIX}%`],
     );
 
-    // Reset module registry so authV1.ts re-evaluates its module-level pgStore
-    // and skip callback with the updated env vars.
+    // Reset module registry so authV1.ts re-evaluates its module-level pgStore,
+    // keyGenerator, and skip callback with the updated env vars.
     vi.resetModules();
 
     let freshApp: Express | undefined;
 
     try {
       // Dynamic import after resetModules → fresh authV1.ts with RL_INTEGRATION=true,
-      // which means: pgStore is a real PgRateLimitStore, skip() returns false.
+      // keyGenerator returns STEP15_PREFIX:req.ip, skip() returns false.
       const appModule = await import("../app");
       freshApp = appModule.default as Express;
 
@@ -516,8 +527,9 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
       expect(csrfToken.length).toBeGreaterThan(0);
 
       // Exhaust the window with bad-credential login attempts.
-      // Each attempt passes CSRF (→ authRateLimiter runs → increments counter)
-      // and is ultimately rejected by the credential check (→ 401).
+      // Each attempt passes CSRF (→ authRateLimiter runs → increments counter
+      // under the unique STEP15_PREFIX key) and is rejected by the credential
+      // check (→ 401).  Must NOT return 429 before limit is reached.
       for (let i = 0; i < RATE_LIMIT_MAX; i++) {
         const r = await agent
           .post("/api/v1/auth/login")
@@ -535,6 +547,14 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
 
       expect(res.status).toBe(429);
       expect((res.body as { error?: string }).error).toMatch(/too many/i);
+
+      // Verify that the rate-limit row in the DB uses the unique prefix key,
+      // proving the keyGenerator override was active in the fresh module.
+      const rlRows = await pool.query(
+        `SELECT key FROM sos_rate_limit_windows WHERE key LIKE $1 LIMIT 5`,
+        [`${STEP15_PREFIX}%`],
+      );
+      expect(rlRows.rows.length).toBeGreaterThan(0);
     } finally {
       // Restore env vars.
       if (prevIntegration === undefined) {
@@ -552,12 +572,18 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
       } else {
         process.env.PHASE2D_RATE_LIMIT_WINDOW_MS = prevWindow;
       }
+      if (prevKeyPrefix === undefined) {
+        delete process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX;
+      } else {
+        process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX = prevKeyPrefix;
+      }
 
-      // Sweep all loopback-IP rate-limit rows created by this test so that
-      // subsequent runs cannot inherit a stale full window.
+      // Sweep the unique prefix rows created by this test.
+      // pruneTestKeys() in afterAll also catches these since the key starts
+      // with 'p2d-rate-limit-test'.
       await pool.query(
-        `DELETE FROM sos_rate_limit_windows WHERE key = ANY($1::text[])`,
-        [LOOPBACK_KEYS],
+        `DELETE FROM sos_rate_limit_windows WHERE key LIKE $1`,
+        [`${STEP15_PREFIX}%`],
       );
 
       // Reset modules so subsequent dynamic imports get fresh module instances
@@ -565,6 +591,54 @@ describe("Phase 2D — PostgreSQL Rate Limiter (12-step proof)", { timeout: 60_0
       vi.resetModules();
     }
   }, 60_000);
+
+  // ── Step 15-R: Regression — keyGenerator namespace isolation ─────────────────
+  //
+  // Proves that the PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX mechanism works at the
+  // unit level: two stores using different prefixes maintain fully independent
+  // counters in the same PostgreSQL table.  This is the deterministic regression
+  // guard that prevents step-15's key from colliding with other tests.
+  it("step-15-R: PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX produces namespace-isolated counters", async () => {
+    const prefixA = "p2d-rate-limit-test-ns-a";
+    const prefixB = "p2d-rate-limit-test-ns-b";
+    const keyA = `${prefixA}:127.0.0.1`;
+    const keyB = `${prefixB}:127.0.0.1`;
+
+    const storeNsA = new PgRateLimitStore(TEST_WINDOW_MS);
+    storeNsA.init();
+    const storeNsB = new PgRateLimitStore(TEST_WINDOW_MS);
+    storeNsB.init();
+
+    try {
+      // Pre-clean both namespaced keys.
+      await pool.query(
+        `DELETE FROM sos_rate_limit_windows WHERE key = ANY($1::text[])`,
+        [[keyA, keyB]],
+      );
+
+      // Increment A three times; B once.
+      await storeNsA.increment(keyA);
+      await storeNsA.increment(keyA);
+      await storeNsA.increment(keyA);
+      await storeNsB.increment(keyB);
+
+      // A counter must be 3, B counter must be 1 — fully independent.
+      const rowA = await pool.query(
+        `SELECT count FROM sos_rate_limit_windows WHERE key=$1`, [keyA]);
+      const rowB = await pool.query(
+        `SELECT count FROM sos_rate_limit_windows WHERE key=$1`, [keyB]);
+
+      expect(parseInt(rowA.rows[0]?.count as string, 10)).toBe(3);
+      expect(parseInt(rowB.rows[0]?.count as string, 10)).toBe(1);
+    } finally {
+      await pool.query(
+        `DELETE FROM sos_rate_limit_windows WHERE key = ANY($1::text[])`,
+        [[keyA, keyB]],
+      );
+      storeNsA.destroy();
+      storeNsB.destroy();
+    }
+  });
 
   // ── Step 16: Admin rate-limit release — 4-case HTTP integration proof ────
   //

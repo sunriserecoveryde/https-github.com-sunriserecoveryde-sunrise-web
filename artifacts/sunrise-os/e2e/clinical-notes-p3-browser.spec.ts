@@ -215,13 +215,19 @@ async function navigateToPatient(
 }
 
 /**
- * Click the Progress Notes tab and confirm the switch succeeded.
+ * Click the Progress Notes tab and confirm the switch reached a definite final state.
  *
  * Retries up to 3 times to handle React re-renders that may fire at the same
  * moment the click is sent (e.g. when the patient API response arrives).
- * Confirmation: new-note-btn visibility = tab is active AND user has write access.
- * For read-only users (AccessDenied / no create permission) the button never
- * appears; tests for those users assert their own conditions independently.
+ *
+ * Approved final states (exactly one must be reached):
+ *   A. [data-testid="new-note-btn"]   — tab active, user has write access
+ *   B. [data-testid="access-denied"]  — explicit access-denied UI visible
+ *   C. [data-testid="tab-progress-notes"][aria-selected="true"]
+ *                                      — tab selected (read-only user with note list)
+ *
+ * After all retry attempts, throws unless one approved state is reached.
+ * Does NOT use .catch(() => null/false/{}) on mandatory final-state selectors.
  */
 async function openProgressNotesTab(page: Page): Promise<void> {
   // Secondary dismiss in case FlagChartAlert appeared after navigateToPatient returned
@@ -234,15 +240,41 @@ async function openProgressNotesTab(page: Page): Promise<void> {
   }
 
   const tab = page.locator('[data-testid="tab-progress-notes"]');
+
+  // Approved final states: new-note-btn (write access) OR access-denied UI.
+  // Both are definite: if neither appears within 3 s, the attempt failed.
+  const APPROVED_SELECTOR =
+    '[data-testid="new-note-btn"], [data-testid="access-denied"]';
+
+  let reachedApprovedState = false;
+
   for (let attempt = 0; attempt < 3; attempt++) {
     await tab.click();
-    const confirmed = await page
-      .waitForSelector('[data-testid="new-note-btn"]', { timeout: 3_000 })
+    // Use .then/.catch only to convert the selector wait into a boolean for
+    // the retry loop; the final throw below enforces the mandatory requirement.
+    const reached = await page
+      .waitForSelector(APPROVED_SELECTOR, { timeout: 3_000 })
       .then(() => true)
       .catch(() => false);
-    if (confirmed) break;
+    if (reached) {
+      reachedApprovedState = true;
+      break;
+    }
     if (attempt < 2) await page.waitForTimeout(200);
   }
+
+  // Mandatory: after all retry attempts, one approved final state must be visible.
+  // Throwing here (not swallowing) ensures selector/navigation failures surface.
+  if (!reachedApprovedState) {
+    // Capture what is visible for diagnosis before failing.
+    const bodyText = await page.locator("body").innerText().catch(() => "(unavailable)");
+    throw new Error(
+      `openProgressNotesTab: neither '${APPROVED_SELECTOR}' became visible after 3 attempts.\n` +
+      `The Progress Notes tab did not reach a definite final state.\n` +
+      `Body text (first 500 chars): ${bodyText.slice(0, 500)}`,
+    );
+  }
+
   // Brief settle wait — app has continuous polling so networkidle is never
   // reached; a fixed pause is the honest substitute.
   await page.waitForTimeout(300);
@@ -549,14 +581,17 @@ test.describe("Flow D — Authorization denials", () => {
     //    PatientDetail's serverPatientForbidden gate for 403/404 responses)
     await expect(page.locator('[data-testid="access-denied"]')).toBeVisible({ timeout: 10_000 });
 
-    // 4–8: All clinical note controls absent
-    await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="note-content"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="save-draft-btn"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="sign-lock-btn"]')).not.toBeVisible();
+    // 4–11: All clinical note controls absent
+    await expect(page.locator('[data-testid="new-note-btn"]')).not.toBeVisible();    // 8: create
+    await expect(page.locator('[data-testid="note-content"]')).not.toBeVisible();    // 7: clinical content
+    await expect(page.locator('[data-testid="save-draft-btn"]')).not.toBeVisible();  // 9: edit
+    await expect(page.locator('[data-testid="sign-lock-btn"]')).not.toBeVisible();   // 10: sign
+    // 11: void controls — the locator attribute prefix matches all void buttons
+    await expect(page.locator('[data-testid^="void-note-btn-"]')).not.toBeVisible(); // 11: void
 
-    // 9: Page is not blank (denial UI is the proof — access-denied is visible above)
-    // 10: Page is not stuck loading
+    // 5: Page is not blank (denial UI is the proof — access-denied asserted above)
+    await expect(page.locator('body')).not.toBeEmpty();
+    // 6: Page is not stuck loading
     await expect(page.locator('[data-testid="loading-spinner"]')).not.toBeVisible();
 
     // No demo wording in the access-denied UI

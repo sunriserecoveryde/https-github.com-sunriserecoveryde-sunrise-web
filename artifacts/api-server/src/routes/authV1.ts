@@ -114,6 +114,17 @@ const authRateLimiter = rateLimit({
   legacyHeaders:   false,
   message: { error: "Too many requests. Please try again later." },
   store:   pgStore,  // PostgreSQL store (undefined = MemoryStore when not in RL_INTEGRATION mode)
+  // Test isolation: PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX prepends a unique per-run
+  // prefix to req.ip so that step-15's rate-limit rows never collide with real
+  // browser logins (Playwright) or other integration tests that share the loopback IP.
+  // The prefix always starts with 'p2d-rate-limit-test' so pruneTestKeys() in the
+  // rate-limit test suite automatically removes it in afterAll.
+  // In production (NODE_ENV !== "test" or no prefix set) this returns req.ip as-is.
+  keyGenerator: (req): string => {
+    const prefix = process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX;
+    const ip = req.ip ?? "127.0.0.1";
+    return prefix ? `${prefix}:${ip}` : ip;
+  },
   skip:    () => process.env.NODE_ENV === "test" && !RL_INTEGRATION,
 });
 
