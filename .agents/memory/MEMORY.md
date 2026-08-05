@@ -21,3 +21,4 @@
 - [Phase 3 browser test hardening](phase-3-browser-hardening.md) — Vite HMR storm fix (watch.ignored), E-1 timeout fix, orgSlug login fix, sos_dev_session cookie; 568+136 vitest×4, 17/17 PW×3
 - [Phase 3 browser test hardening v2](phase-3-browser-hardening-v2.md) — v4 CLOSED: 572/572 API×3, 136/136 SOS×4, 19/19 PW×3; D-6/D-7 Content-Type+void fixes; billing user DB isolation; e2e tsconfig allowImportingTsExtensions; archive 4ee7914f
 - [Phase 3 v6 closure](phase-3-v6-closure.md) — v6 CLOSED: all gates met; ZIP at artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v6.zip
+- [Phase 3 v7 closure](phase-3-v7-closure.md) — v7 CLOSED: 573×4/136×4/19×3/cross×6; maxForks=2 key fix; ZIP at readiness/phase-3-clinical-documentation-foundation-review-v7.zip
