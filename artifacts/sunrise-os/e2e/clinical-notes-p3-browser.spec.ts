@@ -193,20 +193,22 @@ async function navigateToPatient(
 
   // In production mode PatientDetail returns a loading spinner until the server
   // patient record arrives (GET /v1/patients/:id).  Neither the FlagChartAlert
-  // nor the tab bar renders until serverPatient is set.  Wait for whichever
-  // appears first so we never race against the loading gate.
-  await Promise.race([
-    page
-      .waitForSelector('[data-testid="chart-alert-acknowledge"]', { timeout: 10_000 })
-      .catch(() => null),
-    page
-      .waitForSelector('[data-testid="tab-progress-notes"]', { timeout: 10_000 })
-      .catch(() => null),
-  ]);
+  // nor the tab bar renders until serverPatient is set.
+  //
+  // Mandatory: patient chart must reach a definite loaded state before any step
+  // proceeds.  Using a comma-OR selector waits for EITHER the tab bar (chart
+  // loaded successfully) OR the access-denied UI (server returned 403/404 for
+  // this persona).  Both are definite final states.  If neither appears within
+  // the timeout the test fails immediately — no .catch swallows the timeout.
+  await page.waitForSelector(
+    '[data-testid="tab-progress-notes"], [data-testid="access-denied"]',
+    { timeout: 10_000 },
+  );
 
   // Dismiss FlagChartAlert if it appeared (AMA-risk patient shows it on every visit).
+  // locator.isVisible() returns a boolean and does not throw; no .catch needed.
   const acknowledge = page.locator('[data-testid="chart-alert-acknowledge"]');
-  if (await acknowledge.isVisible({ timeout: 1000 }).catch(() => false)) {
+  if (await acknowledge.isVisible({ timeout: 1000 })) {
     await acknowledge.click();
     await expect(acknowledge).not.toBeVisible({ timeout: 5000 });
   }
@@ -224,8 +226,9 @@ async function navigateToPatient(
 async function openProgressNotesTab(page: Page): Promise<void> {
   // Secondary dismiss in case FlagChartAlert appeared after navigateToPatient returned
   // (e.g. the patient API response arrived just after the primary dismiss window closed).
+  // locator.isVisible() returns a boolean and does not throw; no .catch needed.
   const ack = page.locator('[data-testid="chart-alert-acknowledge"]');
-  if (await ack.isVisible({ timeout: 3000 }).catch(() => false)) {
+  if (await ack.isVisible({ timeout: 3000 })) {
     await ack.click();
     await expect(ack).not.toBeVisible({ timeout: 5000 });
   }
@@ -647,6 +650,26 @@ test.describe("Flow D — Authorization denials", () => {
       page.on("pageerror", e => pageErrors.push(e));
 
       await gotoAndAwaitReady(page);
+
+      // 1+2: Mandatory API assertion — billing staff lacks clinical_note.create.
+      // Attempt to POST a new progress note as the billing persona — the server
+      // must return 403.  page.request shares the billing persona's session cookie
+      // (loaded from storageState at context creation).  No .catch — if the
+      // request never fires or returns the wrong status the test fails explicitly.
+      const csrfResBilling = await page.request.get("/api/v1/auth/csrf-token");
+      const { csrfToken: csrfBilling } = await csrfResBilling.json() as { csrfToken: string };
+      const createResp = await page.request.post(
+        `/api/v1/patients/${TEST_PATIENT_ID}/clinical-notes`,
+        {
+          headers: { "X-CSRF-Token": csrfBilling },
+          data: { noteType: "progress_note", content: "D-4 billing authorization probe." },
+        },
+      );
+      expect(
+        createResp.status(),
+        `Clinical notes POST returned ${createResp.status()}, expected 403`,
+      ).toBe(403);
+
       await navigateToPatient(page);
       await page.waitForTimeout(300);
       await snap(page, "billing-patient-access-denied");
