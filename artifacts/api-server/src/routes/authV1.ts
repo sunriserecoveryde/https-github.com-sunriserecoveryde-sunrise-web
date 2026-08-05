@@ -39,7 +39,7 @@ import {
   sosAuthAudit,
 } from "@workspace/db";
 import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
-import { rateLimit, ipKeyGenerator } from "express-rate-limit";
+import { rateLimit, ipKeyGenerator, type Store as RateLimitStore } from "express-rate-limit";
 import { PgRateLimitStore } from "../lib/pgRateLimiter";
 import { getPermissionsForRole, isRoleFacilityWide, isKnownRole } from "../lib/permissionPolicy";
 import { buildScopedGrant } from "../lib/authorizationService";
@@ -134,7 +134,7 @@ const authRateLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders:   false,
   message: { error: "Too many requests. Please try again later." },
-  store:   lazyRateLimitStore as Parameters<typeof rateLimit>[0]["store"],
+  store:   lazyRateLimitStore as unknown as RateLimitStore,
   // Test isolation: PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX prepends a unique per-run
   // prefix to req.ip so that step-15's rate-limit rows never collide with real
   // browser logins (Playwright) or other integration tests that share the loopback IP.
@@ -1138,10 +1138,12 @@ router.delete(
       return;
     }
 
-    // pgStore is undefined when running in test mode without RL_INTEGRATION.
-    // Return 503 rather than silently doing nothing so callers know the store
-    // is not configured.
-    if (!pgStore) {
+    // In test mode without PHASE2D_RATE_LIMIT_INTEGRATION=true the lazy store
+    // is never initialised.  Return 503 so callers know the store is not active.
+    const isStoreActive =
+      process.env.NODE_ENV !== "test" ||
+      process.env.PHASE2D_RATE_LIMIT_INTEGRATION === "true";
+    if (!isStoreActive) {
       res.status(503).json({ error: "Rate-limit store is not configured in this environment." });
       return;
     }
@@ -1150,7 +1152,7 @@ router.delete(
       // adminResetKey() throws on DB error (unlike resetKey() which fails-open).
       // This guarantees we only write a success audit event when the window was
       // actually cleared — a silent failure must never produce a success record.
-      await pgStore.adminResetKey(key);
+      await getOrCreatePgStore().adminResetKey(key);
 
       await writeAuditEvent({
         orgId:    adminAuth.orgId,
