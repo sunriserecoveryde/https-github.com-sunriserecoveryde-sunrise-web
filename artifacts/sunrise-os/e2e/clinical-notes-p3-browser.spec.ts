@@ -291,8 +291,9 @@ test.describe("Flow A — Production login page and clinician login verification
 test.describe("Flow A — Clinician: create, save, and sign a progress note", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
   // HAR capture for main clinician workflow evidence.
-  // Sequential run (workers: 1) → the last test's HAR is preserved (A-6: edit + sign).
-  test.use({ recordHar: { path: "e2e/har/flow-a-clinician.har", mode: "minimal" } });
+  // Playwright 1.38.0: use omitContent (not mode) and an absolute path resolved
+  // from import.meta.dirname (= e2e/).  Sequential run → last test's HAR preserved.
+  test.use({ recordHar: { path: path.join(import.meta.dirname, "har", "flow-a-clinician.har"), omitContent: true } });
 
   test("A-3: Progress Notes tab shows empty state for new patient session", async ({ page }) => {
     await gotoAndAwaitReady(page);
@@ -497,8 +498,9 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe("Flow D — Authorization denials", () => {
   // HAR capture for authorization-denial workflow evidence.
-  // Sequential run (workers: 1) → the last test's HAR is preserved (D-7: clinician void denial).
-  test.use({ recordHar: { path: "e2e/har/flow-d-auth-denial.har", mode: "minimal" } });
+  // Playwright 1.38.0: use omitContent (not mode) and an absolute path resolved
+  // from import.meta.dirname (= e2e/).  Sequential run → D-7's HAR is preserved.
+  test.use({ recordHar: { path: path.join(import.meta.dirname, "har", "flow-d-auth-denial.har"), omitContent: true } });
 
   // ── Shared denial assertion helper ──────────────────────────────────────────
   // Verifies 11 required denial properties for personas that cannot access the
