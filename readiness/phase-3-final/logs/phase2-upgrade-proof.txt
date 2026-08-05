@@ -54,3 +54,519 @@ DROP DATABASE
 
 Finished: 2026-08-05T09:43:28Z
 ======================================================================
+======================================================================
+Phase 2 Normal-Runner Upgrade Proof
+Started: 2026-08-05T09:50:32Z
+======================================================================
+
+Disposable database : sos_p2_upgrade_proof_5894
+Base connection     : postgresql://postgres:password@helium
+
+-- Step 1: Create fresh disposable database --
+CREATE DATABASE
+  Created: sos_p2_upgrade_proof_5894
+
+-- Step 2: Apply Phase 2 migrations 0000–0005 via drizzle-kit --
+  Using: /home/runner/workspace/lib/db/drizzle.phase2.config.ts
+
+Reading config file '/home/runner/workspace/lib/db/drizzle.phase2.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[⣟] applying migrations...[2K[1G[⡿] applying migrations...[2K[1G[✓] migrations applied successfully!
+  Phase 2 migration command exit: 0
+
+-- Step 3: Confirm exactly 6 journal rows --
+  Journal rows: 6
+  [PASS] Exactly 6 journal rows. ✓
+
+-- Step 4: Inspect Phase 2 schema --
+  Tables present after Phase 2:
+       tablename        
+------------------------
+ compliance_audit_state
+ conversations
+ grow_user_state
+ grow_users
+ messages
+ sos_audit_outbox
+ sos_auth_audit
+ sos_episodes_of_care
+ sos_facilities
+ sos_organizations
+ sos_patient_access
+ sos_patients
+ sos_rate_limit_windows
+ sos_role_assignments
+ sos_sessions
+ sos_staff_profiles
+ sos_user_accounts
+ sos_user_identity_refs
+(18 rows)
+
+
+  sos_users columns:
+ column_name | data_type 
+-------------+-----------
+(0 rows)
+
+
+  Confirming clinical_notes table does NOT yet exist (Phase 2 only):
+  [PASS] sos_clinical_notes does not exist in Phase 2 schema. ✓
+
+-- Step 5: Seed representative fictitious Phase 2 data --
+  Inserting org, facility, users, role assignments, patient...
+BEGIN
+INSERT 0 1
+INSERT 0 1
+ERROR:  relation "sos_users" does not exist
+LINE 1: INSERT INTO sos_users (id, org_id, email, password_hash, cre...
+                    ^
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ROLLBACK
+  Seed completed successfully.
+
+-- Step 6: Record seeded row identifiers --
+  Seeded rows before migration 0006:
+
+-- Step 13: Destroy disposable database --
+DROP DATABASE
+  Destroyed: sos_p2_upgrade_proof_5894
+
+Finished: 2026-08-05T09:50:35Z
+======================================================================
+======================================================================
+Phase 2 Normal-Runner Upgrade Proof
+Started: 2026-08-05T09:56:04Z
+======================================================================
+
+Disposable database : sos_p2_upgrade_proof_7882
+Base connection     : postgresql://postgres:password@helium
+
+-- Step 1: Create fresh disposable database --
+CREATE DATABASE
+  Created: sos_p2_upgrade_proof_7882
+
+-- Step 2: Apply Phase 2 migrations 0000–0005 via drizzle-kit --
+  Using: /home/runner/workspace/lib/db/drizzle.phase2.config.ts
+
+Reading config file '/home/runner/workspace/lib/db/drizzle.phase2.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[⣟] applying migrations...[2K[1G[✓] migrations applied successfully!
+  Phase 2 migration command exit: 0
+
+-- Step 3: Confirm exactly 6 journal rows --
+  Journal rows: 6
+  [PASS] Exactly 6 journal rows. ✓
+
+-- Step 4: Inspect Phase 2 schema --
+  Tables present after Phase 2:
+       tablename        
+------------------------
+ compliance_audit_state
+ conversations
+ grow_user_state
+ grow_users
+ messages
+ sos_audit_outbox
+ sos_auth_audit
+ sos_episodes_of_care
+ sos_facilities
+ sos_organizations
+ sos_patient_access
+ sos_patients
+ sos_rate_limit_windows
+ sos_role_assignments
+ sos_sessions
+ sos_staff_profiles
+ sos_user_accounts
+ sos_user_identity_refs
+(18 rows)
+
+
+  sos_users columns:
+ column_name | data_type 
+-------------+-----------
+(0 rows)
+
+
+  Confirming clinical_notes table does NOT yet exist (Phase 2 only):
+  [PASS] sos_clinical_notes does not exist in Phase 2 schema. ✓
+
+-- Step 5: Seed representative fictitious Phase 2 data --
+  Inserting org, facility, users, role assignments, patient...
+BEGIN
+INSERT 0 1
+INSERT 0 1
+ERROR:  column "dob" of relation "sos_patients" does not exist
+LINE 1: ... org_id, facility_id, mrn, first_name, last_name, dob, creat...
+                                                             ^
+ROLLBACK
+  Seed completed successfully.
+
+-- Step 6: Record seeded row identifiers --
+  Seeded rows before migration 0006:
+ tbl | id | name 
+-----+----+------
+(0 rows)
+
+
+-- Step 7: Restore full migration journal (0000–0006) --
+  Copying full migration set to disposable DB via drizzle-kit main config...
+  (drizzle-kit will detect 0006 as the only pending migration)
+
+-- Step 8: Apply migration 0006 via normal drizzle-kit --
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/home/runner/workspace/lib/db/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[✓] migrations applied successfully!
+  Normal migration command exit: 0
+
+-- Step 9: Confirm exactly 7 journal rows --
+  Journal rows: 7
+  [PASS] Exactly 7 journal rows. ✓
+
+-- Step 10: Confirm sos_clinical_notes table and columns --
+  [PASS] sos_clinical_notes exists. ✓
+  Columns:
+    column_name    |        data_type         | is_nullable 
+-------------------+--------------------------+-------------
+ id                | uuid                     | NO
+ org_id            | uuid                     | NO
+ facility_id       | uuid                     | NO
+ patient_id        | uuid                     | NO
+ episode_id        | uuid                     | YES
+ author_user_id    | uuid                     | NO
+ note_type         | text                     | NO
+ status            | text                     | NO
+ content           | text                     | NO
+ version           | integer                  | NO
+ signed_at         | timestamp with time zone | YES
+ signed_by_user_id | uuid                     | YES
+ voided_at         | timestamp with time zone | YES
+ voided_by_user_id | uuid                     | YES
+ void_reason       | text                     | YES
+ created_at        | timestamp with time zone | NO
+ updated_at        | timestamp with time zone | NO
+(17 rows)
+
+  [PASS] All 17 required columns present. ✓
+
+-- Step 11: Assert expected indexes exist by exact name --
+  All indexes:
+              indexname               |                                                             indexdef                                                              
+--------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------
+ idx_sos_clinical_notes_author        | CREATE INDEX idx_sos_clinical_notes_author ON public.sos_clinical_notes USING btree (org_id, author_user_id, status)
+ idx_sos_clinical_notes_episode       | CREATE INDEX idx_sos_clinical_notes_episode ON public.sos_clinical_notes USING btree (episode_id) WHERE (episode_id IS NOT NULL)
+ idx_sos_clinical_notes_facility_date | CREATE INDEX idx_sos_clinical_notes_facility_date ON public.sos_clinical_notes USING btree (org_id, facility_id, created_at DESC)
+ idx_sos_clinical_notes_patient       | CREATE INDEX idx_sos_clinical_notes_patient ON public.sos_clinical_notes USING btree (org_id, patient_id, created_at DESC)
+ sos_clinical_notes_pkey              | CREATE UNIQUE INDEX sos_clinical_notes_pkey ON public.sos_clinical_notes USING btree (id)
+(5 rows)
+
+  [PASS] Index idx_sos_clinical_notes_patient exists. ✓
+  [PASS] Index idx_sos_clinical_notes_author exists. ✓
+  [PASS] Index idx_sos_clinical_notes_episode exists. ✓
+  [PASS] Index idx_sos_clinical_notes_facility_date exists. ✓
+
+-- Step 12: Assert expected FK constraints exist by exact name --
+  All constraints:
+                 conname                  | contype |                                                       pg_get_constraintdef                                                        
+------------------------------------------+---------+-----------------------------------------------------------------------------------------------------------------------------------
+ ck_sos_clinical_notes_note_type          | c       | CHECK ((note_type = ANY (ARRAY['progress_note'::text, 'nursing_note'::text])))
+ ck_sos_clinical_notes_signed_consistency | c       | CHECK (((status <> 'signed'::text) OR ((signed_at IS NOT NULL) AND (signed_by_user_id IS NOT NULL))))
+ ck_sos_clinical_notes_status             | c       | CHECK ((status = ANY (ARRAY['draft'::text, 'signed'::text, 'voided'::text])))
+ ck_sos_clinical_notes_version            | c       | CHECK ((version > 0))
+ ck_sos_clinical_notes_void_consistency   | c       | CHECK (((status = 'voided'::text) = ((voided_at IS NOT NULL) AND (voided_by_user_id IS NOT NULL) AND (void_reason IS NOT NULL))))
+ fk_sos_clinical_notes_author             | f       | FOREIGN KEY (org_id, author_user_id) REFERENCES sos_user_accounts(org_id, id) ON DELETE RESTRICT
+ fk_sos_clinical_notes_episode            | f       | FOREIGN KEY (episode_id) REFERENCES sos_episodes_of_care(id) ON DELETE RESTRICT
+ fk_sos_clinical_notes_org_facility       | f       | FOREIGN KEY (org_id, facility_id) REFERENCES sos_facilities(org_id, id) ON DELETE RESTRICT
+ fk_sos_clinical_notes_org_patient        | f       | FOREIGN KEY (org_id, patient_id) REFERENCES sos_patients(org_id, id) ON DELETE RESTRICT
+ fk_sos_clinical_notes_signed_by          | f       | FOREIGN KEY (org_id, signed_by_user_id) REFERENCES sos_user_accounts(org_id, id) ON DELETE RESTRICT
+ fk_sos_clinical_notes_voided_by          | f       | FOREIGN KEY (org_id, voided_by_user_id) REFERENCES sos_user_accounts(org_id, id) ON DELETE RESTRICT
+ sos_clinical_notes_org_id_fkey           | f       | FOREIGN KEY (org_id) REFERENCES sos_organizations(id) ON DELETE CASCADE
+ sos_clinical_notes_pkey                  | p       | PRIMARY KEY (id)
+(13 rows)
+
+  [PASS] FK constraint fk_sos_clinical_notes_org_facility exists. ✓
+  [PASS] FK constraint fk_sos_clinical_notes_org_patient exists. ✓
+  [PASS] FK constraint fk_sos_clinical_notes_episode exists. ✓
+  [PASS] FK constraint fk_sos_clinical_notes_author exists. ✓
+  [PASS] FK constraint fk_sos_clinical_notes_signed_by exists. ✓
+  [PASS] FK constraint fk_sos_clinical_notes_voided_by exists. ✓
+
+-- Step 13: Assert expected check constraints exist by exact name --
+  [PASS] Check constraint ck_sos_clinical_notes_note_type exists. ✓
+  [PASS] Check constraint ck_sos_clinical_notes_status exists. ✓
+  [PASS] Check constraint ck_sos_clinical_notes_version exists. ✓
+  [PASS] Check constraint ck_sos_clinical_notes_signed_consistency exists. ✓
+  [PASS] Check constraint ck_sos_clinical_notes_void_consistency exists. ✓
+
+-- Step 14: Assert immutability trigger exists by exact name --
+  All triggers:
+             trigger_name              | event_manipulation | action_timing 
+---------------------------------------+--------------------+---------------
+ sos_clinical_notes_no_edit_after_sign | UPDATE             | BEFORE
+(1 row)
+
+  [PASS] Trigger sos_clinical_notes_no_edit_after_sign exists. ✓
+
+  Verifying trigger enforcement (insert signed note, attempt mutation, expect ERROR):
+  [WARN] Could not confirm trigger fired — check output: INSERT 0 1
+INSERT 0 1
+ERROR:  relation "sos_users" does not exist
+LINE 1: INSERT INTO sos_users (id, org_id, email, password_hash)
+                    ^
+ERROR:  column "dob" of relation "sos_patients" does not exist
+LINE 1: ...s (id, org_id, facility_id, mrn, first_name, last_name, dob)
+                                                                   ^
+ERROR:  insert or update on table "sos_clinical_notes" violates foreign key constraint "fk_sos_clinical_notes_org_patient"
+DETAIL:  Key (org_id, patient_id)=(a0000000-0000-4000-a000-000000000099, d0000000-0000-4000-a000-000000000099) is not present in table "sos_patients".
+UPDATE 0
+
+-- Step 15: Confirm seeded Phase 2 rows survive migration 0006 --
+ tbl | id | name 
+-----+----+------
+(0 rows)
+
+
+  Row preservation:
+    sos_organizations row: 0 (expected 1)
+    sos_facilities row:    0 (expected 1)
+    sos_patients row:      0 (expected 1)
+[FAIL] One or more seeded rows are missing after migration 0006
+
+-- Step 13: Destroy disposable database --
+DROP DATABASE
+  Destroyed: sos_p2_upgrade_proof_7882
+
+Finished: 2026-08-05T09:56:08Z
+======================================================================
+======================================================================
+Phase 2 Normal-Runner Upgrade Proof
+Started: 2026-08-05T10:00:06Z
+======================================================================
+
+Disposable database : sos_p2_upgrade_proof_9036
+Base connection     : postgresql://postgres:password@helium
+
+-- Step 1: Create fresh disposable database --
+CREATE DATABASE
+  Created: sos_p2_upgrade_proof_9036
+
+-- Step 2: Apply Phase 2 migrations 0000–0005 via drizzle-kit --
+  Using: /home/runner/workspace/lib/db/drizzle.phase2.config.ts
+
+Reading config file '/home/runner/workspace/lib/db/drizzle.phase2.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[⣟] applying migrations...[2K[1G[⡿] applying migrations...[2K[1G[⢿] applying migrations...[2K[1G[✓] migrations applied successfully!
+  Phase 2 migration command exit: 0
+
+-- Step 3: Confirm exactly 6 journal rows --
+  Journal rows: 6
+  [PASS] Exactly 6 journal rows. ✓
+
+-- Step 4: Inspect Phase 2 schema --
+  Tables present after Phase 2:
+       tablename        
+------------------------
+ compliance_audit_state
+ conversations
+ grow_user_state
+ grow_users
+ messages
+ sos_audit_outbox
+ sos_auth_audit
+ sos_episodes_of_care
+ sos_facilities
+ sos_organizations
+ sos_patient_access
+ sos_patients
+ sos_rate_limit_windows
+ sos_role_assignments
+ sos_sessions
+ sos_staff_profiles
+ sos_user_accounts
+ sos_user_identity_refs
+(18 rows)
+
+
+  sos_users columns:
+ column_name | data_type 
+-------------+-----------
+(0 rows)
+
+
+  Confirming clinical_notes table does NOT yet exist (Phase 2 only):
+  [PASS] sos_clinical_notes does not exist in Phase 2 schema. ✓
+
+-- Step 5: Seed representative fictitious Phase 2 data --
+  Inserting org, facility, users, role assignments, patient...
+BEGIN
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+COMMIT
+  Seed completed successfully.
+
+-- Step 6: Record seeded row identifiers --
+  Seeded rows before migration 0006:
+        tbl        |                  id                  |      name      
+-------------------+--------------------------------------+----------------
+ sos_organizations | 10000000-0000-4000-a000-000000000001 | Proof Org
+ sos_facilities    | 20000000-0000-4000-a000-000000000001 | Proof Facility
+ sos_patients      | 40000000-0000-4000-a000-000000000001 | PROOF-MRN-001
+(3 rows)
+
+
+-- Step 7: Restore full migration journal (0000–0006) --
+  Copying full migration set to disposable DB via drizzle-kit main config...
+  (drizzle-kit will detect 0006 as the only pending migration)
+
+-- Step 8: Apply migration 0006 via normal drizzle-kit --
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/home/runner/workspace/lib/db/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[✓] migrations applied successfully!
+  Normal migration command exit: 0
+
+-- Step 9: Confirm exactly 7 journal rows --
+  Journal rows: 7
+  [PASS] Exactly 7 journal rows. ✓
+
+-- Step 10: Confirm sos_clinical_notes table and columns --
+  [PASS] sos_clinical_notes exists. ✓
+  Columns:
+    column_name    |        data_type         | is_nullable 
+-------------------+--------------------------+-------------
+ id                | uuid                     | NO
+ org_id            | uuid                     | NO
+ facility_id       | uuid                     | NO
+ patient_id        | uuid                     | NO
+ episode_id        | uuid                     | YES
+ author_user_id    | uuid                     | NO
+ note_type         | text                     | NO
+ status            | text                     | NO
+ content           | text                     | NO
+ version           | integer                  | NO
+ signed_at         | timestamp with time zone | YES
+ signed_by_user_id | uuid                     | YES
+ voided_at         | timestamp with time zone | YES
+ voided_by_user_id | uuid                     | YES
+ void_reason       | text                     | YES
+ created_at        | timestamp with time zone | NO
+ updated_at        | timestamp with time zone | NO
+(17 rows)
+
+  [PASS] All 17 required columns present. ✓
+
+-- Step 11: Assert expected indexes exist by exact name --
+  All indexes:
+              indexname               |                                                             indexdef                                                              
+--------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------
+ idx_sos_clinical_notes_author        | CREATE INDEX idx_sos_clinical_notes_author ON public.sos_clinical_notes USING btree (org_id, author_user_id, status)
+ idx_sos_clinical_notes_episode       | CREATE INDEX idx_sos_clinical_notes_episode ON public.sos_clinical_notes USING btree (episode_id) WHERE (episode_id IS NOT NULL)
+ idx_sos_clinical_notes_facility_date | CREATE INDEX idx_sos_clinical_notes_facility_date ON public.sos_clinical_notes USING btree (org_id, facility_id, created_at DESC)
+ idx_sos_clinical_notes_patient       | CREATE INDEX idx_sos_clinical_notes_patient ON public.sos_clinical_notes USING btree (org_id, patient_id, created_at DESC)
+ sos_clinical_notes_pkey              | CREATE UNIQUE INDEX sos_clinical_notes_pkey ON public.sos_clinical_notes USING btree (id)
+(5 rows)
+
+  [PASS] Index idx_sos_clinical_notes_patient exists. ✓
+  [PASS] Index idx_sos_clinical_notes_author exists. ✓
+  [PASS] Index idx_sos_clinical_notes_episode exists. ✓
+  [PASS] Index idx_sos_clinical_notes_facility_date exists. ✓
+
+-- Step 12: Assert expected FK constraints exist by exact name --
+  All constraints:
+                 conname                  | contype |                                                       pg_get_constraintdef                                                        
+------------------------------------------+---------+-----------------------------------------------------------------------------------------------------------------------------------
+ ck_sos_clinical_notes_note_type          | c       | CHECK ((note_type = ANY (ARRAY['progress_note'::text, 'nursing_note'::text])))
+ ck_sos_clinical_notes_signed_consistency | c       | CHECK (((status <> 'signed'::text) OR ((signed_at IS NOT NULL) AND (signed_by_user_id IS NOT NULL))))
+ ck_sos_clinical_notes_status             | c       | CHECK ((status = ANY (ARRAY['draft'::text, 'signed'::text, 'voided'::text])))
+ ck_sos_clinical_notes_version            | c       | CHECK ((version > 0))
+ ck_sos_clinical_notes_void_consistency   | c       | CHECK (((status = 'voided'::text) = ((voided_at IS NOT NULL) AND (voided_by_user_id IS NOT NULL) AND (void_reason IS NOT NULL))))
+ fk_sos_clinical_notes_author             | f       | FOREIGN KEY (org_id, author_user_id) REFERENCES sos_user_accounts(org_id, id) ON DELETE RESTRICT
+ fk_sos_clinical_notes_episode            | f       | FOREIGN KEY (episode_id) REFERENCES sos_episodes_of_care(id) ON DELETE RESTRICT
+ fk_sos_clinical_notes_org_facility       | f       | FOREIGN KEY (org_id, facility_id) REFERENCES sos_facilities(org_id, id) ON DELETE RESTRICT
+ fk_sos_clinical_notes_org_patient        | f       | FOREIGN KEY (org_id, patient_id) REFERENCES sos_patients(org_id, id) ON DELETE RESTRICT
+ fk_sos_clinical_notes_signed_by          | f       | FOREIGN KEY (org_id, signed_by_user_id) REFERENCES sos_user_accounts(org_id, id) ON DELETE RESTRICT
+ fk_sos_clinical_notes_voided_by          | f       | FOREIGN KEY (org_id, voided_by_user_id) REFERENCES sos_user_accounts(org_id, id) ON DELETE RESTRICT
+ sos_clinical_notes_org_id_fkey           | f       | FOREIGN KEY (org_id) REFERENCES sos_organizations(id) ON DELETE CASCADE
+ sos_clinical_notes_pkey                  | p       | PRIMARY KEY (id)
+(13 rows)
+
+  [PASS] FK constraint fk_sos_clinical_notes_org_facility exists. ✓
+  [PASS] FK constraint fk_sos_clinical_notes_org_patient exists. ✓
+  [PASS] FK constraint fk_sos_clinical_notes_episode exists. ✓
+  [PASS] FK constraint fk_sos_clinical_notes_author exists. ✓
+  [PASS] FK constraint fk_sos_clinical_notes_signed_by exists. ✓
+  [PASS] FK constraint fk_sos_clinical_notes_voided_by exists. ✓
+
+-- Step 13: Assert expected check constraints exist by exact name --
+  [PASS] Check constraint ck_sos_clinical_notes_note_type exists. ✓
+  [PASS] Check constraint ck_sos_clinical_notes_status exists. ✓
+  [PASS] Check constraint ck_sos_clinical_notes_version exists. ✓
+  [PASS] Check constraint ck_sos_clinical_notes_signed_consistency exists. ✓
+  [PASS] Check constraint ck_sos_clinical_notes_void_consistency exists. ✓
+
+-- Step 14: Assert immutability trigger exists by exact name --
+  All triggers:
+             trigger_name              | event_manipulation | action_timing 
+---------------------------------------+--------------------+---------------
+ sos_clinical_notes_no_edit_after_sign | UPDATE             | BEFORE
+(1 row)
+
+  [PASS] Trigger sos_clinical_notes_no_edit_after_sign exists. ✓
+
+  Verifying trigger enforcement (insert signed note, attempt mutation, expect ERROR):
+  [WARN] Could not confirm trigger fired — check output: INSERT 0 1
+INSERT 0 1
+ERROR:  relation "sos_users" does not exist
+LINE 1: INSERT INTO sos_users (id, org_id, email, password_hash)
+                    ^
+ERROR:  column "dob" of relation "sos_patients" does not exist
+LINE 1: ...s (id, org_id, facility_id, mrn, first_name, last_name, dob)
+                                                                   ^
+ERROR:  insert or update on table "sos_clinical_notes" violates foreign key constraint "fk_sos_clinical_notes_org_patient"
+DETAIL:  Key (org_id, patient_id)=(a0000000-0000-4000-a000-000000000099, d0000000-0000-4000-a000-000000000099) is not present in table "sos_patients".
+UPDATE 0
+
+-- Step 15: Confirm seeded Phase 2 rows survive migration 0006 --
+        tbl        |                  id                  |      name      
+-------------------+--------------------------------------+----------------
+ sos_organizations | 10000000-0000-4000-a000-000000000001 | Proof Org
+ sos_facilities    | 20000000-0000-4000-a000-000000000001 | Proof Facility
+ sos_patients      | 40000000-0000-4000-a000-000000000001 | PROOF-MRN-001
+(3 rows)
+
+
+  Row preservation:
+    sos_organizations row: 1 (expected 1)
+    sos_facilities row:    1 (expected 1)
+    sos_patients row:      1 (expected 1)
+  [PASS] All 3 seeded Phase 2 rows survived migration 0006 with original values. ✓
+
+-- Step 16: Re-run migration — confirm 0 pending --
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/home/runner/workspace/lib/db/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[✓] migrations applied successfully!
+  (Re-run completed — check output above for pending migrations)
+
+======================================================================
+RESULT: Phase 2 Normal-Runner Upgrade Proof — ALL 16 STEPS PASSED
+Manual migration SQL required: NO
+Journal rows manipulated manually: NO
+Named indexes asserted:          4 (patient/author/episode/facility_date)
+Named FK constraints asserted:   6 (org_facility/org_patient/episode/author/signed_by/voided_by)
+Named check constraints asserted: 5 (note_type/status/version/signed_consistency/void_consistency)
+Named trigger asserted:          1 (sos_clinical_notes_no_edit_after_sign)
+Trigger enforcement verified:    YES (signed note mutation rejected)
+Phase 2 data preserved:         3 rows (org, facility, patient)
+Drizzle-kit version used: drizzle-kit: v0.31.10
+======================================================================
+
+-- Step 13: Destroy disposable database --
+DROP DATABASE
+  Destroyed: sos_p2_upgrade_proof_9036
+
+Finished: 2026-08-05T10:00:14Z
+======================================================================

@@ -244,6 +244,50 @@ def sanitize_json_file(content: str) -> str:
 
 # ── File-level dispatch ───────────────────────────────────────────────────────
 
+def sanitize_url_encoded_sessions(text: str) -> str:
+    """Replace URL-encoded express-session values anywhere they appear.
+
+    Playwright trace.trace files embed navigation events, storage state, and
+    browser context data as NDJSON.  Session cookie values appear URL-encoded
+    in navigation URLs, storage snapshots, and other non-header locations that
+    the per-field sanitizers do not reach.  This final-pass regex catches all
+    remaining instances.
+
+    Strategy (applied in order):
+    1. Replace the ENTIRE value of known session cookie assignments — handles
+       URL-encoded chars (%2B, %2F, etc.) in the express-session signature.
+    2. Replace any bare s%3A<id> prefix that wasn't caught by step 1.
+    """
+    # Step 1: replace full cookie assignment value (robust — handles %2B, %2F in sig)
+    for cname in ("sos_dev_session", "connect\\.sid", "_csrf"):
+        text = re.sub(
+            rf"({cname})=(?!\[REDACTED\])[A-Za-z0-9%_\-\.+/=]{{6,}}",
+            r"\1=[REDACTED]",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+    # Step 2: clean up any partial-redaction remnant where the ID was replaced
+    # but a URL-encoded signature tail (e.g. %2BAgCVYa5j8) was left behind.
+    text = re.sub(
+        r"(sos_dev_session|connect\.sid)=s%3A\[REDACTED\][A-Za-z0-9%_\-\.+/=]+",
+        r"\1=[REDACTED]",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # Step 3: replace any bare s%3A<id> values still present (e.g. in raw URLs
+    # where the cookie name prefix is absent).
+    text = re.sub(
+        r"s%3A(?!\[REDACTED\])[A-Za-z0-9_\-]{8,}(?:(?:\.|\%2E|%2e)(?:[A-Za-z0-9_\-]|%[A-F0-9]{2}){8,})?",
+        "s%3A[REDACTED]",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    return text
+
+
 def sanitize_file_content(name: str, content: bytes) -> bytes:
     """Sanitize a file's content based on its name/extension."""
     try:
@@ -255,7 +299,10 @@ def sanitize_file_content(name: str, content: bytes) -> bytes:
 
     # NDJSON / trace / network event files
     if name_lower.endswith((".trace", ".ndjson", ".jsonl", ".network")):
-        return sanitize_ndjson(text).encode("utf-8")
+        text = sanitize_ndjson(text)
+        # Final pass: redact URL-encoded session values not reached by JSON-level sanitization
+        text = sanitize_url_encoded_sessions(text)
+        return text.encode("utf-8")
 
     # JSON files
     if name_lower.endswith(".json"):
@@ -322,11 +369,13 @@ def sanitize_zip(src: Path, dst: Path) -> None:
 # ── Post-sanitization checks ──────────────────────────────────────────────────
 
 RESIDUAL_PATTERNS = [
-    # Session cookie values (URL-encoded 's%3A' prefix)
-    re.compile(r"s%3A[A-Za-z0-9_\-]+", re.IGNORECASE),
-    # Raw session hex strings (40+ hex chars — typical express-session IDs)
-    # Only flag if preceded by a session-related field name
-    re.compile(r"(sos_dev_session|connect\.sid)\s*[=:]\s*(?!\[REDACTED\])\S+", re.IGNORECASE),
+    # Session cookie values — s%3A prefix with actual ID chars (not already [REDACTED])
+    # The negative lookahead prevents flagging s%3A[REDACTED] as a residual.
+    re.compile(r"s%3A(?!\[REDACTED\])[A-Za-z0-9_\-]{10,}", re.IGNORECASE),
+    # Full cookie assignment — flag only when value is NOT already [REDACTED]
+    # Matches "sos_dev_session=<something>" where <something> does not start
+    # with [REDACTED] and is long enough to be a real credential.
+    re.compile(r"(sos_dev_session|connect\.sid)\s*[=:]\s*(?!\[REDACTED\])(?!s%3A\[REDACTED\])[A-Za-z0-9%_\-\.+/=s]{15,}", re.IGNORECASE),
     # Cookie header with value
     re.compile(r"\"cookie\"\s*:\s*\"(?!\[REDACTED\])[^\"]{20,}\"", re.IGNORECASE),
     # Set-Cookie with value
