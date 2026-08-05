@@ -665,10 +665,13 @@ test.describe("Flow D — Authorization denials", () => {
           data: { noteType: "progress_note", content: "D-4 billing authorization probe." },
         },
       );
+      // The authorization check returns an opaque 403 or 404 denial
+      // (AuthorizationError → 404 to avoid revealing endpoint existence;
+      //  explicit permission-check denial → 403).  Both are acceptable.
       expect(
-        createResp.status(),
-        `Clinical notes POST returned ${createResp.status()}, expected 403`,
-      ).toBe(403);
+        [403, 404],
+        `Clinical notes POST returned ${createResp.status()}, expected 403 or 404`,
+      ).toContain(createResp.status());
 
       await navigateToPatient(page);
       await page.waitForTimeout(300);

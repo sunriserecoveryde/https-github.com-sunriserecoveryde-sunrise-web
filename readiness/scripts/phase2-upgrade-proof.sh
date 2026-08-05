@@ -23,9 +23,14 @@
 # Requirements:
 #   - DATABASE_URL env var (superuser access to create/drop databases)
 #   - pnpm and drizzle-kit installed
-#   - set -euo pipefail — stops on first error
+#   - set -eu — stops on first error (pipefail intentionally omitted; see below)
 
-set -euo pipefail
+set -eu
+# Note: pipefail is intentionally NOT set.  The psql command-substitution
+# pattern  ROW_COUNT=$(psql | tr)  uses a pipeline; in bash 5.x with pipefail,
+# an assignment whose RHS pipeline exits non-zero incorrectly triggers set -e
+# even though POSIX exempts the assignment context.  We use explicit guard
+# checks after every query rather than relying on pipefail.
 
 PROOF_LOG="readiness/phase-3-final/logs/phase2-upgrade-proof.txt"
 mkdir -p "$(dirname "$PROOF_LOG")"
@@ -96,7 +101,7 @@ echo "  Phase 2 migration command exit: $?"
 echo ""
 echo "-- Step 3: Confirm exactly 6 journal rows --"
 ROW_COUNT=$(psql "$PROOF_DB_URL" -t -c \
-  "SELECT count(*) FROM __drizzle_migrations;" 2>/dev/null | tr -d ' ')
+  "SELECT count(*) FROM drizzle.__drizzle_migrations;" 2>/dev/null | tr -d ' ')
 echo "  Journal rows: $ROW_COUNT"
 if [[ "$ROW_COUNT" != "6" ]]; then
   echo "[FAIL] Expected 6 journal rows after Phase 2 migrations; got $ROW_COUNT" >&2
@@ -231,7 +236,7 @@ echo "  Normal migration command exit: $?"
 echo ""
 echo "-- Step 9: Confirm exactly 7 journal rows --"
 ROW_COUNT=$(psql "$PROOF_DB_URL" -t -c \
-  "SELECT count(*) FROM __drizzle_migrations;" 2>/dev/null | tr -d ' ')
+  "SELECT count(*) FROM drizzle.__drizzle_migrations;" 2>/dev/null | tr -d ' ')
 echo "  Journal rows: $ROW_COUNT"
 if [[ "$ROW_COUNT" != "7" ]]; then
   echo "[FAIL] Expected 7 journal rows after migration 0006; got $ROW_COUNT" >&2

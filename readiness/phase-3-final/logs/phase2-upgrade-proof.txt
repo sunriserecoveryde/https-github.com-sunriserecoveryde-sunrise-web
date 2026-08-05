@@ -1,0 +1,56 @@
+======================================================================
+Phase 2 Normal-Runner Upgrade Proof
+Started: 2026-08-05T09:39:31Z
+======================================================================
+
+Disposable database : sos_p2_upgrade_proof_3625
+Base connection     : postgresql://postgres:password@helium
+
+-- Step 1: Create fresh disposable database --
+CREATE DATABASE
+  Created: sos_p2_upgrade_proof_3625
+
+-- Step 2: Apply Phase 2 migrations 0000–0005 via drizzle-kit --
+  Using: /home/runner/workspace/lib/db/drizzle.phase2.config.ts
+
+Reading config file '/home/runner/workspace/lib/db/drizzle.phase2.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[⣟] applying migrations...[2K[1G[⡿] applying migrations...[2K[1G[✓] migrations applied successfully!
+  Phase 2 migration command exit: 0
+
+-- Step 3: Confirm exactly 6 journal rows --
+
+-- Step 13: Destroy disposable database --
+DROP DATABASE
+  Destroyed: sos_p2_upgrade_proof_3625
+
+Finished: 2026-08-05T09:39:36Z
+======================================================================
+======================================================================
+Phase 2 Normal-Runner Upgrade Proof
+Started: 2026-08-05T09:43:26Z
+======================================================================
+
+Disposable database : sos_p2_upgrade_proof_4388
+Base connection     : postgresql://postgres:password@helium
+
+-- Step 1: Create fresh disposable database --
+CREATE DATABASE
+  Created: sos_p2_upgrade_proof_4388
+
+-- Step 2: Apply Phase 2 migrations 0000–0005 via drizzle-kit --
+  Using: /home/runner/workspace/lib/db/drizzle.phase2.config.ts
+
+Reading config file '/home/runner/workspace/lib/db/drizzle.phase2.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[⣟] applying migrations...[2K[1G[⡿] applying migrations...[2K[1G[⢿] applying migrations...[2K[1G[✓] migrations applied successfully!
+  Phase 2 migration command exit: 0
+
+-- Step 3: Confirm exactly 6 journal rows --
+
+-- Step 13: Destroy disposable database --
+DROP DATABASE
+  Destroyed: sos_p2_upgrade_proof_4388
+
+Finished: 2026-08-05T09:43:28Z
+======================================================================
