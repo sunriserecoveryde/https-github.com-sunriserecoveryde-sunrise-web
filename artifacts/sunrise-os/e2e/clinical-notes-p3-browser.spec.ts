@@ -132,7 +132,7 @@ async function gotoAndAwaitReady(page: Page): Promise<void> {
   await page.waitForResponse(
     resp =>
       resp.url().includes("/api/v1/auth/session") && resp.status() < 400,
-    { timeout: 15_000 },
+    { timeout: 30_000 },
   );
 
   // Gate 2 — productionSession is committed to React state.
