@@ -23,3 +23,4 @@
 - [Phase 3 v6 closure](phase-3-v6-closure.md) — v6 CLOSED: all gates met; ZIP at artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v6.zip
 - [Phase 3 v7 closure](phase-3-v7-closure.md) — v7 REJECTED: contaminated credentials, stale screenshots, invalid checksums
 - [Phase 3 v8 closure](phase-3-v8-closure.md) — v8 CLOSED: 573×4/136×4/19×3/cross×6; pnpm secret-injection root cause documented; ZIP at readiness/…review-v8.zip
+- [Phase 3 v9 closure](phase-3-v9-closure.md) — v9 CLOSED: 25/25 migration proof, 573×4/136×4/19×3/cross×6; phase2-proof table names documented; ZIP sha256 49a890ab
