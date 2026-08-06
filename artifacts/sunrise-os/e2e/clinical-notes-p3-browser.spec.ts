@@ -439,7 +439,7 @@ test.describe("Flow A — Clinician: create, save, and sign a progress note", ()
     // Brief settle wait
     await page.waitForTimeout(300);
     // Screenshot 7: Signed read-only note
-    await snap(page, "signed-note-read-only");
+    await snap(page, "signed-read-only-note");
 
     await expect(page.locator('[data-status="signed"]').first()).toBeVisible();
     await expect(page.locator('[data-testid="note-content"]')).not.toBeVisible();
@@ -528,7 +528,7 @@ test.describe("Flow C — Supervisor: void a signed note with validation", () =>
     const confirmBtn = page.locator('[data-testid="confirm-void-btn"]');
     await expect(confirmBtn).toBeDisabled();
     // Screenshot 10: Void-reason validation (short reason keeps Confirm disabled)
-    await snap(page, "void-reason-validation");
+    await snap(page, "void-validation");
   });
 
   test("C-3: valid void reason enables Confirm; submitting voids the note", async ({ page }) => {
