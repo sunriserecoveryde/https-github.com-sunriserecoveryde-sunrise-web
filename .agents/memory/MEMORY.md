@@ -24,3 +24,4 @@
 - [Phase 3 v7 closure](phase-3-v7-closure.md) — v7 REJECTED: contaminated credentials, stale screenshots, invalid checksums
 - [Phase 3 v8 closure](phase-3-v8-closure.md) — v8 CLOSED: 573×4/136×4/19×3/cross×6; pnpm secret-injection root cause documented; ZIP at readiness/…review-v8.zip
 - [Phase 3 v9 closure](phase-3-v9-closure.md) — v9 CLOSED: 25/25 migration proof, 573×4/136×4/19×3/cross×6; phase2-proof table names documented; ZIP sha256 49a890ab
+- [Phase 3 v10 closure](phase-3-v10-closure.md) — v10 CLOSED: all 7 v9 failures corrected; 573×4/136×4/19×3/cross×6; 0 confirmed secrets; ZIP sha256 274b52fd
