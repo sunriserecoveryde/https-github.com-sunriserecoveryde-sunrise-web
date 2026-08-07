@@ -140,8 +140,8 @@ ALTER TABLE sos_auth_audit ADD CONSTRAINT ck_sos_auth_audit_event_type CHECK (
         -- Clinical note events (Phase 3)
         'clinical_note_created', 'clinical_note_viewed', 'clinical_note_updated',
         'clinical_note_signed', 'clinical_note_voided', 'clinical_note_access_denied',
-        -- Appointment events (Phase 4)
-        'appointment_created', 'appointment_updated', 'appointment_cancelled'
+        -- Appointment events (Phase 4) — dot-form per approved contract
+        'appointment.created', 'appointment.updated', 'appointment.cancelled'
     ]::text[])
 );
 

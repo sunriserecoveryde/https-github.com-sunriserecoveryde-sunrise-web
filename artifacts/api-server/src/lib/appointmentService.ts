@@ -45,8 +45,9 @@ import {
   type AppointmentUpdateInput,
   type PatientAppointmentList,
 } from "@workspace/db";
-import { getPatient } from "@workspace/db";
+import { getPatient, getFacility } from "@workspace/db";
 import { and, eq, or, isNull, gte, lte } from "drizzle-orm";
+import { facilityDayToUtcBoundaries } from "./timezoneUtils";
 import {
   authorize,
   type AuthenticatedIdentity,
@@ -104,7 +105,7 @@ async function writeAuditTx(
   tx: DbTx,
   orgId: string,
   userId: string,
-  eventType: "appointment_created" | "appointment_updated" | "appointment_cancelled",
+  eventType: "appointment.created" | "appointment.updated" | "appointment.cancelled",
   req: Request,
   appointmentId: string,
 ): Promise<void> {
@@ -191,10 +192,9 @@ async function validateAssignedUser(
         eq(sosRoleAssignments.orgId, orgId),
         eq(sosRoleAssignments.userId, assignedUserId),
         eq(sosRoleAssignments.status, "active"),
-        or(
-          eq(sosRoleAssignments.facilityId, facilityId),
-          isNull(sosRoleAssignments.facilityId), // org-wide roles cover all facilities
-        ),
+        // §5 contract: assignment must explicitly name the selected facility.
+        // An org-wide role (facility_id IS NULL) does NOT qualify for appointment assignment.
+        eq(sosRoleAssignments.facilityId, facilityId),
         // effectiveAt must be in the past (assignment has started)
         lte(sosRoleAssignments.effectiveAt, now),
         // expiresAt must be null or in the future (assignment hasn't expired)
@@ -289,7 +289,7 @@ export async function createAppointmentService(
     const row = rows[0];
     if (!row) throw new Error("Insert returned no rows");
 
-    await writeAuditTx(tx, orgId, identity.userId, "appointment_created", req, row.id);
+    await writeAuditTx(tx, orgId, identity.userId, "appointment.created", req, row.id);
     return row;
   });
 
@@ -335,12 +335,22 @@ export async function listPatientAppointmentsService(
 
 // ── List facility appointments (schedule view) ───────────────────────────────
 
+/**
+ * Result shape for the facility schedule endpoint.
+ * Includes the facility's IANA timezone so the UI can display local times
+ * without relying on the browser's implicit timezone.
+ */
+export interface FacilityScheduleResult {
+  appointments:    SosAppointment[];
+  facilityTimezone: string;
+}
+
 export async function listFacilityAppointmentsService(
   ctx: AuthContext,
   orgId: string,
   facilityId: string,
-  date: string, // YYYY-MM-DD — treated as UTC day boundary
-): Promise<SosAppointment[]> {
+  date: string, // YYYY-MM-DD — interpreted in the facility's IANA timezone
+): Promise<FacilityScheduleResult> {
   const { identity } = ctx;
 
   // Permission check: appointment.view_facility_schedule at this facility
@@ -355,14 +365,13 @@ export async function listFacilityAppointmentsService(
     throw Object.assign(new Error("Access denied"), { name: "AccessDeniedError" });
   }
 
-  // Parse date into [from, to) UTC boundaries
-  const from = new Date(`${date}T00:00:00.000Z`);
-  const to   = new Date(`${date}T00:00:00.000Z`);
-  to.setUTCDate(to.getUTCDate() + 1);
+  // Load facility to obtain its authoritative IANA timezone
+  const facility = await getFacility(facilityId, orgId);
+  const facilityTimezone = facility.timeZone; // e.g. "America/New_York"
 
-  if (isNaN(from.getTime())) {
-    throw new AppointmentValidationError("date must be a valid YYYY-MM-DD string");
-  }
+  // Convert the facility-local calendar day to UTC [from, to) boundaries.
+  // Uses the facility's timezone — never UTC or browser-local.
+  const { from, to } = facilityDayToUtcBoundaries(date, facilityTimezone);
 
   const apts = await listFacilityAppointments(orgId, facilityId, from, to);
 
@@ -382,7 +391,7 @@ export async function listFacilityAppointmentsService(
     }
   }
 
-  return filtered;
+  return { appointments: filtered, facilityTimezone };
 }
 
 // ── Edit ──────────────────────────────────────────────────────────────────────
@@ -473,7 +482,7 @@ export async function editAppointmentService(
     const result = await repoUpdate(
       appointmentId, orgId, input.version, updateData, identity.userId,
     );
-    await writeAuditTx(tx, orgId, identity.userId, "appointment_updated", req, appointmentId);
+    await writeAuditTx(tx, orgId, identity.userId, "appointment.updated", req, appointmentId);
     return result;
   });
 
@@ -509,7 +518,7 @@ export async function cancelAppointmentService(
     const result = await repoCancel(
       appointmentId, orgId, version, identity.userId, cancellationReason,
     );
-    await writeAuditTx(tx, orgId, identity.userId, "appointment_cancelled", req, appointmentId);
+    await writeAuditTx(tx, orgId, identity.userId, "appointment.cancelled", req, appointmentId);
     return result;
   });
 

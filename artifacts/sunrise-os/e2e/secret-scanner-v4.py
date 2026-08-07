@@ -128,8 +128,12 @@ class Scanner:
                     try:
                         content = z.read(name)
                         self.files_scanned += 1
+                        # HAR files — count and scan (§18 fix: detect HAR inside any ZIP)
+                        if name.lower().endswith('.har'):
+                            self.har_files_parsed += 1
+                            scan_bytes(content, label, self.findings)
                         # Recurse into nested ZIPs
-                        if name.endswith('.zip'):
+                        elif name.endswith('.zip'):
                             inner_is_trace = 'trace' in name.lower()
                             self.scan_zip_bytes(content, label, inner_is_trace)
                         else:
@@ -178,8 +182,11 @@ class Scanner:
 
     def scan_zip_file(self, path: str):
         """Scan an outer ZIP file, recursing into nested ZIPs."""
+        import hashlib
         with open(path, 'rb') as f:
             data = f.read()
+        sha256 = hashlib.sha256(data).hexdigest()
+        print(f"[scanner] Outer ZIP SHA-256: {sha256}")
         print(f"[scanner] Outer ZIP opened: YES")
         self.scan_zip_bytes(data, os.path.basename(path), is_trace=False)
         # The outer ZIP itself: the nested_zips_opened count includes the outer

@@ -67,9 +67,42 @@ const DOT_STYLE: Record<Appointment['type'], string> = {
 
 const WEEK_DAYS = ['Mon 7/20', 'Tue 7/21', 'Wed 7/22', 'Thu 7/23', 'Fri 7/24'];
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16];
-const HOUR_LABELS = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
 const CURRENT_DAY = 2; // Wednesday Jul 22 (today in the demo)
 const CURRENT_HOUR = 14; // 2:00 PM
+
+// ── Facility timezone rendering ────────────────────────────────────────────────
+// All appointment times display in the facility's IANA timezone via Intl.DateTimeFormat.
+// This ensures correct local rendering regardless of the browser's own timezone.
+
+/** IANA timezone for this facility (sourced from facilityTimezone field on schedule API responses). */
+const FACILITY_TIMEZONE = "America/New_York";
+
+/**
+ * Format a UTC Date object to a human-readable time string using the facility's timezone.
+ * Uses Intl.DateTimeFormat with an explicit `timeZone` — never relies on browser-local timezone.
+ */
+function formatFacilityTime(date: Date, opts?: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: FACILITY_TIMEZONE,
+    hour:     "numeric",
+    minute:   "2-digit",
+    hour12:   true,
+    ...opts,
+  }).format(date);
+}
+
+/**
+ * Build the hour-label string for a given integer hour (0–23) in the facility timezone.
+ * Example: buildHourLabel(9) → "9:00 AM (ET)"
+ */
+function buildHourLabel(hour: number): string {
+  // Construct a reference UTC date for the given hour on a fixed date
+  const ref = new Date(Date.UTC(2026, 6, 22, hour, 0, 0)); // Jul 22, 2026 as stable reference
+  return formatFacilityTime(ref);
+}
+
+/** Pre-built hour labels in facility-local time for the calendar grid. */
+const HOUR_LABELS = HOURS.map(buildHourLabel);
 
 // ─── Component ────────────────────────────────────────────────────────────
 

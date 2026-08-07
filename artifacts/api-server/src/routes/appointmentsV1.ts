@@ -27,6 +27,7 @@ import {
   AppointmentConflictError,
   AppointmentConcurrencyError,
   AppointmentStatusError,
+  type FacilityScheduleResult,
 } from "../lib/appointmentService";
 import { logger } from "../lib/logger";
 
@@ -279,13 +280,18 @@ router.get(
     }
 
     try {
-      const apts = await listFacilityAppointmentsService(
+      const result: FacilityScheduleResult = await listFacilityAppointmentsService(
         { identity: auth, req },
         auth.orgId,
         facilityId,
         parsed.data.date,
       );
-      res.json({ appointments: apts });
+      // facilityTimezone is included so the UI can format times without
+      // relying on the browser's implicit timezone (Phase 4 contract §2).
+      res.json({
+        appointments:    result.appointments,
+        facilityTimezone: result.facilityTimezone,
+      });
     } catch (err) {
       mapError(err, res);
     }

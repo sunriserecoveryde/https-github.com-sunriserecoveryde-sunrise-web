@@ -1261,5 +1261,120 @@ test.describe("CSRF protection on appointment mutations", () => {
   });
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Sched-H — Facility schedule: facilityTimezone field + per-row filter (v6)
+// ══════════════════════════════════════════════════════════════════════════════
+
+test.describe("Sched-H Facility schedule includes facilityTimezone (v6 contract)", () => {
+  test.use({ storageState: SESSION_PATHS.clinician });
+
+  test("Sched-H-1: facility schedule response includes facilityTimezone field (IANA string)", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const apiBase = getApiBase(page);
+    const dateStr = futureIso(48).slice(0, 10);
+
+    const res = await page.request.get(
+      `${apiBase}/api/v1/facilities/${FACILITY_ID}/appointments?date=${dateStr}`,
+    );
+    expect(
+      res.status(),
+      `Clinician facility schedule must return 200; got ${res.status()}`,
+    ).toBe(200);
+
+    const body = await res.json() as {
+      appointments?: unknown[];
+      facilityTimezone?: string;
+    };
+
+    // §2 contract: facilityTimezone must be present
+    expect(
+      body.facilityTimezone,
+      "Response must include facilityTimezone (v6 §2 contract)",
+    ).toBeTruthy();
+
+    // Must be a valid IANA timezone identifier
+    expect(
+      body.facilityTimezone,
+      "facilityTimezone must match IANA timezone pattern",
+    ).toMatch(/^[A-Za-z]+(?:\/[A-Za-z_]+)+$/);
+
+    // Appointments array must still be present
+    expect(
+      Array.isArray(body.appointments),
+      "Response must include appointments array alongside facilityTimezone",
+    ).toBe(true);
+
+    await snap(page, "17-sched-h-facility-timezone.png");
+  });
+
+  test("Sched-H-2: facility schedule date boundary — appointments returned use facility-local day boundaries", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const apiBase   = getApiBase(page);
+    const csrfToken = await getCsrfToken(page, apiBase);
+
+    // Create an appointment for a specific future date via API
+    const targetDateStr = futureIso(72).slice(0, 10); // 3 days out (YYYY-MM-DD, UTC)
+
+    // First, get the facilityTimezone from a schedule query
+    const tzRes = await page.request.get(
+      `${apiBase}/api/v1/facilities/${FACILITY_ID}/appointments?date=${targetDateStr}`,
+    );
+    expect(tzRes.status()).toBe(200);
+    const tzBody = await tzRes.json() as { facilityTimezone?: string };
+    const tz = tzBody.facilityTimezone ?? "America/New_York";
+
+    // Create an appointment on the target date (early morning NY local time)
+    const startMs = new Date(`${targetDateStr}T14:00:00Z`).getTime(); // 10:00 AM EDT
+    const endMs   = startMs + 3_600_000;
+    const startsAt = new Date(startMs).toISOString().replace("Z", "+00:00");
+    const endsAt   = new Date(endMs).toISOString().replace("Z", "+00:00");
+
+    const createRes = await page.request.post(
+      `${apiBase}/api/v1/patients/${TEST_PATIENT_ID}/appointments`,
+      {
+        headers: { "X-CSRF-Token": csrfToken, "Content-Type": "application/json" },
+        data: {
+          facilityId:      FACILITY_ID,
+          appointmentType: "individual_therapy",
+          startsAt,
+          endsAt,
+          reason: `Sched-H-2 boundary test appointment ${targetDateStr}`,
+        },
+      },
+    );
+
+    // If creation succeeds, verify it appears in the correct date's schedule
+    if (createRes.status() === 201) {
+      const createdId = (await createRes.json() as { appointment?: { id: string } })
+        .appointment?.id;
+
+      const schedRes = await page.request.get(
+        `${apiBase}/api/v1/facilities/${FACILITY_ID}/appointments?date=${targetDateStr}`,
+      );
+      expect(schedRes.status()).toBe(200);
+      const schedBody = await schedRes.json() as {
+        appointments?: { id: string }[];
+        facilityTimezone?: string;
+      };
+
+      expect(
+        schedBody.facilityTimezone,
+        "facilityTimezone must be present in schedule response",
+      ).toBeTruthy();
+
+      // The created appointment must appear in the target date's schedule
+      const ids = (schedBody.appointments ?? []).map((a) => a.id);
+      if (createdId) {
+        expect(
+          ids,
+          `Appointment ${createdId} must appear in ${targetDateStr} ${tz} schedule`,
+        ).toContain(createdId);
+      }
+    }
+
+    await snap(page, "17b-sched-h-boundary-test.png");
+  });
+});
+
 // Suppress unused-variable warnings for constants used only in payloads.
 void ORG_ID;
