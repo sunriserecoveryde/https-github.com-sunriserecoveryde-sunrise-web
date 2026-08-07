@@ -29,3 +29,4 @@
 - [Phase 3 audit record](phase-3-audit-record.md) — PERMANENT: merge commit 2a15811, approved code 75701271, evidence ZIP sha256 9fd4213c; 573/573/19 tests; CLOSED
 - [Phase 4 Scheduling](phase-4-scheduling.md) — 668×4/29×3 tests; TS parameter property pitfall; route prefix; outbox no constraint; db rebuild before tsc
 - [Phase 4 v2 closure](phase-4-v2-closure.md) — 668×4/136×4/42×3; UUID c000→a000 fix; DB accumulation fix; listPatientAppointments status+time bucketing; ZIP sha256 b24a7275
+- [Phase 4 v3 closure](phase-4-v3-closure.md) — CLOSED: 668×4/136×4/43×4; migration proof 28/28; 0 secrets; ZIP sha256 421f01ae; screenshots-p4 isolation fix; 8 migrations JSON journal
