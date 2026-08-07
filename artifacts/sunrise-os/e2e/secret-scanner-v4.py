@@ -48,7 +48,8 @@ SECRET_PATTERNS = {
         re.IGNORECASE
     ),
     "database_credential": re.compile(
-        r'postgresql://[^:]+:[^@]+@',
+        # Require actual credential chars — no regex metacharacters like [^ in the user/password
+        r'postgresql://[A-Za-z0-9_\-\.]+:[A-Za-z0-9_\-\.!@#$%^&*()]{4,}@',
         re.IGNORECASE
     ),
     "private_key": re.compile(
