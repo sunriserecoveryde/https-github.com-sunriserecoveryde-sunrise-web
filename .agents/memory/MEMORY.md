@@ -32,3 +32,4 @@
 - [Phase 4 v3 closure](phase-4-v3-closure.md) — CLOSED: 668×4/136×4/43×4; migration proof 28/28; 0 secrets; ZIP sha256 421f01ae; screenshots-p4 isolation fix; 8 migrations JSON journal
 - [Phase 4 v4 closure](phase-4-v4-closure.md) — v4 CLOSED: 668×4/136×4/43×3/isolation-8/7-gates; migration proof 22/22; 0 secrets; ZIP sha256 8ba270e0; staff_profiles FK pitfall documented
 - [Phase 4 v5 closure](phase-4-v5-closure.md) — v5 CLOSED: all spec gates + 8/8 cross-suite; 0 secrets; ZIP sha256 a22159d5; trace binary sweep + scanner credential fix documented
+- [Phase 4 v6 closure](phase-4-v6-closure.md) — v6 CLOSED: 678×4/136×4/45×3; 12 new tests; ZIP sha256 3d75009a; sos_roles/created_by_user_id/isNull import pitfalls documented
