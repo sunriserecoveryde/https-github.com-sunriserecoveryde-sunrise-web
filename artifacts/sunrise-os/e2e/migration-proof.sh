@@ -195,19 +195,21 @@ pass "All ${MIG_APPLIED} migrations applied without error"
 
 step "Verify core application tables exist after migrations"
 REQUIRED_TABLES=(
-  "sos_orgs"
+  "sos_organizations"
   "sos_facilities"
+  "sos_user_identity_refs"
   "sos_user_accounts"
-  "sos_role_definitions"
-  "sos_user_role_grants"
+  "sos_staff_profiles"
+  "sos_role_assignments"
   "sos_patients"
   "sos_episodes_of_care"
   "sos_clinical_notes"
-  "sos_clinical_note_audit"
+  "sos_auth_audit"
   "sos_appointments"
   "sos_patient_access"
   "sos_sessions"
-  "sos_outbox"
+  "sos_audit_outbox"
+  "sos_rate_limit_windows"
 )
 for tbl in "${REQUIRED_TABLES[@]}"; do
   EXISTS="$(psql "${PROOF_DB_URL}" -tAc \
@@ -240,17 +242,18 @@ for col in appointment_type status starts_at ends_at assigned_user_id; do
 done
 pass "All required appointment columns present"
 
-step "Verify outbox table schema"
-for col in id org_id event_type payload status created_at; do
+step "Verify sos_audit_outbox table schema (auth event outbox)"
+# Table is sos_audit_outbox (not sos_outbox); populated by the Phase 2D outbox worker.
+for col in id org_id event_type outcome created_at processed_at failed_permanently; do
   EXISTS="$(psql "${PROOF_DB_URL}" -tAc \
     "SELECT count(*) FROM information_schema.columns
-     WHERE table_schema='public' AND table_name='sos_outbox' AND column_name='${col}';")"
+     WHERE table_schema='public' AND table_name='sos_audit_outbox' AND column_name='${col}';")"
   if [[ "${EXISTS}" -ne 1 ]]; then
-    fail "Column '${col}' missing from sos_outbox"
+    fail "Column '${col}' missing from sos_audit_outbox"
   fi
-  echo "  [present] sos_outbox.${col}"
+  echo "  [present] sos_audit_outbox.${col}"
 done
-pass "All required outbox columns present"
+pass "All required sos_audit_outbox columns present"
 
 step "Verify sos_clinical_notes has signed_consistency check constraint"
 CONSTRAINT_EXISTS="$(psql "${PROOF_DB_URL}" -tAc \
