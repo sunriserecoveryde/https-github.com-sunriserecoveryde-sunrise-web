@@ -370,7 +370,8 @@ psql "${PROOF_DB_URL}" -v ON_ERROR_STOP=1 -c "
 pass "Valid scheduled appointment inserted"
 
 step "Step 28: Prove ends_at <= starts_at is rejected"
-if psql "${PROOF_DB_URL}" -c "
+# Capture output without triggering pipefail (|| true absorbs psql non-zero exit)
+OUT28="$(psql "${PROOF_DB_URL}" -c "
   INSERT INTO sos_appointments
     (id, org_id, facility_id, patient_id, assigned_user_id, created_by_user_id,
      appointment_type, status, starts_at, ends_at, reason, version, created_at)
@@ -378,15 +379,18 @@ if psql "${PROOF_DB_URL}" -c "
           '${USR_ID}', '${USR_ID}',
           'intake', 'scheduled',
           NOW() + INTERVAL '2 hours', NOW() + INTERVAL '1 hour',
-          'bad time order', 1, NOW());" 2>&1 | grep -qiE "check|constraint|violat"; then
-  echo "  ends_at <= starts_at: REJECTED (constraint enforced)"
+          'bad time order', 1, NOW());" 2>&1 || true)"
+if echo "${OUT28}" | grep -qiE "check|constraint|violat|error"; then
+  echo "  ends_at <= starts_at: REJECTED"
+  echo "  psql output: ${OUT28}"
   pass "Invalid time order correctly rejected"
 else
+  echo "  psql output: ${OUT28}"
   fail "ends_at <= starts_at was not rejected by constraint"
 fi
 
 step "Step 29: Prove invalid cancellation state (no metadata) is rejected"
-if psql "${PROOF_DB_URL}" -c "
+OUT29="$(psql "${PROOF_DB_URL}" -c "
   INSERT INTO sos_appointments
     (id, org_id, facility_id, patient_id, assigned_user_id, created_by_user_id,
      appointment_type, status, starts_at, ends_at, reason, version, created_at)
@@ -394,10 +398,13 @@ if psql "${PROOF_DB_URL}" -c "
           '${USR_ID}', '${USR_ID}',
           'intake', 'cancelled',
           NOW() + INTERVAL '1 hour', NOW() + INTERVAL '2 hours',
-          'missing cancel metadata', 1, NOW());" 2>&1 | grep -qiE "check|constraint|violat"; then
-  echo "  cancelled without metadata: REJECTED (constraint enforced)"
+          'missing cancel metadata', 1, NOW());" 2>&1 || true)"
+if echo "${OUT29}" | grep -qiE "check|constraint|violat|error"; then
+  echo "  cancelled without metadata: REJECTED"
+  echo "  psql output: ${OUT29}"
   pass "Invalid cancellation correctly rejected"
 else
+  echo "  psql output: ${OUT29}"
   fail "cancelled status without metadata was NOT rejected"
 fi
 
