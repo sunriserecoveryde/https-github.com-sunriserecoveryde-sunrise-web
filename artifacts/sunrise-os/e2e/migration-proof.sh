@@ -111,48 +111,60 @@ MIG_DIR="${REPO_ROOT}/lib/db/drizzle"
 if [[ ! -d "${MIG_DIR}" ]]; then
   fail "Migration directory not found: ${MIG_DIR}"
 fi
-MIGRATION_COUNT="$(find "${MIG_DIR}" -name "*.sql" | wc -l | tr -d ' ')"
+MIGRATION_COUNT="$(find "${MIG_DIR}" -maxdepth 1 -name "*.sql" | wc -l | tr -d ' ')"
 echo "  Migration directory: ${MIG_DIR}"
-echo "  SQL migration files: ${MIGRATION_COUNT}"
+echo "  SQL migration files (top-level only): ${MIGRATION_COUNT}"
 pass "Migration directory found"
 
-# ── Step 9: Verify exactly 6 migration SQL files exist ───────────────────────
+# ── Step 9: Verify exactly 8 migration SQL files exist ───────────────────────
+# Phase 1-4 produced 8 total: 0000..0007.
+# Exclude the phase2-proof/ subdirectory (it is a read-only copy used by
+# Phase 2 migration proof and not applied here).
 
-step "Verify exactly 6 migration SQL files"
-if [[ "${MIGRATION_COUNT}" -ne 6 ]]; then
-  fail "Expected 6 migration files; found ${MIGRATION_COUNT}"
+step "Verify exactly 8 migration SQL files (top-level)"
+if [[ "${MIGRATION_COUNT}" -ne 8 ]]; then
+  fail "Expected 8 migration files; found ${MIGRATION_COUNT}"
 fi
-find "${MIG_DIR}" -name "*.sql" | sort
-pass "Exactly 6 migration SQL files confirmed"
+find "${MIG_DIR}" -maxdepth 1 -name "*.sql" | sort
+pass "Exactly 8 migration SQL files confirmed"
 
-# ── Step 10: Verify __drizzle_migrations journal exists ──────────────────────
+# ── Step 10: Verify Drizzle journal JSON exists ───────────────────────────────
 
-step "Verify Drizzle migration journal file exists"
-JOURNAL="${MIG_DIR}/__drizzle_migrations"
+step "Verify Drizzle migration journal JSON exists"
+JOURNAL="${MIG_DIR}/meta/_journal.json"
 if [[ ! -f "${JOURNAL}" ]]; then
   fail "Drizzle migration journal not found: ${JOURNAL}"
 fi
 pass "Journal file found: ${JOURNAL}"
 
-# ── Step 11: Read journal and verify it has 6 entries ────────────────────────
+# ── Step 11: Read journal and verify it has 8 entries ────────────────────────
 
-step "Verify journal lists exactly 6 migration entries"
-# Journal is an SQLite DB; query it with sqlite3
-JOURNAL_ENTRY_COUNT="$(sqlite3 "${JOURNAL}" "SELECT count(*) FROM __drizzle_migrations;" 2>/dev/null)"
+step "Verify journal lists exactly 8 migration entries"
+JOURNAL_ENTRY_COUNT="$(python3 -c "
+import json, sys
+with open('${JOURNAL}') as f:
+    d = json.load(f)
+print(len(d.get('entries', [])))
+")"
 echo "  Journal entry count: ${JOURNAL_ENTRY_COUNT}"
-if [[ "${JOURNAL_ENTRY_COUNT}" -ne 6 ]]; then
-  fail "Journal has ${JOURNAL_ENTRY_COUNT} entries; expected 6"
+if [[ "${JOURNAL_ENTRY_COUNT}" -ne 8 ]]; then
+  fail "Journal has ${JOURNAL_ENTRY_COUNT} entries; expected 8"
 fi
-pass "Journal has exactly 6 entries"
+pass "Journal has exactly 8 entries"
 
-# ── Step 12: Print journal entry hashes ──────────────────────────────────────
+# ── Step 12: Print journal entry tags ────────────────────────────────────────
 
-step "Print all journal entries (id, hash, created_at)"
-sqlite3 "${JOURNAL}" "SELECT id, hash, created_at FROM __drizzle_migrations ORDER BY id;" \
-  || fail "Could not read journal entries"
+step "Print all journal entries (idx + tag)"
+python3 -c "
+import json
+with open('${JOURNAL}') as f:
+    d = json.load(f)
+for e in d.get('entries', []):
+    print(f\"  idx={e['idx']:02d} tag={e['tag']}\")
+" || fail "Could not read journal entries"
 pass "Journal entries listed"
 
-# ── Step 13: Verify migration 1 SQL file is non-empty ────────────────────────
+# ── Step 13: Verify each migration SQL file is non-empty ─────────────────────
 
 step "Verify each migration SQL file is non-empty"
 while IFS= read -r sql_file; do
@@ -161,23 +173,21 @@ while IFS= read -r sql_file; do
     fail "Migration file is suspiciously small (${size} bytes): ${sql_file}"
   fi
   echo "  OK (${size} bytes): $(basename "${sql_file}")"
-done < <(find "${MIG_DIR}" -name "*.sql" | sort)
+done < <(find "${MIG_DIR}" -maxdepth 1 -name "*.sql" | sort)
 pass "All migration SQL files are non-empty"
 
-# ── Step 14: Apply migration 1 to proof DB ───────────────────────────────────
+# ── Step 14: Apply all migrations to proof DB ────────────────────────────────
 
-step "Apply migrations to proof DB via drizzle-kit push"
-# We use DATABASE_URL override rather than drizzle-kit to apply raw SQL directly,
-# because drizzle-kit push requires config files. Instead, apply SQL files in order.
+step "Apply all 8 migrations to proof DB sequentially"
+# Apply SQL files in order (maxdepth 1 excludes phase2-proof/).
 MIG_APPLIED=0
 while IFS= read -r sql_file; do
   MIG_APPLIED=$((MIG_APPLIED + 1))
-  step_label="Apply migration ${MIG_APPLIED}: $(basename "${sql_file}")"
-  echo "  ${step_label}"
+  echo "  Applying ${MIG_APPLIED}/8: $(basename "${sql_file}")"
   psql "${PROOF_DB_URL}" -v ON_ERROR_STOP=1 -f "${sql_file}" \
     || fail "Failed to apply ${sql_file}"
   echo "  [OK] $(basename "${sql_file}")"
-done < <(find "${MIG_DIR}" -name "*.sql" | sort)
+done < <(find "${MIG_DIR}" -maxdepth 1 -name "*.sql" | sort)
 pass "All ${MIG_APPLIED} migrations applied without error"
 
 # ── Step N: Remaining steps (post-apply verification) ────────────────────────

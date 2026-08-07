@@ -64,12 +64,14 @@ if (!_rawTestPwd) {
 
 // ── Screenshot helpers ────────────────────────────────────────────────────────
 
-const screenshotDir = path.join(import.meta.dirname, "screenshots");
+// Phase 4 uses its own subdirectory so the Phase 3 spec's global cleanup
+// (`fs.rmSync(screenshotDir)` that runs at load time) does not delete Phase 4
+// screenshots when both specs are loaded in the same Playwright worker pool.
+const screenshotDir = path.join(import.meta.dirname, "screenshots-p4");
 
-// Ensure directory exists (created fresh; cleaned up in beforeAll below).
-if (!fs.existsSync(screenshotDir)) {
-  fs.mkdirSync(screenshotDir, { recursive: true });
-}
+// Wipe and recreate so each PW run starts from a known baseline.
+fs.rmSync(screenshotDir, { recursive: true, force: true });
+fs.mkdirSync(screenshotDir, { recursive: true });
 
 /**
  * Take a screenshot and save it under an exact filename in screenshotDir.
