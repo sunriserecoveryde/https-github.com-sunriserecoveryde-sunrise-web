@@ -35,7 +35,7 @@ const TEST_API_PORT   = 8099;
 
 export default defineConfig({
   testDir:    path.join(import.meta.dirname, "e2e"),
-  testMatch:  "**/clinical-notes-p3-browser.spec.ts",
+  testMatch:  ["**/clinical-notes-p3-browser.spec.ts", "**/appointments-p4-browser.spec.ts"],
   globalSetup:    path.join(import.meta.dirname, "e2e", "global-setup.ts"),
   globalTeardown: path.join(import.meta.dirname, "e2e", "global-teardown.ts"),
   tsconfig:   path.join(import.meta.dirname, "e2e", "tsconfig.json"),

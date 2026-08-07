@@ -201,6 +201,15 @@ const TEST_USERS: TestUser[] = [
     facilityId:  FACILITY_ID,
     roleRevoked: true,
   },
+  // ── Phase 4 new persona ────────────────────────────────────────────────────
+  {
+    // Clinical supervisor: can edit/cancel any appointment (not just own).
+    // Also tests supervisor-only internal_note visibility.
+    email:       "supervisor@test.sunrise",
+    displayName: "[TEST] Dr. Evelyn Marsh, Clinical Supervisor",
+    roleId:      "clinical_supervisor",
+    facilityId:  FACILITY_ID,
+  },
 ];
 
 // ── Seed helper ───────────────────────────────────────────────────────────────

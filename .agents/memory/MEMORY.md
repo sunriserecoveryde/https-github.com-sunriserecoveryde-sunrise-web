@@ -27,3 +27,4 @@
 - [Phase 3 v10 closure](phase-3-v10-closure.md) — v10 CLOSED: all 7 v9 failures corrected; 573×4/136×4/19×3/cross×6; 0 confirmed secrets; ZIP sha256 274b52fd
 - [Phase 3 v10-final closure](phase-3-v10-final-closure.md) — v10-final: 3 CSRF traces patched; recursive ZIP scanner (20 ZIPs/19 traces/4 HARs); 0 confirmed; ZIP sha256 9fd4213c
 - [Phase 3 audit record](phase-3-audit-record.md) — PERMANENT: merge commit 2a15811, approved code 75701271, evidence ZIP sha256 9fd4213c; 573/573/19 tests; CLOSED
+- [Phase 4 Scheduling](phase-4-scheduling.md) — 668×4/29×3 tests; TS parameter property pitfall; route prefix; outbox no constraint; db rebuild before tsc
