@@ -284,8 +284,9 @@ pass "sos_appointments present after Phase 4 upgrade"
 # ── Step 19 ───────────────────────────────────────────────────────────────────
 
 step "Step 19: Prove required indexes on sos_appointments"
-for IDX in sos_appointments_org_id_idx sos_appointments_patient_id_idx \
-           sos_appointments_facility_id_idx sos_appointments_starts_at_idx; do
+# Actual index names from migration 0007 (verified against production)
+for IDX in idx_apt_facility_time idx_apt_patient_history \
+           idx_apt_patient_time idx_apt_staff_time; do
   CNT="$(psql "${PROOF_DB_URL}" -tAc \
     "SELECT count(*) FROM pg_indexes
      WHERE tablename='sos_appointments' AND indexname='${IDX}';")"
