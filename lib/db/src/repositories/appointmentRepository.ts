@@ -117,8 +117,17 @@ export async function listPatientAppointments(
       )
       .orderBy(sosAppointments.startsAt);
 
-    const upcoming = rows.filter((r) => new Date(r.startsAt) >= pivot);
-    const past = rows.filter((r) => new Date(r.startsAt) < pivot);
+    // Upcoming: scheduled appointments whose start time is still in the future.
+    // Past: everything else — appointments whose start has passed, AND any
+    // cancelled/completed appointments regardless of their original start time
+    // (a future cancelled appointment is no longer "upcoming" from a scheduling
+    // perspective and should appear in the historical/past section).
+    const upcoming = rows.filter(
+      (r) => r.status === "scheduled" && new Date(r.startsAt) >= pivot,
+    );
+    const past = rows.filter(
+      (r) => r.status !== "scheduled" || new Date(r.startsAt) < pivot,
+    );
     return { upcoming, past };
   } catch (err: unknown) {
     throw new DatabaseError("Failed to list patient appointments", err);

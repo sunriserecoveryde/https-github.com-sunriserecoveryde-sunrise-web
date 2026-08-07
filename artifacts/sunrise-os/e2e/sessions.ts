@@ -25,6 +25,7 @@ export const SESSION_PATHS = {
   hr:            path.join(SESSIONS_DIR, "hr.json"),
   billing:       path.join(SESSIONS_DIR, "billing.json"),
   multiFac:      path.join(SESSIONS_DIR, "multi-facility.json"),
+  bht:           path.join(SESSIONS_DIR, "bht.json"),
 } as const;
 
 export type PersonaKey = keyof typeof SESSION_PATHS;

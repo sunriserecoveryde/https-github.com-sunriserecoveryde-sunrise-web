@@ -408,6 +408,12 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   const [cancelReason, setCancelReason] = useState<string>('');
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  // Edit appointment modal state (Phase 4)
+  const [editAptId, setEditAptId] = useState<string | null>(null);
+  const [editAptReason, setEditAptReason] = useState<string>('');
+  const [editAptVersion, setEditAptVersion] = useState<number>(1);
+  const [editAptSaving, setEditAptSaving] = useState(false);
+  const [editAptError, setEditAptError] = useState<string | null>(null);
 
   useEffect(() => {
     if (DATA_MODE !== 'production' || !patientId || activeTab !== 'Appointments') return;
@@ -2417,7 +2423,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                   <p className="text-xs mt-1">Connect to API to view and manage appointments.</p>
                 </div>
               ) : !appointmentsLoading && appointments.upcoming.length === 0 && appointments.past.length === 0 ? (
-                <div className="text-center py-12 text-slate-400">
+                <div data-testid="apt-empty-state" className="text-center py-12 text-slate-400">
                   <Calendar className="w-8 h-8 mx-auto mb-3 opacity-30" />
                   <p className="text-sm font-medium">No appointments scheduled</p>
                   <p className="text-xs mt-1">Use the button above to schedule this patient's first appointment.</p>
@@ -2450,15 +2456,26 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                                   <p className="text-xs text-slate-500 mt-1 italic">Note: {apt.internalNote}</p>
                                 )}
                               </div>
-                              {(productionSession?.permissionCodes ?? []).includes('appointment.cancel') && (
-                                <button
-                                  data-testid={`cancel-apt-${apt.id}`}
-                                  onClick={() => { setCancelModalAptId(apt.id); setCancelModalVersion(apt.version); setCancelReason(''); setCancelError(null); }}
-                                  className="ml-3 text-xs text-red-500 hover:text-red-700 font-medium"
-                                >
-                                  Cancel
-                                </button>
-                              )}
+                              <div className="flex items-center gap-2 ml-3">
+                                {(productionSession?.permissionCodes ?? []).includes('appointment.edit') && (
+                                  <button
+                                    data-testid={`edit-apt-${apt.id}`}
+                                    onClick={() => { setEditAptId(apt.id); setEditAptReason(apt.reason); setEditAptVersion(apt.version); setEditAptError(null); }}
+                                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                                {(productionSession?.permissionCodes ?? []).includes('appointment.cancel') && (
+                                  <button
+                                    data-testid={`cancel-apt-${apt.id}`}
+                                    onClick={() => { setCancelModalAptId(apt.id); setCancelModalVersion(apt.version); setCancelReason(''); setCancelError(null); }}
+                                    className="text-xs text-red-500 hover:text-red-700 font-medium"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -2564,7 +2581,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                   </div>
 
                   {aptApiError && (
-                    <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{aptApiError}</div>
+                    <div data-testid="apt-api-error" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{aptApiError}</div>
                   )}
 
                   <div className="flex gap-3">
@@ -2677,6 +2694,66 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 </button>
                 <button
                   onClick={() => { setCancelModalAptId(null); setCancelError(null); }}
+                  className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit appointment modal (Phase 4) */}
+        {editAptId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+              <h3 className="text-lg font-bold text-navy mb-1">Edit Appointment</h3>
+              <p className="text-sm text-slate mb-4">Update the appointment reason below.</p>
+              <textarea
+                data-testid="edit-apt-reason-input"
+                value={editAptReason}
+                onChange={e => setEditAptReason(e.target.value)}
+                rows={3}
+                placeholder="Appointment reason…"
+                className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 mb-3 resize-none"
+              />
+              {editAptError && <div className="text-sm text-red-600 mb-3">{editAptError}</div>}
+              <div className="flex gap-3">
+                <button
+                  data-testid="confirm-edit-btn"
+                  disabled={editAptSaving || !editAptReason.trim()}
+                  onClick={async () => {
+                    if (!editAptReason.trim() || !editAptId) return;
+                    setEditAptSaving(true);
+                    setEditAptError(null);
+                    try {
+                      const csrfRes = await fetch(`${API_BASE}/v1/auth/csrf-token`, { headers: DEV_HEADERS });
+                      const { csrfToken } = await csrfRes.json() as { csrfToken: string };
+                      const res = await fetch(`${API_BASE}/v1/appointments/${editAptId}`, {
+                        method: 'PATCH',
+                        headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify({ version: editAptVersion, reason: editAptReason.trim() }),
+                      });
+                      if (!res.ok) {
+                        const err = await res.json() as { error?: string };
+                        setEditAptError(err?.error ?? `Server error ${res.status}`);
+                      } else {
+                        setEditAptId(null);
+                        setEditAptError(null);
+                        refreshAppointments();
+                      }
+                    } catch {
+                      setEditAptError('Network error — please try again.');
+                    } finally {
+                      setEditAptSaving(false);
+                    }
+                  }}
+                  className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light disabled:opacity-50"
+                >
+                  {editAptSaving ? 'Saving…' : 'Save Changes'}
+                </button>
+                <button
+                  onClick={() => { setEditAptId(null); setEditAptError(null); }}
                   className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded hover:bg-slate-50"
                 >
                   Close

@@ -1,18 +1,27 @@
 /**
- * Browser test seed — Phase 3 True Browser Tests
+ * Browser test seed — Phase 3 + Phase 4 True Browser Tests
  *
  * Creates deterministic, idempotent test fixtures that the Playwright
  * browser test suite depends on.  Run this in globalSetup, AFTER authSeed
  * has been run at least once against the target database.
  *
  * Fixtures created:
- *  - BROWSER_SIGNED_NOTE_ID  — a signed progress note authored by the
- *    certified_clinician, used to test supervisor void flow.
- *  - BROWSER_DRAFT_NOTE_ID   — a draft progress note authored by the
- *    certified_clinician, used to test the concurrency / stale-version flow.
+ *  Phase 3:
+ *   - BROWSER_SIGNED_NOTE_ID  — a signed progress note authored by the
+ *     certified_clinician, used to test supervisor void flow.
+ *   - BROWSER_DRAFT_NOTE_ID   — a draft progress note authored by the
+ *     certified_clinician, used to test the concurrency / stale-version flow.
  *
- * Both notes are for the test patient (TEST_PATIENT_ID) at FACILITY_1.
- * Uses onConflictDoNothing so repeated runs are idempotent.
+ *  Phase 4 (Scheduling & Appointments):
+ *   - BROWSER_APT_EDIT_ID       — a future scheduled appointment for the
+ *     edit-appointment browser test (§UI-D).
+ *   - BROWSER_APT_CANCEL_ID     — a future scheduled appointment for the
+ *     cancel-appointment browser test (§UI-E).
+ *   - BROWSER_APT_CONCURRENT_ID — a future scheduled appointment for the
+ *     concurrent-update browser test (§Conc-H).
+ *
+ * All fixtures are for the test patient (TEST_PATIENT_ID) at FACILITY_1.
+ * Uses delete-then-insert so every run starts from a known baseline.
  *
  * MUST NOT run in production (enforced below).
  */
@@ -21,18 +30,23 @@ if (process.env.NODE_ENV === "production") {
   throw new Error("browserTestSeed.ts must never run in production. Aborting.");
 }
 
-import { db, sosUserAccounts, sosClinicalNotes } from "@workspace/db";
+import { db, sosUserAccounts, sosClinicalNotes, sosAppointments } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 
 // ── Deterministic IDs ────────────────────────────────────────────────────────
 export const BROWSER_SIGNED_NOTE_ID  = "00000000-0000-4000-b000-000000000001";
 export const BROWSER_DRAFT_NOTE_ID   = "00000000-0000-4000-b000-000000000002";
 
+// Phase 4 appointment fixtures
+export const BROWSER_APT_EDIT_ID       = "00000000-0000-4000-a000-000000000011";
+export const BROWSER_APT_CANCEL_ID     = "00000000-0000-4000-a000-000000000012";
+export const BROWSER_APT_CONCURRENT_ID = "00000000-0000-4000-a000-000000000013";
+
 // ── Static seed values (must match authSeed.ts) ───────────────────────────────
-const ORG_ID         = "00000000-0000-4000-a000-000000000001";
-const FACILITY_ID    = "00000000-0000-4000-a000-000000000002";
+const ORG_ID          = "00000000-0000-4000-a000-000000000001";
+const FACILITY_ID     = "00000000-0000-4000-a000-000000000002";
 const TEST_PATIENT_ID = "00000000-0000-4000-a000-000000000099";
-const CLINICIAN_EMAIL = "clinician@test.sunrise";
+const CLINICIAN_EMAIL  = "clinician@test.sunrise";
 const SUPERVISOR_EMAIL = "org-admin@test.sunrise";
 
 async function getAccountId(email: string): Promise<string> {
@@ -57,7 +71,17 @@ export async function runBrowserTestSeed(): Promise<void> {
 
   const now = new Date();
 
-  // ── Delete-and-reinsert strategy ─────────────────────────────────────────────
+  // ── Wipe ALL appointments for the test patient ─────────────────────────────
+  //
+  // Creation tests (Pos-1, Pos-2, UI-B, UI-C) accumulate appointments across
+  // runs.  Removing them all here ensures each run starts from a known baseline
+  // and creation tests don't collide with a previous run's leftovers.
+  // This is safe: TEST_PATIENT_ID is a fixture-only patient that only exists
+  // in the browser-test database.
+  await db.delete(sosAppointments).where(eq(sosAppointments.patientId, TEST_PATIENT_ID));
+  console.log("[browser-seed] All appointments for test patient cleared.");
+
+  // ── Phase 3: Delete-and-reinsert clinical note fixtures ─────────────────────
   //
   // Tests leave these notes in mutated states (voided, version bumped, etc.).
   // `onConflictDoNothing` would silently keep the dirty state.  Instead, delete
@@ -123,6 +147,103 @@ export async function runBrowserTestSeed(): Promise<void> {
     });
 
   console.log(`[browser-seed] Draft note ready: ${BROWSER_DRAFT_NOTE_ID} (status=draft, version=1)`);
+
+  // ── Phase 4: Delete-and-reinsert appointment fixtures ───────────────────────
+  //
+  // These appointments are consumed by the Phase 4 browser tests:
+  //  - §UI-D (edit): opens edit modal, changes reason, asserts version=2
+  //  - §UI-E (cancel): opens cancel dialog, confirms cancellation
+  //  - §Conc-H (concurrent): two contexts race → stale-version 409
+  //
+  // Delete first so every run starts at version=1, status=scheduled.
+  // Future dates (now + 30/31/32 days) keep the appointments in the "upcoming"
+  // list throughout the test suite.
+  await db
+    .delete(sosAppointments)
+    .where(
+      inArray(sosAppointments.id, [
+        BROWSER_APT_EDIT_ID,
+        BROWSER_APT_CANCEL_ID,
+        BROWSER_APT_CONCURRENT_ID,
+      ]),
+    );
+
+  console.log("[browser-seed] Old fixture appointments deleted (if any).");
+
+  // Base: 30 days from now at 14:00 UTC
+  const editDate = new Date(now);
+  editDate.setUTCDate(editDate.getUTCDate() + 30);
+  editDate.setUTCHours(14, 0, 0, 0);
+  const editDateEnd = new Date(editDate);
+  editDateEnd.setUTCHours(15, 0, 0, 0);
+
+  // Cancel apt: 31 days from now at 14:00 UTC
+  const cancelDate = new Date(now);
+  cancelDate.setUTCDate(cancelDate.getUTCDate() + 31);
+  cancelDate.setUTCHours(14, 0, 0, 0);
+  const cancelDateEnd = new Date(cancelDate);
+  cancelDateEnd.setUTCHours(15, 0, 0, 0);
+
+  // Concurrent apt: 32 days from now at 14:00 UTC
+  const concurrentDate = new Date(now);
+  concurrentDate.setUTCDate(concurrentDate.getUTCDate() + 32);
+  concurrentDate.setUTCHours(14, 0, 0, 0);
+  const concurrentDateEnd = new Date(concurrentDate);
+  concurrentDateEnd.setUTCHours(15, 0, 0, 0);
+
+  // ── 3. Edit test appointment ────────────────────────────────────────────────
+  await db.insert(sosAppointments).values({
+    id:               BROWSER_APT_EDIT_ID,
+    orgId:            ORG_ID,
+    facilityId:       FACILITY_ID,
+    patientId:        TEST_PATIENT_ID,
+    createdByUserId:  clinicianId,
+    assignedUserId:   clinicianId,
+    appointmentType:  "individual_therapy",
+    status:           "scheduled",
+    startsAt:         editDate,
+    endsAt:           editDateEnd,
+    reason:           "[BROWSER-SEED] Edit test — original reason before browser edit.",
+    version:          1,
+  });
+
+  console.log(`[browser-seed] Edit apt ready: ${BROWSER_APT_EDIT_ID} (${editDate.toISOString()})`);
+
+  // ── 4. Cancel test appointment ─────────────────────────────────────────────
+  await db.insert(sosAppointments).values({
+    id:               BROWSER_APT_CANCEL_ID,
+    orgId:            ORG_ID,
+    facilityId:       FACILITY_ID,
+    patientId:        TEST_PATIENT_ID,
+    createdByUserId:  clinicianId,
+    assignedUserId:   clinicianId,
+    appointmentType:  "follow_up",
+    status:           "scheduled",
+    startsAt:         cancelDate,
+    endsAt:           cancelDateEnd,
+    reason:           "[BROWSER-SEED] Cancel test — this appointment will be cancelled by browser test.",
+    version:          1,
+  });
+
+  console.log(`[browser-seed] Cancel apt ready: ${BROWSER_APT_CANCEL_ID} (${cancelDate.toISOString()})`);
+
+  // ── 5. Concurrent update test appointment ──────────────────────────────────
+  await db.insert(sosAppointments).values({
+    id:               BROWSER_APT_CONCURRENT_ID,
+    orgId:            ORG_ID,
+    facilityId:       FACILITY_ID,
+    patientId:        TEST_PATIENT_ID,
+    createdByUserId:  clinicianId,
+    assignedUserId:   clinicianId,
+    appointmentType:  "medication_management",
+    status:           "scheduled",
+    startsAt:         concurrentDate,
+    endsAt:           concurrentDateEnd,
+    reason:           "[BROWSER-SEED] Concurrent update test — two contexts race on this appointment.",
+    version:          1,
+  });
+
+  console.log(`[browser-seed] Concurrent apt ready: ${BROWSER_APT_CONCURRENT_ID} (${concurrentDate.toISOString()})`);
 
   console.log("[browser-seed] Browser test fixture seed complete.");
   void supervisorId; // unused but kept for future fixture needs
