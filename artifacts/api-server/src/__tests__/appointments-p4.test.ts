@@ -1381,6 +1381,109 @@ describe("§13 facility-schedule row-level filtering (v6)", () => {
     );
   });
 
+  // SF-01: Same-facility patient-access filter — aftercare_staff sees Patient A (has grant)
+  //        but NOT Patient B (no patient_access grant). Both appointments at FACILITY_ID.
+  //        This tests the per-row patient access filter in listFacilityAppointmentsService,
+  //        not merely cross-facility (facility_id) filtering.
+  it("SF-01: same-facility schedule — authorized patient visible, unauthorized patient absent", async () => {
+    // aftercare_staff has appointment.view_facility_schedule + is caseload-limited
+    const AFTERCARE_EMAIL = "aftercare@test.sunrise";
+    // Role assignment ID for aftercare@test.sunrise at FACILITY_ID
+    const AFTERCARE_ROLE_ASSIGNMENT_ID = "92b7b4d9-e6a7-42d3-b79b-d0595d2dc4f6";
+    // Patient A: TEST_PATIENT_ID — will receive explicit access grant
+    // Patient B: TEST_PATIENT_EMPTY_ID — no access grant
+    const PATIENT_A_ID = "00000000-0000-4000-a000-000000000099";
+    const PATIENT_B_ID = "00000000-0000-4000-a000-000000000098";
+    const APT_A_ID = "00000000-0000-4000-a000-000000009901";
+    const APT_B_ID = "00000000-0000-4000-a000-000000009902";
+    const ACCESS_ROW_ID = "00000000-0000-4000-a000-000000009910";
+
+    const aftercareAgent = request.agent(app);
+    const aftercareToken = await fetchCsrfToken(aftercareAgent);
+
+    // Login as aftercare_staff
+    const loginRes = await aftercareAgent.post("/api/v1/auth/login").set("X-CSRF-Token", aftercareToken).send({
+      orgSlug: "sunrise",
+      email: AFTERCARE_EMAIL,
+      password: TEST_PASSWORD,
+    });
+    expect(loginRes.status, "aftercare_staff login must succeed").toBe(200);
+
+    // Create explicit patient access row for aftercare → Patient A
+    await db.execute(
+      `INSERT INTO sos_patient_access
+         (id, org_id, facility_id, patient_id, user_id, relationship_type, status, role_assignment_id, created_at, effective_at)
+       VALUES
+         ('${ACCESS_ROW_ID}', '${ORG_ID}', '${FACILITY_ID}', '${PATIENT_A_ID}',
+          (SELECT id FROM sos_user_accounts WHERE email = '${AFTERCARE_EMAIL}'),
+          'caseload_member', 'active', '${AFTERCARE_ROLE_ASSIGNMENT_ID}', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+    );
+
+    // Use future date for the appointments
+    const futureDate = new Date(Date.now() + 10 * 86_400_000);
+    const dateStr = futureDate.toISOString().slice(0, 10);
+    const { from: dayFrom } = facilityDayToUtcBoundaries(dateStr, "America/New_York");
+    const startA = new Date(dayFrom.getTime() + 9 * 3_600_000).toISOString();
+    const endA   = new Date(dayFrom.getTime() + 10 * 3_600_000).toISOString();
+    const startB = new Date(dayFrom.getTime() + 11 * 3_600_000).toISOString();
+    const endB   = new Date(dayFrom.getTime() + 12 * 3_600_000).toISOString();
+
+    // Insert both appointments directly (bypass API to avoid create-permission issue)
+    await db.execute(
+      `INSERT INTO sos_appointments
+         (id, org_id, facility_id, patient_id, assigned_user_id,
+          appointment_type, starts_at, ends_at, reason, status, version, created_by_user_id, created_at)
+       VALUES
+         ('${APT_A_ID}', '${ORG_ID}', '${FACILITY_ID}', '${PATIENT_A_ID}',
+          (SELECT id FROM sos_user_accounts WHERE email = 'clinician@test.sunrise'),
+          'individual_therapy', '${startA}', '${endA}',
+          'SF-01 Patient A — authorized to aftercare_staff', 'scheduled', 1,
+          (SELECT id FROM sos_user_accounts WHERE email = 'clinician@test.sunrise'), now()),
+         ('${APT_B_ID}', '${ORG_ID}', '${FACILITY_ID}', '${PATIENT_B_ID}',
+          (SELECT id FROM sos_user_accounts WHERE email = 'clinician@test.sunrise'),
+          'individual_therapy', '${startB}', '${endB}',
+          'SF-01 Patient B — NOT authorized to aftercare_staff', 'scheduled', 1,
+          (SELECT id FROM sos_user_accounts WHERE email = 'clinician@test.sunrise'), now())
+       ON CONFLICT (id) DO NOTHING`,
+    );
+
+    // Query facility schedule as aftercare_staff
+    const schedToken = await fetchCsrfToken(aftercareAgent);
+    const schedRes = await aftercareAgent.get(
+      `/api/v1/facilities/${FACILITY_ID}/appointments?date=${dateStr}`,
+    );
+    expect(schedRes.status, "aftercare_staff facility schedule must return 200").toBe(200);
+
+    const body = schedRes.body as {
+      appointments: Array<{ id: string; patientId?: string; reason?: string; internalNote?: string }>;
+      facilityTimezone?: string;
+    };
+    void schedToken;
+
+    const responseIds = (body.appointments ?? []).map((a) => a.id);
+    const bodyStr = JSON.stringify(body);
+
+    // Appointment A (authorized patient) MUST appear
+    expect(responseIds, "Appointment A (authorized patient) must be visible to aftercare_staff").toContain(APT_A_ID);
+
+    // Appointment B (unauthorized patient) must NOT appear at all
+    expect(responseIds, "Appointment B (unauthorized patient) must NOT appear in schedule").not.toContain(APT_B_ID);
+    // Patient B's ID must not appear anywhere in the response
+    expect(bodyStr, "Patient B's patient ID must not appear in response").not.toContain(PATIENT_B_ID);
+    expect(bodyStr, "Appointment B ID must not appear in response").not.toContain(APT_B_ID);
+    expect(bodyStr, "Appointment B reason text must not appear in response").not.toContain("SF-01 Patient B");
+    // Metadata leak: no Patient B timestamp, internal note, or identifier
+    expect(bodyStr, "No appointment B time metadata must appear").not.toContain(startB.slice(0, 19));
+
+    // facilityTimezone must still be present
+    expect(body.facilityTimezone, "facilityTimezone must be present in schedule response").toBeTruthy();
+
+    // Cleanup
+    await db.execute(`DELETE FROM sos_patient_access WHERE id = '${ACCESS_ROW_ID}'`);
+    await db.execute(`DELETE FROM sos_appointments WHERE id IN ('${APT_A_ID}', '${APT_B_ID}')`);
+  });
+
   // FS-02: facilityTimezone field is present and is the facility's IANA zone string.
   it("FS-02: facility schedule response includes facilityTimezone (IANA string)", async () => {
     const dateStr = new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10);
