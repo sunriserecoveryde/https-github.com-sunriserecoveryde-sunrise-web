@@ -33,3 +33,4 @@
 - [Phase 4 v4 closure](phase-4-v4-closure.md) — v4 CLOSED: 668×4/136×4/43×3/isolation-8/7-gates; migration proof 22/22; 0 secrets; ZIP sha256 8ba270e0; staff_profiles FK pitfall documented
 - [Phase 4 v5 closure](phase-4-v5-closure.md) — v5 CLOSED: all spec gates + 8/8 cross-suite; 0 secrets; ZIP sha256 a22159d5; trace binary sweep + scanner credential fix documented
 - [Phase 4 v6 closure](phase-4-v6-closure.md) — v6 CLOSED: 678×4/136×4/45×3; 12 new tests; ZIP sha256 3d75009a; sos_roles/created_by_user_id/isNull import pitfalls documented
+- [Phase 4 v7 closure](phase-4-v7-closure.md) — v7 CLOSED: 679×4/136×4/29×4; TZ-UI+SF-01 tests; migration table drizzle.__drizzle_migrations; ZIP sha256 d10d77f3
