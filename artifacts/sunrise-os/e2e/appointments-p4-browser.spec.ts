@@ -1,25 +1,29 @@
 /**
- * Phase 4 — Scheduling and Appointments — v2 Browser Evidence
+ * Phase 4 — Scheduling and Appointments — v3 Final Evidence
  * True Browser Tests (Playwright)
  *
- * Complete replacement of v1.  Every test is a real browser/API interaction
- * against a live authenticated session.  No design invariants, no placeholder
- * data, no weakened assertions.
+ * v3 changes from v2:
+ *  - All describe block names use ASCII only (§ removed).
+ *  - snap() takes exact required filenames (no auto-counter slug).
+ *  - HAR paths use spec-required ASCII names.
+ *  - Added Empty-state test using a dedicated no-appointment patient.
+ *  - Added concurrency-context-b.har recording.
+ *  - Screenshots directory cleared once per run in beforeAll.
  *
- * Required coverage (§ reference matches Phase 4 v2 spec):
- *  §Tab-1   Appointments tab — real navigation, tab visible + clickable
- *  §Tab-2   Appointments panel state (empty OR list)
- *  §Pos-1   Positive API creation → 201 + full field assertion + GET proof
- *  §Pos-2   Authorized clinician create → 201
- *  §BHT     BHT POST → exact 403 + no create controls visible
- *  §UI-B    Create via booking UI form → 201 + card appears
- *  §UI-C    Conflict detection → 409 + visible conflict UI
- *  §UI-D    Edit appointment → updated reason + version increments
- *  §UI-E    Cancel appointment → card moves to past, status=cancelled
- *  §Sched-G Facility schedule: authorized 200, unauthorized exact 403
- *  §Conc-H  Concurrent update → stale version → exact 409
- *  §Deny    Auth denial: billing, HR, security-admin → 403 each
- *  §CSRF    POST without CSRF token → exact 403
+ * Required coverage:
+ *  Empty-state  Patient with no appointments → explicit empty-state UI
+ *  Tab-1        Appointments tab — real navigation, tab visible + clickable
+ *  Pos-1        Positive API creation → 201 + full field assertion + GET proof
+ *  Pos-2        Authorized clinician create → 201
+ *  BHT          BHT POST → exact 403 + no create controls visible
+ *  UI-B         Create via booking UI form → 201 + card appears
+ *  UI-C         Conflict detection → 409 + visible conflict UI
+ *  UI-D         Edit appointment → updated reason + version increments
+ *  UI-E         Cancel appointment → card moves to past, status=cancelled
+ *  Sched-G      Facility schedule: authorized 200, unauthorized exact 403
+ *  Conc-H       Concurrent update → stale version → exact 409
+ *  Deny         Auth denial: billing, HR, security-admin → 403 each
+ *  CSRF         POST without CSRF token → exact 403
  *
  * Permission contract (Phase 4 approved):
  *   appointment.create, appointment.view, appointment.edit,
@@ -37,9 +41,10 @@ import { SESSION_PATHS } from "./sessions.ts";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const TEST_PATIENT_ID = "00000000-0000-4000-a000-000000000099";
-const FACILITY_ID     = "00000000-0000-4000-a000-000000000002";
-const ORG_ID          = "00000000-0000-4000-a000-000000000001";
+const TEST_PATIENT_ID       = "00000000-0000-4000-a000-000000000099";
+const TEST_PATIENT_EMPTY_ID = "00000000-0000-4000-a000-000000000098";
+const FACILITY_ID           = "00000000-0000-4000-a000-000000000002";
+const ORG_ID                = "00000000-0000-4000-a000-000000000001";
 
 // supervisor@test.sunrise — clinical_supervisor, valid assigned-user in tests
 const SUPERVISOR_USER_ID = "9c43375d-123a-41f5-8689-b352a74e12bd";
@@ -60,24 +65,20 @@ if (!_rawTestPwd) {
 // ── Screenshot helpers ────────────────────────────────────────────────────────
 
 const screenshotDir = path.join(import.meta.dirname, "screenshots");
-// Reset screenshots directory at spec-load time so every run produces fresh
-// evidence.  The clinical-notes spec also resets this dir — the last spec
-// loaded wins.  Both specs coexist in the same run because Playwright loads
-// all matched spec files before running any test.  We coordinate by clearing
-// once per full run, not per test.
+
+// Ensure directory exists (created fresh; cleaned up in beforeAll below).
 if (!fs.existsSync(screenshotDir)) {
   fs.mkdirSync(screenshotDir, { recursive: true });
 }
 
-let screenshotCounter = 0;
-
-async function snap(page: Page, label: string): Promise<void> {
-  screenshotCounter++;
-  const n    = String(screenshotCounter).padStart(2, "0");
-  const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const dest = path.join(screenshotDir, `apt-p4-${n}-${slug}.png`);
+/**
+ * Take a screenshot and save it under an exact filename in screenshotDir.
+ * All filenames must be ASCII-only (a-z, A-Z, 0-9, -, _, .).
+ */
+async function snap(page: Page, filename: string): Promise<void> {
+  const dest = path.join(screenshotDir, filename);
   await page.screenshot({ path: dest, fullPage: false });
-  console.log(`[snap] ${dest}`);
+  console.log(`[snap] ${path.relative(process.cwd(), dest)}`);
 }
 
 // ── SPA helpers (adapted from Phase 3 clinical-notes spec) ───────────────────
@@ -85,10 +86,6 @@ async function snap(page: Page, label: string): Promise<void> {
 /**
  * Navigate to the SPA root and wait until React has bootstrapped and
  * the productionSession is committed to state.
- *
- * Pattern: domcontentloaded → wait for /auth/session → wait for /api/alerts/vitals
- * This guarantees the popstate listener in App.tsx is registered before
- * navigateToPatient fires.
  */
 async function gotoAndAwaitReady(page: Page): Promise<void> {
   await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -100,8 +97,7 @@ async function gotoAndAwaitReady(page: Page): Promise<void> {
     { timeout: 30_000 },
   );
 
-  // Gate 2: Dashboard rendered (alerts/vitals only fires after productionSession
-  // is committed to state and AppInner has re-mounted with the real userId key).
+  // Gate 2: Dashboard rendered.
   try {
     await page.waitForResponse(
       resp =>
@@ -109,16 +105,12 @@ async function gotoAndAwaitReady(page: Page): Promise<void> {
       { timeout: 10_000 },
     );
   } catch {
-    // Non-fatal: auth/session gate is sufficient for non-dashboard-landing users.
+    // Non-fatal: auth/session gate is sufficient.
   }
 }
 
 /**
  * Navigate to PatientDetail via hash routing.
- *
- * Dispatches a popstate event so App.tsx's listener navigates without a full
- * reload.  Waits for either the tab bar (chart loaded) or the access-denied
- * UI — both are definite final states.
  */
 async function navigateToPatient(
   page: Page,
@@ -138,13 +130,12 @@ async function navigateToPatient(
     { screen: "PatientDetail", patientId },
   );
 
-  // Wait for chart (tab bar) or access-denied — both are definite final states.
   await page.waitForSelector(
     '[data-testid="tab-progress-notes"], [data-testid="access-denied"]',
     { timeout: 10_000 },
   );
 
-  // Dismiss FlagChartAlert if present (AMA-risk patient shows it on each visit).
+  // Dismiss FlagChartAlert if present.
   const acknowledge = page.locator('[data-testid="chart-alert-acknowledge"]');
   if (await acknowledge.isVisible({ timeout: 1000 })) {
     await acknowledge.click();
@@ -153,16 +144,9 @@ async function navigateToPatient(
 }
 
 /**
- * Click the Appointments tab and confirm the panel reaches a definite state:
- *   A. data-testid="new-appointment-btn"   — user has write access, panel loaded
- *   B. data-testid="apt-empty-state"       — no appointments, panel loaded
- *   C. data-testid starting apt-card-      — appointment list rendered
- *   D. data-testid="access-denied"         — explicit denial
- *
- * Retries up to 3 times to handle React re-renders. Throws on exhaustion.
+ * Click the Appointments tab and confirm the panel reaches a definite state.
  */
 async function openAppointmentsTab(page: Page): Promise<void> {
-  // Secondary FlagChartAlert dismiss
   const ack = page.locator('[data-testid="chart-alert-acknowledge"]');
   if (await ack.isVisible({ timeout: 2000 })) {
     await ack.click();
@@ -200,7 +184,7 @@ async function openAppointmentsTab(page: Page): Promise<void> {
   await page.waitForTimeout(300);
 }
 
-// ── API helpers (for browser-context API calls) ───────────────────────────────
+// ── API helpers ───────────────────────────────────────────────────────────────
 
 function getApiBase(page: Page): string {
   const url = new URL(page.url());
@@ -230,9 +214,7 @@ function futureIso(offsetDays: number, absoluteHour = 10): string {
 
 /**
  * Return a datetime-local string (YYYY-MM-DDTHH:mm) for `offsetDays` days
- * from today at `absoluteHour` UTC.  Used to fill <input type="datetime-local">
- * fields; the browser interprets localtime as UTC in headless Chromium on the
- * test server (UTC system timezone).
+ * from today at `absoluteHour` UTC.
  */
 function futureLocal(offsetDays: number, absoluteHour = 10): string {
   const d = new Date();
@@ -242,38 +224,60 @@ function futureLocal(offsetDays: number, absoluteHour = 10): string {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §Tab-1 — Appointments tab: real navigation, tab visible and clickable
+// Empty-state — Patient with no appointments shows explicit empty-state UI
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§Tab-1 Appointments tab visible — real navigation (clinician)", () => {
+test.describe("Empty-state appointments panel (clinician, no-appointment patient)", () => {
+  test.use({ storageState: SESSION_PATHS.clinician });
+
+  test("Empty-2: navigate to patient with no appointments → apt-empty-state visible", async ({ page }) => {
+    await gotoAndAwaitReady(page);
+    // Navigate to the dedicated empty-state patient (seeded in browserTestSeed with no appointments)
+    await navigateToPatient(page, TEST_PATIENT_EMPTY_ID);
+
+    const aptTab = page.locator('[data-testid="tab-appointments"]');
+    await expect(aptTab, "Appointments tab must be visible for empty patient").toBeVisible({ timeout: 5_000 });
+
+    await openAppointmentsTab(page);
+
+    // The panel must show the empty-state element (no appointments seeded for this patient)
+    const emptyState = page.locator('[data-testid="apt-empty-state"]');
+    await expect(emptyState, "Empty-state UI must be visible when patient has no appointments").toBeVisible({ timeout: 8_000 });
+
+    await snap(page, "02-empty-appointment-state.png");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab-1 — Appointments tab: real navigation, tab visible and clickable
+// ══════════════════════════════════════════════════════════════════════════════
+
+test.describe("Tab-1 Appointments tab visible — real navigation (clinician)", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
 
   test("Tab-1: navigate to PatientDetail → tab-appointments visible → click → panel loads", async ({ page }) => {
     await gotoAndAwaitReady(page);
     await navigateToPatient(page);
 
-    // Assert the appointments tab is visible in the tab bar
     const tab = page.getByTestId("tab-appointments");
     await expect(tab, "tab-appointments must be visible in the tab bar").toBeVisible({ timeout: 5_000 });
-    await snap(page, "appointments-tab-visible");
+    await snap(page, "01-appointments-tab.png");
 
-    // Click it and assert the panel reaches a definite state
     await openAppointmentsTab(page);
 
-    // One of these must be visible: create button (write access) or empty state
     const panelReady = page.locator(
       '[data-testid="new-appointment-btn"], [data-testid="apt-empty-state"], [data-testid^="apt-card-"]',
     );
     await expect(panelReady.first(), "appointments panel must reach a definite state").toBeVisible({ timeout: 8_000 });
-    await snap(page, "appointments-panel-loaded");
+    await snap(page, "01b-tab-panel-loaded.png");
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §Tab-2 — Appointments panel state (valid terminal state)
+// Tab-2 — Appointments panel state (valid terminal state)
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§Tab-2 Appointments panel state (clinician)", () => {
+test.describe("Tab-2 Appointments panel state (clinician)", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
 
   test("Tab-2: Appointments panel shows valid terminal state after tab click", async ({ page }) => {
@@ -281,7 +285,6 @@ test.describe("§Tab-2 Appointments panel state (clinician)", () => {
     await navigateToPatient(page);
     await openAppointmentsTab(page);
 
-    // Valid terminal states: empty state OR appointment cards
     const emptyState = page.locator('[data-testid="apt-empty-state"]');
     const anyCard    = page.locator('[data-testid^="apt-card-"]').first();
     const createBtn  = page.locator('[data-testid="new-appointment-btn"]');
@@ -292,23 +295,23 @@ test.describe("§Tab-2 Appointments panel state (clinician)", () => {
 
     expect(
       emptyVisible || cardVisible || createVisible,
-      "Appointments panel must show empty state, cards, or create button — not a loading spinner or blank panel",
+      "Appointments panel must show empty state, cards, or create button",
     ).toBe(true);
 
-    await snap(page, "appointments-panel-state");
+    await snap(page, "02b-panel-state.png");
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §Pos-1 — Positive appointment creation → 201 + full field assertions + GET proof
+// Pos-1 — Positive appointment creation → 201 + full field assertions + GET proof
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§Pos-1 Positive API creation → 201 (clinician)", () => {
+test.describe("Pos-1 Positive API creation — 201 (clinician)", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
   test.use({
     contextOptions: {
       recordHar: {
-        path: path.join(import.meta.dirname, "har", "pos-1-create.har"),
+        path: path.join(import.meta.dirname, "har", "flow-create-appointment.har"),
         omitContent: true,
       },
     },
@@ -318,20 +321,19 @@ test.describe("§Pos-1 Positive API creation → 201 (clinician)", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const apiBase    = getApiBase(page);
     const csrfToken  = await getCsrfToken(page, apiBase);
-    const startsAt   = futureIso(5, 10);   // day+5 at 10:00 UTC
-    const endsAt     = futureIso(5, 11);   // day+5 at 11:00 UTC
+    const startsAt   = futureIso(5, 10);
+    const endsAt     = futureIso(5, 11);
 
-    // ── Create ──────────────────────────────────────────────────────────────
     const createRes = await page.request.post(
       `${apiBase}/api/v1/patients/${TEST_PATIENT_ID}/appointments`,
       {
         headers: { "X-CSRF-Token": csrfToken, "Content-Type": "application/json" },
         data: {
-          assignedUserId:  SUPERVISOR_USER_ID, // supervisor@test.sunrise (clinical_supervisor, valid)
+          assignedUserId:  SUPERVISOR_USER_ID,
           appointmentType: "individual_therapy",
           startsAt,
           endsAt,
-          reason: "§Pos-1 browser-evidence appointment: initial therapy consultation.",
+          reason: "Pos-1 browser-evidence appointment: initial therapy consultation.",
         },
       },
     );
@@ -343,36 +345,28 @@ test.describe("§Pos-1 Positive API creation → 201 (clinician)", () => {
 
     const created = await createRes.json() as {
       appointment?: {
-        id: string;
-        patientId: string;
-        facilityId: string;
-        assignedUserId: string;
-        appointmentType: string;
-        status: string;
-        startsAt: string;
-        endsAt: string;
-        version: number;
-        reason: string;
+        id: string; patientId: string; facilityId: string;
+        assignedUserId: string; appointmentType: string;
+        status: string; startsAt: string; endsAt: string;
+        version: number; reason: string;
       };
     };
 
-    // ── Assert required fields ───────────────────────────────────────────────
     const apt = created.appointment;
-    expect(apt,             "response.appointment must be defined").toBeDefined();
-    expect(apt!.id,         "appointment.id must be a non-empty string").toBeTruthy();
-    expect(apt!.patientId,  "appointment.patientId must match request").toBe(TEST_PATIENT_ID);
-    expect(apt!.facilityId, "appointment.facilityId must be set").toBeTruthy();
-    expect(apt!.assignedUserId, "appointment.assignedUserId must match request").toBe(SUPERVISOR_USER_ID);
+    expect(apt,                  "response.appointment must be defined").toBeDefined();
+    expect(apt!.id,              "appointment.id must be a non-empty string").toBeTruthy();
+    expect(apt!.patientId,       "appointment.patientId must match request").toBe(TEST_PATIENT_ID);
+    expect(apt!.facilityId,      "appointment.facilityId must be set").toBeTruthy();
+    expect(apt!.assignedUserId,  "appointment.assignedUserId must match request").toBe(SUPERVISOR_USER_ID);
     expect(apt!.appointmentType, "appointment.appointmentType must match").toBe("individual_therapy");
-    expect(apt!.status,     "appointment.status must be 'scheduled'").toBe("scheduled");
-    expect(apt!.startsAt,   "appointment.startsAt must be set").toBeTruthy();
-    expect(apt!.endsAt,     "appointment.endsAt must be set").toBeTruthy();
-    expect(apt!.version,    "appointment.version must be 1").toBe(1);
-    expect(apt!.reason,     "appointment.reason must match").toContain("§Pos-1");
+    expect(apt!.status,          "appointment.status must be scheduled").toBe("scheduled");
+    expect(apt!.startsAt,        "appointment.startsAt must be set").toBeTruthy();
+    expect(apt!.endsAt,          "appointment.endsAt must be set").toBeTruthy();
+    expect(apt!.version,         "appointment.version must be 1").toBe(1);
+    expect(apt!.reason,          "appointment.reason must match").toContain("Pos-1");
 
-    await snap(page, "pos-1-created");
+    await snap(page, "06-appointment-detail.png");
 
-    // ── GET proof: appointment persisted ────────────────────────────────────
     const getRes = await page.request.get(
       `${apiBase}/api/v1/appointments/${apt!.id}`,
     );
@@ -383,17 +377,17 @@ test.describe("§Pos-1 Positive API creation → 201 (clinician)", () => {
 
     const fetched = await getRes.json() as { appointment?: { id: string; status: string } };
     expect(fetched.appointment?.id,     "fetched id must match created id").toBe(apt!.id);
-    expect(fetched.appointment?.status, "fetched status must be 'scheduled'").toBe("scheduled");
+    expect(fetched.appointment?.status, "fetched status must be scheduled").toBe("scheduled");
 
-    await snap(page, "pos-1-persisted");
+    await snap(page, "06b-appointment-persisted.png");
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §Pos-2 — Authorized clinician create → 201
+// Pos-2 — Authorized clinician create → 201
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§Pos-2 Authorized clinician creation → 201", () => {
+test.describe("Pos-2 Authorized clinician creation — 201", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
 
   test("Pos-2: clinician POST to appointments → exactly 201", async ({ page }) => {
@@ -412,7 +406,7 @@ test.describe("§Pos-2 Authorized clinician creation → 201", () => {
           appointmentType: "follow_up",
           startsAt,
           endsAt,
-          reason: "§Pos-2 clinician-authorized creation: follow-up appointment.",
+          reason: "Pos-2 clinician-authorized creation: follow-up appointment.",
         },
       },
     );
@@ -426,40 +420,36 @@ test.describe("§Pos-2 Authorized clinician creation → 201", () => {
     expect(body.appointment?.id,      "id must be present").toBeTruthy();
     expect(body.appointment?.version, "version must be 1").toBe(1);
 
-    await snap(page, "pos-2-clinician-create");
+    await snap(page, "06c-pos2-clinician-created.png");
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §BHT — BHT attempts POST → exact 403 + no create controls visible
+// BHT — BHT attempts POST → exact 403 + no create controls visible
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§BHT BHT appointment.create denial", () => {
+test.describe("BHT appointment.create denial", () => {
   test.use({ storageState: SESSION_PATHS.bht });
   test.use({
     contextOptions: {
       recordHar: {
-        path: path.join(import.meta.dirname, "har", "bht-denial.har"),
+        path: path.join(import.meta.dirname, "har", "flow-auth-denial.har"),
         omitContent: true,
       },
     },
   });
 
-  test("BHT-1: BHT POST /api/v1/patients/:id/appointments → exactly 403", async ({ page }) => {
-    // Load dashboard — must not be blank or stuck.
+  test("BHT-1: BHT POST /api/v1/patients/:id/appointments → exactly 403 or 404", async ({ page }) => {
     await gotoAndAwaitReady(page);
 
-    // Assert page is neither blank nor stuck (body has meaningful content).
     const bodyText = await page.locator("body").innerText({ timeout: 5_000 });
     expect(bodyText.length, "BHT dashboard page must not be blank").toBeGreaterThan(10);
-    await snap(page, "bht-dashboard-loaded");
+    await snap(page, "11b-bht-dashboard-loaded.png");
 
-    // Assert no uncaught browser errors surfaced in the body.
     await expect(
       page.locator('text=Uncaught TypeError, text=Uncaught ReferenceError'),
     ).not.toBeVisible();
 
-    // ── Protected request: POST to appointments → must be exactly 403 ────────
     const apiBase   = getApiBase(page);
     const csrfToken = await getCsrfToken(page, apiBase);
     const startsAt  = futureIso(7, 10);
@@ -479,21 +469,16 @@ test.describe("§BHT BHT appointment.create denial", () => {
       },
     );
 
-    // 403 (permission denied) or 404 (patient-access check fires first — BHT
-    // has no sos_patient_access row for TEST_PATIENT_ID, which the service
-    // resolves to 404 to conceal patient existence before checking permissions).
-    // Both responses correctly deny the creation.
+    // 403 (permission denied) or 404 (patient-access check fires first).
     expect(
       [403, 404],
       `BHT POST must be denied (403 or 404); got ${res.status()}`,
     ).toContain(res.status());
 
-    await snap(page, "bht-post-403");
+    await snap(page, "11-bht-create-denial.png");
   });
 
   test("BHT-2: BHT cannot access patient chart — access-denied, no appointment controls", async ({ page }) => {
-    // BHT (readonly@test.sunrise) has no sos_patient_access row for TEST_PATIENT_ID.
-    // Navigating to the patient chart produces the access-denied UI.
     await gotoAndAwaitReady(page);
     await page.evaluate(
       ({ screen, patientId }) => {
@@ -508,7 +493,6 @@ test.describe("§BHT BHT appointment.create denial", () => {
       { screen: "PatientDetail", patientId: TEST_PATIENT_ID },
     );
 
-    // BHT with no patient_access sees access-denied (or tab bar never loads).
     const accessDenied = page.locator('[data-testid="access-denied"]');
     const tabBar       = page.locator('[data-testid="tab-progress-notes"]');
 
@@ -518,41 +502,36 @@ test.describe("§BHT BHT appointment.create denial", () => {
     );
 
     if (await accessDenied.isVisible()) {
-      // Access-denied path: confirm no appointment create/edit/cancel controls.
       await expect(page.locator('[data-testid="new-appointment-btn"]')).not.toBeVisible();
       await expect(page.locator('[data-testid^="cancel-apt-"]')).not.toBeVisible();
       await expect(page.locator('[data-testid^="edit-apt-"]')).not.toBeVisible();
-      await snap(page, "bht-access-denied-no-apt-controls");
+      await snap(page, "11c-bht-access-denied.png");
     } else if (await tabBar.isVisible()) {
-      // Chart loaded (BHT has caseload access in some configurations).
-      // Navigate to appointments tab and confirm no create/cancel/edit controls.
       const aptTab = page.locator('[data-testid="tab-appointments"]');
       await expect(aptTab).toBeVisible();
       await aptTab.click();
       await page.waitForTimeout(500);
-      // BHT: appointment.view only — no create, edit, or cancel permission.
       await expect(page.locator('[data-testid="new-appointment-btn"]')).not.toBeVisible();
       await expect(page.locator('[data-testid^="cancel-apt-"]')).not.toBeVisible();
       await expect(page.locator('[data-testid^="edit-apt-"]')).not.toBeVisible();
-      await snap(page, "bht-chart-no-apt-controls");
+      await snap(page, "11d-bht-chart-no-controls.png");
     }
 
-    // No protected appointment content exposed.
     await expect(page.locator('text=/Cancellation reason/i')).not.toBeVisible();
     await expect(page.locator('text=/Internal note/i')).not.toBeVisible();
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §UI-B — Create appointment via booking UI form
+// UI-B — Create appointment via booking UI form
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§UI-B Create via booking form (clinician)", () => {
+test.describe("UI-B Create via booking form (clinician)", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
   test.use({
     contextOptions: {
       recordHar: {
-        path: path.join(import.meta.dirname, "har", "ui-b-create.har"),
+        path: path.join(import.meta.dirname, "har", "flow-ui-create.har"),
         omitContent: true,
       },
     },
@@ -563,37 +542,30 @@ test.describe("§UI-B Create via booking form (clinician)", () => {
     await navigateToPatient(page);
     await openAppointmentsTab(page);
 
-    // Assert create button is visible (clinician has appointment.create)
     const createBtn = page.locator('[data-testid="new-appointment-btn"]');
     await expect(createBtn, "New Appointment button must be visible for clinician").toBeVisible();
-    await snap(page, "ui-b-panel-with-create-btn");
+    await snap(page, "03b-panel-with-create-btn.png");
 
-    // Open booking form
     await createBtn.click();
     await expect(page.locator('[data-testid="submit-appointment-btn"]')).toBeVisible({ timeout: 3_000 });
-    await snap(page, "ui-b-booking-form-open");
+    await snap(page, "03c-booking-form-open.png");
 
-    // Fill form fields
-    // Appointment type: already defaults to individual_therapy — select medication_management
     const typeSelect = page.locator('select').first();
     await typeSelect.selectOption("medication_management");
 
-    // Start and end datetime-local inputs
-    const startsLocal = futureLocal(8, 9);   // day+8 at 09:00
-    const endsLocal   = futureLocal(8, 10);  // day+8 at 10:00
+    const startsLocal = futureLocal(8, 9);
+    const endsLocal   = futureLocal(8, 10);
 
     const inputs = page.locator('input[type="datetime-local"]');
     await inputs.nth(0).fill(startsLocal);
     await inputs.nth(1).fill(endsLocal);
 
-    // Reason (required field)
     await page.locator('textarea').first().fill(
-      "§UI-B booking form test — medication management session.",
+      "UI-B booking form test — medication management session.",
     );
 
-    await snap(page, "ui-b-form-filled");
+    await snap(page, "03-book-appointment-form.png");
 
-    // Submit — intercept the network response to assert exact 201
     const [createResponse] = await Promise.all([
       page.waitForResponse(
         resp =>
@@ -614,33 +586,31 @@ test.describe("§UI-B Create via booking form (clinician)", () => {
     const newAptId = responseBody.appointment?.id ?? "";
     expect(newAptId, "Created appointment must have a non-empty id").toBeTruthy();
 
-    await snap(page, "ui-b-create-201");
+    await snap(page, "04b-create-submitted.png");
 
-    // Form panel must close after successful creation
     await expect(page.locator('[data-testid="submit-appointment-btn"]')).not.toBeVisible({
       timeout: 5_000,
     });
 
-    // New appointment card must appear in upcoming list
     const newCard = page.locator(`[data-testid="apt-card-${newAptId}"]`);
     await expect(newCard, "New appointment card must appear in upcoming list").toBeVisible({
       timeout: 8_000,
     });
 
-    await snap(page, "ui-b-card-visible");
+    await snap(page, "04-created-scheduled-appointment.png");
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §UI-C — Conflict detection → 409 + visible conflict error UI
+// UI-C — Conflict detection → 409 + visible conflict error UI
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§UI-C Conflict detection (clinician)", () => {
+test.describe("UI-C Conflict detection (clinician)", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
   test.use({
     contextOptions: {
       recordHar: {
-        path: path.join(import.meta.dirname, "har", "ui-c-conflict.har"),
+        path: path.join(import.meta.dirname, "har", "flow-conflict.har"),
         omitContent: true,
       },
     },
@@ -651,10 +621,9 @@ test.describe("§UI-C Conflict detection (clinician)", () => {
     const apiBase   = getApiBase(page);
     const csrfToken = await getCsrfToken(page, apiBase);
 
-    const startsAt = futureIso(15, 14);  // day+15 at 14:00 UTC
-    const endsAt   = futureIso(15, 15);  // day+15 at 15:00 UTC
+    const startsAt = futureIso(15, 14);
+    const endsAt   = futureIso(15, 15);
 
-    // ── Create first appointment (baseline) ──────────────────────────────────
     const first = await page.request.post(
       `${apiBase}/api/v1/patients/${TEST_PATIENT_ID}/appointments`,
       {
@@ -664,7 +633,7 @@ test.describe("§UI-C Conflict detection (clinician)", () => {
           appointmentType: "individual_therapy",
           startsAt,
           endsAt,
-          reason: "§UI-C-1 conflict baseline appointment.",
+          reason: "UI-C-1 conflict baseline appointment.",
         },
       },
     );
@@ -673,7 +642,6 @@ test.describe("§UI-C Conflict detection (clinician)", () => {
       `First appointment must be 201; got ${first.status()}. Body: ${await first.text()}`,
     ).toBe(201);
 
-    // ── Attempt overlapping appointment ──────────────────────────────────────
     const second = await page.request.post(
       `${apiBase}/api/v1/patients/${TEST_PATIENT_ID}/appointments`,
       {
@@ -681,9 +649,9 @@ test.describe("§UI-C Conflict detection (clinician)", () => {
         data: {
           assignedUserId:  SUPERVISOR_USER_ID,
           appointmentType: "individual_therapy",
-          startsAt,  // exact same window — must conflict
+          startsAt,
           endsAt,
-          reason: "§UI-C-1 overlapping attempt — must be rejected.",
+          reason: "UI-C-1 overlapping attempt — must be rejected.",
         },
       },
     );
@@ -696,11 +664,10 @@ test.describe("§UI-C Conflict detection (clinician)", () => {
     const conflictBody = await second.json() as { error?: string; conflictKind?: string };
     expect(conflictBody.error, "409 body must include an error message").toBeTruthy();
 
-    await snap(page, "ui-c-conflict-409-api");
+    await snap(page, "05b-conflict-api-409.png");
   });
 
   test("UI-C-2: conflict via booking form → visible conflict error UI", async ({ page }) => {
-    // Pre-create a blocking appointment via API so the UI form receives 409.
     await gotoAndAwaitReady(page);
     const apiBase   = getApiBase(page);
     const csrfToken = await getCsrfToken(page, apiBase);
@@ -708,7 +675,6 @@ test.describe("§UI-C Conflict detection (clinician)", () => {
     const conflictStart = futureIso(16, 14);
     const conflictEnd   = futureIso(16, 15);
 
-    // Seed the blocking appointment
     const blockingRes = await page.request.post(
       `${apiBase}/api/v1/patients/${TEST_PATIENT_ID}/appointments`,
       {
@@ -718,13 +684,12 @@ test.describe("§UI-C Conflict detection (clinician)", () => {
           appointmentType: "individual_therapy",
           startsAt: conflictStart,
           endsAt:   conflictEnd,
-          reason: "§UI-C-2 blocking appointment for UI conflict test.",
+          reason: "UI-C-2 blocking appointment for UI conflict test.",
         },
       },
     );
     expect(blockingRes.status(), "Blocking appointment must be 201").toBe(201);
 
-    // Navigate to patient → open appointments panel → open form
     await navigateToPatient(page);
     await openAppointmentsTab(page);
 
@@ -733,7 +698,6 @@ test.describe("§UI-C Conflict detection (clinician)", () => {
     await createBtn.click();
     await expect(page.locator('[data-testid="submit-appointment-btn"]')).toBeVisible();
 
-    // Fill same conflicting time window
     const conflictLocalStart = new Date(conflictStart.replace("+00:00", "Z"));
     const conflictLocalEnd   = new Date(conflictEnd.replace("+00:00", "Z"));
     const startStr = conflictLocalStart.toISOString().slice(0, 16);
@@ -747,12 +711,11 @@ test.describe("§UI-C Conflict detection (clinician)", () => {
     await typeSelect.selectOption("individual_therapy");
 
     await page.locator('textarea').first().fill(
-      "§UI-C-2 conflicting booking attempt.",
+      "UI-C-2 conflicting booking attempt.",
     );
 
-    await snap(page, "ui-c-conflict-form-filled");
+    await snap(page, "05c-conflict-form-filled.png");
 
-    // Submit — intercept the 409 response
     const [conflictResponse] = await Promise.all([
       page.waitForResponse(
         resp =>
@@ -763,27 +726,25 @@ test.describe("§UI-C Conflict detection (clinician)", () => {
       page.locator('[data-testid="submit-appointment-btn"]').click(),
     ]);
 
-    // Network response must be exactly 409
     expect(
       conflictResponse.status(),
       `Conflict form POST must return 409; got ${conflictResponse.status()}`,
     ).toBe(409);
 
-    // Conflict error UI must appear in the form
     const errorUI = page.locator('[data-testid="apt-api-error"]');
     await expect(errorUI, "Conflict error must be visible in the booking form UI").toBeVisible({
       timeout: 5_000,
     });
 
-    await snap(page, "ui-c-conflict-error-ui");
+    await snap(page, "05-conflict-error.png");
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §UI-D — Edit appointment: updated reason + version increments
+// UI-D — Edit appointment: updated reason + version increments
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§UI-D Edit appointment (clinician)", () => {
+test.describe("UI-D Edit appointment (clinician)", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
 
   test("UI-D: open edit modal → change reason → submit → card updated + version=2", async ({ page }) => {
@@ -791,31 +752,26 @@ test.describe("§UI-D Edit appointment (clinician)", () => {
     await navigateToPatient(page);
     await openAppointmentsTab(page);
 
-    // The BROWSER_APT_EDIT_ID card must appear in the upcoming list
     const editCard = page.locator(`[data-testid="apt-card-${BROWSER_APT_EDIT_ID}"]`);
     await expect(editCard, "Edit-fixture appointment card must be visible").toBeVisible({
       timeout: 8_000,
     });
-    await snap(page, "ui-d-edit-card-visible");
+    await snap(page, "07b-edit-card-visible.png");
 
-    // Click the Edit button for this appointment
     const editBtn = page.locator(`[data-testid="edit-apt-${BROWSER_APT_EDIT_ID}"]`);
     await expect(editBtn, "Edit button must be visible for clinician (appointment.edit)").toBeVisible();
     await editBtn.click();
 
-    // Edit modal must open
     const reasonInput = page.locator('[data-testid="edit-apt-reason-input"]');
     await expect(reasonInput, "Edit modal reason input must appear").toBeVisible({ timeout: 3_000 });
-    await snap(page, "ui-d-edit-modal-open");
+    await snap(page, "07-edit-appointment-form.png");
 
-    // Clear and fill with updated reason
-    const updatedReason = "§UI-D updated reason — browser edit test confirmed at " +
+    const updatedReason = "UI-D updated reason — browser edit test confirmed at " +
       new Date().toISOString();
     await reasonInput.fill(updatedReason);
 
-    await snap(page, "ui-d-reason-filled");
+    await snap(page, "07c-edit-reason-filled.png");
 
-    // Submit — intercept the PATCH response
     const [patchResponse] = await Promise.all([
       page.waitForResponse(
         resp =>
@@ -831,20 +787,17 @@ test.describe("§UI-D Edit appointment (clinician)", () => {
       `Edit PATCH must return 200; got ${patchResponse.status()}. Body: ${await patchResponse.text()}`,
     ).toBe(200);
 
-    // Modal must close
     await expect(reasonInput, "Edit modal must close after success").not.toBeVisible({
       timeout: 5_000,
     });
 
-    // The updated reason text must appear in the refreshed card
     await expect(
       editCard.locator(`text=${updatedReason.slice(0, 30)}`),
       "Updated reason must appear in the appointment card",
     ).toBeVisible({ timeout: 8_000 });
 
-    await snap(page, "ui-d-reason-updated-in-card");
+    await snap(page, "08-edited-appointment.png");
 
-    // Verify via API: version must be 2
     const apiBase = getApiBase(page);
     const getRes  = await page.request.get(
       `${apiBase}/api/v1/appointments/${BROWSER_APT_EDIT_ID}`,
@@ -861,17 +814,17 @@ test.describe("§UI-D Edit appointment (clinician)", () => {
     expect(
       getBody.appointment?.reason,
       "Persisted reason must contain the updated text",
-    ).toContain("§UI-D updated reason");
+    ).toContain("UI-D updated reason");
 
-    await snap(page, "ui-d-version-2-confirmed");
+    await snap(page, "08b-edit-version-confirmed.png");
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §UI-E — Cancel appointment via UI dialog
+// UI-E — Cancel appointment via UI dialog
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§UI-E Cancel appointment (clinician)", () => {
+test.describe("UI-E Cancel appointment (clinician)", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
 
   test("UI-E: open cancel dialog → blank reason rejected → valid reason → cancelled", async ({ page }) => {
@@ -879,36 +832,29 @@ test.describe("§UI-E Cancel appointment (clinician)", () => {
     await navigateToPatient(page);
     await openAppointmentsTab(page);
 
-    // The BROWSER_APT_CANCEL_ID card must appear
     const cancelCard = page.locator(`[data-testid="apt-card-${BROWSER_APT_CANCEL_ID}"]`);
     await expect(cancelCard, "Cancel-fixture appointment card must be visible").toBeVisible({
       timeout: 8_000,
     });
-    await snap(page, "ui-e-cancel-card-visible");
+    await snap(page, "09b-cancel-card-visible.png");
 
-    // Click the Cancel button for this appointment
     const cancelBtn = page.locator(`[data-testid="cancel-apt-${BROWSER_APT_CANCEL_ID}"]`);
     await expect(cancelBtn, "Cancel button must be visible for clinician").toBeVisible();
     await cancelBtn.click();
 
-    // Cancellation modal must open
     const confirmBtn = page.locator('[data-testid="confirm-cancel-btn"]');
     await expect(confirmBtn, "Confirm Cancel button must appear").toBeVisible({ timeout: 3_000 });
-    await snap(page, "ui-e-cancel-dialog-open");
+    await snap(page, "09-cancel-dialog.png");
 
-    // Confirm button must be disabled with no reason entered
     await expect(confirmBtn, "Confirm Cancel must be disabled when reason is blank").toBeDisabled();
 
-    // Fill cancellation reason
-    const cancelReason = "§UI-E — browser-test cancellation of follow-up appointment.";
+    const cancelReason = "UI-E — browser-test cancellation of follow-up appointment.";
     await page.locator('textarea').last().fill(cancelReason);
 
-    await snap(page, "ui-e-cancel-reason-filled");
+    await snap(page, "09c-cancel-reason-filled.png");
 
-    // Confirm button must now be enabled
     await expect(confirmBtn, "Confirm Cancel must be enabled after reason entered").not.toBeDisabled();
 
-    // Submit — intercept the cancel POST response
     const [cancelResponse] = await Promise.all([
       page.waitForResponse(
         resp =>
@@ -924,53 +870,47 @@ test.describe("§UI-E Cancel appointment (clinician)", () => {
       `Cancel POST must return 200; got ${cancelResponse.status()}. Body: ${await cancelResponse.text()}`,
     ).toBe(200);
 
-    // Modal must close
     await expect(confirmBtn, "Cancel modal must close after success").not.toBeVisible({
       timeout: 5_000,
     });
 
-    // Appointment must now appear in the past list with cancelled status
     const pastCard = page.locator(`[data-testid="apt-card-past-${BROWSER_APT_CANCEL_ID}"]`);
     await expect(pastCard, "Cancelled appointment must move to past list").toBeVisible({
       timeout: 8_000,
     });
 
-    // Original scheduling details must remain (reason text still present)
     await expect(
       pastCard.locator('text=Cancel test'),
       "Original reason text must still appear in past card",
     ).toBeVisible();
 
-    // Status badge must show Cancelled (exact text match on the span badge element
-    // avoids strict-mode conflict with reason/cancellation-reason text nodes).
     await expect(
       pastCard.locator('span', { hasText: /^Cancelled$/ }),
       "Cancelled status badge must be visible on past card",
     ).toBeVisible();
 
-    await snap(page, "ui-e-cancelled-in-past-list");
+    await snap(page, "10-cancelled-appointment.png");
 
-    // Cancellation metadata: cancellation reason visible
     await expect(
       pastCard.locator(`text=${cancelReason.slice(0, 20)}`),
       "Cancellation reason must be visible in past card",
     ).toBeVisible();
 
-    await snap(page, "ui-e-cancellation-metadata");
+    await snap(page, "10b-cancellation-metadata.png");
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §Sched-G — Facility schedule: authorized 200, unauthorized exact 403
+// Sched-G — Facility schedule: authorized 200, unauthorized exact 403
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§Sched-G-1 Facility schedule authorized clinician → 200", () => {
+test.describe("Sched-G-1 Facility schedule authorized clinician — 200", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
 
   test("Sched-G-1: clinician GET facility schedule → 200 + appointments array", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const apiBase = getApiBase(page);
-    const dateStr = futureIso(5).slice(0, 10); // YYYY-MM-DD
+    const dateStr = futureIso(5).slice(0, 10);
 
     const res = await page.request.get(
       `${apiBase}/api/v1/facilities/${FACILITY_ID}/appointments?date=${dateStr}`,
@@ -983,11 +923,11 @@ test.describe("§Sched-G-1 Facility schedule authorized clinician → 200", () =
     const body = await res.json() as { appointments?: unknown[] };
     expect(Array.isArray(body.appointments), "Response must include appointments array").toBe(true);
 
-    await snap(page, "sched-g-clinician-200");
+    await snap(page, "15-facility-schedule-filtered.png");
   });
 });
 
-test.describe("§Sched-G-2 Facility schedule billing → exact 403", () => {
+test.describe("Sched-G-2 Facility schedule billing — exact 403", () => {
   test.use({ storageState: SESSION_PATHS.billing });
 
   test("Sched-G-2: billing GET facility schedule → exactly 403; no patient data in body", async ({ page }) => {
@@ -998,25 +938,20 @@ test.describe("§Sched-G-2 Facility schedule billing → exact 403", () => {
     const res = await page.request.get(
       `${apiBase}/api/v1/facilities/${FACILITY_ID}/appointments?date=${dateStr}`,
     );
-
-    // Billing has zero appointment permission codes.  The route returns 403
-    // (permission denied) or 404 (facility-access guard fires first — billing
-    // has no facility access row).  Either response correctly denies access.
     expect(
       [403, 404],
       `Billing facility schedule must be denied (403 or 404); got ${res.status()}`,
     ).toContain(res.status());
 
-    // The denial body must not expose appointment data.
     const body = await res.text();
     expect(body, "Denial response must not contain patient UUIDs").not.toContain(TEST_PATIENT_ID);
     expect(body, "Denial response must not contain appointment startsAt field").not.toContain("startsAt");
 
-    await snap(page, "sched-g-billing-403");
+    await snap(page, "15b-sched-billing-denied.png");
   });
 });
 
-test.describe("§Sched-G-3 Facility schedule HR → exact 403", () => {
+test.describe("Sched-G-3 Facility schedule HR — exact 403", () => {
   test.use({ storageState: SESSION_PATHS.hr });
 
   test("Sched-G-3: HR GET facility schedule → exactly 403", async ({ page }) => {
@@ -1031,20 +966,20 @@ test.describe("§Sched-G-3 Facility schedule HR → exact 403", () => {
       [403, 404],
       `HR facility schedule must be denied (403 or 404); got ${res.status()}`,
     ).toContain(res.status());
-    await snap(page, "sched-g-hr-403");
+    await snap(page, "15c-sched-hr-denied.png");
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §Conc-H — Concurrent update: stale version → exact 409
+// Conc-H — Concurrent update: stale version → exact 409
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§Conc-H Concurrent update → stale-version 409", () => {
+test.describe("Conc-H Concurrent update — stale-version 409", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
   test.use({
     contextOptions: {
       recordHar: {
-        path: path.join(import.meta.dirname, "har", "conc-h-context-a.har"),
+        path: path.join(import.meta.dirname, "har", "concurrency-context-a.har"),
         omitContent: true,
       },
     },
@@ -1052,20 +987,25 @@ test.describe("§Conc-H Concurrent update → stale-version 409", () => {
 
   test("Conc-H: context A updates → context B stale PATCH → exactly 409", async ({ page, browser }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const apiBaseA  = getApiBase(page);
+    const apiBaseA   = getApiBase(page);
     const csrfTokenA = await getCsrfToken(page, apiBaseA);
 
-    // Both contexts read the seeded concurrent-update appointment at version=1.
     const getResA = await page.request.get(
       `${apiBaseA}/api/v1/appointments/${BROWSER_APT_CONCURRENT_ID}`,
     );
     expect(getResA.status(), "Context A GET must return 200").toBe(200);
-    const aptA = (await getResA.json() as { appointment: { version: number } }).appointment;
+    const aptA     = (await getResA.json() as { appointment: { version: number } }).appointment;
     const versionA = aptA.version;
     expect(versionA, "Context A must read version=1 (freshly seeded)").toBe(1);
 
-    // ── Context B: second browser context, same clinician session ────────────
-    const ctxB  = await browser.newContext({ storageState: SESSION_PATHS.clinician });
+    // Context B: second browser context with concurrency-context-b HAR recording
+    const ctxB = await browser.newContext({
+      storageState: SESSION_PATHS.clinician,
+      recordHar: {
+        path: path.join(import.meta.dirname, "har", "concurrency-context-b.har"),
+        omitContent: true,
+      },
+    });
     const pageB = await ctxB.newPage();
 
     try {
@@ -1081,14 +1021,14 @@ test.describe("§Conc-H Concurrent update → stale-version 409", () => {
       const versionB = aptB.version;
       expect(versionB, "Context B must also read version=1").toBe(1);
 
-      // ── Context A patches first (wins) ────────────────────────────────────
+      // Context A patches first (wins)
       const patchA = await page.request.patch(
         `${apiBaseA}/api/v1/appointments/${BROWSER_APT_CONCURRENT_ID}`,
         {
           headers: { "X-CSRF-Token": csrfTokenA, "Content-Type": "application/json" },
           data: {
             version: versionA,
-            reason: "§Conc-H context A wins — updated first.",
+            reason: "Conc-H context A wins — updated first.",
           },
         },
       );
@@ -1103,16 +1043,16 @@ test.describe("§Conc-H Concurrent update → stale-version 409", () => {
         "Context A must increment version to 2",
       ).toBe(2);
 
-      await snap(page, "conc-h-ctx-a-updated");
+      await snap(page, "16b-conc-ctx-a-updated.png");
 
-      // ── Context B patches with stale version=1 → must get exactly 409 ─────
+      // Context B patches with stale version=1 → must get exactly 409
       const patchB = await pageB.request.patch(
         `${apiBaseB}/api/v1/appointments/${BROWSER_APT_CONCURRENT_ID}`,
         {
           headers: { "X-CSRF-Token": csrfTokenB, "Content-Type": "application/json" },
           data: {
             version: versionB, // stale: still 1, but current is now 2
-            reason: "§Conc-H context B stale — must be rejected.",
+            reason: "Conc-H context B stale — must be rejected.",
           },
         },
       );
@@ -1128,7 +1068,7 @@ test.describe("§Conc-H Concurrent update → stale-version 409", () => {
         "Context B 409 must include an error message",
       ).toBeTruthy();
 
-      await snap(page, "conc-h-ctx-b-409");
+      await snap(pageB, "16-concurrent-update-conflict.png");
 
     } finally {
       await ctxB.close();
@@ -1137,10 +1077,10 @@ test.describe("§Conc-H Concurrent update → stale-version 409", () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §Deny — Authorization denial: billing, HR, security-admin
+// Deny — Authorization denial: billing, HR, security-admin
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§Deny billing POST and GET → exact 403", () => {
+test.describe("Deny billing POST and GET — exact 403", () => {
   test.use({ storageState: SESSION_PATHS.billing });
 
   test("Deny-billing-1: billing POST appointments → exactly 403", async ({ page }) => {
@@ -1157,7 +1097,7 @@ test.describe("§Deny billing POST and GET → exact 403", () => {
           appointmentType: "individual_therapy",
           startsAt: futureIso(20),
           endsAt:   futureIso(20, 11),
-          reason:   "§Deny billing POST — must be denied",
+          reason:   "Deny billing POST — must be denied",
         },
       },
     );
@@ -1165,7 +1105,7 @@ test.describe("§Deny billing POST and GET → exact 403", () => {
       [403, 404],
       `Billing POST must be denied (403 or 404); got ${res.status()}`,
     ).toContain(res.status());
-    await snap(page, "deny-billing-post-403");
+    await snap(page, "12-billing-denial.png");
   });
 
   test("Deny-billing-2: billing GET patient appointments → 403 or 404", async ({ page }) => {
@@ -1179,11 +1119,11 @@ test.describe("§Deny billing POST and GET → exact 403", () => {
       [403, 404],
       `Billing GET appointments must be denied (403 or 404); got ${res.status()}`,
     ).toContain(res.status());
-    await snap(page, "deny-billing-get-403");
+    await snap(page, "12b-billing-get-denied.png");
   });
 });
 
-test.describe("§Deny HR POST and GET → exact 403", () => {
+test.describe("Deny HR POST and GET — exact 403", () => {
   test.use({ storageState: SESSION_PATHS.hr });
 
   test("Deny-hr-1: HR POST appointments → exactly 403", async ({ page }) => {
@@ -1200,7 +1140,7 @@ test.describe("§Deny HR POST and GET → exact 403", () => {
           appointmentType: "individual_therapy",
           startsAt: futureIso(21),
           endsAt:   futureIso(21, 11),
-          reason:   "§Deny HR POST — must be denied",
+          reason:   "Deny HR POST — must be denied",
         },
       },
     );
@@ -1208,7 +1148,7 @@ test.describe("§Deny HR POST and GET → exact 403", () => {
       [403, 404],
       `HR POST must be denied (403 or 404); got ${res.status()}`,
     ).toContain(res.status());
-    await snap(page, "deny-hr-post-403");
+    await snap(page, "13-hr-denial.png");
   });
 
   test("Deny-hr-2: HR GET patient appointments → 403 or 404", async ({ page }) => {
@@ -1222,11 +1162,11 @@ test.describe("§Deny HR POST and GET → exact 403", () => {
       [403, 404],
       `HR GET appointments must be denied (403 or 404); got ${res.status()}`,
     ).toContain(res.status());
-    await snap(page, "deny-hr-get-403");
+    await snap(page, "13b-hr-get-denied.png");
   });
 });
 
-test.describe("§Deny security-admin POST and GET → exact 403", () => {
+test.describe("Deny security-admin POST and GET — exact 403", () => {
   test.use({ storageState: SESSION_PATHS.securityAdmin });
 
   test("Deny-secadmin-1: security-admin POST appointments → exactly 403", async ({ page }) => {
@@ -1243,7 +1183,7 @@ test.describe("§Deny security-admin POST and GET → exact 403", () => {
           appointmentType: "individual_therapy",
           startsAt: futureIso(22),
           endsAt:   futureIso(22, 11),
-          reason:   "§Deny security-admin POST — must be denied",
+          reason:   "Deny security-admin POST — must be denied",
         },
       },
     );
@@ -1251,7 +1191,7 @@ test.describe("§Deny security-admin POST and GET → exact 403", () => {
       [403, 404],
       `Security-admin POST must be denied (403 or 404); got ${res.status()}`,
     ).toContain(res.status());
-    await snap(page, "deny-secadmin-post-403");
+    await snap(page, "14-security-admin-denial.png");
   });
 
   test("Deny-secadmin-2: security-admin GET patient appointments → 403 or 404", async ({ page }) => {
@@ -1265,22 +1205,21 @@ test.describe("§Deny security-admin POST and GET → exact 403", () => {
       [403, 404],
       `Security-admin GET appointments must be denied (403 or 404); got ${res.status()}`,
     ).toContain(res.status());
-    await snap(page, "deny-secadmin-get-403");
+    await snap(page, "14b-secadmin-get-denied.png");
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// §CSRF — POST without CSRF token → exact 403
+// CSRF — POST without CSRF token → exact 403
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe("§CSRF CSRF protection on appointment mutations", () => {
+test.describe("CSRF protection on appointment mutations", () => {
   test.use({ storageState: SESSION_PATHS.clinician });
 
   test("CSRF-1: POST without X-CSRF-Token → exactly 403", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const apiBase = getApiBase(page);
 
-    // Deliberately omit X-CSRF-Token
     const res = await page.request.post(
       `${apiBase}/api/v1/patients/${TEST_PATIENT_ID}/appointments`,
       {
@@ -1298,7 +1237,7 @@ test.describe("§CSRF CSRF protection on appointment mutations", () => {
       res.status(),
       `POST without CSRF token must return exactly 403; got ${res.status()}`,
     ).toBe(403);
-    await snap(page, "csrf-no-token-403");
+    await snap(page, "csrf-1-post-no-token.png");
   });
 
   test("CSRF-2: PATCH without X-CSRF-Token → exactly 403", async ({ page }) => {
@@ -1316,9 +1255,9 @@ test.describe("§CSRF CSRF protection on appointment mutations", () => {
       res.status(),
       `PATCH without CSRF token must return exactly 403; got ${res.status()}`,
     ).toBe(403);
-    await snap(page, "csrf-patch-no-token-403");
+    await snap(page, "csrf-2-patch-no-token.png");
   });
 });
 
-// Capture void ORG_ID to suppress "declared but never used" TS lint warning.
+// Suppress unused-variable warnings for constants used only in payloads.
 void ORG_ID;

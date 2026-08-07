@@ -23,6 +23,9 @@
  * All fixtures are for the test patient (TEST_PATIENT_ID) at FACILITY_1.
  * Uses delete-then-insert so every run starts from a known baseline.
  *
+ * Also creates TEST_PATIENT_EMPTY_ID — a patient with NO appointments, used
+ * by the Empty-state browser test to verify the apt-empty-state UI.
+ *
  * MUST NOT run in production (enforced below).
  */
 
@@ -30,7 +33,7 @@ if (process.env.NODE_ENV === "production") {
   throw new Error("browserTestSeed.ts must never run in production. Aborting.");
 }
 
-import { db, sosUserAccounts, sosClinicalNotes, sosAppointments } from "@workspace/db";
+import { db, sosUserAccounts, sosClinicalNotes, sosAppointments, sosPatients } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 
 // ── Deterministic IDs ────────────────────────────────────────────────────────
@@ -41,6 +44,9 @@ export const BROWSER_DRAFT_NOTE_ID   = "00000000-0000-4000-b000-000000000002";
 export const BROWSER_APT_EDIT_ID       = "00000000-0000-4000-a000-000000000011";
 export const BROWSER_APT_CANCEL_ID     = "00000000-0000-4000-a000-000000000012";
 export const BROWSER_APT_CONCURRENT_ID = "00000000-0000-4000-a000-000000000013";
+
+// Phase 4 empty-state patient — no appointments; used by Empty-2 browser test.
+export const TEST_PATIENT_EMPTY_ID = "00000000-0000-4000-a000-000000000098";
 
 // ── Static seed values (must match authSeed.ts) ───────────────────────────────
 const ORG_ID          = "00000000-0000-4000-a000-000000000001";
@@ -71,15 +77,40 @@ export async function runBrowserTestSeed(): Promise<void> {
 
   const now = new Date();
 
-  // ── Wipe ALL appointments for the test patient ─────────────────────────────
+  // ── Wipe ALL appointments for both test patients ──────────────────────────
   //
   // Creation tests (Pos-1, Pos-2, UI-B, UI-C) accumulate appointments across
   // runs.  Removing them all here ensures each run starts from a known baseline
   // and creation tests don't collide with a previous run's leftovers.
-  // This is safe: TEST_PATIENT_ID is a fixture-only patient that only exists
-  // in the browser-test database.
+  // This is safe: TEST_PATIENT_ID and TEST_PATIENT_EMPTY_ID are fixture-only
+  // patients that only exist in the browser-test database.
   await db.delete(sosAppointments).where(eq(sosAppointments.patientId, TEST_PATIENT_ID));
-  console.log("[browser-seed] All appointments for test patient cleared.");
+  await db.delete(sosAppointments).where(eq(sosAppointments.patientId, TEST_PATIENT_EMPTY_ID));
+  console.log("[browser-seed] All appointments for test patients cleared.");
+
+  // ── Upsert empty-state patient (no appointments) ───────────────────────────
+  //
+  // TEST_PATIENT_EMPTY_ID is a second patient fixture used exclusively by the
+  // Empty-state browser test (Empty-2).  It must exist in sos_patients so the
+  // SPA can navigate to it.  Patient access is granted by role (the clinician's
+  // mh_therapist role grants facility-wide chart access), so no separate
+  // sos_patient_access row is required — matching the same pattern used by
+  // authSeed for TEST_PATIENT_ID.  The patient must never have any
+  // appointments — enforced by the DELETE above that runs before every seed.
+  await db
+    .insert(sosPatients)
+    .values({
+      id:         TEST_PATIENT_EMPTY_ID,
+      orgId:      ORG_ID,
+      facilityId: FACILITY_ID,
+      mrn:        "TEST-0002",
+      firstName:  "[TEST]",
+      lastName:   "EmptyPatient",
+      status:     "active",
+    })
+    .onConflictDoNothing();
+
+  console.log(`[browser-seed] Empty-state patient ready: ${TEST_PATIENT_EMPTY_ID} (no appointments)`);
 
   // ── Phase 3: Delete-and-reinsert clinical note fixtures ─────────────────────
   //
