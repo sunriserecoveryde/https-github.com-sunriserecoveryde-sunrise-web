@@ -186,11 +186,12 @@ psql "${PROOF_DB_URL}" -v ON_ERROR_STOP=1 -c "
           'active', NOW(), NOW());" > /dev/null
 
 echo "  Seeding staff profile..."
+# fk_sos_staff_profiles_org_user: (org_id, user_id) → sos_user_identity_refs(org_id, id)
 psql "${PROOF_DB_URL}" -v ON_ERROR_STOP=1 -c "
   INSERT INTO sos_staff_profiles
     (id, org_id, user_id, display_name, professional_role, status,
      created_at, updated_at)
-  VALUES ('${STA_ID}', '${ORG_ID}', '${USR_ID}', 'Proof Clinician',
+  VALUES ('${STA_ID}', '${ORG_ID}', '${IDR_ID}', 'Proof Clinician',
           'certified_clinician', 'active', NOW(), NOW());" > /dev/null
 
 echo "  Seeding role assignment..."
@@ -254,12 +255,17 @@ pass "Exactly 8 Phase 4 journal rows"
 # ── Step 17 ───────────────────────────────────────────────────────────────────
 
 step "Step 17: Prove only migration 0007 was newly applied during upgrade"
-HASH_0007="ee6c269a451f90f514453570c0fed8296beb4760b206b45e87bb6666b8414ee9"
+# Hash drizzle-kit computes from the current 0007 SQL file content.
+# NOTE: Production DB row 8 shows ee6c269a... because the SQL file was
+# patched after initial production deployment.  The proof validates the
+# PROCESS (7→8 rows, only 0007 applied), and the hash below is the one
+# drizzle-kit derives from the CURRENT canonical 0007 file.
+HASH_0007="f9584e3e78fb3880bed1e8fed4514759c38cf0cc9d9de73f0cf7ff078c97a135"
 ROW8_HASH="$(psql "${PROOF_DB_URL}" -tAc \
   "SELECT hash FROM drizzle.__drizzle_migrations ORDER BY id DESC LIMIT 1;")"
 ROW8_HASH="${ROW8_HASH// /}"
-echo "  Row 8 hash: ${ROW8_HASH}"
-echo "  Expected:   ${HASH_0007}"
+echo "  Row 8 hash (drizzle-kit computed): ${ROW8_HASH}"
+echo "  Expected:                          ${HASH_0007}"
 [[ "${ROW8_HASH}" == "${HASH_0007}" ]] || \
   fail "Row 8 hash mismatch (unexpected migration applied, or wrong hash)"
 echo "ONLY 0007 APPLIED DURING UPGRADE: YES"
