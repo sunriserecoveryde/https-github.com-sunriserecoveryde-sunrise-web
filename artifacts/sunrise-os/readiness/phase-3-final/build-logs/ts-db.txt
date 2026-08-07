@@ -1,0 +1,9 @@
+=== DB TypeScript check ===
+Command: pnpm --filter @workspace/db tsc --noEmit
+Started: 2026-08-04T21:41:54Z
+None of the selected packages has a "tsc" script
+Exit: 0
+Finished: 2026-08-04T21:41:55Z
+Command: pnpm --filter @workspace/db build
+None of the selected packages has a "build" script
+Exit: 0

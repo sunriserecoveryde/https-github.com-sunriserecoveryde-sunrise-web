@@ -8,7 +8,8 @@
  *  - No token stored in localStorage or sessionStorage.
  *  - Login endpoint is rate-limited server-side.
  *  - Generic error message on failure (no account-existence disclosure).
- *  - CSRF-exempt on login (server-side rate-limiting provides protection).
+ *  - CSRF double-submit-cookie guard: GET /csrf-token called first, then the
+ *    resulting token is sent as X-CSRF-Token on the POST (Phase 2C requirement).
  *  - Password field value never logged or sent to analytics.
  *
  * Accessibility: WCAG 2.2 AA — keyboard nav, ARIA labels, 44 px tap targets.
@@ -57,11 +58,32 @@ export function ProductionLogin({ onSuccess }: ProductionLoginProps) {
     setErrorMsg('');
 
     try {
+      // Phase 2C: login requires double-submit CSRF token.
+      // Fetch (or refresh) the token immediately before submitting so the
+      // _csrf cookie and X-CSRF-Token header are always in sync.
+      let csrfToken = '';
+      try {
+        const csrfRes = await fetch(`${API_BASE}/v1/auth/csrf-token`, { credentials: 'include' });
+        if (csrfRes.ok) {
+          const csrfData = await csrfRes.json() as { csrfToken?: string };
+          csrfToken = csrfData.csrfToken ?? '';
+        }
+      } catch {
+        // Non-fatal — proceed; server will return 403 if CSRF guard fires.
+      }
+
       const res = await fetch(`${API_BASE}/v1/auth/login`, {
         method:      'POST',
         credentials: 'include',
-        headers:     { 'Content-Type': 'application/json' },
-        body:        JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        headers:     {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
+        body:        JSON.stringify({
+          orgSlug: (import.meta.env.VITE_SUNRISE_ORG_SLUG as string | undefined) ?? "sunrise",
+          email:   email.trim().toLowerCase(),
+          password,
+        }),
       });
 
       if (res.status === 429) {
@@ -164,6 +186,7 @@ export function ProductionLogin({ onSuccess }: ProductionLoginProps) {
               </label>
               <input
                 id={emailId}
+                data-testid="email-input"
                 type="email"
                 autoComplete="email"
                 required
@@ -189,6 +212,7 @@ export function ProductionLogin({ onSuccess }: ProductionLoginProps) {
                 <input
                   ref={passwordRef}
                   id={passwordId}
+                  data-testid="password-input"
                   type={showPwd ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
@@ -213,6 +237,7 @@ export function ProductionLogin({ onSuccess }: ProductionLoginProps) {
             {/* Submit */}
             <button
               type="submit"
+              data-testid="submit-btn"
               disabled={!email || !password || loginState === 'loading'}
               className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >

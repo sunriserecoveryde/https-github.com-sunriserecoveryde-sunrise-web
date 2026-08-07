@@ -1,0 +1,4 @@
+=== Phase 2 Upgrade Proof (v4) ===
+Started: 2026-08-04T22:34:17Z
+bash: readiness/scripts/phase2-upgrade-proof.sh: No such file or directory
+Exit: 127

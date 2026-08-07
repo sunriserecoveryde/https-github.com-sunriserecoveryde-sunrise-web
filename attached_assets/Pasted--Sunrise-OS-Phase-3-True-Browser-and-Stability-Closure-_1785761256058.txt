@@ -1,0 +1,599 @@
+# Sunrise OS — Phase 3 True Browser and Stability Closure
+
+Continue on:
+
+`feature/phase-3-clinical-documentation-foundation`
+
+Do not merge into `main`.
+
+Do not begin another phase.
+
+Do not add unrelated functionality.
+
+The remaining task is limited to genuine production-like browser verification, removal of test-environment authentication fallback, elimination of the unexplained intermittent test failure, and regeneration of the final review package.
+
+---
+
+# 1. Do not substitute API tests for browser tests
+
+The previous Playwright run changed browser workflows into API-only assertions because Chromium crashed while loading the React application.
+
+That does not satisfy the browser acceptance criteria.
+
+Every required browser workflow must use an actual Playwright `page` and interact with the rendered Sunrise OS frontend.
+
+Do not replace browser actions with:
+
+* `request.get()`
+* `request.post()`
+* Direct repository calls
+* Supertest
+* Direct service calls
+* Synthetic JSON traces
+* DOM assembled only for tests
+
+API requests may be observed or asserted as supporting evidence, but the workflow itself must occur through the rendered UI.
+
+---
+
+# 2. Fix the Chromium/SPA crash
+
+Diagnose why Chromium crashes while opening the real Sunrise OS frontend.
+
+Capture:
+
+* Chromium stderr
+* Browser console errors
+* Page errors
+* Failed requests
+* Vite errors
+* API proxy errors
+* Memory or process-exit information
+* Playwright trace
+
+Correct the actual crash.
+
+Do not work around the crash by avoiding page navigation.
+
+After correction, prove this basic browser smoke test:
+
+1. Launch Chromium.
+2. Open the Sunrise OS frontend.
+3. Wait for the login page.
+4. Confirm the application root rendered.
+5. Confirm no page crash.
+6. Confirm no uncaught JavaScript exception.
+7. Confirm the login controls are visible.
+8. Close the browser cleanly.
+
+Run this test three times in separate fresh browser processes.
+
+---
+
+# 3. Use a production-like browser environment
+
+Start the browser environment with:
+
+```text
+NODE_ENV=production
+VITE_SUNRISE_DATA_MODE=production
+DISABLE_AUTH_FALLBACK=true
+```
+
+Scope `DISABLE_AUTH_FALLBACK=true` only to the browser-test API process.
+
+Do not set it globally.
+
+The browser-test environment must use:
+
+* Real frontend
+* Real API
+* Real PostgreSQL
+* Real CSRF middleware
+* Real secure session behavior
+* Real seeded fictitious accounts
+* Real scoped grants
+* Real patient-access records
+* No development identity fallback
+* No mock identity headers
+* No route interception
+* No mocked API responses
+
+Before running Playwright, confirm an unauthenticated request to a protected clinical-note endpoint returns `401`, not a development supervisor identity.
+
+---
+
+# 4. Seed the complete browser-test data set
+
+Create an isolated, repeatable browser-test seed using only fictitious information.
+
+Seed:
+
+* Clinician
+* Nurse
+* Clinical supervisor
+* Other-facility clinician
+* Unassigned clinician
+* Security administrator without clinical grant
+* HR user
+* Billing user
+
+Also seed:
+
+* At least two facilities
+* Assigned patient
+* Unassigned patient
+* Other-facility patient
+* Active episode
+* Closed episode
+* Exact patient-access assignments
+* Signed clinical note available for supervisor void testing
+* Draft note available for concurrency testing
+
+Use `PHASE2D_TEST_PASSWORD` or a dedicated environment secret.
+
+Do not print its value.
+
+Make the seed idempotent.
+
+---
+
+# 5. Execute the clinician workflow through the UI
+
+Use browser locators and visible UI controls.
+
+Required steps:
+
+1. Open the login page.
+2. Enter organization slug.
+3. Enter clinician email.
+4. Enter the test password.
+5. Submit login.
+6. Confirm navigation into the authenticated application.
+7. Open the assigned patient.
+8. Open the Progress Notes tab.
+9. Confirm the notes empty or timeline state renders.
+10. Click Create Note.
+11. Select `progress_note`.
+12. Enter fictitious note content.
+13. Save draft.
+14. Confirm the draft appears in the timeline.
+15. Refresh the page.
+16. Confirm the draft remains.
+17. Open the draft.
+18. Edit the content.
+19. Save again.
+20. Sign the note.
+21. Confirm it becomes read-only.
+22. Confirm edit controls disappear.
+23. Refresh again.
+24. Confirm the signed state remains.
+
+Assert actual visible content and state.
+
+Do not perform these actions through the request API.
+
+---
+
+# 6. Execute the nursing workflow through the UI
+
+1. Log out.
+2. Login as the seeded nurse.
+3. Open an authorized patient.
+4. Open Progress Notes.
+5. Create a `nursing_note`.
+6. Save.
+7. Sign.
+8. Confirm the displayed note type.
+9. Confirm the displayed author.
+10. Confirm the signed, read-only state.
+
+---
+
+# 7. Execute the supervisor void workflow through the UI
+
+1. Login as the clinical supervisor.
+2. Open a patient with a signed note.
+3. Open the signed note.
+4. Confirm the Void button is visible.
+5. Open the void dialog.
+6. Submit an empty reason.
+7. Confirm validation rejection.
+8. Submit a reason shorter than the minimum.
+9. Confirm validation rejection.
+10. Submit a valid fictitious reason.
+11. Confirm success.
+12. Confirm original note content remains visible.
+13. Confirm status is `voided`.
+14. Confirm void reason is displayed where authorized.
+15. Confirm void actor and timestamp.
+16. Confirm edit and sign actions are unavailable.
+
+---
+
+# 8. Execute real authorization-denial browser tests
+
+Use real logged-in personas.
+
+Do not test these by relying only on unauthenticated CSRF errors.
+
+Verify through the rendered application:
+
+## Other-facility clinician
+
+* Cannot open the patient.
+* Cannot view the note.
+* Direct note URL does not expose content.
+
+## Unassigned clinician
+
+* Cannot access the assignment-limited patient.
+* Cannot view the note.
+
+## Another clinician
+
+* May view only when their grant allows it.
+* Cannot edit another author’s draft.
+* Cannot sign another author’s draft.
+
+## Security administrator without a clinical grant
+
+* Cannot access clinical-note content.
+
+## Human resources
+
+* Cannot access clinical-note content.
+
+## Billing
+
+* Cannot access clinical-note content.
+
+## Original author without supervisory void permission
+
+* Does not see the Void action.
+* Direct void request is denied.
+
+Assert exact status and visible denial state.
+
+---
+
+# 9. Execute concurrency through two browser contexts
+
+Use two real Playwright browser contexts.
+
+Required flow:
+
+1. Login as the same clinician in contexts A and B.
+2. Open the same draft in both contexts.
+3. Edit and save from A.
+4. Edit stale content in B.
+5. Save from B.
+6. Confirm the API returns `409`.
+7. Confirm B’s unsaved text remains visible.
+8. Confirm the UI displays conflict guidance.
+9. Reload the latest server version.
+10. Confirm A’s saved content was not overwritten.
+
+Do not simulate the conflict through direct repository calls.
+
+---
+
+# 10. Capture authentic browser evidence
+
+Capture screenshots from the actual Playwright pages:
+
+1. Login page
+2. Progress Notes empty state
+3. Create-note form
+4. Saved clinician draft
+5. Edited draft
+6. Signed read-only note
+7. Nursing note
+8. Supervisor void dialog
+9. Void validation error
+10. Voided note
+11. Other-facility denial
+12. Unassigned-patient denial
+13. Another-author edit denial
+14. Security-administrator denial
+15. HR denial
+16. Billing denial
+17. Concurrency conflict
+18. Production mode without demo UI
+
+Label production screenshots:
+
+`Real API — no route interception`
+
+Generate authentic Playwright traces and HAR/network captures for:
+
+* Login
+* Patient Detail
+* Note list
+* Note creation
+* Draft update
+* Note signature
+* Note void
+* Authorization denial
+* Concurrency `409`
+* Logout
+
+Do not generate network files from Vitest, Supertest, or previously recorded test output.
+
+Sanitize:
+
+* Passwords
+* Cookie values
+* Session IDs
+* CSRF values
+* Authorization headers
+* Real patient information
+* Real clinical content
+
+---
+
+# 11. Remove misleading synthetic browser evidence
+
+Review every existing screenshot, JSON trace, HAR, and browser-evidence file.
+
+Delete or relabel any evidence that was:
+
+* Generated from Vitest
+* Generated from Supertest
+* Manually assembled
+* Generated from API logs
+* Created after the browser workflow failed
+* Not captured by an actual browser execution
+
+Synthetic evidence may be retained only when clearly labeled:
+
+`Automated HTTP evidence — not browser evidence`
+
+It must not be counted as Playwright evidence.
+
+---
+
+# 12. Investigate the intermittent Vitest failure
+
+The required repeated test run produced:
+
+* One clean run
+* One run with one failure
+* Later clean runs
+
+Do not dismiss the failure as a transient fluke.
+
+Identify:
+
+* Exact test that failed
+* Error message
+* Shared global state
+* Environment mutation
+* Timer state
+* Singleton state
+* Database state
+* Rate-limit state
+* Test ordering
+* Open handle or process interaction
+
+Correct the root cause.
+
+Add or strengthen cleanup for:
+
+* Environment variables
+* Module caches
+* Fake timers
+* Mock state
+* Database rows
+* Rate-limit windows
+* Servers
+* Workers
+* Database pools
+* Singleton instances
+
+Do not solve the issue merely by retrying the full suite until it passes.
+
+---
+
+# 13. Prove test stability
+
+After the root cause is corrected, run the non-browser suite:
+
+1. Full suite in fresh process A
+2. Full suite in fresh process B
+3. Full suite in fresh process C
+4. Clinical-note suite followed by rate-limit suite
+5. Rate-limit suite followed by clinical-note suite
+6. Outbox suite followed by clinical-note suite
+7. Clinical-note suite followed by outbox suite
+
+Every run must pass.
+
+Report every run, including failures.
+
+Do not omit an unsuccessful run.
+
+---
+
+# 14. Verify migration evidence accurately
+
+The latest report says:
+
+* Clean migration used the normal runner.
+* Phase 2 upgrade used the normal runner.
+* Existing database journal timestamps were reconciled.
+
+Include the actual reconciliation script and proof.
+
+Confirm:
+
+* Seven exact journal rows
+* Seven exact hashes
+* Seven exact timestamps
+* Correct order
+* No duplicate rows
+* No manual execution of migration `0006` required after reconciliation
+* Normal migration runner reports no pending migrations
+
+Do not describe the historical `psql` execution as final migration proof.
+
+---
+
+# 15. Run final validation
+
+Run:
+
+* Stable non-browser suite as described above
+* Actual Playwright suite
+* Database TypeScript build
+* API TypeScript
+* API production build
+* Sunrise OS TypeScript
+* Sunrise OS production build
+* Repository secret scan
+* Browser-evidence secret scan
+* ZIP secret scan
+
+Required results:
+
+* Zero test failures
+* Zero required skips
+* Zero unexplained intermittent failures
+* Real browser flows pass
+* No development identity fallback
+* No secrets in evidence
+
+---
+
+# 16. Regenerate the final review ZIP
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip`
+
+Include:
+
+* Complete migration chain
+* Migration metadata
+* Journal-reconciliation script
+* Journal-reconciliation proof
+* Clean-migration proof
+* Normal-runner Phase 2 upgrade proof
+* Clinical-note schema
+* Repository
+* Service
+* Routes
+* Permission policy
+* Frontend source
+* Automated tests
+* Stable-run evidence
+* Actual Playwright source
+* Actual Playwright result log
+* Actual browser screenshots
+* Actual Playwright traces
+* Actual sanitized HAR/network capture
+* TypeScript logs
+* Production build logs
+* Secret-scan report
+* Evidence manifest
+* Complete SHA-256 manifest
+
+The SHA manifest must cover every archive entry except itself.
+
+Do not include:
+
+* Synthetic browser evidence presented as real
+* Passwords
+* Cookies
+* Session IDs
+* CSRF values
+* Environment files
+* Database dumps
+* Real patient data
+* Real note content
+* Dependency caches
+* Build caches
+* Previous review ZIPs
+
+---
+
+# 17. Verify the archive
+
+Run:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+```
+
+Confirm:
+
+* ZIP integrity passes
+* SHA coverage is complete
+* Actual browser evidence is present
+* Synthetic evidence is properly labeled or removed
+* No secrets are present
+* No previous ZIP is nested inside
+
+---
+
+# Required final response
+
+Provide:
+
+1. Branch
+2. Starting HEAD
+3. Correction commits
+4. Final HEAD
+5. Browser environment mode
+6. Development auth fallback enabled: yes/no
+7. Chromium crash root cause
+8. Chromium crash correction
+9. Browser smoke runs passed
+10. Clinician UI workflow result
+11. Nursing UI workflow result
+12. Supervisor void UI result
+13. Other-facility denial result
+14. Unassigned-patient denial result
+15. Another-author denial result
+16. Security-admin denial result
+17. HR denial result
+18. Billing denial result
+19. Concurrency UI result
+20. Intermittent Vitest failure root cause
+21. Stability run A
+22. Stability run B
+23. Stability run C
+24. Clinical-note → rate-limit result
+25. Rate-limit → clinical-note result
+26. Outbox → clinical-note result
+27. Clinical-note → outbox result
+28. Non-browser tests discovered
+29. Non-browser tests passed
+30. Non-browser tests failed
+31. Non-browser tests skipped
+32. Playwright tests discovered
+33. Playwright tests passed
+34. Playwright tests failed
+35. Playwright tests skipped
+36. Screenshot count
+37. Authentic Playwright trace count
+38. Authentic HAR/network capture count
+39. Migration journal result
+40. TypeScript result
+41. Production-build result
+42. Secret-scan result
+43. ZIP path
+44. ZIP size
+45. ZIP SHA-256
+46. ZIP entry count
+47. SHA-manifest coverage
+48. Known limitations
+49. Explicit answer: `PHASE 3 APPROVED FOR MERGE` or `PHASE 3 NOT APPROVED`
+
+Do not merge automatically.
+
+Do not begin another phase.
+
+Stop after regenerating and verifying the final Phase 3 review archive.

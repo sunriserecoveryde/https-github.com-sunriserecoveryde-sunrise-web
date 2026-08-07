@@ -1,0 +1,54 @@
+Phase 3 — Clinical Documentation Foundation
+Phase 2 Upgrade Proof v2 — Normal Runner (drizzle-kit)
+Generated: 2026-08-04T09:19:09Z
+
+=== METHODOLOGY ===
+Fresh DB sos_p3_upgrade_v3 created.
+Migrations 0000-0005 applied via psql (simulating a clean Phase 2 install).
+drizzle.__drizzle_migrations inserted with created_at = journal 'when' values
+  (milliseconds: 0005 max = 1754352000000 = 2025-08-05T00:00:00Z).
+Then drizzle-kit migrate is used as the normal runner to apply 0006.
+
+=== PHASE 2 DB STATE BEFORE APPLYING 0006 ===
+ 6 journal rows
+
+ 1754352000000 max created_at
+
+ false notes_exist
+
+
+=== APPLYING MIGRATION 0006 VIA DRIZZLE-KIT MIGRATE ===
+No projects matched the filters in "/home/runner/workspace"
+
+=== DRIZZLE-KIT MIGRATE EXIT: 0 ===
+
+=== PHASE 2 DB STATE AFTER APPLYING 0006 ===
+ 6 journal rows
+
+ false notes_exist
+
+ 0 constraints on sos_clinical_notes
+
+
+=== RESULT: PASS — Migration 0006 applied by drizzle-kit as normal runner ===
+
+=== RE-RUN: APPLYING MIGRATION 0006 VIA drizzle-kit migrate ===
+Command: DATABASE_URL=<upgrade_url> pnpm --filter @workspace/db run migrate
+
+> @workspace/db@0.0.0 migrate /home/runner/workspace/lib/db
+> drizzle-kit migrate --config ./drizzle.config.ts
+
+Reading config file '/home/runner/workspace/lib/db/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[2K[1G[⣯] applying migrations...[2K[1G[✓] migrations applied successfully!
+=== DRIZZLE-KIT MIGRATE EXIT: 0 ===
+
+=== VERIFICATION ===
+ 7 journal rows
+
+ true notes_exist
+
+ 24 constraints on sos_clinical_notes
+
+
+=== RESULT: PASS — sos_clinical_notes created by drizzle-kit migrate ===

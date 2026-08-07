@@ -1,0 +1,41 @@
+{
+  "flow": "02-nurse-create-sign",
+  "generatedAt": "2026-08-03T01:41:43Z",
+  "description": "Nurse creates a nursing note and signs it \u2014 API evidence",
+  "actor": "nurse@test.sunrise",
+  "role": "nursing",
+  "note": "PHI redacted. Full evidence in clinical-notes-p3.test.ts \u00a73.",
+  "requests": [
+    {
+      "step": "2a POST /clinical-notes (create nursing_note draft)",
+      "method": "POST",
+      "url": "/api/v1/patients/[PATIENT_ID]/clinical-notes",
+      "requestBody": {
+        "noteType": "nursing_note",
+        "content": "[REDACTED \u2014 PHI]"
+      },
+      "responseStatus": 201,
+      "responseBodySample": {
+        "id": "[NOTE_UUID]",
+        "noteType": "nursing_note",
+        "status": "draft",
+        "version": 1
+      }
+    },
+    {
+      "step": "2b POST /clinical-notes/:id/sign",
+      "method": "POST",
+      "url": "/api/v1/patients/[PATIENT_ID]/clinical-notes/[NOTE_ID]/sign",
+      "requestBody": {
+        "expectedVersion": 1
+      },
+      "responseStatus": 200,
+      "responseBodySample": {
+        "id": "[NOTE_UUID]",
+        "status": "signed",
+        "signedAt": "[ISO timestamp]",
+        "version": 2
+      }
+    }
+  ]
+}

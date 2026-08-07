@@ -23,6 +23,23 @@ import { DATA_MODE, DATA_MODE_ERROR, API_BASE, DEV_HEADERS } from '../lib/dataMo
 import type { Patient } from '../data/mockPatients';
 
 
+// ── Clinical note list item returned by GET /clinical-notes (Phase 3) ─────────
+interface ApiClinicalNoteItem {
+  id: string;
+  noteType: 'progress_note' | 'nursing_note';
+  status: 'draft' | 'signed' | 'voided';
+  authorDisplayName: string | null;
+  authorUserId: string;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+  signedAt: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
+  // content is only present on the detail endpoint (GET /:noteId), not on the list.
+  content?: string;
+}
+
 // ── Server-patient adapter for PatientDetail (Phase 1A) ───────────────────────
 interface ServerPatientDetailRecord {
   id: string; mrn: string; firstName: string; lastName: string;
@@ -58,16 +75,30 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   const [serverPatient, setServerPatient] = useState<Patient | null>(null);
   // Explicit fetch-failure flag — no silent fallback to mock data in production mode.
   const [serverPatientError, setServerPatientError] = useState(false);
+  // Distinct flag for 403 / 404 authorization denials — rendered with data-testid="access-denied"
+  // so browser tests (and the access-denied assertion helper) can detect the denial UI.
+  const [serverPatientForbidden, setServerPatientForbidden] = useState(false);
   useEffect(() => {
     if (DATA_MODE !== 'production' || !patientId) return;
     setServerPatient(null);
     setServerPatientError(false);
+    setServerPatientForbidden(false);
     fetch(`${API_BASE}/v1/patients/${patientId}`, { headers: DEV_HEADERS })
-      .then(r => r.ok ? r.json() as Promise<ServerPatientDetailRecord> : Promise.reject(r.status))
+      .then(r => {
+        if (r.status === 403 || r.status === 404) {
+          setServerPatientForbidden(true);
+          throw new Error(`${r.status}`);
+        }
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json() as Promise<ServerPatientDetailRecord>;
+      })
       .then(data => setServerPatient(adaptForDetail(data)))
-      .catch(() => {
+      .catch((err) => {
         // Production mode: surface the failure explicitly — never fall back to mock data.
-        setServerPatientError(true);
+        // serverPatientForbidden is already set for 403/404; all other failures go here.
+        if (!(err instanceof Error && (err.message === '403' || err.message === '404'))) {
+          setServerPatientError(true);
+        }
       });
   }, [patientId]);
 
@@ -92,8 +123,12 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
 
 
   // ── Pin / Unpin ────────────────────────────────────────────────────────────
-  const { currentStaff } = useAuth();
+  const { currentStaff, productionSession } = useAuth();
   const staffId = currentStaff?.id ?? null;
+  // Void button is only shown when the current production session has the void permission.
+  // The API still rejects unauthorized void requests even if this gate is bypassed.
+  const canVoidNote = DATA_MODE === 'production'
+    && ((productionSession?.permissionCodes ?? []) as string[]).includes('clinical_note.void');
   const { pinPatient, unpinPatient, isPinned, refreshPinnedPatient } = useSidebarPrefs(staffId);
   const patientIsPinned = isPinned(patient.id);
   const [pinError, setPinError] = useState<string | null>(null);
@@ -110,6 +145,167 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient.id, staffId]);
+
+  // ── Clinical Notes — API helpers (Production mode — Phase 3) ─────────────
+  async function apiGetCsrfToken(): Promise<string> {
+    const res = await fetch(`${API_BASE}/v1/auth/csrf-token`);
+    const data = await res.json() as { csrfToken?: string };
+    return data.csrfToken ?? '';
+  }
+
+  async function refreshClinicalNotesList(): Promise<void> {
+    if (!patientId) return;
+    const res = await fetch(`${API_BASE}/v1/patients/${patientId}/clinical-notes`, { headers: DEV_HEADERS });
+    if (res.ok) setClinicalNotes(await res.json() as ApiClinicalNoteItem[]);
+  }
+
+  function resetComposeState() {
+    setIsComposingNote(false);
+    setNoteContent('');
+    setEditingNoteId(null);
+    setEditingNoteVersion(1);
+    setNoteIsDirty(false);
+    setNoteConflict(false);
+    setNoteApiError(null);
+  }
+
+  async function handleProductionSaveDraft() {
+    if (!patientId) return;
+    setNoteSaving(true);
+    setNoteApiError(null);
+    setNoteConflict(false);
+    try {
+      const csrf = await apiGetCsrfToken();
+      if (!editingNoteId) {
+        // Create draft for the first time.
+        const res = await fetch(`${API_BASE}/v1/patients/${patientId}/clinical-notes`, {
+          method:  'POST',
+          headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body:    JSON.stringify({ noteType: apiNoteType, content: noteContent || ' ' }),
+        });
+        if (!res.ok) throw new Error((await res.json() as { error?: string }).error ?? `${res.status}`);
+        const note = await res.json() as ApiClinicalNoteItem;
+        setEditingNoteId(note.id);
+        setEditingNoteVersion(note.version);
+      } else {
+        // Patch existing draft.
+        const res = await fetch(`${API_BASE}/v1/patients/${patientId}/clinical-notes/${editingNoteId}`, {
+          method:  'PATCH',
+          headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body:    JSON.stringify({ content: noteContent, expectedVersion: editingNoteVersion }),
+        });
+        if (res.status === 409) { setNoteConflict(true); return; }
+        if (!res.ok) throw new Error(`${res.status}`);
+        const note = await res.json() as ApiClinicalNoteItem;
+        setEditingNoteVersion(note.version);
+      }
+      setNoteIsDirty(false);
+      saveChartAction('Draft saved');
+      await refreshClinicalNotesList();
+    } catch (err) {
+      setNoteApiError(err instanceof Error ? err.message : 'Failed to save draft.');
+    } finally {
+      setNoteSaving(false);
+    }
+  }
+
+  async function handleProductionSignNote() {
+    if (!patientId) return;
+    setNoteSaving(true);
+    setNoteApiError(null);
+    setNoteConflict(false);
+    try {
+      const csrf = await apiGetCsrfToken();
+      let currentNoteId = editingNoteId;
+      let currentVersion = editingNoteVersion;
+
+      // If no draft exists yet, create it first.
+      if (!currentNoteId) {
+        const res = await fetch(`${API_BASE}/v1/patients/${patientId}/clinical-notes`, {
+          method:  'POST',
+          headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body:    JSON.stringify({ noteType: apiNoteType, content: noteContent || ' ' }),
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        const note = await res.json() as ApiClinicalNoteItem;
+        currentNoteId = note.id;
+        currentVersion = note.version;
+        setEditingNoteId(currentNoteId);
+        setEditingNoteVersion(currentVersion);
+      } else if (noteIsDirty) {
+        // Save latest content before signing.
+        const csrf2 = await apiGetCsrfToken();
+        const patchRes = await fetch(`${API_BASE}/v1/patients/${patientId}/clinical-notes/${currentNoteId}`, {
+          method:  'PATCH',
+          headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf2 },
+          body:    JSON.stringify({ content: noteContent, expectedVersion: currentVersion }),
+        });
+        if (patchRes.status === 409) { setNoteConflict(true); return; }
+        if (patchRes.ok) {
+          const patched = await patchRes.json() as ApiClinicalNoteItem;
+          currentVersion = patched.version;
+          setEditingNoteVersion(currentVersion);
+        }
+      }
+
+      // Sign the note.
+      const csrf3 = await apiGetCsrfToken();
+      const signRes = await fetch(`${API_BASE}/v1/patients/${patientId}/clinical-notes/${currentNoteId}/sign`, {
+        method:  'POST',
+        headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf3 },
+        body:    JSON.stringify({ expectedVersion: currentVersion }),
+      });
+      if (signRes.status === 409) { setNoteConflict(true); return; }
+      if (!signRes.ok) throw new Error(`Sign failed: ${signRes.status}`);
+
+      resetComposeState();
+      saveChartAction('Note signed and locked');
+      await refreshClinicalNotesList();
+    } catch (err) {
+      setNoteApiError(err instanceof Error ? err.message : 'Failed to sign note.');
+    } finally {
+      setNoteSaving(false);
+    }
+  }
+
+  // ── Supervisor void note (Phase 3 §5) ──────────────────────────────────
+  async function handleProductionVoidNote() {
+    if (!patientId || !voidModalNoteId || voidReason.trim().length < 5) return;
+    setVoidSubmitting(true);
+    setVoidError(null);
+    try {
+      const csrf = await apiGetCsrfToken();
+      const res = await fetch(
+        `${API_BASE}/v1/patients/${patientId}/clinical-notes/${voidModalNoteId}/void`,
+        {
+          method:  'POST',
+          headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body:    JSON.stringify({ voidReason: voidReason.trim(), expectedVersion: voidModalNoteVersion }),
+        }
+      );
+      if (res.status === 409) {
+        setVoidError('This note was modified by someone else. Reload the patient chart and try again.');
+        return;
+      }
+      if (res.status === 403 || res.status === 404) {
+        setVoidError('You do not have permission to void notes, or this note is no longer available.');
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? `Void request failed (${res.status})`);
+      }
+      setVoidModalNoteId(null);
+      setVoidReason('');
+      setVoidError(null);
+      saveChartAction('Note voided');
+      await refreshClinicalNotesList();
+    } catch (err) {
+      setVoidError(err instanceof Error ? err.message : 'An unexpected error occurred while voiding.');
+    } finally {
+      setVoidSubmitting(false);
+    }
+  }
 
   function handlePinToggle() {
     setPinError(null);
@@ -134,11 +330,47 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   }
 
   const [activeTab, setActiveTab] = useState('Overview');
+
+  // ── Clinical Notes — fetch when tab is active (Production mode — Phase 3) ──
+  useEffect(() => {
+    if (DATA_MODE !== 'production' || !patientId || activeTab !== 'Progress Notes') return;
+    let cancelled = false;
+    setClinicalNotesLoading(true);
+    setClinicalNotesError(null);
+    fetch(`${API_BASE}/v1/patients/${patientId}/clinical-notes`, { headers: DEV_HEADERS })
+      .then(r => r.ok ? r.json() as Promise<ApiClinicalNoteItem[]> : Promise.reject(r.status))
+      .then(data => { if (!cancelled) setClinicalNotes(data); })
+      .catch(() => { if (!cancelled) setClinicalNotesError('Unable to load clinical notes from server.'); })
+      .finally(() => { if (!cancelled) setClinicalNotesLoading(false); });
+    return () => { cancelled = true; };
+  }, [patientId, activeTab]);
+
   const [isComposingNote, setIsComposingNote] = useState(false);
   const [noteFormat, setNoteFormat] = useState('BIRP');
   const [noteContent, setNoteContent] = useState('');
   const [noteTypeFilter, setNoteTypeFilter] = useState<string>('All');
   const [noteIsDirty, setNoteIsDirty] = useState(false);
+
+  // ── Clinical Notes — Production API state (Phase 3) ───────────────────────
+  const [clinicalNotes, setClinicalNotes] = useState<ApiClinicalNoteItem[]>([]);
+  const [clinicalNotesLoading, setClinicalNotesLoading] = useState(false);
+  const [clinicalNotesError, setClinicalNotesError] = useState<string | null>(null);
+  // Currently editing draft: id + version for optimistic concurrency
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteVersion, setEditingNoteVersion] = useState<number>(1);
+  // Status of the API operation
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteApiError, setNoteApiError] = useState<string | null>(null);
+  const [noteConflict, setNoteConflict] = useState(false);
+  // Note type selector for the compose panel (production mode)
+  const [apiNoteType, setApiNoteType] = useState<'progress_note' | 'nursing_note'>('progress_note');
+
+  // ── Supervisor void modal state (Phase 3 §5) ─────────────────────────────
+  const [voidModalNoteId, setVoidModalNoteId] = useState<string | null>(null);
+  const [voidModalNoteVersion, setVoidModalNoteVersion] = useState<number>(1);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidSubmitting, setVoidSubmitting] = useState(false);
+  const [voidError, setVoidError] = useState<string | null>(null);
 
   // ── Flags — local state so edits survive tab-switches within a chart session
   const [localFlags, setLocalFlags] = useState<Flag[]>(patient.flags);
@@ -177,6 +409,32 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   // Must come AFTER all hooks (Rules of Hooks: no conditional hook calls).
   // Prevents the full chart from rendering with stub/mock data in production.
   if (DATA_MODE === 'production' && !serverPatient) {
+    // 403/404 — access denied (cross-facility or insufficient permission)
+    if (serverPatientForbidden) {
+      return (
+        <div
+          className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6"
+          data-testid="access-denied"
+        >
+          <div className="w-20 h-20 rounded-full bg-navy/10 flex items-center justify-center mx-auto">
+            <svg className="w-10 h-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V7a4.5 4.5 0 10-9 0v3.5M5 10.5h14a1 1 0 011 1V20a1 1 0 01-1 1H5a1 1 0 01-1-1v-8.5a1 1 0 011-1z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-navy">Access Restricted</h2>
+          <p className="text-sm text-slate max-w-sm">
+            You do not have permission to access this patient record.
+            Contact your system administrator if you believe this is an error.
+          </p>
+          <button
+            onClick={() => navigate('PatientList')}
+            className="flex items-center gap-2 text-sm font-semibold text-sunrise-blue hover:underline"
+          >
+            ← Back to patient list
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
         {serverPatientError ? (
@@ -402,6 +660,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
         {tabs.map(tab => (
           <button
             key={tab.id}
+            data-testid={`tab-${tab.id.replace(/\s+/g, '-').toLowerCase()}`}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 py-3 px-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
               activeTab === tab.id
@@ -548,39 +807,68 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
         {/* ── PROGRESS NOTES ── */}
         {activeTab === 'Progress Notes' && (
           <div className="flex h-full gap-6">
+            {/* ── List panel ─────────────────────────────────────────────────── */}
             <div className={`flex-col h-full ${isComposingNote ? 'w-1/3' : 'w-full'}`}>
               {/* Title row + New Note button */}
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-bold text-navy">
                   Progress Notes
-                  {noteTypeFilter !== 'All' && (
+                  {DATA_MODE === 'production' && clinicalNotes.length > 0 && noteTypeFilter !== 'All' && (
+                    <span className="ml-2 text-sm font-normal text-slate-400">
+                      ({clinicalNotes.filter(n => n.noteType === noteTypeFilter).length} of {clinicalNotes.length})
+                    </span>
+                  )}
+                  {DATA_MODE !== 'production' && noteTypeFilter !== 'All' && (
                     <span className="ml-2 text-sm font-normal text-slate-400">
                       ({patient.notes.filter(n => n.type === noteTypeFilter).length} of {patient.notes.length})
                     </span>
                   )}
                 </h2>
                 {!isComposingNote && (
-                  <LockedButton locked={readOnly} onClick={() => { setIsComposingNote(true); setNoteIsDirty(false); }} className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors">
+                  <LockedButton
+                    locked={readOnly}
+                    data-testid="new-note-btn"
+                    onClick={() => { setIsComposingNote(true); setNoteIsDirty(false); setEditingNoteId(null); setNoteContent(''); setNoteApiError(null); setNoteConflict(false); }}
+                    className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors"
+                  >
                     + New Note
                   </LockedButton>
                 )}
               </div>
 
-              {/* Filter pills */}
-              {!isComposingNote && (() => {
+              {/* Production: loading / error banners */}
+              {DATA_MODE === 'production' && clinicalNotesLoading && (
+                <div className="text-center p-8 text-slate text-sm animate-pulse">Loading notes…</div>
+              )}
+              {DATA_MODE === 'production' && clinicalNotesError && (
+                <div className="text-center p-8 text-rose-600 text-sm border border-dashed border-rose-200 rounded-lg bg-rose-50">
+                  {clinicalNotesError}
+                </div>
+              )}
+
+              {/* Filter pills — production mode */}
+              {!isComposingNote && DATA_MODE === 'production' && !clinicalNotesLoading && !clinicalNotesError && (() => {
+                const types = Array.from(new Set(clinicalNotes.map(n => n.noteType)));
+                return types.length > 1 ? (
+                  <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+                    {(['All', ...types] as string[]).map(t => (
+                      <button key={t} onClick={() => setNoteTypeFilter(t)}
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${noteTypeFilter === t ? 'bg-navy text-white border-navy' : 'bg-white text-slate border-slate-200 hover:border-navy/40 hover:text-navy'}`}>
+                        {t === 'progress_note' ? 'Progress' : t === 'nursing_note' ? 'Nursing' : t}
+                      </button>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Filter pills — demo mode */}
+              {!isComposingNote && DATA_MODE !== 'production' && (() => {
                 const types = Array.from(new Set(patient.notes.map(n => n.type)));
                 return types.length > 1 ? (
                   <div className="flex items-center gap-1.5 mb-3 flex-wrap">
                     {(['All', ...types] as string[]).map(t => (
-                      <button
-                        key={t}
-                        onClick={() => setNoteTypeFilter(t)}
-                        className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${
-                          noteTypeFilter === t
-                            ? 'bg-navy text-white border-navy'
-                            : 'bg-white text-slate border-slate-200 hover:border-navy/40 hover:text-navy'
-                        }`}
-                      >
+                      <button key={t} onClick={() => setNoteTypeFilter(t)}
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${noteTypeFilter === t ? 'bg-navy text-white border-navy' : 'bg-white text-slate border-slate-200 hover:border-navy/40 hover:text-navy'}`}>
                         {t}
                       </button>
                     ))}
@@ -588,117 +876,323 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                 ) : null;
               })()}
 
-              <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                {patient.notes.filter(n => noteTypeFilter === 'All' || n.type === noteTypeFilter).map(note => (
-                  <div key={note.id} className="border border-border rounded-lg p-4 hover:border-sunrise-blue transition-colors cursor-pointer group">
-                    <div className="flex justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-navy group-hover:text-sunrise-blue transition-colors">{note.type} Note</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${note.status === 'Signed' ? 'bg-success/20 text-success' : note.status === 'Draft' ? 'bg-slate-100 text-slate' : 'bg-sunrise-amber/20 text-sunrise-amber'}`}>{note.status}</span>
-                      </div>
-                      <span className="text-xs font-medium text-slate">{note.date}</span>
+              {/* Void confirmation modal — production mode only (Phase 3 §5) */}
+              {DATA_MODE === 'production' && voidModalNoteId && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+                  onClick={() => { if (!voidSubmitting) { setVoidModalNoteId(null); setVoidReason(''); setVoidError(null); } }}
+                >
+                  <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+                    <h3 className="font-bold text-navy text-lg mb-1">Void Note</h3>
+                    <p className="text-sm text-slate mb-4">
+                      This action is irreversible. The note will be marked voided and its original content
+                      preserved for the audit record. A void reason is required.
+                    </p>
+                    {voidError && (
+                      <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded text-sm text-rose-600">{voidError}</div>
+                    )}
+                    <label className="block text-xs font-bold text-slate mb-1 uppercase tracking-wider">
+                      Void Reason <span className="text-rose-500">*</span>
+                    </label>
+                    <textarea
+                      data-testid="void-reason-input"
+                      className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px] mb-4"
+                      placeholder="Enter a clinical reason for voiding this note (min. 5 characters)…"
+                      value={voidReason}
+                      onChange={e => setVoidReason(e.target.value)}
+                      disabled={voidSubmitting}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => { setVoidModalNoteId(null); setVoidReason(''); setVoidError(null); }}
+                        className="px-4 py-2 border border-border text-slate rounded text-sm font-medium hover:bg-slate-50"
+                        disabled={voidSubmitting}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        data-testid="confirm-void-btn"
+                        onClick={handleProductionVoidNote}
+                        disabled={voidReason.trim().length < 5 || voidSubmitting}
+                        className={`px-4 py-2 rounded text-sm font-medium text-white transition-colors ${
+                          voidReason.trim().length >= 5 && !voidSubmitting
+                            ? 'bg-rose-600 hover:bg-rose-700'
+                            : 'bg-slate-300 cursor-not-allowed'
+                        }`}
+                      >
+                        {voidSubmitting ? 'Voiding…' : 'Confirm Void'}
+                      </button>
                     </div>
-                    <div className="text-xs text-slate-light mb-3">Format: {note.format} • Author: {note.author}</div>
-                    <p className="text-sm text-navy line-clamp-3">{note.content}</p>
                   </div>
-                ))}
-                {patient.notes.filter(n => noteTypeFilter === 'All' || n.type === noteTypeFilter).length === 0 && (
-                  <div className="text-center p-12 border border-dashed border-border rounded-lg bg-bg text-slate">
-                    {noteTypeFilter === 'All' ? 'No notes yet. Click "+ New Note" to begin.' : `No "${noteTypeFilter}" notes for this patient.`}
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* Note list — production mode */}
+              {DATA_MODE === 'production' && !clinicalNotesLoading && !clinicalNotesError && (
+                <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                  {clinicalNotes
+                    .filter(n => noteTypeFilter === 'All' || n.noteType === noteTypeFilter)
+                    .map(note => (
+                      <div
+                        key={note.id}
+                        data-testid={`note-card-${note.id}`}
+                        data-status={note.status}
+                        className={`border border-border rounded-lg p-4 transition-colors group ${note.status === 'draft' ? 'hover:border-sunrise-blue cursor-pointer' : ''}`}
+                        onClick={() => {
+                          if (note.status === 'draft') {
+                            setEditingNoteId(note.id);
+                            setEditingNoteVersion(note.version);
+                            setNoteContent(note.content ?? '');
+                            setApiNoteType(note.noteType as 'progress_note' | 'nursing_note');
+                            setNoteIsDirty(false);
+                            setNoteApiError(null);
+                            setNoteConflict(false);
+                            setIsComposingNote(true);
+                          }
+                        }}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`font-bold text-navy ${note.status === 'draft' ? 'group-hover:text-sunrise-blue transition-colors' : ''}`}>
+                              {note.noteType === 'progress_note' ? 'Progress' : 'Nursing'} Note
+                            </span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                              note.status === 'signed'  ? 'bg-success/20 text-success' :
+                              note.status === 'voided'  ? 'bg-slate-200 text-slate line-through' :
+                                                          'bg-slate-100 text-slate'
+                            }`}>
+                              {note.status.charAt(0).toUpperCase() + note.status.slice(1)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            <span className="text-xs font-medium text-slate">{new Date(note.createdAt).toLocaleDateString()}</span>
+                            {note.status === 'signed' && canVoidNote && (
+                              <button
+                                data-testid={`void-note-btn-${note.id}`}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setVoidModalNoteId(note.id);
+                                  setVoidModalNoteVersion(note.version);
+                                  setVoidReason('');
+                                  setVoidError(null);
+                                }}
+                                className="text-[10px] px-2 py-0.5 rounded border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors font-medium"
+                                title="Void this note (requires supervisory permission)"
+                              >
+                                Void
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {note.content && <p className="text-sm text-navy line-clamp-3">{note.content}</p>}
+                        {note.status === 'draft'  && <p className="text-[10px] text-slate mt-1">Click to edit</p>}
+                        {note.status === 'signed' && note.signedAt && (
+                          <p className="text-[10px] text-success mt-1">
+                            Signed {new Date(note.signedAt).toLocaleString()}
+                          </p>
+                        )}
+                        {note.status === 'voided' && (
+                          <p className="text-[10px] text-slate mt-1">
+                            Voided {note.voidedAt ? new Date(note.voidedAt).toLocaleString() : '—'}
+                            {note.voidReason ? ` — Reason: ${note.voidReason}` : ''}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  {clinicalNotes.filter(n => noteTypeFilter === 'All' || n.noteType === noteTypeFilter).length === 0 && (
+                    <div className="text-center p-12 border border-dashed border-border rounded-lg bg-bg text-slate">
+                      {noteTypeFilter === 'All' ? 'No notes yet. Click "+ New Note" to begin.' : 'No notes of this type for this patient.'}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Note list — demo mode */}
+              {DATA_MODE !== 'production' && (
+                <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                  {patient.notes.filter(n => noteTypeFilter === 'All' || n.type === noteTypeFilter).map(note => (
+                    <div key={note.id} className="border border-border rounded-lg p-4 hover:border-sunrise-blue transition-colors cursor-pointer group">
+                      <div className="flex justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-navy group-hover:text-sunrise-blue transition-colors">{note.type} Note</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${note.status === 'Signed' ? 'bg-success/20 text-success' : note.status === 'Draft' ? 'bg-slate-100 text-slate' : 'bg-sunrise-amber/20 text-sunrise-amber'}`}>{note.status}</span>
+                        </div>
+                        <span className="text-xs font-medium text-slate">{note.date}</span>
+                      </div>
+                      <div className="text-xs text-slate-light mb-3">Format: {note.format} • Author: {note.author}</div>
+                      <p className="text-sm text-navy line-clamp-3">{note.content}</p>
+                    </div>
+                  ))}
+                  {patient.notes.filter(n => noteTypeFilter === 'All' || n.type === noteTypeFilter).length === 0 && (
+                    <div className="text-center p-12 border border-dashed border-border rounded-lg bg-bg text-slate">
+                      {noteTypeFilter === 'All' ? 'No notes yet. Click "+ New Note" to begin.' : `No "${noteTypeFilter}" notes for this patient.`}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
+            {/* ── Compose / edit panel ────────────────────────────────────────── */}
             {isComposingNote && (
               <div className="w-2/3 border border-border rounded-lg flex flex-col overflow-hidden shadow-sm">
                 <div className="bg-bg p-4 border-b border-border flex justify-between items-center">
-                  <h3 className="font-bold text-navy">Compose Note</h3>
+                  <h3 className="font-bold text-navy">
+                    {DATA_MODE === 'production' ? (editingNoteId ? 'Edit Draft' : 'New Note') : 'Compose Note'}
+                  </h3>
                   <div className="flex gap-2">
-                    <select value={noteFormat} onChange={e => setNoteFormat(e.target.value)} className="border border-border rounded px-2 py-1 text-sm text-slate focus:outline-none">
-                      <option value="BIRP">BIRP Format</option>
-                      <option value="DAP">DAP Format</option>
-                      <option value="Free Text">Free Text</option>
-                    </select>
-                    <button onClick={() => setIsComposingNote(false)} className="text-slate hover:text-navy px-2 py-1">Cancel</button>
+                    {DATA_MODE === 'production' ? (
+                      <select
+                        value={apiNoteType}
+                        onChange={e => setApiNoteType(e.target.value as 'progress_note' | 'nursing_note')}
+                        className="border border-border rounded px-2 py-1 text-sm text-slate focus:outline-none"
+                        disabled={!!editingNoteId}
+                      >
+                        <option value="progress_note">Progress Note</option>
+                        <option value="nursing_note">Nursing Note</option>
+                      </select>
+                    ) : (
+                      <select value={noteFormat} onChange={e => setNoteFormat(e.target.value)} className="border border-border rounded px-2 py-1 text-sm text-slate focus:outline-none">
+                        <option value="BIRP">BIRP Format</option>
+                        <option value="DAP">DAP Format</option>
+                        <option value="Free Text">Free Text</option>
+                      </select>
+                    )}
+                    <button onClick={() => resetComposeState()} className="text-slate hover:text-navy px-2 py-1">Cancel</button>
                   </div>
                 </div>
+
                 <div className="flex-1 flex overflow-hidden">
-                  <div className="flex-1 p-4 overflow-y-auto space-y-4" onInput={() => setNoteIsDirty(true)}>
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="flex-1 p-4 overflow-y-auto space-y-4">
+                    {DATA_MODE === 'production' ? (
+                      /* ── Production compose / edit ── */
                       <div>
-                        <label className="block text-xs font-bold text-slate mb-1">Note Type</label>
-                        <select className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue">
-                          <option>Individual Therapy</option>
-                          <option>Group Therapy</option>
-                          <option>Case Management</option>
-                          <option>Medical/Psychiatric</option>
-                        </select>
+                        {noteConflict && (
+                          <div className="mb-3 p-3 bg-sunrise-amber/10 border border-sunrise-amber rounded text-sm text-sunrise-amber">
+                            This note was modified elsewhere. Reload the patient chart to get the latest version before editing.
+                          </div>
+                        )}
+                        {noteApiError && !noteConflict && (
+                          <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded text-sm text-rose-600">
+                            {noteApiError}
+                          </div>
+                        )}
+                        <label className="block text-xs font-bold text-slate mb-1 uppercase">Note Content</label>
+                        <textarea
+                          data-testid="note-content"
+                          className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[300px]"
+                          placeholder="Enter clinical note content…"
+                          value={noteContent}
+                          onChange={e => { setNoteContent(e.target.value); setNoteIsDirty(true); }}
+                          disabled={noteSaving || noteConflict}
+                        />
                       </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate mb-1">Date/Time</label>
-                        <input type="datetime-local" className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue" defaultValue={new Date().toISOString().slice(0, 16)} />
-                      </div>
+                    ) : (
+                      /* ── Demo compose ── */
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-slate mb-1">Note Type</label>
+                            <select className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue">
+                              <option>Individual Therapy</option>
+                              <option>Group Therapy</option>
+                              <option>Case Management</option>
+                              <option>Medical/Psychiatric</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate mb-1">Date/Time</label>
+                            <input type="datetime-local" className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue" defaultValue={new Date().toISOString().slice(0, 16)} />
+                          </div>
+                        </div>
+                        {noteFormat === 'BIRP' && (
+                          <>
+                            {['Behavior', 'Intervention', 'Response', 'Plan'].map((section, si) => (
+                              <div key={section}>
+                                <label className="block text-xs font-bold text-navy mb-1 uppercase">{section}</label>
+                                <textarea
+                                  className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px]"
+                                  placeholder={si === 0 ? 'Objective description of client presentation...' : si === 1 ? "Counselor's methods and actions..." : si === 2 ? "Client's reaction to intervention..." : 'Next steps, assignments, future appointments...'}
+                                  value={si === 0 ? noteContent : undefined}
+                                  onChange={si === 0 ? e => setNoteContent(e.target.value) : undefined}
+                                />
+                              </div>
+                            ))}
+                          </>
+                        )}
+                        {noteFormat === 'DAP' && (
+                          <>
+                            {['Data', 'Assessment', 'Plan'].map(section => (
+                              <div key={section}>
+                                <label className="block text-xs font-bold text-navy mb-1 uppercase">{section}</label>
+                                <textarea className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px]" placeholder={`${section} section...`} />
+                              </div>
+                            ))}
+                          </>
+                        )}
+                        {noteFormat === 'Free Text' && (
+                          <div>
+                            <label className="block text-xs font-bold text-navy mb-1 uppercase">Note</label>
+                            <textarea className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[240px]" placeholder="Free-text note..." />
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {DATA_MODE !== 'production' && (
+                    <div className="w-64 border-l border-border bg-bg p-4 flex flex-col">
+                      <CustomButtons onInsert={handleQuickInsert} />
                     </div>
-                    {noteFormat === 'BIRP' && (
-                      <>
-                        {['Behavior', 'Intervention', 'Response', 'Plan'].map((section, si) => (
-                          <div key={section}>
-                            <label className="block text-xs font-bold text-navy mb-1 uppercase">{section}</label>
-                            <textarea
-                              className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px]"
-                              placeholder={si === 0 ? 'Objective description of client presentation...' : si === 1 ? "Counselor's methods and actions..." : si === 2 ? "Client's reaction to intervention..." : 'Next steps, assignments, future appointments...'}
-                              value={si === 0 ? noteContent : undefined}
-                              onChange={si === 0 ? e => setNoteContent(e.target.value) : undefined}
-                            />
-                          </div>
-                        ))}
-                      </>
-                    )}
-                    {noteFormat === 'DAP' && (
-                      <>
-                        {['Data', 'Assessment', 'Plan'].map(section => (
-                          <div key={section}>
-                            <label className="block text-xs font-bold text-navy mb-1 uppercase">{section}</label>
-                            <textarea className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[80px]" placeholder={`${section} section...`} />
-                          </div>
-                        ))}
-                      </>
-                    )}
-                    {noteFormat === 'Free Text' && (
-                      <div>
-                        <label className="block text-xs font-bold text-navy mb-1 uppercase">Note</label>
-                        <textarea className="w-full border border-border rounded p-2 text-sm focus:outline-none focus:border-sunrise-blue min-h-[240px]" placeholder="Free-text note..." />
-                      </div>
-                    )}
-                  </div>
-                  <div className="w-64 border-l border-border bg-bg p-4 flex flex-col">
-                    <CustomButtons onInsert={handleQuickInsert} />
-                  </div>
+                  )}
                 </div>
+
                 <div className="bg-bg border-t border-border p-4 flex justify-between items-center">
-                  <div className="text-xs text-slate">Auto-saved at {new Date().toLocaleTimeString()}</div>
+                  {DATA_MODE === 'production' ? (
+                    <div className="text-xs text-slate">{noteSaving ? 'Saving…' : 'Use "Save Draft" to keep your work, or "Sign & Lock" to finalise.'}</div>
+                  ) : (
+                    <div className="text-xs text-slate">Auto-saved at {new Date().toLocaleTimeString()}</div>
+                  )}
                   <div className="flex gap-2">
-                    <LockedButton
-                      locked={!!readOnly}
-                      onClick={() => noteIsDirty && saveChartAction('Draft saved')}
-                      className={`px-4 py-2 border rounded text-sm font-medium transition-colors ${noteIsDirty ? 'border-border text-slate hover:bg-slate-50' : 'border-border text-slate opacity-40 cursor-not-allowed pointer-events-none'}`}
-                      title={noteIsDirty ? undefined : 'Write a note before saving'}
-                    >Save Draft</LockedButton>
-                    <LockedButton
-                      locked={!!readOnly}
-                      onClick={() => noteIsDirty && saveChartAction('Note sent for co-sign')}
-                      className={`px-4 py-2 border rounded text-sm font-medium transition-colors ${noteIsDirty ? 'border-sunrise-orange text-sunrise-orange bg-sunrise-orange/10 hover:bg-sunrise-orange/20' : 'border-border text-slate opacity-40 cursor-not-allowed pointer-events-none'}`}
-                      title={noteIsDirty ? undefined : 'Write a note before sending for co-sign'}
-                    >Send for Co-sign</LockedButton>
-                    <LockedButton
-                      locked={readOnly}
-                      onClick={() => noteIsDirty && saveChartAction('Note signed and locked')}
-                      className={`px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium transition-colors ${noteIsDirty ? 'hover:bg-sunrise-blue-light' : 'opacity-40 cursor-not-allowed pointer-events-none'}`}
-                      title={noteIsDirty ? undefined : 'Add note content before signing'}
-                    >
-                      Sign & Lock
-                    </LockedButton>
+                    {DATA_MODE === 'production' ? (
+                      <>
+                        <LockedButton
+                          locked={!!readOnly || noteSaving || !noteIsDirty || noteConflict}
+                          data-testid="save-draft-btn"
+                          onClick={handleProductionSaveDraft}
+                          className={`px-4 py-2 border rounded text-sm font-medium transition-colors ${noteIsDirty && !noteSaving && !noteConflict ? 'border-border text-slate hover:bg-slate-50' : 'border-border text-slate opacity-40 cursor-not-allowed pointer-events-none'}`}
+                        >
+                          {noteSaving ? 'Saving…' : 'Save Draft'}
+                        </LockedButton>
+                        <LockedButton
+                          locked={readOnly || noteSaving || !noteIsDirty || noteConflict}
+                          data-testid="sign-lock-btn"
+                          onClick={handleProductionSignNote}
+                          className={`px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium transition-colors ${noteIsDirty && !noteSaving && !noteConflict ? 'hover:bg-sunrise-blue-light' : 'opacity-40 cursor-not-allowed pointer-events-none'}`}
+                        >
+                          {noteSaving ? 'Saving…' : 'Sign & Lock'}
+                        </LockedButton>
+                      </>
+                    ) : (
+                      <>
+                        <LockedButton
+                          locked={!!readOnly}
+                          onClick={() => noteIsDirty && saveChartAction('Draft saved')}
+                          className={`px-4 py-2 border rounded text-sm font-medium transition-colors ${noteIsDirty ? 'border-border text-slate hover:bg-slate-50' : 'border-border text-slate opacity-40 cursor-not-allowed pointer-events-none'}`}
+                          title={noteIsDirty ? undefined : 'Write a note before saving'}
+                        >Save Draft</LockedButton>
+                        <LockedButton
+                          locked={!!readOnly}
+                          onClick={() => noteIsDirty && saveChartAction('Note sent for co-sign')}
+                          className={`px-4 py-2 border rounded text-sm font-medium transition-colors ${noteIsDirty ? 'border-sunrise-orange text-sunrise-orange bg-sunrise-orange/10 hover:bg-sunrise-orange/20' : 'border-border text-slate opacity-40 cursor-not-allowed pointer-events-none'}`}
+                          title={noteIsDirty ? undefined : 'Write a note before sending for co-sign'}
+                        >Send for Co-sign</LockedButton>
+                        <LockedButton
+                          locked={readOnly}
+                          onClick={() => noteIsDirty && saveChartAction('Note signed and locked')}
+                          className={`px-4 py-2 bg-sunrise-blue text-white rounded text-sm font-medium transition-colors ${noteIsDirty ? 'hover:bg-sunrise-blue-light' : 'opacity-40 cursor-not-allowed pointer-events-none'}`}
+                          title={noteIsDirty ? undefined : 'Add note content before signing'}
+                        >Sign & Lock</LockedButton>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

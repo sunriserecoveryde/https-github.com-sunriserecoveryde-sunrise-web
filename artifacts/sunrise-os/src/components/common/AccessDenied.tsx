@@ -2,7 +2,10 @@ import React from 'react';
 import { Lock, ChevronRight } from 'lucide-react';
 import { useRole } from '../../context/RoleContext';
 import { ROLES, ROLE_CATEGORIES, RoleCategory } from '../../data/mockRoles';
+import { DATA_MODE } from '../../lib/dataMode';
 import type { Screen } from '../../App';
+
+const IS_PRODUCTION = DATA_MODE === 'production';
 
 interface Props {
   screen: Screen;
@@ -51,7 +54,7 @@ export function AccessDenied({ screen, onSwitchRole }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6" data-testid="access-denied">
       <div className="max-w-lg w-full text-center space-y-6">
         {/* Lock icon */}
         <div className="w-20 h-20 rounded-full bg-navy/10 flex items-center justify-center mx-auto">
@@ -91,16 +94,22 @@ export function AccessDenied({ screen, onSwitchRole }: Props) {
           </div>
         )}
 
-        {/* Switch role CTA */}
-        {onSwitchRole && (
+        {/* Switch role CTA — demo mode only */}
+        {!IS_PRODUCTION && onSwitchRole && (
           <button onClick={onSwitchRole} className="btn-primary text-sm px-6 py-2.5 flex items-center gap-2 mx-auto">
             Switch Role <ChevronRight className="w-4 h-4" />
           </button>
         )}
-        <p className="text-xs text-slate">
-          In a live system, access is enforced by server-side authentication.
-          This demo uses role switching to illustrate permission boundaries.
-        </p>
+        {/* Production: plain authorization message — no demo references */}
+        {IS_PRODUCTION ? (
+          <p className="text-xs text-slate">
+            You do not have permission to access this content. Contact your system administrator if you believe this is an error.
+          </p>
+        ) : (
+          <p className="text-xs text-slate">
+            In a live system, access is enforced by server-side authentication.
+          </p>
+        )}
       </div>
     </div>
   );

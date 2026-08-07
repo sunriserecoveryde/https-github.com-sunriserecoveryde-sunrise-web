@@ -1,0 +1,823 @@
+# Sunrise OS — Approve Next Implementation Phase
+
+Proceed with the following product decision:
+
+## Roadmap decision
+
+The next implementation phase will be:
+
+**Clinical Documentation Foundation**
+
+This work should be labeled in engineering as:
+
+**Implementation Phase 3 — Clinical Documentation Foundation**
+
+In roadmap documentation, clarify that this implementation completes part of the product audit’s earlier:
+
+**Clinical Workflow Completion**
+
+It intentionally occurs before the product audit’s integrations phase.
+
+Do not begin:
+
+* Eligibility integrations
+* Clearinghouse integrations
+* Electronic prescribing
+* FHIR integrations
+* Claims
+* Medication administration
+* Treatment plans
+* Group notes
+* ASAM assessments
+* Discharge summaries
+* AI-generated clinical content
+
+The product audit roadmap is not being discarded. It is being sequenced so foundational clinical workflows exist before external integrations are added.
+
+---
+
+# Part 1 — Finalize Migration Reconciliation
+
+## 1. Verify the reconciliation branch
+
+Review:
+
+`maintenance/post-phase-2-migration-reconciliation`
+
+Expected commit:
+
+`a120bb68`
+
+Confirm that it contains only:
+
+* Migration-history reconciliation documentation
+* The guarded reconciliation script
+* Migration verification evidence
+* Necessary metadata corrections
+
+Confirm that it contains no new clinical feature implementation.
+
+Run from that branch:
+
+* Clean migrations from an empty database
+* Migration reapplication
+* Full test suite
+* TypeScript
+* API production build
+* Sunrise OS production build
+
+Required result:
+
+* Zero failed tests
+* Zero skipped required tests
+* No pending migrations
+* Six correct Drizzle migration records
+* Reconciliation script idempotent
+* Working tree clean
+
+---
+
+## 2. Merge the reconciliation branch
+
+After verification, merge:
+
+`maintenance/post-phase-2-migration-reconciliation`
+
+into:
+
+`main`
+
+Do not squash away migration-reconciliation history unless required by repository policy.
+
+After merging, run:
+
+```bash
+git checkout main
+git pull --ff-only
+git status --short
+git rev-parse HEAD
+git log --oneline --decorate -20
+```
+
+Then rerun:
+
+* Drizzle migration command
+* Full test suite
+* TypeScript
+* Production builds
+
+The final result must confirm:
+
+```text
+POST-PHASE-2 MIGRATION RECONCILIATION VERIFIED
+```
+
+Stop if this verification fails.
+
+---
+
+# Part 2 — Add the Approved Planning Documents
+
+## 3. Review the planning branch
+
+Review:
+
+`planning/phase-3-scope`
+
+Expected commit:
+
+`def6c811`
+
+Confirm it contains planning documents only:
+
+* `docs/readiness/phase-3-current-state-inventory.md`
+* `docs/readiness/phase-3-proposed-scope.md`
+* `artifacts/sunrise-os/readiness/phase-3/phase-3-implementation-prompt.md`
+* `artifacts/sunrise-os/readiness/phase-3/phase-3-decision-summary.md`
+
+It must contain no migrations, API implementation, database tables, or frontend feature code.
+
+---
+
+## 4. Update roadmap terminology
+
+Before merging the planning documents, update them to distinguish:
+
+### Engineering sequence
+
+`Implementation Phase 3 — Clinical Documentation Foundation`
+
+### Product-audit sequence
+
+`Clinical Workflow Completion`
+
+Document that the engineering phase is intentionally completing foundational clinical workflows before beginning the product audit’s integrations phase.
+
+Do not rename integrations as completed or in progress.
+
+---
+
+## 5. Apply these product decisions
+
+Use the following approved defaults for the Clinical Documentation Foundation scope.
+
+### Decision 1 — Note types
+
+The initial allowlist is limited to:
+
+* `progress_note`
+* `nursing_note`
+
+Do not couple note types directly to billing codes.
+
+No billing claim or service-code generation is included.
+
+Design the allowlist so future note types can be added through reviewed code and migrations.
+
+---
+
+### Decision 2 — Draft ownership
+
+A draft note may be edited only by its original author.
+
+Supervisors and administrators may view drafts when their scoped permissions authorize access, but they may not silently edit another author’s draft.
+
+No draft reassignment is included.
+
+---
+
+### Decision 3 — Signing
+
+Signing requires:
+
+* A currently authenticated session
+* Valid CSRF protection
+* Permission to sign the note
+* Continued authorization for the organization, facility, patient, and episode
+* Confirmation that the user is the note author
+* Current note version matching the submitted version
+
+Do not add MFA in this phase.
+
+Do not claim that signing without MFA satisfies every regulatory or organizational signature policy.
+
+Record:
+
+* Signer identity
+* Signature timestamp
+* Final version
+* Organization
+* Facility
+* Patient
+* Episode where applicable
+
+---
+
+### Decision 4 — Signed-note immutability
+
+A signed note is immutable.
+
+After signature:
+
+* Text cannot be edited
+* Author cannot change
+* Patient cannot change
+* Episode cannot change
+* Facility cannot change
+* Note type cannot change
+* Signed timestamp cannot change
+
+Do not implement amendments, late entries, addenda, corrections, or co-signatures in this phase.
+
+---
+
+### Decision 5 — Void behavior
+
+A signed note may be voided only by a separately authorized supervisor or administrator.
+
+Voiding requires:
+
+* `clinical_note.void`
+* Scoped patient access
+* A required reason
+* Audit event
+* Voiding user
+* Void timestamp
+
+Voiding must not delete or overwrite the original note.
+
+The original content must remain available to appropriately authorized audit and supervisory users.
+
+The original author may not void their own signed note unless they independently possess the approved supervisory permission.
+
+---
+
+### Decision 6 — Storage and encryption posture
+
+Clinical-note content may use the existing PostgreSQL storage architecture for this implementation phase.
+
+Do not claim field-level encryption exists when it does not.
+
+Document clearly:
+
+* Clinical-note content contains sensitive health information
+* Database access must be restricted
+* Transport encryption is required
+* Backups must be protected
+* Production key-management and field-level encryption remain a separate security decision
+* The implementation is not, by itself, a declaration of HIPAA or regulatory compliance
+
+Do not put real patient information in:
+
+* Tests
+* Seeds
+* Screenshots
+* Logs
+* Review archives
+
+---
+
+# Part 3 — Finalize the Approved Scope
+
+## 6. Approved in-scope workflow
+
+Implement one coherent workflow:
+
+1. Authorized staff opens an authorized patient.
+2. Staff opens the Progress Notes area.
+3. Staff creates a draft note.
+4. Server validates organization, facility, patient, episode, assignment, and permission scope.
+5. Staff saves the draft.
+6. Staff views the draft in a note timeline.
+7. Original author edits the draft.
+8. Optimistic concurrency prevents silent overwrites.
+9. Original author signs the note.
+10. Signed note becomes immutable.
+11. Authorized staff can view the signed note.
+12. Authorized supervisor may void the signed note with a reason.
+13. Every sensitive action is audited.
+
+---
+
+## 7. Approved database scope
+
+Add one primary table:
+
+`sos_clinical_notes`
+
+At minimum include:
+
+* `id`
+* `organization_id`
+* `facility_id`
+* `patient_id`
+* `episode_id`, nullable only when explicitly permitted
+* `author_user_id`
+* `note_type`
+* `status`
+* `content`
+* `version`
+* `created_at`
+* `updated_at`
+* `signed_at`
+* `signed_by_user_id`
+* `voided_at`
+* `voided_by_user_id`
+* `void_reason`
+
+Use explicit status values such as:
+
+* `draft`
+* `signed`
+* `voided`
+
+Required database protections:
+
+* Organization consistency
+* Facility consistency
+* Patient consistency
+* Episode consistency
+* Valid note-type check
+* Valid status check
+* Version greater than zero
+* Signed fields required when status is signed
+* Void fields required when status is voided
+* Signed content protected from mutation
+* Appropriate foreign keys
+* Appropriate indexes
+* No hard delete through normal application credentials
+
+Use database-level protection for signed-note immutability where practical.
+
+Do not rely only on frontend controls.
+
+---
+
+## 8. Approved permissions
+
+Create narrowly scoped permissions:
+
+* `clinical_note.create`
+* `clinical_note.view`
+* `clinical_note.edit_own_draft`
+* `clinical_note.sign_own`
+* `clinical_note.void`
+* `clinical_note.audit_view`
+
+Do not authorize note operations from a generic patient-chart permission alone.
+
+Every operation must also require valid patient access through the scoped-grant model.
+
+---
+
+## 9. Approved API scope
+
+Implement only the reviewed equivalents of:
+
+```text
+POST   /api/v1/patients/:patientId/clinical-notes
+GET    /api/v1/patients/:patientId/clinical-notes
+GET    /api/v1/patients/:patientId/clinical-notes/:noteId
+PATCH  /api/v1/patients/:patientId/clinical-notes/:noteId
+POST   /api/v1/patients/:patientId/clinical-notes/:noteId/sign
+POST   /api/v1/patients/:patientId/clinical-notes/:noteId/void
+```
+
+Every route must enforce:
+
+* Authenticated session
+* CSRF for state changes
+* Organization scope
+* Facility scope
+* Patient scope
+* Exact patient-assignment binding where applicable
+* Note-specific permission
+* Ownership for draft edits and signing
+* Current version for modifications
+* Minimum-necessary response fields
+* Audit requirements
+
+Do not accept organization, facility, author, signer, or status authority directly from the client.
+
+Derive authoritative identity and scope from the server session and database.
+
+---
+
+## 10. Approved frontend scope
+
+Implement:
+
+* Progress Notes tab in Patient Detail
+* Note timeline/list
+* Create-note action
+* Draft editor
+* Draft save state
+* Signed read-only view
+* Void action for authorized supervisors
+* Loading state
+* Empty state
+* Validation state
+* Permission-denied state
+* Concurrent-edit conflict state
+* API error state
+* Production versus demo data-mode behavior
+
+Do not build:
+
+* Rich template designers
+* Drag-and-drop form builders
+* AI writing
+* Dictation
+* Auto-coding
+* Billing integration
+* Group documentation
+* Co-signature queues
+
+---
+
+# Part 4 — Implementation Branch
+
+## 11. Merge the approved planning documents
+
+After updating the documents with the decisions above, merge the planning-document changes into `main`.
+
+Do not merge implementation code because none should exist yet.
+
+Record the updated `main` HEAD.
+
+---
+
+## 12. Create the implementation branch
+
+Create from the updated and reconciled `main`:
+
+`feature/phase-3-clinical-documentation-foundation`
+
+Record:
+
+```bash
+git checkout main
+git pull --ff-only
+git status --short
+git rev-parse HEAD
+git checkout -b feature/phase-3-clinical-documentation-foundation
+```
+
+Do not implement on `main`.
+
+---
+
+# Part 5 — Implement Clinical Documentation Foundation
+
+## 13. Migration requirements
+
+Create one new versioned migration.
+
+The migration must:
+
+* Create the clinical-note table
+* Create required enums or check constraints
+* Add foreign keys
+* Add indexes
+* Add signed-note immutability enforcement
+* Add audit-event types
+* Add permissions
+* Preserve the migration journal
+* Apply cleanly after migrations `0000` through `0005`
+
+Test:
+
+* Empty-database migration
+* Reapplication
+* Constraint behavior
+* Signed-note immutability
+* Invalid cross-organization references
+* Invalid cross-facility references
+* Invalid patient/episode combinations
+
+Do not alter old committed migrations.
+
+---
+
+## 14. Repository and service requirements
+
+Create dedicated clinical-note repository and service layers.
+
+Do not put all note logic directly in route handlers.
+
+The service must enforce:
+
+* Patient authorization
+* Permission checks
+* Draft ownership
+* Status transitions
+* Version checking
+* Signing rules
+* Void rules
+* Minimum-necessary projections
+* Transactional audit events
+
+Use transactions for:
+
+* Create plus audit
+* Edit plus audit
+* Sign plus audit
+* Void plus audit
+
+No state-changing operation may report success when its required audit record fails.
+
+---
+
+## 15. Concurrency requirements
+
+Use optimistic concurrency.
+
+Every draft update must submit the expected version.
+
+When the stored version differs:
+
+* Return HTTP 409
+* Do not overwrite newer content
+* Return a safe conflict response
+* Let the frontend preserve the user’s unsaved text
+* Provide reload/retry behavior
+
+Signing must also verify the expected current version.
+
+---
+
+## 16. Audit requirements
+
+At minimum create events for:
+
+* `clinical_note_created`
+* `clinical_note_viewed`
+* `clinical_note_updated`
+* `clinical_note_signed`
+* `clinical_note_voided`
+* `clinical_note_access_denied`
+
+Include appropriate:
+
+* Organization
+* Facility
+* Patient
+* Note
+* User
+* Session or request correlation
+* Timestamp
+* Outcome
+* Reason where applicable
+
+Do not place note content in audit metadata.
+
+---
+
+## 17. Automated test requirements
+
+Add tests for:
+
+### Database
+
+* Migration from empty database
+* Reapplication
+* Constraints
+* Foreign keys
+* Status rules
+* Signed immutability
+* Void requirements
+* Version requirements
+
+### Authorization
+
+* Cross-organization denial
+* Cross-facility denial
+* Unassigned-patient denial
+* Exact role-assignment binding
+* Permission denial
+* Security administrator without clinical grant
+* HR without clinical grant
+* Mixed-role scope isolation
+
+### Workflow
+
+* Create draft
+* View draft
+* Edit own draft
+* Reject another author’s edit
+* Sign own draft
+* Reject another author’s signature
+* Reject editing after signature
+* Void as supervisor
+* Reject unauthorized void
+* Preserve original content after void
+* Timeline ordering
+* Pagination where implemented
+
+### Concurrency
+
+* Stale draft update returns 409
+* Concurrent signature attempt
+* Duplicate sign request
+* Void versus edit race
+* Version increments correctly
+
+### Audit
+
+* Required events created
+* Transaction rolls back on required audit failure
+* Note content excluded from audit metadata
+* Access denials recorded durably
+
+### API
+
+Use:
+
+* Real PostgreSQL
+* Real login
+* Real CSRF
+* Real session cookies
+* Real authorization middleware
+
+Do not rely only on direct service calls.
+
+All existing 444 tests must continue to pass.
+
+---
+
+## 18. Browser verification requirements
+
+Use a real browser with:
+
+* Real frontend
+* Real API
+* Real PostgreSQL
+* Production data mode
+* No route interception
+* No mocked API responses
+* No development identity headers
+
+At minimum verify:
+
+### Clinician
+
+1. Login
+2. Open assigned patient
+3. Create progress-note draft
+4. Save
+5. Edit
+6. Sign
+7. Confirm read-only state
+8. Confirm refresh preserves signed state
+
+### Supervisor
+
+1. Login
+2. View signed note
+3. Void with required reason
+4. Confirm original content remains visible
+5. Confirm void status
+
+### Authorization
+
+1. Unassigned clinician cannot view the note
+2. Other-facility clinician cannot view the note
+3. Security administrator without a clinical grant cannot view the note
+4. Another author cannot edit the draft
+
+### Concurrency
+
+1. Open the same draft in two sessions
+2. Save from session A
+3. Save stale version from session B
+4. Confirm 409 conflict and preserved unsaved text
+
+Capture screenshots and sanitized network evidence.
+
+---
+
+# Part 6 — Review Package
+
+## 19. Create the Phase 3 review ZIP
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip`
+
+Include:
+
+* New migration
+* Migration metadata
+* Clinical-note schema
+* Repository
+* Service
+* Routes
+* Permissions
+* Authorization policy
+* Audit implementation
+* Frontend implementation
+* Tests
+* Clean migration proof
+* Test logs
+* TypeScript logs
+* Production build logs
+* Browser screenshots
+* Sanitized network evidence
+* Automated persona report
+* Manual browser report
+* Evidence manifest
+* Complete SHA-256 manifest
+
+Do not include:
+
+* Passwords
+* Cookies
+* Session IDs
+* CSRF token values
+* Environment files
+* Credentials
+* Real patient data
+* Note content from real patients
+* Database dumps
+* Dependency caches
+* Build caches
+* Previous ZIP files
+
+The SHA manifest must cover every ZIP entry except itself.
+
+---
+
+# Acceptance criteria
+
+Implementation Phase 3 is complete only when:
+
+* Migration reconciliation is merged and verified.
+* Planning decisions above are reflected in the scope.
+* Clinical notes use real PostgreSQL persistence.
+* Authorization is enforced server-side.
+* Patient assignment is enforced.
+* Draft ownership is enforced.
+* Signed notes are immutable.
+* Voiding preserves the original record.
+* Optimistic concurrency prevents silent overwrites.
+* Required audit events are durable.
+* Note content is excluded from audit metadata.
+* Existing 444 tests remain green.
+* New tests pass with zero required skips.
+* Clean migrations work from an empty database.
+* TypeScript passes.
+* Production builds pass.
+* Real browser workflow passes.
+* Review ZIP is complete and sanitized.
+
+---
+
+# Required final response
+
+Provide:
+
+1. Reconciliation branch verification result
+2. Reconciliation merge commit
+3. Updated main HEAD
+4. Planning-document merge commit
+5. Implementation branch
+6. Starting implementation commit
+7. Implementation commits
+8. Final HEAD
+9. Migration filename
+10. Clinical-note table summary
+11. Permission summary
+12. API endpoint summary
+13. Draft ownership result
+14. Signing result
+15. Signed immutability result
+16. Void result
+17. Concurrency result
+18. Patient-assignment result
+19. Cross-organization result
+20. Cross-facility result
+21. Audit result
+22. Existing test result
+23. New test result
+24. Failed tests
+25. Skipped tests
+26. Clean migration result
+27. Migration reapplication result
+28. TypeScript result
+29. Production-build result
+30. Real browser result
+31. Screenshot count
+32. Network-evidence count
+33. ZIP path
+34. ZIP size
+35. ZIP SHA-256
+36. ZIP entry count
+37. SHA-manifest coverage
+38. Known limitations
+39. Explicit merge recommendation
+
+Do not merge the implementation branch automatically.
+
+Do not begin integrations or any later phase.
+
+Stop after creating and verifying the Clinical Documentation Foundation review package.

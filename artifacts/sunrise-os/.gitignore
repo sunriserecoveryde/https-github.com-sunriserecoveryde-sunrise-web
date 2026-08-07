@@ -1,0 +1,14 @@
+# Playwright session files contain auth cookies — never commit
+e2e/sessions/*.json
+e2e/traces/
+
+# Playwright test artefacts
+playwright-results/
+playwright-report/
+
+# Build output
+dist/
+
+# Vite cache
+node_modules/
+.vite/

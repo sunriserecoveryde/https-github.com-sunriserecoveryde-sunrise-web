@@ -16,3 +16,13 @@
 - [Phase 2B Authorization Correction](phase-2b-authorization-correction.md) — scoped grants, tenant login (orgSlug required), PgRateLimiter, role-grant policy, 343/343 tests, review ZIP
 - [Phase 2D Hardening](phase-2d-hardening.md) — exact FK binding, outbox worker, credential rotation, 414/414 tests, ZIP evidence; Zod v4 email/mrn/trigger pitfalls documented
 - [Migration journal reconciliation](migration-journal-reconciliation.md) — drizzle.__drizzle_migrations drift cause, correct SHA-256 hashes for all 6 migrations, reconciliation script path, forward policy
+- [Phase 3 Clinical Documentation](phase-3-clinical-documentation.md) — signed_consistency constraint implication vs biconditional, append-only audit table, 401 design invariant pattern, 19 permission codes
+- [Phase 3 closure state](phase-3-closure.md) — 550/550 vitest × 2 clean runs, 17/17 Playwright × 3 clean runs (true browser), all gate reqs met
+- [Phase 3 browser test hardening](phase-3-browser-hardening.md) — Vite HMR storm fix (watch.ignored), E-1 timeout fix, orgSlug login fix, sos_dev_session cookie; 568+136 vitest×4, 17/17 PW×3
+- [Phase 3 browser test hardening v2](phase-3-browser-hardening-v2.md) — v4 CLOSED: 572/572 API×3, 136/136 SOS×4, 19/19 PW×3; D-6/D-7 Content-Type+void fixes; billing user DB isolation; e2e tsconfig allowImportingTsExtensions; archive 4ee7914f
+- [Phase 3 v6 closure](phase-3-v6-closure.md) — v6 CLOSED: all gates met; ZIP at artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v6.zip
+- [Phase 3 v7 closure](phase-3-v7-closure.md) — v7 REJECTED: contaminated credentials, stale screenshots, invalid checksums
+- [Phase 3 v8 closure](phase-3-v8-closure.md) — v8 CLOSED: 573×4/136×4/19×3/cross×6; pnpm secret-injection root cause documented; ZIP at readiness/…review-v8.zip
+- [Phase 3 v9 closure](phase-3-v9-closure.md) — v9 CLOSED: 25/25 migration proof, 573×4/136×4/19×3/cross×6; phase2-proof table names documented; ZIP sha256 49a890ab
+- [Phase 3 v10 closure](phase-3-v10-closure.md) — v10 CLOSED: all 7 v9 failures corrected; 573×4/136×4/19×3/cross×6; 0 confirmed secrets; ZIP sha256 274b52fd
+- [Phase 3 v10-final closure](phase-3-v10-final-closure.md) — v10-final: 3 CSRF traces patched; recursive ZIP scanner (20 ZIPs/19 traces/4 HARs); 0 confirmed; ZIP sha256 9fd4213c

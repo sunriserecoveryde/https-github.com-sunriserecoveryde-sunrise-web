@@ -1,0 +1,81 @@
+{
+  "flow": "01-clinician-create-sign",
+  "generatedAt": "2026-08-03T01:41:43Z",
+  "description": "Clinician creates a progress note and signs it \u2014 API evidence",
+  "actor": "clinician@test.sunrise",
+  "role": "certified_clinician",
+  "note": "Network trace from API integration test suite (clinical-notes-p3.test.ts \u00a73 / \u00a74). PHI redacted.",
+  "requests": [
+    {
+      "step": "1a GET /api/v1/auth/csrf-token",
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token",
+      "responseStatus": 200,
+      "responseBodySample": {
+        "csrfToken": "[40-byte hex token]"
+      }
+    },
+    {
+      "step": "1b POST /api/v1/auth/login",
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "requestBody": {
+        "email": "clinician@test.sunrise",
+        "password": "[REDACTED]",
+        "orgSlug": "sunrise"
+      },
+      "responseStatus": 200,
+      "responseBodySample": {
+        "userId": "[UUID]",
+        "orgId": "[UUID]",
+        "displayName": "[TEST] Jordan Kim, LCPC",
+        "roleIds": [
+          "certified_clinician"
+        ],
+        "permissionCodes": [
+          "clinical_note.create",
+          "clinical_note.view",
+          "clinical_note.edit_own_draft",
+          "clinical_note.sign_own"
+        ],
+        "sessionExpiresAt": "[ISO timestamp]"
+      }
+    },
+    {
+      "step": "1c POST /api/v1/patients/:id/clinical-notes (create draft)",
+      "method": "POST",
+      "url": "/api/v1/patients/[PATIENT_ID]/clinical-notes",
+      "requestBody": {
+        "noteType": "progress_note",
+        "content": "[REDACTED \u2014 PHI]"
+      },
+      "responseStatus": 201,
+      "responseBodySample": {
+        "id": "[NOTE_UUID]",
+        "noteType": "progress_note",
+        "status": "draft",
+        "authorUserId": "[CLINICIAN_UUID]",
+        "version": 1,
+        "createdAt": "[ISO timestamp]",
+        "updatedAt": "[ISO timestamp]"
+      }
+    },
+    {
+      "step": "1d POST /api/v1/patients/:id/clinical-notes/:noteId/sign",
+      "method": "POST",
+      "url": "/api/v1/patients/[PATIENT_ID]/clinical-notes/[NOTE_ID]/sign",
+      "requestBody": {
+        "expectedVersion": 1
+      },
+      "responseStatus": 200,
+      "responseBodySample": {
+        "id": "[NOTE_UUID]",
+        "noteType": "progress_note",
+        "status": "signed",
+        "signedAt": "[ISO timestamp]",
+        "signedByUserId": "[CLINICIAN_UUID]",
+        "version": 2
+      }
+    }
+  ]
+}

@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { pool as pgPool } from "@workspace/db";
@@ -216,19 +217,22 @@ describe("§11.6 sos_rate_limit_windows table structure", () => {
 // ── §11.7 Migration journal integrity ────────────────────────────────────────
 
 describe("§11.7 Migration journal", () => {
-  it("journal file has 6 entries (0000–0005)", () => {
+  it("journal file has exactly 7 entries (0000–0006)", () => {
     const journalPath = path.join(MIGRATION_DIR, "meta/_journal.json");
     expect(fs.existsSync(journalPath)).toBe(true);
     const journal = JSON.parse(fs.readFileSync(journalPath, "utf8")) as {
       entries: { idx: number; tag: string }[];
     };
-    expect(journal.entries).toHaveLength(6); // Phase 2E added entry idx=5
+    expect(journal.entries).toHaveLength(7);
     expect(journal.entries[0].idx).toBe(0);
     expect(journal.entries[1].idx).toBe(1);
     expect(journal.entries[2].idx).toBe(2);
     expect(journal.entries[3].idx).toBe(3);
     expect(journal.entries[4].idx).toBe(4);
     expect(journal.entries[5].idx).toBe(5);
+    // Phase 3 entry
+    expect(journal.entries[6].idx).toBe(6);
+    expect(journal.entries[6].tag).toBe("0006_clinical_documentation_foundation");
   });
 
   it("all migration SQL files exist", () => {
@@ -240,9 +244,31 @@ describe("§11.7 Migration journal", () => {
       "0003_phase_2c_closure.sql",
       "0004_phase_2d_final_closure.sql",
       "0005_rate_limit_window_cleared_event.sql",
+      "0006_clinical_documentation_foundation.sql",
     ];
     for (const file of files) {
       expect(fs.existsSync(path.join(MIGRATION_DIR, file))).toBe(true);
+    }
+  });
+
+  it("all 7 migration SQL files have known SHA-256 content hashes", () => {
+    // These hashes are the canonical sha256sum of each migration file.
+    // Any change to a migration file must be coordinated with a corresponding
+    // journal-row update in the DB (historical migrations are immutable).
+    const expected: Record<string, string> = {
+      "0000_perpetual_rafael_vega.sql":             "d469974922cc3fc74bbd81e20697f39d9732ae09456fc01871f6c210e4138c1c",
+      "0001_authentication_authorization.sql":       "86b492875afcbdfe10daf7867f66fb31930148fe42c10fd33527c7809d34508d",
+      "0002_authorization_correction.sql":           "8b64783c95ef5bace0826342cac4e007252c7faac029de5914de88f20b83050d",
+      "0003_phase_2c_closure.sql":                   "2ad2d880dfe87b3b331459a50b8ddf8ec3c9dd7c76bf26edd297ea887d9af3a6",
+      "0004_phase_2d_final_closure.sql":             "4584ae4def09750eb69fe431348e16b59e6a873c55a71147c7c8020db65240d4",
+      "0005_rate_limit_window_cleared_event.sql":    "1694a931db81b17ef306132f5e916dd57f725a7f849a18d991da930eb8b00a4d",
+      "0006_clinical_documentation_foundation.sql":  "83072a363b079a404b4286eb1eec2fe637796d0aa905760146cd79db6ed50c0f",
+    };
+    for (const [filename, expectedHash] of Object.entries(expected)) {
+      const filePath = path.join(MIGRATION_DIR, filename);
+      const content = fs.readFileSync(filePath);
+      const actual = crypto.createHash("sha256").update(content).digest("hex");
+      expect(actual, `SHA-256 mismatch for ${filename} — migration was altered after being applied`).toBe(expectedHash);
     }
   });
 });

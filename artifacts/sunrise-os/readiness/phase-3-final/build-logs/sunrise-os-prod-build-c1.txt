@@ -1,0 +1,22 @@
+
+> @workspace/sunrise-os@0.0.0 build /home/runner/workspace/artifacts/sunrise-os
+> vite build --config vite.config.ts
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 3144 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/public/index.html                                            1.37 kB │ gzip:     0.55 kB
+dist/public/assets/0_SunriseOS_Logo_transparent-Co5acG82.png    277.00 kB
+dist/public/assets/index-kZTzLlMT.css                           208.48 kB │ gzip:    30.64 kB
+dist/public/assets/purify.es-VaSPOPhr.js                         28.72 kB │ gzip:    10.74 kB
+dist/public/assets/index.es-BMv5lPZR.js                         158.79 kB │ gzip:    52.90 kB
+dist/public/assets/html2canvas.esm-DXEQVQnt.js                  201.04 kB │ gzip:    47.07 kB
+dist/public/assets/index-D02kZC1-.js                          4,868.83 kB │ gzip: 1,262.93 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 15.55s

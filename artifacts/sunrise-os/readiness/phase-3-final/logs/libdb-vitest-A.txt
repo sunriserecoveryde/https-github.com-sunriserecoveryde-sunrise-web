@@ -1,0 +1,182 @@
+=== lib/db Vitest A ===
+Started: 2026-08-04T22:35:55Z
+
+> @workspace/db@0.0.0 test /home/runner/workspace/lib/db
+> vitest run
+
+
+ RUN  v4.1.10 /home/runner/workspace/lib/db
+
+ ❯ src/repositories/__tests__/constraints.test.ts (28 tests | 28 skipped) 30ms
+ ❯ src/repositories/__tests__/integration.test.ts (23 tests | 23 skipped) 61ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items)
+DatabaseError: Failed to create organization
+ ❯ createOrganization src/repositories/organizationRepo.ts:13:11
+     11|     return rows[0];
+     12|   } catch (err) {
+     13|     throw new DatabaseError("Failed to create organization", err);
+       |           ^
+     14|   }
+     15| }
+ ❯ src/repositories/__tests__/constraints.test.ts:58:18
+
+Caused by: Error: Failed query: insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"
+params: [TEST-15ad787f] OrgA,active
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/constraints.test.ts:58:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { query: 'insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"', params: [ '[TEST-15ad787f] OrgA', 'active' ] }
+Caused by: error: null value in column "slug" of relation "sos_organizations" violates not-null constraint
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:45:11
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:124:18
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/constraints.test.ts:58:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 344, severity: 'ERROR', code: '23502', detail: 'Failing row contains (f19e29d8-7b1c-4c6d-a3cf-4a2d92792172, [TEST-15ad787f] OrgA, active, 2026-08-04 22:35:57.245445+00, 2026-08-04 22:35:57.245445+00, null).', hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: 'public', table: 'sos_organizations', dataType: undefined, constraint: undefined, file: 'execMain.c', routine: 'ExecConstraints' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/repositories/__tests__/integration.test.ts > organizationRepo
+DatabaseError: Failed to create organization
+ ❯ createOrganization src/repositories/organizationRepo.ts:13:11
+     11|     return rows[0];
+     12|   } catch (err) {
+     13|     throw new DatabaseError("Failed to create organization", err);
+       |           ^
+     14|   }
+     15| }
+ ❯ src/repositories/__tests__/integration.test.ts:56:17
+
+Caused by: Error: Failed query: insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"
+params: [TEST-72d388bd] Phase 1A Org,active
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:56:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { query: 'insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"', params: [ '[TEST-72d388bd] Phase 1A Org', 'active' ] }
+Caused by: error: null value in column "slug" of relation "sos_organizations" violates not-null constraint
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:45:11
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:124:18
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:56:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 352, severity: 'ERROR', code: '23502', detail: 'Failing row contains (c89f15d9-7115-4b90-ba9c-8ac15687ae90, [TEST-72d388bd] Phase 1A Org, active, 2026-08-04 22:35:57.236809+00, 2026-08-04 22:35:57.236809+00, null).', hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: 'public', table: 'sos_organizations', dataType: undefined, constraint: undefined, file: 'execMain.c', routine: 'ExecConstraints' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/repositories/__tests__/integration.test.ts > facilityRepo
+DatabaseError: Failed to create organization
+ ❯ createOrganization src/repositories/organizationRepo.ts:13:11
+     11|     return rows[0];
+     12|   } catch (err) {
+     13|     throw new DatabaseError("Failed to create organization", err);
+       |           ^
+     14|   }
+     15| }
+ ❯ src/repositories/__tests__/integration.test.ts:95:17
+
+Caused by: Error: Failed query: insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"
+params: [TEST-72d388bd] Facility Org,active
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:95:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { query: 'insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"', params: [ '[TEST-72d388bd] Facility Org', 'active' ] }
+Caused by: error: null value in column "slug" of relation "sos_organizations" violates not-null constraint
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:45:11
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:124:18
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:95:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 352, severity: 'ERROR', code: '23502', detail: 'Failing row contains (c94abf2d-e696-41b1-afa6-b5925f5fb40a, [TEST-72d388bd] Facility Org, active, 2026-08-04 22:35:57.253287+00, 2026-08-04 22:35:57.253287+00, null).', hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: 'public', table: 'sos_organizations', dataType: undefined, constraint: undefined, file: 'execMain.c', routine: 'ExecConstraints' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/repositories/__tests__/integration.test.ts > patientRepo
+DatabaseError: Failed to create organization
+ ❯ createOrganization src/repositories/organizationRepo.ts:13:11
+     11|     return rows[0];
+     12|   } catch (err) {
+     13|     throw new DatabaseError("Failed to create organization", err);
+       |           ^
+     14|   }
+     15| }
+ ❯ src/repositories/__tests__/integration.test.ts:144:17
+
+Caused by: Error: Failed query: insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"
+params: [TEST-72d388bd] Patient Org,active
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:144:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { query: 'insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"', params: [ '[TEST-72d388bd] Patient Org', 'active' ] }
+Caused by: error: null value in column "slug" of relation "sos_organizations" violates not-null constraint
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:45:11
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:124:18
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:144:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 351, severity: 'ERROR', code: '23502', detail: 'Failing row contains (ed4af352-92c0-49ef-8c3f-2218fe419a85, [TEST-72d388bd] Patient Org, active, 2026-08-04 22:35:57.264532+00, 2026-08-04 22:35:57.264532+00, null).', hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: 'public', table: 'sos_organizations', dataType: undefined, constraint: undefined, file: 'execMain.c', routine: 'ExecConstraints' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/repositories/__tests__/integration.test.ts > episodeRepo
+DatabaseError: Failed to create organization
+ ❯ createOrganization src/repositories/organizationRepo.ts:13:11
+     11|     return rows[0];
+     12|   } catch (err) {
+     13|     throw new DatabaseError("Failed to create organization", err);
+       |           ^
+     14|   }
+     15| }
+ ❯ src/repositories/__tests__/integration.test.ts:225:17
+
+Caused by: Error: Failed query: insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"
+params: [TEST-72d388bd] Episode Org,active
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:225:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { query: 'insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"', params: [ '[TEST-72d388bd] Episode Org', 'active' ] }
+Caused by: error: null value in column "slug" of relation "sos_organizations" violates not-null constraint
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:45:11
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:124:18
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:225:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 351, severity: 'ERROR', code: '23502', detail: 'Failing row contains (2a747f92-8408-48a6-b1ad-5322cbe3e4fd, [TEST-72d388bd] Episode Org, active, 2026-08-04 22:35:57.275233+00, 2026-08-04 22:35:57.275233+00, null).', hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: 'public', table: 'sos_organizations', dataType: undefined, constraint: undefined, file: 'execMain.c', routine: 'ExecConstraints' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  2 failed | 3 passed (5)
+      Tests  18 passed | 51 skipped (69)
+   Start at  22:35:56
+   Duration  912ms (transform 417ms, setup 0ms, import 1.44s, tests 252ms, environment 0ms)
+
+ ELIFECYCLE  Test failed. See above for more details.
+Exit: 1

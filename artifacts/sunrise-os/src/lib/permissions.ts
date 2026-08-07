@@ -25,6 +25,13 @@ export const PERMISSION_CODES = [
   "role.manage",
   "session.manage",
   "audit.authentication.view",
+  // Phase 3 — Clinical Documentation Foundation
+  // Exact approved set — must match server permissionPolicy.ts exactly.
+  "clinical_note.create",
+  "clinical_note.view",
+  "clinical_note.edit_own_draft",
+  "clinical_note.sign_own",
+  "clinical_note.void",
 ] as const;
 
 export type PermissionCode = (typeof PERMISSION_CODES)[number];

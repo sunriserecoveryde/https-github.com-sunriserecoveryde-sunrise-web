@@ -1,0 +1,16 @@
+=== Sunrise OS Vitest C ===
+Started: 2026-08-04T22:36:17Z
+
+> @workspace/sunrise-os@0.0.0 test /home/runner/workspace/artifacts/sunrise-os
+> vitest run --config vitest.config.ts
+
+
+ RUN  v4.1.10 /home/runner/workspace/artifacts/sunrise-os
+
+
+ Test Files  10 passed (10)
+      Tests  136 passed (136)
+   Start at  22:36:18
+   Duration  568ms (transform 801ms, setup 0ms, import 1.17s, tests 84ms, environment 2ms)
+
+Exit: 0

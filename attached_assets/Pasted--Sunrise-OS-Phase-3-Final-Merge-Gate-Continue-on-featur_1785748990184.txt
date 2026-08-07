@@ -1,0 +1,511 @@
+# Sunrise OS — Phase 3 Final Merge Gate
+
+Continue on:
+
+`feature/phase-3-clinical-documentation-foundation`
+
+Do not merge into `main`.
+
+Do not begin integrations, medications, treatment plans, billing, or another phase.
+
+Complete only the remaining Phase 3 approval blockers.
+
+---
+
+# 1. Replace the manual Phase 2 upgrade proof
+
+The current Phase 2 upgrade proof used `psql` to apply migration `0006`.
+
+That does not satisfy the migration acceptance criterion.
+
+Create a new disposable database using the normal migration runner.
+
+## Required upgrade sequence
+
+1. Create a completely empty database.
+2. Temporarily use migration metadata containing only `0000` through `0005`.
+3. Apply `0000` through `0005` with the normal Drizzle migration runner.
+4. Seed representative fictitious Phase 2 data.
+5. Restore the final migration metadata containing `0000` through `0006`.
+6. Run the normal migration runner again.
+7. Confirm that it applies only `0006`.
+8. Confirm exactly seven journal rows.
+9. Confirm all seven hashes and timestamps match `_journal.json`.
+10. Confirm all Phase 2 data remains unchanged.
+11. Confirm `sos_clinical_notes` and all Phase 3 constraints exist.
+12. Run the migration command again.
+13. Confirm no pending migrations.
+14. Run the full test suite.
+15. Destroy the database.
+
+Do not:
+
+* Apply `0006` using `psql`
+* Execute the migration through `pool.query`
+* Insert its journal record manually
+* Alter the proof database’s journal to force the result
+* Describe a manually applied migration as a normal-runner upgrade
+
+Replace:
+
+`phase-2-upgrade-proof.txt`
+
+with a proof generated entirely through the normal migration runner.
+
+---
+
+# 2. Reconcile the existing development database correctly
+
+The existing database has migration timestamp drift that causes the runner to skip newer migrations.
+
+Do not solve this by repeatedly applying migration SQL manually.
+
+Create a guarded reconciliation script specifically for the Drizzle journal.
+
+The script must:
+
+1. Read all migration files and `_journal.json`.
+2. Compute the exact migration hashes.
+3. Verify that all seven expected schema fingerprints exist.
+4. Verify that each existing journal row maps to the correct migration.
+5. Verify there are no conflicting or unknown rows.
+6. Correct incorrect journal timestamps to the exact `_journal.json` `when` values.
+7. Correct hashes only when the verified schema fingerprint proves the migration is already present.
+8. Insert a missing history row only when the migration’s complete schema fingerprint is already present.
+9. Refuse to run when any required object is missing.
+10. Refuse to run when conflicting objects exist.
+11. Be idempotent.
+12. Produce sanitized output.
+
+Test the reconciliation on a database clone first.
+
+After reconciliation, the normal migration runner must report:
+
+* Seven exact journal rows
+* Correct order
+* Correct hashes
+* Correct timestamps
+* No pending migrations
+
+Document that this is migration-history reconciliation, not migration execution.
+
+---
+
+# 3. Remove `clinical_note.audit_view` completely
+
+Phase 3 selected Option B: no user-facing audit panel in this phase.
+
+Therefore remove `clinical_note.audit_view` from:
+
+* `PermissionCode`
+* Permission lists
+* Role-policy structures
+* Seed data
+* API request or response types
+* Migration permission inserts
+* Tests
+* Documentation
+* Frontend checks
+
+Do not leave the code in the permission union with no role assigned to it.
+
+The underlying security audit records must remain.
+
+Detailed clinical-note audit UI may be proposed in a later reviewed phase.
+
+Update the permission-count and exact-permission tests.
+
+---
+
+# 4. Complete episode consistency enforcement
+
+The existing report tests only:
+
+* Null episode allowed
+* Null stored
+* Nonexistent UUID rejected
+
+Add the missing production enforcement and tests.
+
+For Phase 3, use this policy:
+
+* `episodeId` may be omitted.
+* When supplied, the episode must be active.
+* It must belong to the same patient.
+* It must belong to the same organization.
+* It must belong to the authorized facility.
+* The user must be authorized for the patient through the grant used for the note operation.
+
+Add tests for:
+
+1. Valid active episode
+2. Episode belonging to another patient
+3. Episode belonging to another organization
+4. Episode belonging to another facility
+5. Closed episode
+6. Nonexistent episode
+7. Null episode
+8. Cross-scope mixed-role user
+9. Assignment-limited user with the wrong patient assignment
+
+Apply these checks to:
+
+* Create draft
+* Edit draft
+* Sign draft
+
+Do not trust the client-provided episode ID.
+
+---
+
+# 5. Verify the supervisor void UI is permission-gated
+
+The report says the Void button appears on every signed note.
+
+It must appear only when all of these are true:
+
+* The note is signed.
+* The note is not already voided.
+* The current identity has `clinical_note.void`.
+* The void permission’s scoped grant authorizes the patient and facility.
+* The current user satisfies the approved supervisory policy.
+
+Test the UI as:
+
+* Supervisor: button shown
+* CMO with approved clinical supervisory grant: follow the explicit role matrix
+* Clinician without void permission: hidden
+* Original author without supervisory permission: hidden
+* Security administrator without clinical grant: hidden
+* HR: hidden
+* Billing: hidden
+* Other-facility supervisor: hidden or denied
+* Unassigned supervisor: hidden or denied
+
+The API must still reject unauthorized requests even when the UI button is hidden.
+
+---
+
+# 6. Run actual Playwright browser tests
+
+The current evidence was generated from existing test output after the live API flow failed.
+
+Delete or clearly label any synthetic network-trace files that were derived from unit or Supertest evidence.
+
+They must not be presented as browser network captures.
+
+Install and configure:
+
+* `@playwright/test`
+* Chromium for the current environment
+
+Start:
+
+* Real Sunrise OS frontend
+* Real API server
+* Real PostgreSQL
+* Production data mode
+* Fictitious seeded Phase 3 users
+* Valid patient-access rows
+
+Use:
+
+* Real CSRF
+* Real session cookies
+* No route interception
+* No mocked responses
+* No development identity headers
+* No synthetic network JSON substituted for browser traffic
+
+The Playwright suite must actually execute.
+
+Report:
+
+* Browser tests discovered
+* Passed
+* Failed
+* Skipped
+* Browser version
+* Frontend origin
+* API origin
+* Data mode
+
+The suite must fail—not skip—when its required environment is unavailable.
+
+---
+
+# 7. Execute these real browser workflows
+
+## Clinician
+
+1. Login.
+2. Open assigned patient.
+3. Open Progress Notes.
+4. Create a progress-note draft.
+5. Save.
+6. Refresh.
+7. Confirm persistence.
+8. Edit.
+9. Sign.
+10. Confirm read-only state.
+11. Confirm editing is unavailable after signing.
+
+## Nurse
+
+1. Login.
+2. Open an authorized patient.
+3. Create a nursing note.
+4. Save.
+5. Sign.
+6. Confirm type, author, and signed state.
+
+## Supervisor
+
+1. Login.
+2. Open a signed note.
+3. Open the Void dialog.
+4. Verify empty or short reason is rejected.
+5. Submit a valid reason.
+6. Confirm the original content remains.
+7. Confirm void status, actor, reason, and timestamp.
+8. Confirm the note remains read-only.
+
+## Authorization
+
+Verify in a real browser:
+
+* Other-facility clinician denied
+* Unassigned clinician denied
+* Another clinician cannot edit the author’s draft
+* Security administrator without clinical grant denied
+* HR denied
+* Billing denied
+* Non-supervisory author cannot void
+
+## Concurrency
+
+1. Open one draft in browser context A.
+2. Open the same draft in browser context B.
+3. Save from A.
+4. Attempt stale save from B.
+5. Confirm HTTP 409.
+6. Confirm B’s unsaved text remains visible.
+7. Confirm reload/retry guidance appears.
+
+---
+
+# 8. Capture authentic browser evidence
+
+Capture actual screenshots from the executed browser workflows:
+
+1. Empty notes state
+2. Create-note form
+3. Saved draft
+4. Edited draft
+5. Signed note
+6. Nursing note
+7. Supervisor void dialog
+8. Validation error for short reason
+9. Voided note
+10. Unauthorized access
+11. Other-facility denial
+12. Another-author edit denial
+13. Concurrency conflict
+14. Production mode without demo UI
+
+Label production screenshots:
+
+`Real API — no route interception`
+
+Export an actual sanitized Playwright trace, HAR, or browser network capture for:
+
+* Login
+* Note create
+* Note list
+* Note detail
+* Note edit
+* Note sign
+* Note void
+* Unauthorized note request
+* Stale-version 409
+* Logout
+
+Remove:
+
+* Passwords
+* Cookie values
+* Session IDs
+* CSRF values
+* Authorization headers
+* Real patient data
+* Real clinical-note content
+
+Do not manufacture browser evidence from test logs.
+
+---
+
+# 9. Rerun all tests with exact counts
+
+Run:
+
+* Full Phase 2 regression suite
+* Phase 3 database tests
+* Phase 3 authorization tests
+* Phase 3 workflow tests
+* Phase 3 concurrency tests
+* Phase 3 audit tests
+* Phase 3 API tests
+* Actual Playwright tests
+* Migration tests
+* TypeScript
+* Production builds
+
+Run the full non-browser suite twice in separate fresh processes.
+
+Run the Playwright suite once in a clean environment.
+
+Report:
+
+* Tests discovered
+* Passed
+* Failed
+* Skipped
+* Real PostgreSQL tests
+* Real HTTP tests
+* Real Playwright tests
+* Static tests
+
+Required result:
+
+* Zero failures
+* Zero required skips
+* No order-dependent failures
+
+---
+
+# 10. Regenerate the review archive
+
+Regenerate:
+
+`artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip`
+
+Include:
+
+* Migrations `0000` through `0006`
+* Complete migration metadata
+* Guarded journal-reconciliation script
+* Journal-reconciliation proof
+* Clean migration proof
+* Normal-runner Phase 2 upgrade proof
+* Database schema
+* Repository
+* Service
+* Routes
+* Final permission policy
+* Frontend source
+* All tests
+* Actual Playwright test
+* Actual browser screenshots
+* Actual sanitized HAR or trace
+* Test logs
+* TypeScript logs
+* Production build logs
+* Evidence manifest
+* Secret-scan report
+* Complete SHA-256 manifest
+
+The manifest must cover every ZIP entry except itself.
+
+Do not include:
+
+* Synthetic browser traces presented as real
+* Passwords
+* Cookies
+* Session IDs
+* CSRF values
+* Environment files
+* Credentials
+* Database dumps
+* Real patient data
+* Real clinical-note content
+* Dependency caches
+* Build caches
+* Previous review ZIPs
+
+---
+
+# 11. Verify the archive
+
+Run:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+```
+
+Run repository and ZIP secret scans.
+
+Confirm:
+
+* ZIP integrity passes
+* SHA coverage is complete
+* Phase 2 upgrade proof uses only the normal runner
+* Actual browser tests executed
+* Actual browser evidence is present
+* No synthetic traces are mislabeled
+* No secrets are present
+* No previous ZIP is nested inside
+
+---
+
+# Required final response
+
+Provide:
+
+1. Branch
+2. Starting HEAD
+3. Correction commits
+4. Final HEAD
+5. Migration `0006` filename
+6. Clean migration runner result
+7. Normal-runner Phase 2 upgrade result
+8. Existing-database journal reconciliation result
+9. Exact journal count
+10. Journal hash result
+11. Journal timestamp result
+12. Manual migration SQL required: yes/no
+13. `clinical_note.audit_view` fully removed: yes/no
+14. Episode consistency result
+15. Patient-assignment result
+16. Supervisor void permission-gating result
+17. Signed immutability result
+18. Void preservation result
+19. Concurrency result
+20. Non-browser tests discovered
+21. Non-browser tests passed
+22. Non-browser tests failed
+23. Non-browser tests skipped
+24. Playwright tests discovered
+25. Playwright tests passed
+26. Playwright tests failed
+27. Playwright tests skipped
+28. Screenshot count
+29. Actual HAR/trace count
+30. TypeScript result
+31. Production build result
+32. Repository secret-scan result
+33. ZIP secret-scan result
+34. ZIP path
+35. ZIP size
+36. ZIP SHA-256
+37. ZIP entry count
+38. SHA-manifest coverage
+39. Known limitations
+40. Explicit answer: `PHASE 3 APPROVED FOR MERGE` or `PHASE 3 NOT APPROVED`
+
+Do not merge automatically.
+
+Do not begin another phase.
+
+Stop after producing and verifying the corrected review package.

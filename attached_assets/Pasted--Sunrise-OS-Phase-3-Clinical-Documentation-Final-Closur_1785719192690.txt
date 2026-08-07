@@ -1,0 +1,736 @@
+# Sunrise OS — Phase 3 Clinical Documentation Final Closure
+
+Continue on:
+
+`feature/phase-3-clinical-documentation-foundation`
+
+Do not merge into `main`.
+
+Do not begin tasks `#820`, `#821`, or `#822` as separate follow-up phases.
+
+The supervisor void UI is part of the already-approved Phase 3 scope and must be completed here.
+
+Do not add unrelated clinical features.
+
+## Objective
+
+Correct the migration process, complete the approved frontend workflow, remove test-order flakiness, perform real browser verification, and produce a complete independently reviewable Phase 3 package.
+
+---
+
+# 1. Correct migration `0006`
+
+The current report states that migration `0006` was applied directly using `psql` because the migration runner did not execute the PL/pgSQL block correctly.
+
+This is not acceptable final migration evidence.
+
+Do not preserve a workflow requiring manual SQL execution.
+
+## Required correction
+
+Determine why the normal migration runner does not execute migration `0006`.
+
+Correct the migration using a format supported by the checked-in Drizzle migration runner.
+
+Acceptable approaches include:
+
+* Splitting statements using the required Drizzle statement-breakpoint syntax
+* Moving trigger-function creation into runner-compatible statements
+* Replacing unsupported dollar-quoted blocks with a compatible representation
+* Creating separate migration statements where required
+
+Do not:
+
+* Apply the final migration through `psql`
+* Use `pool.query()` to apply the migration
+* Manually insert a journal row
+* Mark a migration applied before its SQL succeeds
+* Weaken the migration test to accept an approximate count
+
+The normal migration command must perform the complete migration.
+
+---
+
+# 2. Restore exact migration assertions
+
+The migration test must not use:
+
+```text
+journal count >= 6
+```
+
+It must verify the exact expected migration sequence.
+
+At this phase, the expected sequence is:
+
+```text
+0000_perpetual_rafael_vega.sql
+0001_authentication_authorization.sql
+0002_authorization_correction.sql
+0003_phase_2c_closure.sql
+0004_phase_2d_final_closure.sql
+0005_rate_limit_window_cleared_event.sql
+0006_<clinical_documentation_migration>.sql
+```
+
+Use the actual filename for `0006`.
+
+Verify:
+
+* Exactly seven journal records
+* Correct order
+* Correct SHA-256 hash for each migration
+* No duplicate records
+* No missing records
+* No unexpected records
+
+Do not alter historical migrations.
+
+---
+
+# 3. Prove migration `0006` from an empty database
+
+Create a new disposable PostgreSQL database with no Sunrise OS schema and no migration journal.
+
+Using only the normal migration runner:
+
+1. Apply migrations `0000` through `0006`.
+2. Confirm all seven migration records.
+3. Confirm `sos_clinical_notes` exists.
+4. Confirm all clinical-note indexes.
+5. Confirm all foreign keys.
+6. Confirm note-type constraint.
+7. Confirm note-status constraint.
+8. Confirm version constraint.
+9. Confirm signed-field consistency constraint.
+10. Confirm void-field consistency constraint.
+11. Confirm signed-note immutability trigger.
+12. Confirm all six clinical-note audit event types.
+13. Confirm all six clinical-note permissions.
+14. Run the normal migration command again.
+15. Confirm no pending migrations.
+16. Seed fictitious test data.
+17. Run all database and API tests.
+18. Destroy the database.
+
+No direct SQL application is permitted.
+
+Save sanitized output to:
+
+`artifacts/sunrise-os/readiness/phase-3/clean-migration-proof.txt`
+
+---
+
+# 4. Test migration against an existing Phase 2 database
+
+Create a second disposable database containing migrations `0000` through `0005` and representative fictitious Phase 2 data.
+
+Using only the normal migration runner:
+
+1. Apply migration `0006`.
+2. Confirm existing patients, episodes, users, sessions, assignments, and audit records remain intact.
+3. Confirm the clinical-note table and policies are added.
+4. Run the full test suite.
+5. Confirm no patient or authentication data is changed unexpectedly.
+
+Save sanitized output to:
+
+`artifacts/sunrise-os/readiness/phase-3/phase-2-upgrade-proof.txt`
+
+---
+
+# 5. Complete the supervisor void UI
+
+The approved scope includes supervisor voiding.
+
+The backend-only implementation is incomplete.
+
+Add the void workflow to the production Progress Notes UI.
+
+Requirements:
+
+* Show the void action only when the authenticated user has `clinical_note.void`.
+* Show it only for signed notes.
+* Do not show it for drafts.
+* Require a non-empty reason.
+* Require confirmation before submission.
+* Send the current expected version.
+* Handle HTTP 409 conflicts.
+* Handle HTTP 403.
+* Handle HTTP 404.
+* Handle validation errors.
+* Preserve the original note content.
+* Display the void status.
+* Display the void reason only to authorized users according to the approved response policy.
+* Display the voiding user and timestamp when authorized.
+* Refresh the note timeline after success.
+* Prevent double submission.
+* Provide loading, success, and failure states.
+
+The original author must not receive the void action unless they independently possess the supervisory permission.
+
+Do not implement deletion.
+
+---
+
+# 6. Confirm signed-note immutability
+
+Test immutability at all layers.
+
+## Database
+
+Direct update attempts against a signed note must fail for:
+
+* Content
+* Note type
+* Author
+* Patient
+* Episode
+* Facility
+* Signed timestamp
+* Signed user
+
+## Repository and service
+
+No edit method may change a signed or voided note.
+
+## API
+
+`PATCH` against signed or voided notes must return the documented denial.
+
+## Frontend
+
+Signed and voided notes must render read-only.
+
+Do not rely only on hiding an edit button.
+
+---
+
+# 7. Confirm void preservation
+
+A void operation must:
+
+* Preserve original content
+* Preserve original author
+* Preserve original creation time
+* Preserve signer
+* Preserve signing time
+* Add voiding user
+* Add void timestamp
+* Add required reason
+* Increment version
+* Write an audit event
+
+A void operation must not:
+
+* Blank content
+* Replace content
+* Delete the note
+* Rewrite the original author
+* Remove signature evidence
+
+Add exact database and API assertions.
+
+---
+
+# 8. Complete the audit-view decision
+
+The permission:
+
+`clinical_note.audit_view`
+
+has been added.
+
+Either:
+
+### Option A — Implement the approved minimal audit display
+
+Add a read-only note activity panel showing sanitized event metadata for authorized supervisory users.
+
+It may show:
+
+* Event type
+* Actor display name
+* Timestamp
+* Outcome
+* Version
+* Void reason where authorized
+
+It must not show:
+
+* Session IDs
+* IP addresses unless explicitly approved
+* Internal stack traces
+* Note content copied into audit metadata
+* Secret values
+
+Or:
+
+### Option B — Remove the unused user-facing permission from Phase 3
+
+When no audit panel is in the approved scope, remove `clinical_note.audit_view` from the Phase 3 role grants and document that detailed audit UI is deferred.
+
+Do not leave a permission implemented with no clear workflow or policy.
+
+The underlying security audit records must remain.
+
+---
+
+# 9. Fix rate-limit test-order flakiness
+
+Task `#822` must not be deferred.
+
+The full suite passed only after isolating the rate-limit test, and the report identifies cross-file module-reset ordering as the cause.
+
+Correct the test isolation.
+
+Requirements:
+
+* One test file must not alter another file’s module state.
+* Restore all environment values.
+* Restore fake timers.
+* Restore mocks.
+* Close database pools.
+* Stop servers.
+* Stop workers.
+* Reset singleton instances.
+* Avoid relying on test-file execution order.
+* Do not solve this by forcing one global file order.
+* Do not mark the test skipped.
+* Do not rerun until green and ignore the original failure.
+
+Add a repeated-suite test command or run the affected suites in multiple orders.
+
+At minimum run:
+
+1. Rate-limit suite alone.
+2. Clinical-note suite followed by rate-limit suite.
+3. Rate-limit suite followed by clinical-note suite.
+4. Full suite twice in separate fresh processes.
+
+All runs must pass.
+
+---
+
+# 10. Review the clinical-note permission assignments
+
+Provide an explicit role matrix for:
+
+* CMO
+* Facility administrator
+* Clinician
+* Nurse
+* BHT
+* Aftercare
+* Supervisor
+* Security administrator
+* Human resources
+* Billing
+* Ownership
+
+For every role list:
+
+* `clinical_note.create`
+* `clinical_note.view`
+* `clinical_note.edit_own_draft`
+* `clinical_note.sign_own`
+* `clinical_note.void`
+* `clinical_note.audit_view`
+
+Verify:
+
+* Security administration alone grants no clinical-note access.
+* HR alone grants no clinical-note access.
+* Billing alone grants no clinical-note access.
+* Ownership alone grants no clinical-note access unless explicitly approved.
+* Mixed-role permissions remain bounded by the clinical grant’s patient and facility scope.
+* Organization-wide nonclinical roles do not inflate clinical scope.
+
+Add real HTTP tests for mixed-role users.
+
+---
+
+# 11. Verify minimum-necessary response fields
+
+Define exact response DTOs for:
+
+## Note list
+
+Return only fields required for the timeline, such as:
+
+* ID
+* Note type
+* Status
+* Author display information
+* Created time
+* Updated time
+* Signed time
+* Version
+* Authorized void summary where applicable
+
+Do not return full note content in list responses.
+
+## Note detail
+
+Return note content only after note-specific authorization succeeds.
+
+## Audit response
+
+Do not return note content in audit metadata.
+
+Add exact-key tests.
+
+Do not merely assert that the request returned 200.
+
+---
+
+# 12. Verify note ownership using authoritative IDs
+
+Confirm that note ownership uses the correct authenticated account or identity-reference identifier consistently.
+
+Document:
+
+* Which database ID is stored in `author_user_id`
+* Which ID is stored in `signed_by_user_id`
+* Which ID is stored in `voided_by_user_id`
+* Which authenticated identity field is compared during ownership checks
+
+Do not mix account IDs, identity-reference IDs, and staff-profile IDs.
+
+Add tests where these IDs differ.
+
+---
+
+# 13. Verify patient and episode consistency
+
+The API must not accept arbitrary episode IDs.
+
+For note creation:
+
+* Patient must belong to the authenticated organization.
+* Facility must be authorized through the effective clinical grant.
+* Episode must belong to the same patient.
+* Episode must belong to the same organization.
+* Episode facility must match the permitted workflow.
+* Patient assignment must be tied to the exact role assignment where required.
+
+Add tests for:
+
+* Episode belonging to another patient
+* Episode in another organization
+* Episode in another facility
+* Closed episode when notes are disallowed
+* Null episode when allowed
+* Null episode when not allowed
+* Valid patient and episode
+
+---
+
+# 14. Perform real browser testing
+
+Use:
+
+* Real Chromium browser
+* Real Sunrise OS frontend
+* Real API server
+* Real PostgreSQL
+* Production data mode
+* Real authentication
+* Real CSRF
+* No route interception
+* No mock API
+* No development identity headers
+
+Required browser scenarios:
+
+## Clinician flow
+
+1. Login.
+2. Open assigned patient.
+3. Open Progress Notes.
+4. Create a progress-note draft.
+5. Save.
+6. Refresh browser.
+7. Confirm draft persists.
+8. Edit draft.
+9. Sign.
+10. Confirm note becomes read-only.
+11. Attempt to edit through UI.
+12. Confirm no edit action is available.
+
+## Nursing flow
+
+1. Login as nurse.
+2. Create a nursing note.
+3. Save and sign.
+4. Confirm note type and author.
+
+## Supervisor flow
+
+1. Login as supervisor.
+2. Open signed note.
+3. Void with a reason.
+4. Confirm original content remains visible.
+5. Confirm void status, reason, actor, and timestamp.
+6. Confirm the note cannot be edited.
+
+## Authorization flow
+
+1. Other-facility clinician cannot access the note.
+2. Unassigned clinician cannot access the note.
+3. Security administrator without a clinical role cannot access it.
+4. HR cannot access it.
+5. Billing cannot access it.
+6. Another clinician cannot edit the author’s draft.
+
+## Concurrency flow
+
+1. Open one draft in browser session A.
+2. Open it in browser session B.
+3. Save from A.
+4. Attempt stale save from B.
+5. Confirm HTTP 409.
+6. Confirm B’s unsaved content is preserved.
+7. Confirm reload/retry guidance is displayed.
+
+The browser tests must fail—not silently skip—when the required environment is unavailable.
+
+---
+
+# 15. Capture browser evidence
+
+Capture screenshots for:
+
+1. Progress Notes empty state
+2. Create-note form
+3. Saved draft
+4. Edited draft
+5. Signed read-only note
+6. Nursing note
+7. Supervisor void dialog
+8. Voided note
+9. Unauthorized access
+10. Other-facility denial
+11. Another-author edit denial
+12. Concurrency conflict
+13. Production mode without demo UI
+14. Demo mode with banner
+
+Label production screenshots:
+
+`Real API — no route interception`
+
+Capture sanitized network evidence for:
+
+* Note create
+* Note list
+* Note detail
+* Note edit
+* Note sign
+* Note void
+* Unauthorized note request
+* Stale-version 409
+
+Remove:
+
+* Passwords
+* Cookies
+* Session IDs
+* CSRF values
+* Authorization headers
+* Real patient information
+
+---
+
+# 16. Run complete tests and builds
+
+Run:
+
+* All existing 444 Phase 2 tests
+* All Phase 3 tests
+* Migration tests
+* Database constraint tests
+* Authorization tests
+* Workflow tests
+* Concurrency tests
+* Audit tests
+* API tests
+* Frontend tests
+* Browser tests
+* TypeScript for every package
+* API production build
+* Sunrise OS production build
+
+Report accurately:
+
+* Discovered
+* Passed
+* Failed
+* Skipped
+* Unit tests
+* Real PostgreSQL tests
+* Real HTTP tests
+* Real browser tests
+* Static checks
+
+Required:
+
+* Zero failures
+* Zero required skips
+* No order-dependent test failure
+
+---
+
+# 17. Regenerate the Phase 3 review archive
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip`
+
+Include:
+
+* Complete migration chain `0000` through `0006`
+* Complete migration metadata
+* Clinical-note schema
+* Repository
+* Service
+* Routes
+* Permission policy
+* Authorization integration
+* Audit implementation
+* Frontend source
+* All Phase 3 tests
+* Relevant regression tests
+* Clean-migration proof
+* Phase 2 upgrade proof
+* Test-order proof
+* TypeScript logs
+* Production build logs
+* Browser screenshots
+* Sanitized network evidence
+* Automated persona report
+* Manual browser report
+* Evidence manifest
+* Complete SHA-256 manifest
+
+The manifest must cover every ZIP entry except itself.
+
+Do not include:
+
+* Credentials
+* Passwords
+* Password hashes
+* Cookies
+* Session IDs
+* CSRF values
+* Environment files
+* Database dumps
+* Real patient data
+* Real clinical-note content
+* Dependency caches
+* Build caches
+* Previous ZIP files
+
+---
+
+# 18. Verify the final archive
+
+Run:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+```
+
+Run repository and ZIP secret scans.
+
+Confirm:
+
+* ZIP integrity passes
+* SHA coverage is complete
+* Migration proof uses the normal runner
+* Frontend implementation is included
+* Browser evidence is included
+* No secrets are present
+* No prior ZIP is nested inside
+
+---
+
+# Acceptance criteria
+
+Phase 3 may be recommended for merge only when:
+
+* Migration `0006` applies through the normal runner.
+* Exactly seven correct journal records exist.
+* No manual SQL application is required.
+* Supervisor void UI is complete.
+* Signed notes are immutable.
+* Voiding preserves original content and signature evidence.
+* Patient and episode consistency is enforced.
+* Exact assignment binding is enforced.
+* Role permissions do not create clinical scope bleed.
+* Note list responses omit content.
+* Note detail is properly authorized.
+* Concurrency conflicts return 409 and preserve user work.
+* Rate-limit tests are order-independent.
+* All existing and new tests pass.
+* Real browser verification passes.
+* Review ZIP is complete and sanitized.
+
+---
+
+# Required final response
+
+Provide:
+
+1. Branch
+2. Starting HEAD
+3. Correction commits
+4. Final HEAD
+5. Migration `0006` filename
+6. Normal migration-runner result
+7. Exact journal record count
+8. Migration reapplication result
+9. Phase 2 upgrade result
+10. Manual SQL required: yes/no
+11. Clinical-note table result
+12. Role-permission matrix result
+13. Patient-assignment result
+14. Episode-consistency result
+15. Draft ownership result
+16. Signing result
+17. Signed immutability result
+18. Supervisor void UI result
+19. Void preservation result
+20. Concurrency result
+21. Minimum-necessary projection result
+22. Audit result
+23. Test-order isolation result
+24. Existing test result
+25. New test result
+26. Tests discovered
+27. Tests passed
+28. Tests failed
+29. Tests skipped
+30. Real PostgreSQL test count
+31. Real HTTP test count
+32. Real browser test count
+33. TypeScript result
+34. Production-build result
+35. Screenshot count
+36. Network-evidence count
+37. ZIP path
+38. ZIP size
+39. ZIP SHA-256
+40. ZIP entry count
+41. SHA-manifest coverage
+42. Secret-scan result
+43. Known limitations
+44. Explicit merge recommendation
+
+Do not merge automatically.
+
+Do not begin integrations or another phase.
+
+Stop after producing and verifying the corrected Phase 3 review package.

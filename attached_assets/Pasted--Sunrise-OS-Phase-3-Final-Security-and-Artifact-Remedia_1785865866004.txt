@@ -1,0 +1,618 @@
+# Sunrise OS — Phase 3 Final Security and Artifact Remediation
+
+Continue on:
+
+`feature/phase-3-clinical-documentation-foundation`
+
+Current reported final commit:
+
+`390decc`
+
+Do not merge into `main`.
+
+Do not begin another phase.
+
+Do not add new product functionality.
+
+Complete only the remaining independent-review blockers, then regenerate the canonical review ZIP.
+
+---
+
+# 1. Rotate exposed browser-test credentials
+
+The previous review archive exposed:
+
+* Browser-test passwords
+* Session cookies
+* CSRF tokens
+* Session identifiers inside HAR and Playwright trace files
+
+Immediately:
+
+1. Rotate the dedicated Phase 3 browser-test password.
+2. Revoke all browser-test sessions created before this correction.
+3. Delete old HAR files, traces, screenshots, archives, and extracted evidence containing the old values.
+4. Remove any hard-coded fallback password from source.
+5. Require the browser-test password through an environment secret only.
+6. Never print the password or secret value.
+
+Report only whether rotation and revocation succeeded.
+
+---
+
+# 2. Sanitize Playwright traces and HAR files
+
+Regenerate all browser evidence after credential rotation.
+
+The final archive must not contain:
+
+* Passwords
+* Cookie values
+* `sos_dev_session`
+* Session IDs
+* CSRF cookies
+* CSRF tokens
+* Authorization headers
+* `Set-Cookie` header values
+* Login request bodies containing credentials
+
+For HAR generation, sanitize:
+
+* Request headers
+* Response headers
+* Cookie collections
+* Query parameters
+* POST bodies
+* Embedded content
+
+For Playwright traces:
+
+1. Generate the authentic trace.
+2. Extract it into a temporary directory.
+3. Sanitize request and response data.
+4. Rebuild the trace archive.
+5. Open the rebuilt trace with the Playwright trace viewer.
+6. Confirm screenshots, actions, DOM snapshots, and network timeline remain readable.
+7. Run a recursive secret scan on the rebuilt trace archive.
+
+Provide 17 readable and sanitized trace archives, one for each Playwright test.
+
+Do not include the original unsanitized traces anywhere in the final ZIP.
+
+---
+
+# 3. Remove the hard-coded password fallback
+
+Search the entire repository for:
+
+* The previous browser-test password
+* Default password fallbacks
+* Literal test credentials
+* `PHASE2D_TEST_PASSWORD ??`
+* Similar fallback expressions
+
+The Playwright suite must fail clearly when the required test-password environment variable is absent.
+
+Do not silently substitute a password.
+
+Add a test or startup assertion proving that missing credentials abort browser setup without exposing the expected value.
+
+---
+
+# 4. Produce a valid Phase 2 upgrade proof
+
+The current proof still applies migrations `0000` through `0005` with `psql` and manually constructs migration-journal rows.
+
+That is not acceptable.
+
+Create a fresh disposable PostgreSQL database.
+
+Required process:
+
+1. Begin with an empty database.
+2. Use a temporary checked-in migration metadata state containing only migrations `0000` through `0005`.
+3. Apply migrations `0000` through `0005` using the normal Drizzle migration runner.
+4. Confirm exactly six migration journal rows were created by the runner.
+5. Seed representative fictitious Phase 2 records.
+6. Restore the final migration metadata containing `0000` through `0006`.
+7. Run the same normal migration command.
+8. Confirm only migration `0006` is applied.
+9. Confirm exactly seven journal rows.
+10. Confirm hashes and timestamps match migration metadata.
+11. Confirm the seeded Phase 2 records remain unchanged.
+12. Confirm `sos_clinical_notes`, its indexes, constraints, and trigger exist.
+13. Run the migration command again.
+14. Confirm there are no pending migrations.
+15. Destroy the disposable database.
+
+Do not:
+
+* Execute migration SQL through `psql`
+* Insert migration journal rows manually
+* Update journal timestamps manually
+* Use `pool.query()` to apply migration files
+* Claim a database assembled manually is a normal-runner proof
+
+Save the complete command output as:
+
+`evidence/migrations/phase-2-normal-runner-upgrade-proof.txt`
+
+---
+
+# 5. Correct SHA256SUMS generation
+
+The final manifest must cover every regular file in the ZIP except:
+
+`SHA256SUMS.txt`
+
+Requirements:
+
+1. Use ASCII-only archive filenames.
+2. Do not include the checksum manifest itself.
+3. Sort paths consistently.
+4. Generate checksums only after all evidence files are final.
+5. Verify every line successfully with:
+
+```bash
+sha256sum -c SHA256SUMS.txt
+```
+
+Report:
+
+* ZIP regular-file count
+* Manifest entry count
+* Expected manifest count
+* Verification result
+
+Expected:
+
+```text
+manifest entries = regular ZIP files - 1
+```
+
+---
+
+# 6. Prove the exact clinical-note permission contract
+
+The only valid Phase 3 clinical-note permissions are:
+
+```text
+clinical_note.create
+clinical_note.view
+clinical_note.edit_own_draft
+clinical_note.sign_own
+clinical_note.void
+```
+
+These must not exist:
+
+```text
+clinical_note.sign
+clinical_note.export
+clinical_note.audit_view
+```
+
+Verify exact equality in:
+
+* Database permission rows
+* Server permission type
+* Frontend permission type
+* Role policy
+* Seed data
+* Session/login response
+* Route checks
+* Service checks
+* Automated tests
+* Documentation
+
+Add exact-equality tests. Do not use subset or “contains” assertions.
+
+---
+
+# 7. Correct production persona and role display
+
+In production data mode, the visible role must match the authenticated session.
+
+Remove or suppress demo-only role-switching UI in production mode.
+
+Requirements:
+
+* Clinician login visibly identifies the clinician role.
+* Nurse login visibly identifies the nurse role.
+* Supervisor login visibly identifies the clinical supervisor role.
+* Security administrator login does not display a clinical persona.
+* HR login does not display a clinical persona.
+* Billing login does not display a clinical persona.
+* No production screenshot contains “Demo Mode.”
+* No production denial message says that the demo uses role switching.
+
+Add browser assertions checking the displayed role against the authenticated account.
+
+---
+
+# 8. Strengthen authorization browser tests
+
+Do not prove denial only by checking that the New Note button is absent.
+
+For each denied persona, assert:
+
+1. The expected protected request occurred.
+2. The response status is the approved `403` or `404`.
+3. The explicit denial UI is visible.
+4. Protected note content is absent.
+5. Create, edit, sign, and void controls are absent.
+6. The page is not blank.
+7. The page is not stuck loading.
+8. No uncaught browser error occurred.
+
+Required denied personas:
+
+* Other-facility clinician
+* Unassigned clinician
+* Another author editing a draft
+* Another author signing a draft
+* Security administrator without clinical grant
+* HR
+* Billing
+* Original author without void permission
+
+For the another-author edit test, explicitly capture and assert the denied API response.
+
+Remove `.catch(() => {})` from required UI-state assertions.
+
+Timeout handling may be used only where the timeout itself is explicitly asserted as the expected result.
+
+---
+
+# 9. Use scoped browser-test cleanup only
+
+Do not execute:
+
+```sql
+DELETE FROM sos_rate_limit_windows;
+```
+
+Use one of:
+
+* A dedicated browser-test database
+* Keys namespaced to the browser-test run
+* Precise deletion of loopback/browser-test keys created by the suite
+
+Cleanup must not affect unrelated rate-limit rows.
+
+Record the keys removed and row count, without exposing session or identity secrets.
+
+---
+
+# 10. Include one authoritative source snapshot
+
+Build the archive from one clean final commit.
+
+Do not include duplicate or stale source copies.
+
+Include at minimum:
+
+## Migrations
+
+* `0000` through `0006`
+* Migration journal metadata
+* Database schema
+
+## API
+
+* Clinical-note repository
+* Clinical-note service
+* Clinical-note routes
+* Authorization policy
+* Permission types
+* Rate-limit implementation
+* Clinical-note tests
+* Rate-limit regression tests
+* Migration tests
+* Outbox tests relevant to ordering and pool cleanup
+
+## Frontend
+
+* `PatientDetail.tsx`
+* `App.tsx`
+* `AuthContext.tsx`
+* `RoleContext.tsx`
+* `ProductionLogin.tsx`
+* Permission store/types
+* Demo banner
+* Relevant UI components
+* Production data-mode implementation
+
+## Playwright
+
+* Configuration
+* Global setup
+* Global teardown
+* TypeScript configuration
+* Complete browser spec
+* Seed implementation
+* Helper utilities
+
+Include:
+
+* Final commit hash
+* `git status --short`
+* `git diff --stat` against the previous reviewed commit
+* Source-file inventory
+
+The working tree must be clean before packaging.
+
+---
+
+# 11. Run the complete deterministic test sequence
+
+Run sequentially, not concurrently:
+
+1. API Vitest A
+2. Sunrise OS Vitest A
+3. Playwright A
+4. API Vitest B
+5. Sunrise OS Vitest B
+6. Playwright B
+7. API Vitest C
+8. Sunrise OS Vitest C
+9. Playwright C
+10. API Vitest D
+11. Sunrise OS Vitest D
+
+Also run:
+
+* Rate limiter alone
+* Clinical notes followed by rate limiter
+* Rate limiter followed by clinical notes
+* Playwright followed by rate limiter
+* Outbox followed by clinical notes
+* Clinical notes followed by outbox
+
+Every process must exit before the next begins.
+
+Save the full output and exit code for every run.
+
+Required result:
+
+* API: all discovered tests pass in every run
+* Sunrise OS: all discovered tests pass in every run
+* Playwright: `17/17` in all three runs
+* Zero failures
+* Zero required skips
+* No retry-based acceptance
+
+---
+
+# 12. Generate final production browser evidence
+
+Run in:
+
+```text
+VITE_SUNRISE_DATA_MODE=production
+DISABLE_AUTH_FALLBACK=true
+```
+
+Use:
+
+* Real frontend
+* Real API
+* Real PostgreSQL
+* Real CSRF
+* Real sessions
+* Real authorization
+* Real scoped grants
+* No mocked routes
+* No development identity headers
+* No API-only substitutions
+
+Generate:
+
+* 17 sanitized Playwright trace archives
+* Production-mode screenshots
+* Sanitized HAR/browser-network evidence
+* Browser-console logs
+* Page-error logs
+
+Screenshot evidence must include:
+
+1. Production login
+2. Clinician dashboard with correct role
+3. Empty note state
+4. Draft creation
+5. Saved draft
+6. Edited draft
+7. Signed read-only note
+8. Nursing note
+9. Supervisor void dialog
+10. Void validation error
+11. Voided note
+12. Other-facility denial
+13. Unassigned denial
+14. Another-author denial
+15. Security-admin denial
+16. HR denial
+17. Billing denial
+18. Concurrency conflict
+
+No screenshot may show demo mode or demo-role-switching text.
+
+---
+
+# 13. Run recursive secret scans
+
+Scan:
+
+* Repository source
+* Generated evidence directory
+* HAR files
+* Extracted Playwright traces
+* Rebuilt Playwright trace archives
+* Final ZIP
+* Nested compressed files
+
+Search for:
+
+* Passwords
+* Cookie headers
+* `Set-Cookie`
+* `sos_dev_session`
+* CSRF tokens
+* Session IDs
+* Authorization headers
+* Environment secrets
+* Private keys
+* Database credentials
+
+The scan must inspect compressed contents, not only filenames.
+
+Save the full scan commands and results.
+
+Required result:
+
+```text
+0 confirmed secrets
+```
+
+---
+
+# 14. Regenerate the canonical archive
+
+Create:
+
+`artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v3.zip`
+
+Do not overwrite or reuse the contaminated v2 evidence.
+
+Include:
+
+* One authoritative final source snapshot
+* Migrations `0000` through `0006`
+* Normal-runner migration proofs
+* Exact permission evidence
+* Role matrix
+* API tests and logs
+* Frontend tests and logs
+* Playwright tests and logs
+* Seventeen sanitized trace archives
+* Sanitized HAR/network evidence
+* Production screenshots
+* Console and page-error logs
+* TypeScript logs
+* Production-build logs
+* Recursive secret-scan report
+* Evidence manifest
+* `SHA256SUMS.txt`
+
+Do not include:
+
+* Old v1 or v2 ZIPs
+* Unsanitized traces
+* Unsanitized HARs
+* Test passwords
+* Session or CSRF values
+* Database dumps
+* Real patient data
+* Real note content
+* Duplicate stale source files
+
+---
+
+# 15. Verify the v3 archive
+
+Run:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v3.zip
+sha256sum artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v3.zip
+unzip -l artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review-v3.zip
+```
+
+Extract it into a fresh directory and run:
+
+```bash
+sha256sum -c SHA256SUMS.txt
+```
+
+Confirm:
+
+* ZIP integrity passes
+* Manifest passes
+* Manifest does not include itself
+* ASCII-only paths
+* Exactly 17 sanitized traces
+* All traces open successfully
+* HAR files contain no cookies, sessions, CSRF values, passwords, or authorization headers
+* Production screenshots contain no demo UI
+* No duplicate source versions
+* No previous ZIP nested inside
+* Recursive secret scan is clean
+
+---
+
+# Required final response
+
+Provide:
+
+1. Branch
+2. Starting HEAD
+3. Correction commits
+4. Final HEAD
+5. Test-password rotation result
+6. Session-revocation result
+7. Hard-coded password removed
+8. Sanitized trace count
+9. Trace-viewer verification result
+10. Sanitized HAR count
+11. HAR secret-scan result
+12. Repository secret-scan result
+13. ZIP recursive secret-scan result
+14. Phase 2 normal-runner upgrade result
+15. Manual migration SQL required: yes/no
+16. Exact clinical-note permission set
+17. Unapproved permission-code scan
+18. Production clinician-role display result
+19. Demo UI absent result
+20. Other-facility denial result
+21. Unassigned denial result
+22. Another-author edit denial result
+23. Another-author sign denial result
+24. Security-admin denial result
+25. HR denial result
+26. Billing denial result
+27. API Vitest A
+28. Sunrise OS Vitest A
+29. Playwright A
+30. API Vitest B
+31. Sunrise OS Vitest B
+32. Playwright B
+33. API Vitest C
+34. Sunrise OS Vitest C
+35. Playwright C
+36. API Vitest D
+37. Sunrise OS Vitest D
+38. Rate limiter alone
+39. Clinical notes → rate limiter
+40. Rate limiter → clinical notes
+41. Playwright → rate limiter
+42. Outbox → clinical notes
+43. Clinical notes → outbox
+44. TypeScript result
+45. Production-build result
+46. Source inventory result
+47. Working-tree result
+48. ZIP path
+49. ZIP size
+50. ZIP SHA-256
+51. ZIP entry count
+52. Manifest entry count
+53. Manifest verification
+54. Screenshot count
+55. Known limitations
+56. Explicit answer: `PHASE 3 APPROVED FOR MERGE` or `PHASE 3 NOT APPROVED`
+
+Do not merge automatically.
+
+Do not begin another phase.
+
+Stop after producing and verifying the v3 archive.

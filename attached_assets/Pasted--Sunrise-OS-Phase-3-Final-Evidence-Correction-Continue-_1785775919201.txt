@@ -1,0 +1,587 @@
+# Sunrise OS — Phase 3 Final Evidence Correction
+
+Continue on:
+
+`feature/phase-3-clinical-documentation-foundation`
+
+Do not merge into `main`.
+
+Do not begin another phase.
+
+Do not add new clinical functionality.
+
+Complete only the remaining deterministic-test, permission-contract, browser-tooling, production-mode, and evidence-package corrections.
+
+---
+
+# 1. Fix the rate-limit state leak
+
+The latest run produced a Vitest failure after the Playwright suite:
+
+* Expected login rate-limit response: `429`
+* Actual response: `401`
+
+The report attributes this to leftover rows in:
+
+`sos_rate_limit_windows`
+
+Do not treat this as a transient flake.
+
+Implement deterministic isolation.
+
+## Requirements
+
+Before each rate-limit integration scenario:
+
+* Delete only that scenario’s rate-limit keys.
+* Do not delete unrelated production-style records.
+* Use an isolated test database or uniquely namespaced keys where practical.
+* Reset the store singleton.
+* Close the database pool.
+* Restore rate-limit environment settings.
+* Restore timers and mocks.
+* Ensure Playwright and Vitest cannot share stale rate-limit rows.
+
+After every Playwright run:
+
+* Shut down the API process.
+* Close all browser contexts.
+* Close all database connections.
+* Remove browser-test rate-limit rows.
+* Confirm no browser-test login counters remain.
+
+The rate-limit integration test must establish its own initial database state and must not depend on whether Playwright ran first.
+
+---
+
+# 2. Remove the browser rate-limit bypass
+
+Remove this Playwright workaround:
+
+```text
+PHASE2D_RATE_LIMIT_MAX=1000
+```
+
+Do not make the browser environment pass by effectively disabling the configured login threshold.
+
+Instead:
+
+* Use a dedicated browser-test database.
+* Reset only browser-test rate-limit records between personas.
+* Use one authenticated session for multiple steps when the workflow permits.
+* Log out only where persona separation requires it.
+* Keep the real PostgreSQL rate limiter enabled.
+
+Add one Playwright setup assertion confirming that the rate limiter is active with the configured test threshold.
+
+The main clinical-note workflows need not exhaust the rate limiter, but they must not bypass it globally.
+
+---
+
+# 3. Restore the exact clinical-note permission contract
+
+The approved Phase 3 permission codes are exactly:
+
+```text
+clinical_note.create
+clinical_note.view
+clinical_note.edit_own_draft
+clinical_note.sign_own
+clinical_note.void
+```
+
+The following must not exist in the Phase 3 permission contract:
+
+```text
+clinical_note.sign
+clinical_note.export
+clinical_note.audit_view
+```
+
+Unless a separate approved migration already introduced another code, remove those unapproved values from:
+
+* Server `PermissionCode`
+* Frontend permission unions
+* Permission policy
+* Role grants
+* Seed definitions
+* Migration permission inserts
+* Route checks
+* Service checks
+* Tests
+* Documentation
+
+Do not alias `clinical_note.sign` to `clinical_note.sign_own`.
+
+Use the exact `clinical_note.sign_own` code end to end.
+
+## Add exact-equality tests
+
+Assert that the clinical-note permission subset is exactly:
+
+```json
+[
+  "clinical_note.create",
+  "clinical_note.view",
+  "clinical_note.edit_own_draft",
+  "clinical_note.sign_own",
+  "clinical_note.void"
+]
+```
+
+Test exact equality in:
+
+* Database permission records
+* Server permission union
+* Frontend permission union
+* Role-policy matrix
+* Login/session permission response
+
+Do not use “contains at least” assertions.
+
+---
+
+# 4. Verify the role matrix after permission correction
+
+Produce and test the exact matrix for:
+
+* Clinician
+* Nurse
+* Clinical supervisor
+* CMO
+* Facility administrator
+* BHT
+* Aftercare
+* Security administrator
+* HR
+* Billing
+* Ownership
+
+At minimum prove:
+
+* Clinician may create, view, edit own draft, and sign own draft.
+* Nurse may create and sign nursing notes only according to approved scope.
+* Clinical supervisor may view and void within the supervisor’s clinical scope.
+* Supervisor may not edit or sign another author’s draft.
+* Security administration alone grants no clinical-note permission.
+* HR alone grants no clinical-note permission.
+* Billing alone grants no clinical-note permission.
+* Ownership alone grants no clinical-note permission.
+* Mixed roles do not expand clinical patient or facility scope beyond the effective clinical grant.
+
+---
+
+# 5. Correct the production DemoBanner behavior
+
+The latest investigation found that `DemoBanner` is always rendered.
+
+Correct it so the demo banner renders only when:
+
+```text
+VITE_SUNRISE_DATA_MODE=demo
+```
+
+In production data mode:
+
+```text
+VITE_SUNRISE_DATA_MODE=production
+```
+
+the demo banner must not be present in the DOM.
+
+Add frontend tests for:
+
+* Demo mode: banner visible
+* Production mode before login: banner absent
+* Production mode after login: banner absent
+* Production Patient Detail: banner absent
+
+Capture an authentic production-mode screenshot proving no demo banner is displayed.
+
+---
+
+# 6. Use a compatible Playwright and Chromium pair
+
+The latest tests use Playwright 1.62 with Chromium revision 1080.
+
+That mismatch caused:
+
+* Browser rendering failures
+* CDP network deadlocks
+* Mouse-event hangs
+* Trace failures
+* HAR failures
+* Forced-click workarounds
+
+Do not retain this mismatched pairing.
+
+Use one of these approaches:
+
+## Preferred
+
+Install the Chromium revision managed by the checked-in Playwright version, together with all required runtime dependencies.
+
+## Alternative
+
+Pin the Playwright package to the exact version compatible with the available Chromium revision.
+
+Document:
+
+* Playwright version
+* Chromium version
+* Chromium revision
+* Executable path
+* Why they are compatible
+
+Do not select a browser executable merely because it launches.
+
+---
+
+# 7. Remove protocol-mismatch interaction workarounds
+
+After using a compatible browser pair, remove broad workarounds added solely because of the protocol mismatch:
+
+* Global `{ force: true }` on clicks
+* `dispatchEvent("click")` replacing normal user interaction
+* Disabling trace collection
+* Removing `recordHar`
+* Avoiding normal mouse events
+* Bypassing hit-testing across the suite
+
+A forced click may remain only for one specifically documented UI condition where an ordinary user-equivalent action is impossible and the application behavior is still meaningfully tested.
+
+The normal browser workflow must use standard interactions:
+
+```text
+locator.click()
+locator.fill()
+locator.selectOption()
+page.goto()
+page.reload()
+```
+
+Playwright must be capable of:
+
+* Screenshots
+* Traces
+* HAR/network capture
+* Browser-console collection
+* Page-error collection
+
+without hanging.
+
+---
+
+# 8. Run genuine browser smoke verification
+
+With the compatible browser pair, run this smoke test in three fresh processes:
+
+1. Start the test API.
+2. Start the production-data-mode frontend.
+3. Launch Chromium.
+4. Navigate to the login page.
+5. Confirm the React application renders.
+6. Confirm the production login form is visible.
+7. Confirm no demo banner exists.
+8. Confirm no uncaught page error.
+9. Confirm no browser crash.
+10. Close cleanly.
+
+Do not use forced clicks in this smoke test.
+
+---
+
+# 9. Rerun the complete real-browser workflows
+
+Run the existing 17 Playwright scenarios again using:
+
+* Standard browser clicks
+* Real frontend
+* Real API
+* Real PostgreSQL
+* Real CSRF
+* Real login
+* Real session cookies
+* `DISABLE_AUTH_FALLBACK=true`
+* Production data mode
+* Real scoped permissions
+* No route interception
+* No API-only substitutions
+
+Required:
+
+* 17 discovered
+* 17 passed
+* 0 failed
+* 0 skipped
+
+Run the complete Playwright suite three times in separate fresh processes.
+
+---
+
+# 10. Capture authentic Playwright evidence
+
+Now that the browser and Playwright versions are compatible, enable:
+
+* Trace collection
+* Screenshots
+* Video where supported
+* HAR or browser-network capture
+* Browser console
+* Page-error capture
+
+Capture actual browser evidence for:
+
+* Production login
+* Clinician draft creation
+* Draft persistence after refresh
+* Draft edit
+* Signature
+* Nursing-note workflow
+* Supervisor void
+* Short-reason validation
+* Other-facility denial
+* Unassigned-patient denial
+* Security-administrator denial
+* HR denial
+* Billing denial
+* Another-author edit denial
+* Concurrency conflict
+* Logout
+
+Do not count old evidence produced while tracing or HAR was disabled.
+
+Delete or clearly label incompatible-browser evidence as superseded.
+
+---
+
+# 11. Prove deterministic non-browser stability
+
+After the test-state cleanup is implemented, run the following in this exact order:
+
+1. Vitest fresh process A
+2. Playwright full run A
+3. Vitest fresh process B
+4. Playwright full run B
+5. Vitest fresh process C
+6. Playwright full run C
+7. Vitest fresh process D
+
+Every Vitest process must report:
+
+* 550 discovered, or the corrected actual count
+* All passed
+* Zero failed
+* Zero skipped
+
+Every Playwright process must report:
+
+* 17 discovered, or the corrected actual count
+* All passed
+* Zero failed
+* Zero skipped
+
+No run may be omitted.
+
+No failed run may be dismissed as transient.
+
+Also run:
+
+* Clinical-note suite followed by rate-limit suite
+* Rate-limit suite followed by clinical-note suite
+* Playwright followed by rate-limit suite
+* Rate-limit suite followed by Playwright setup
+* Outbox suite followed by clinical-note suite
+* Clinical-note suite followed by outbox suite
+
+---
+
+# 12. Recheck TypeScript and builds
+
+Run:
+
+* Database package TypeScript/build
+* API TypeScript
+* API production build
+* Sunrise OS TypeScript
+* Sunrise OS production build
+* Playwright TypeScript validation
+
+Required:
+
+* Zero errors
+* No permission-union mismatch
+* No unapproved clinical-note permission codes
+* No browser-version warning
+
+---
+
+# 13. Update the evidence manifest
+
+Create or update the Phase 3 evidence manifest with:
+
+* Branch
+* Final commit
+* Exact permission-code set
+* Exact role matrix
+* Playwright version
+* Chromium version
+* Chromium revision
+* Browser executable
+* Demo-banner result
+* Rate-limit-isolation result
+* Every stability-run result
+* Screenshot inventory
+* Trace inventory
+* HAR/network inventory
+* TypeScript results
+* Build results
+* Secret-scan results
+* Known limitations
+
+Do not describe failed or omitted runs as passing.
+
+---
+
+# 14. Regenerate the final review ZIP
+
+Regenerate:
+
+`artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip`
+
+Include:
+
+* Complete migration chain
+* Migration metadata
+* Migration proofs
+* Final server permission contract
+* Final frontend permission contract
+* Exact permission tests
+* Role matrix
+* Database schema
+* Repository
+* Service
+* Routes
+* Frontend source
+* Demo-banner tests
+* Rate-limit isolation correction
+* Full Vitest logs
+* Full Playwright logs
+* Actual Playwright screenshots
+* Actual Playwright traces
+* Actual sanitized HAR/network capture
+* Browser console/page-error logs
+* TypeScript logs
+* Production build logs
+* Secret-scan report
+* Evidence manifest
+* Complete SHA-256 manifest
+
+The SHA manifest must cover every entry except itself.
+
+Do not include:
+
+* Superseded synthetic traces
+* Incompatible-browser traces presented as final
+* Passwords
+* Cookies
+* Session identifiers
+* CSRF values
+* Environment files
+* Database dumps
+* Real patient data
+* Real note content
+* Previous review ZIPs
+
+---
+
+# 15. Verify and upload the actual ZIP
+
+Run:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+```
+
+Confirm:
+
+* ZIP integrity passes
+* SHA-manifest coverage is complete
+* Compatible-browser evidence is included
+* Traces and HAR are authentic
+* No unapproved permission codes exist
+* Demo banner is absent in production evidence
+* No failed stability run is hidden
+* Secret scan is clean
+* No previous ZIP is nested inside
+
+Make the ZIP available for download so it can be independently reviewed.
+
+---
+
+# Required final response
+
+Provide:
+
+1. Branch
+2. Starting HEAD
+3. Correction commits
+4. Final HEAD
+5. Exact clinical-note permission codes
+6. Unapproved permission codes removed
+7. Role-matrix result
+8. Demo-mode banner result
+9. Production-mode banner result
+10. Rate-limit state-leak root cause
+11. Rate-limit state-leak correction
+12. Browser rate-limit bypass removed
+13. Playwright version
+14. Chromium version
+15. Chromium revision
+16. Browser compatibility result
+17. Forced-click workarounds removed
+18. Trace result
+19. HAR/network result
+20. Browser smoke run 1
+21. Browser smoke run 2
+22. Browser smoke run 3
+23. Playwright run A
+24. Vitest run B
+25. Playwright run B
+26. Vitest run C
+27. Playwright run C
+28. Vitest final run
+29. Clinical-note → rate-limit result
+30. Rate-limit → clinical-note result
+31. Playwright → rate-limit result
+32. Outbox → clinical-note result
+33. Clinical-note → outbox result
+34. Non-browser tests discovered
+35. Non-browser tests passed
+36. Non-browser tests failed
+37. Non-browser tests skipped
+38. Playwright tests discovered
+39. Playwright tests passed
+40. Playwright tests failed
+41. Playwright tests skipped
+42. Screenshot count
+43. Authentic trace count
+44. Authentic HAR/network count
+45. TypeScript result
+46. Production-build result
+47. Secret-scan result
+48. ZIP path
+49. ZIP size
+50. ZIP SHA-256
+51. ZIP entry count
+52. SHA-manifest coverage
+53. Known limitations
+54. Explicit answer: `PHASE 3 APPROVED FOR MERGE` or `PHASE 3 NOT APPROVED`
+
+Do not merge automatically.
+
+Do not begin another phase.
+
+Stop after producing the corrected ZIP.

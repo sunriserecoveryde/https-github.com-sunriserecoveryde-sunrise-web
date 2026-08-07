@@ -1,0 +1,7 @@
+=== API typecheck ===
+Started: 2026-08-04T22:37:23Z
+
+> @workspace/api-server@0.0.0 typecheck /home/runner/workspace/artifacts/api-server
+> tsc -p tsconfig.json --noEmit
+
+API TYPECHECK EXIT: 0

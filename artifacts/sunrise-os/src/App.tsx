@@ -306,7 +306,7 @@ function AppInner() {
 
   return (
     <div className="min-h-screen bg-bg flex flex-col font-sans">
-      <DemoBanner />
+      {DATA_MODE === 'demo' && <DemoBanner />}
       <Topbar navigate={navigateTo} currentScreen={activeScreen} />
 
       <div className="flex flex-1 pt-[calc(var(--banner-height)+var(--topbar-height))]">

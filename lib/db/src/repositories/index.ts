@@ -4,3 +4,4 @@ export * from "./facilityRepo";
 export * from "./staffRepo";
 export * from "./patientRepo";
 export * from "./episodeRepo";
+export * from "./clinicalNoteRepository";

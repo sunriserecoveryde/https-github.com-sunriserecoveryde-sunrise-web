@@ -84,6 +84,7 @@ export function FlagChartAlert({ patientName, flags, amaRisk, onClose, onEdit }:
           </button>
           <button
             onClick={onClose}
+            data-testid="chart-alert-acknowledge"
             className="bg-navy text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-navy-mid transition-colors"
           >
             Acknowledge &amp; Continue

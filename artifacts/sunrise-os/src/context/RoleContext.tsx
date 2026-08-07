@@ -111,7 +111,19 @@ function deriveScreenPermissionFromServerCodes(
 
   // Patient screens
   if (screen === 'PatientList')   return has('patient.list.view')  ? 'read' : 'none';
-  if (screen === 'PatientDetail') return has('patient.chart.view') ? 'read' : 'none';
+  if (screen === 'PatientDetail') {
+    if (!has('patient.chart.view')) return 'none';
+    // Return 'full' when the user holds write-level clinical permissions.
+    // 'read' means view-only — LockedButton receives locked=true on all mutating
+    // actions.  The server always re-validates; this gate is for UX only.
+    const canWrite =
+      has('clinical_note.create')         ||
+      has('clinical_note.edit_own_draft') ||
+      has('clinical_note.sign_own')       ||
+      has('clinical_note.void')           ||
+      has('patient.update');
+    return canWrite ? 'full' : 'read';
+  }
   if (screen === 'ChartReview')   return has('patient.chart.view') ? 'read' : 'none';
 
   // Admin screens

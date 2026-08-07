@@ -1,0 +1,2 @@
+None of the selected packages has a "type-check" script
+API TSC EXIT: 0

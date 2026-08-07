@@ -1,0 +1,35 @@
+{
+  "flow": "03-supervisor-void",
+  "generatedAt": "2026-08-03T01:41:43Z",
+  "description": "CMO (org-admin) voids a signed note with clinical reason \u2014 API evidence",
+  "actor": "org-admin@test.sunrise",
+  "role": "cmo",
+  "note": "PHI and void reason redacted. Full evidence in clinical-notes-p3.test.ts \u00a74 / \u00a79.",
+  "requests": [
+    {
+      "step": "3a POST /clinical-notes/:id/void (CMO session)",
+      "method": "POST",
+      "url": "/api/v1/patients/[PATIENT_ID]/clinical-notes/[NOTE_ID]/void",
+      "requestBody": {
+        "voidReason": "[REDACTED \u2014 clinical reason]",
+        "expectedVersion": 2
+      },
+      "responseStatus": 200,
+      "responseBodySample": {
+        "id": "[NOTE_UUID]",
+        "status": "voided",
+        "voidedAt": "[ISO timestamp]",
+        "voidReason": "[REDACTED \u2014 PHI]",
+        "voidedByUserId": "[CMO_UUID]",
+        "version": 3
+      },
+      "dbVerification": {
+        "content": "UNCHANGED \u2014 original note content preserved in DB",
+        "signedAt": "UNCHANGED \u2014 original sign timestamp preserved",
+        "signedByUserId": "UNCHANGED \u2014 original signer preserved",
+        "voidedAt": "SET \u2014 matches responseBody.voidedAt",
+        "voidedByUserId": "SET \u2014 matches CMO session userId"
+      }
+    }
+  ]
+}

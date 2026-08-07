@@ -1,0 +1,29 @@
+{
+  "flow": "05-concurrency-conflict",
+  "generatedAt": "2026-08-03T01:41:43Z",
+  "description": "Stale version sign attempt returns 409 (ConcurrencyError) or 422 (NoteStatusError)",
+  "actor": "clinician@test.sunrise",
+  "role": "certified_clinician",
+  "note": "Full evidence in clinical-notes-p3.test.ts \u00a72 (ConcurrencyError) and \u00a73 (NoteStatusError). PHI redacted.",
+  "requests": [
+    {
+      "step": "5a POST /clinical-notes/:id/sign with stale expectedVersion",
+      "method": "POST",
+      "url": "/api/v1/patients/[PATIENT_ID]/clinical-notes/[NOTE_ID]/sign",
+      "requestBody": {
+        "expectedVersion": 1
+      },
+      "responseStatus": 409,
+      "responseBodySample": {
+        "error": "Optimistic lock conflict: expected version 1 but note is at version 2"
+      },
+      "alternativeScenario": {
+        "scenario": "Note already voided \u2014 version is correct but status does not permit signing",
+        "responseStatus": 422,
+        "responseBodySample": {
+          "error": "Note status 'voided' does not permit signing"
+        }
+      }
+    }
+  ]
+}

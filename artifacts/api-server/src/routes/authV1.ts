@@ -39,7 +39,7 @@ import {
   sosAuthAudit,
 } from "@workspace/db";
 import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
-import { rateLimit } from "express-rate-limit";
+import { rateLimit, ipKeyGenerator, type Store as RateLimitStore } from "express-rate-limit";
 import { PgRateLimitStore } from "../lib/pgRateLimiter";
 import { getPermissionsForRole, isRoleFacilityWide, isKnownRole } from "../lib/permissionPolicy";
 import { buildScopedGrant } from "../lib/authorizationService";
@@ -80,41 +80,78 @@ const ABSOLUTE_TIMEOUT_MS = parseInt(process.env.SESSION_ABSOLUTE_TIMEOUT_MS ?? 
 // Survives API restarts. Shared across multiple API instances.
 // Fail-open: DB unavailability allows the request (see pgRateLimiter.ts).
 //
-// Phase 2D: set PHASE2D_RATE_LIMIT_INTEGRATION=true to enable the real
-// PgRateLimitStore even in test mode (used by auth-p2d-rate-limit.test.ts).
-// Set PHASE2D_RATE_LIMIT_WINDOW_MS to override the window (test: short window).
-// Set PHASE2D_RATE_LIMIT_MAX to override the limit (test: low threshold).
+// All behaviour-controlling env vars are evaluated at REQUEST TIME (not module
+// load time) so that auth-p2d-rate-limit.test.ts step-15 can activate / deactivate
+// integration mode without calling vi.resetModules() (which fragments the DB
+// connection pool and causes cross-file timeout failures).
+//
+// PHASE2D_RATE_LIMIT_INTEGRATION=true   — enable real rate limiting in test mode
+// PHASE2D_RATE_LIMIT_MAX=N              — override per-window limit (read per request)
+// PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX=P  — prepend unique prefix to req.ip key
+//
+// pgStore uses a lazy singleton so no DB connection or setInterval is created at
+// module load time in test mode.  It initialises on the first request that has
+// skip()=false.  In normal test mode skip() always returns true so the store is
+// never touched.  This prevents background prune queries from competing with
+// parallel test-file DB connections and causing spurious timeouts.
 
 const WINDOW_MS = parseInt(
   process.env.PHASE2D_RATE_LIMIT_WINDOW_MS ?? "900000",  // 15 min default
   10,
 );
-const RATE_LIMIT_MAX = parseInt(
-  process.env.PHASE2D_RATE_LIMIT_MAX ?? "10",
-  10,
-);
-const RL_INTEGRATION = process.env.PHASE2D_RATE_LIMIT_INTEGRATION === "true";
 
-const pgStore = (process.env.NODE_ENV !== "test" || RL_INTEGRATION)
-  ? (() => {
-      const s = new PgRateLimitStore(WINDOW_MS);
-      s.init();
-      return s;
-    })()
-  : undefined;
+// Lazy singleton — initialised on first real use (skip()=false).
+let _pgStore: PgRateLimitStore | undefined;
+
+function getOrCreatePgStore(): PgRateLimitStore {
+  if (!_pgStore) {
+    _pgStore = new PgRateLimitStore(WINDOW_MS);
+    _pgStore.init();
+  }
+  return _pgStore;
+}
+
+// Store proxy: delegates to the lazy singleton but only when the rate limiter
+// is actually active (skip()=false).  When skip()=true, express-rate-limit does
+// not call these methods at all, so the proxy is never invoked in normal test mode.
+const lazyRateLimitStore = {
+  async increment(key: string) {
+    return getOrCreatePgStore().increment(key);
+  },
+  async decrement(key: string): Promise<void> {
+    return getOrCreatePgStore().decrement(key);
+  },
+  async resetKey(key: string): Promise<void> {
+    return getOrCreatePgStore().resetKey(key);
+  },
+};
 
 const authRateLimiter = rateLimit({
   windowMs: WINDOW_MS,
-  // express-rate-limit v8 reads 'max' from passedOptions before spreading the
-  // full options object; 'limit' is the canonical v8 option name but 'max' is
-  // what the config initializer seeds from.  Set both to be unambiguous.
-  limit:    RATE_LIMIT_MAX,
-  max:      RATE_LIMIT_MAX,
+  // Read limit from env var at request time so step-15 can lower it to 3 without
+  // reloading the module.  Default is 10 (production setting).
+  limit: (): number => parseInt(process.env.PHASE2D_RATE_LIMIT_MAX ?? "10", 10),
   standardHeaders: "draft-8",
   legacyHeaders:   false,
   message: { error: "Too many requests. Please try again later." },
-  store:   pgStore,  // PostgreSQL store (undefined = MemoryStore when not in RL_INTEGRATION mode)
-  skip:    () => process.env.NODE_ENV === "test" && !RL_INTEGRATION,
+  store:   lazyRateLimitStore as unknown as RateLimitStore,
+  // Test isolation: PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX prepends a unique per-run
+  // prefix to req.ip so that step-15's rate-limit rows never collide with real
+  // browser logins (Playwright) or other integration tests that share the loopback IP.
+  // The prefix always starts with 'p2d-rate-limit-test' so pruneTestKeys() in the
+  // rate-limit test suite automatically removes it in afterAll.
+  // In production (no prefix set) this returns ipKeyGenerator(req.ip) as-is.
+  // ipKeyGenerator satisfies the express-rate-limit v8 validation check that
+  // requires IP-based key generators to call ipKeyGenerator explicitly.
+  keyGenerator: (req): string => {
+    const prefix = process.env.PHASE2D_RATE_LIMIT_TEST_KEY_PREFIX;
+    const ip = ipKeyGenerator(req.ip ?? "127.0.0.1");
+    return prefix ? `${prefix}:${ip}` : ip;
+  },
+  // Evaluated at request time — no module reload required for integration tests.
+  skip: (): boolean =>
+    process.env.NODE_ENV === "test" &&
+    process.env.PHASE2D_RATE_LIMIT_INTEGRATION !== "true",
 });
 
 // ── Input schemas ─────────────────────────────────────────────────────────────
@@ -1101,10 +1138,12 @@ router.delete(
       return;
     }
 
-    // pgStore is undefined when running in test mode without RL_INTEGRATION.
-    // Return 503 rather than silently doing nothing so callers know the store
-    // is not configured.
-    if (!pgStore) {
+    // In test mode without PHASE2D_RATE_LIMIT_INTEGRATION=true the lazy store
+    // is never initialised.  Return 503 so callers know the store is not active.
+    const isStoreActive =
+      process.env.NODE_ENV !== "test" ||
+      process.env.PHASE2D_RATE_LIMIT_INTEGRATION === "true";
+    if (!isStoreActive) {
       res.status(503).json({ error: "Rate-limit store is not configured in this environment." });
       return;
     }
@@ -1113,7 +1152,7 @@ router.delete(
       // adminResetKey() throws on DB error (unlike resetKey() which fails-open).
       // This guarantees we only write a success audit event when the window was
       // actually cleared — a silent failure must never produce a success record.
-      await pgStore.adminResetKey(key);
+      await getOrCreatePgStore().adminResetKey(key);
 
       await writeAuditEvent({
         orgId:    adminAuth.orgId,

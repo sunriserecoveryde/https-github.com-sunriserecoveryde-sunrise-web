@@ -1,0 +1,359 @@
+# Sunrise OS — Phase 3 Evidence Packaging and Flake Elimination
+
+Continue on:
+
+`feature/phase-3-clinical-documentation-foundation`
+
+Do not merge into `main`.
+
+Do not begin another phase.
+
+Do not add new product functionality.
+
+Complete only the remaining deterministic-test correction and final evidence packaging.
+
+---
+
+# 1. Identify the recurring 567/568 failure
+
+The activity history contains multiple API test runs with:
+
+```text
+567/568
+```
+
+Do not classify this as a timing fluke.
+
+Locate and report:
+
+* Exact test file
+* Exact test name
+* Expected result
+* Actual result
+* Error message
+* Database state before the test
+* Environment state before the test
+* Test ordering
+* Whether Playwright had run immediately before it
+* Whether rate-limit, audit-outbox, session, timer, singleton, or module state remained
+
+Preserve the failing output as evidence.
+
+---
+
+# 2. Correct the flake’s root cause
+
+Apply the narrowest deterministic correction.
+
+The correction must ensure that every relevant test establishes and cleans up its own:
+
+* Rate-limit keys
+* Database fixtures
+* Environment variables
+* Mock state
+* Fake timers
+* Module cache
+* Singleton state
+* API servers
+* Workers
+* Database pools
+* Browser-test records
+
+Do not correct it by:
+
+* Retrying until green
+* Increasing test timeouts without explanation
+* Changing an assertion
+* Skipping the test
+* Forcing a file order
+* Deleting all shared database data
+* Calling the failure transient
+
+Add a regression test proving the affected test passes:
+
+1. Before Playwright
+2. After Playwright
+3. After the clinical-note suite
+4. After the rate-limit suite
+5. In the full suite
+
+---
+
+# 3. Run the required deterministic sequence
+
+Run this exact sequence in fresh processes:
+
+1. API Vitest A
+2. Sunrise OS Vitest A
+3. Playwright A
+4. API Vitest B
+5. Sunrise OS Vitest B
+6. Playwright B
+7. API Vitest C
+8. Sunrise OS Vitest C
+9. Playwright C
+10. API Vitest D
+11. Sunrise OS Vitest D
+
+Also run:
+
+* Clinical notes → rate limiter
+* Rate limiter → clinical notes
+* Playwright → rate limiter
+* Rate limiter → Playwright setup
+* Outbox worker → clinical notes
+* Clinical notes → outbox worker
+
+Record every run.
+
+Do not omit failed runs.
+
+Required result:
+
+* Every API Vitest run passes
+* Every Sunrise OS Vitest run passes
+* Every Playwright run passes
+* Zero required tests skipped
+* No unexplained intermittent result
+
+---
+
+# 4. Produce authentic traces per browser scenario
+
+The full 17-test trace-enabled run exhausted available resources.
+
+Use individual or small-batch trace runs instead.
+
+For each of the 17 Playwright tests:
+
+1. Reset the browser-test database state.
+2. Start the isolated API and frontend.
+3. Run that test with trace enabled.
+4. Capture the trace.
+5. Capture screenshots.
+6. Capture browser console output.
+7. Capture page errors.
+8. Capture sanitized network evidence or HAR.
+9. Shut down the processes.
+10. Confirm the test passed.
+
+Do not claim a trace exists unless Playwright generated it during that test’s browser execution.
+
+The final evidence must contain:
+
+* 17 authentic Playwright traces
+* Network evidence covering every API operation used by the 17 scenarios
+* Required screenshots
+* Browser-console logs
+* Page-error logs
+
+A full-suite run may continue using lower-overhead trace settings for stability proof, but every scenario must have a separate authentic evidence run.
+
+---
+
+# 5. Verify the final browser environment
+
+Document and prove:
+
+* Playwright version
+* Chromium version
+* Chromium revision
+* Browser executable path
+* Compatibility rationale
+* Frontend origin
+* API origin
+* PostgreSQL database used
+* `VITE_SUNRISE_DATA_MODE=production`
+* `DISABLE_AUTH_FALLBACK=true`
+* Development identity unavailable
+* Demo banner absent
+* Real CSRF enabled
+* Real session cookies enabled
+* Real PostgreSQL rate limiter enabled
+
+Do not use:
+
+* A globally inflated rate-limit maximum
+* Development identity fallback
+* Route interception
+* Mock API responses
+* API-only substitutions for UI workflows
+
+---
+
+# 6. Verify the exact permission contract
+
+Include exact-equality evidence showing that the clinical-note permission set is:
+
+```text
+clinical_note.create
+clinical_note.view
+clinical_note.edit_own_draft
+clinical_note.sign_own
+clinical_note.void
+```
+
+Confirm that these do not exist:
+
+```text
+clinical_note.sign
+clinical_note.export
+clinical_note.audit_view
+```
+
+Verify the exact set in:
+
+* Database records
+* Server permission type
+* Frontend permission type
+* Role policy
+* Login/session response
+* Tests
+* Documentation
+
+---
+
+# 7. Build one complete final Phase 3 archive
+
+The browser-hardening ZIP is supplemental evidence and is not the complete Phase 3 review package.
+
+Regenerate the canonical archive at:
+
+`artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip`
+
+Include:
+
+* Migrations `0000` through `0006`
+* Migration metadata
+* Journal reconciliation
+* Clean-migration proof
+* Phase 2 upgrade proof
+* Database schema
+* Repositories
+* Services
+* Routes
+* Authorization policy
+* Exact permission contract
+* Role matrix
+* Frontend source
+* Demo/production data-mode behavior
+* All API tests
+* All Sunrise OS tests
+* All Playwright tests
+* Every stability-run log
+* All 17 authentic Playwright traces
+* Sanitized HAR/network evidence
+* Screenshots
+* Browser-console logs
+* Page-error logs
+* TypeScript logs
+* Production-build logs
+* Secret-scan report
+* Evidence manifest
+* Complete SHA-256 manifest
+
+Do not nest:
+
+* The browser-hardening ZIP
+* Any previous Phase 3 ZIP
+* Prior review archives
+
+The SHA manifest must cover every archive entry except itself.
+
+---
+
+# 8. Verify the canonical archive
+
+Run:
+
+```bash
+unzip -t artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+sha256sum artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+unzip -l artifacts/sunrise-os/readiness/phase-3-clinical-documentation-foundation-review.zip
+```
+
+Also verify:
+
+* Every manifest checksum
+* Exact trace count
+* Screenshot count
+* HAR/network count
+* Test-log count
+* No secret values
+* No cookies
+* No session identifiers
+* No CSRF values
+* No real patient data
+* No real clinical-note content
+* No previous ZIPs
+
+Make the canonical ZIP available for download.
+
+---
+
+# Required final response
+
+Provide:
+
+1. Branch
+2. Starting HEAD
+3. Correction commit
+4. Final HEAD
+5. Previously flaky test file
+6. Previously flaky test name
+7. Failure root cause
+8. Root-cause correction
+9. API Vitest A
+10. Sunrise OS Vitest A
+11. Playwright A
+12. API Vitest B
+13. Sunrise OS Vitest B
+14. Playwright B
+15. API Vitest C
+16. Sunrise OS Vitest C
+17. Playwright C
+18. API Vitest D
+19. Sunrise OS Vitest D
+20. Clinical notes → rate limiter
+21. Rate limiter → clinical notes
+22. Playwright → rate limiter
+23. Rate limiter → Playwright setup
+24. Outbox → clinical notes
+25. Clinical notes → outbox
+26. API tests discovered
+27. API tests passed
+28. API tests failed
+29. API tests skipped
+30. Sunrise OS tests discovered
+31. Sunrise OS tests passed
+32. Sunrise OS tests failed
+33. Sunrise OS tests skipped
+34. Playwright tests discovered
+35. Playwright tests passed
+36. Playwright tests failed
+37. Playwright tests skipped
+38. Playwright version
+39. Chromium version and revision
+40. Development auth fallback disabled
+41. Production data mode result
+42. Exact clinical-note permission set
+43. Unapproved permission-code scan
+44. Authentic trace count
+45. Screenshot count
+46. Authentic HAR/network count
+47. TypeScript result
+48. Production-build result
+49. Secret-scan result
+50. Canonical ZIP path
+51. ZIP size
+52. ZIP SHA-256
+53. ZIP entry count
+54. SHA-manifest coverage
+55. Known limitations
+56. Explicit answer: `PHASE 3 APPROVED FOR MERGE` or `PHASE 3 NOT APPROVED`
+
+Do not merge automatically.
+
+Do not begin another phase.
+
+Stop after making the canonical ZIP available.

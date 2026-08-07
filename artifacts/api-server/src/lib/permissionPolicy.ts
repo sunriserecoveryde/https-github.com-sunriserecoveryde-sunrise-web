@@ -2,7 +2,7 @@
  * Permission policy for Sunrise OS.
  *
  * Defines:
- *  1. PermissionCode union — 13 server-side permission codes.
+ *  1. PermissionCode union — 18 server-side permission codes (13 core + 5 clinical_note.*).
  *  2. ROLE_PERMISSIONS — maps every code-defined role ID to:
  *       - permissions: the set of permission codes it grants
  *       - facilityWide: true = role grants facility-wide patient access without
@@ -38,6 +38,12 @@ export const PERMISSION_CODES = [
   "role.manage",
   "session.manage",
   "audit.authentication.view",
+  // Phase 3 — Clinical Documentation Foundation
+  "clinical_note.create",
+  "clinical_note.view",
+  "clinical_note.edit_own_draft",
+  "clinical_note.sign_own",
+  "clinical_note.void",
 ] as const;
 
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
@@ -78,6 +84,12 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.create",
       "patient.update",
       "patient.export",
+      // Phase 3 — Clinical Documentation Foundation
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
     ],
   },
   certified_clinician: {
@@ -92,6 +104,11 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.episode.view",
       "patient.create",
       "patient.update",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
     ],
   },
   mh_therapist: {
@@ -106,6 +123,11 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.episode.view",
       "patient.create",
       "patient.update",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
     ],
   },
   cmo: {
@@ -132,6 +154,12 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "role.manage",
       "session.manage",
       "audit.authentication.view",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
+      "clinical_note.void",
     ],
   },
   prescriber: {
@@ -144,6 +172,10 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.chart.view",
       "patient.demographics.view",
       "patient.episode.view",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.sign_own",
     ],
   },
   nursing: {
@@ -156,6 +188,11 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.chart.view",
       "patient.demographics.view",
       "patient.episode.view",
+      // Phase 3
+      "clinical_note.create",
+      "clinical_note.view",
+      "clinical_note.edit_own_draft",
+      "clinical_note.sign_own",
     ],
   },
   director_of_operations: {
@@ -192,6 +229,8 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.chart.view",
       "patient.demographics.view",
       "patient.episode.view",
+      // Phase 3 — view-only clinical note access
+      "clinical_note.view",
     ],
   },
   billing_staff: {
@@ -241,6 +280,7 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "role.manage",
       "session.manage",
       "audit.authentication.view",
+      // security_admin has zero clinical note permissions in Phase 3.
     ],
   },
 };

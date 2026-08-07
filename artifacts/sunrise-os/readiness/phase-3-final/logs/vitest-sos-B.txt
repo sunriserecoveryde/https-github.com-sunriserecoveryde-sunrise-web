@@ -1,0 +1,252 @@
+=== SOS Vitest Run B ===
+Started: 2026-08-04T21:58:22Z
+
+> @workspace/db@0.0.0 test /home/runner/workspace/lib/db
+> vitest run --reporter=verbose
+
+
+ RUN  v4.1.10 /home/runner/workspace/lib/db
+
+ ✓ src/repositories/__tests__/browserStorage.test.ts > localStorage: sidebar prefs v2 schema > documents the key format (staffId-scoped, no patient data in key) 2ms
+ ✓ src/repositories/__tests__/browserStorage.test.ts > localStorage: sidebar prefs v2 schema > documents the v2 RecentPatient schema (production mode stores no displayName) 1ms
+ ✓ src/repositories/__tests__/browserStorage.test.ts > localStorage: sidebar prefs v2 schema > documents the v2 PinnedPatient schema (production: no displayName) 0ms
+ ✓ src/repositories/__tests__/browserStorage.test.ts > localStorage: sidebar prefs v2 schema > version bump from v1→v2 prevents loading stale production displayNames 1ms
+ ✓ src/repositories/__tests__/browserStorage.test.ts > localStorage: UA drug-testing workflow items schema > documents that workflow items store patient UUIDs (linkable, not anonymous) 0ms
+ ✓ src/repositories/__tests__/browserStorage.test.ts > localStorage: UA drug-testing workflow items schema > documents that UA workflow localStorage is a demo-only store (not written in production) 0ms
+ ✓ src/repositories/__tests__/browserStorage.test.ts > IndexedDB: recording store schema > documents that recording entries contain no structured PHI fields 0ms
+ ✓ src/repositories/__tests__/browserStorage.test.ts > IndexedDB: recording store schema > documents that recordings are transient — deleted after processing 1ms
+ ✓ src/repositories/__tests__/healthEndpoints.test.ts > /health/live — liveness probe > returns HTTP 200 with status ok 69ms
+ ✓ src/repositories/__tests__/healthEndpoints.test.ts > /health/live — liveness probe > does not expose secrets or credentials in the response 11ms
+ ✓ src/repositories/__tests__/healthEndpoints.test.ts > /health/ready — readiness probe > returns HTTP 200 when database is reachable 17ms
+ ✓ src/repositories/__tests__/authBoundary.test.ts > /api/v1 identity guard — dev mode (identity always attached) > returns 200 for /api/v1/patients when dev seed headers are absent (devIdentityMiddleware fills defaults) 76ms
+ ✓ src/repositories/__tests__/authBoundary.test.ts > /api/v1 identity guard — dev mode (identity always attached) > returns 200 with explicit dev org/facility headers 27ms
+ ✓ src/repositories/__tests__/healthEndpoints.test.ts > /health/ready — readiness probe > does not expose database connection string in the response 6ms
+ ✓ src/repositories/__tests__/healthEndpoints.test.ts > /health/ready — readiness probe > health endpoints are reachable without authentication headers 4ms
+ ✓ src/repositories/__tests__/authBoundary.test.ts > /api/v1 identity guard — dev mode (identity always attached) > patients endpoint returns an array 11ms
+ ✓ src/repositories/__tests__/authBoundary.test.ts > requireIdentity — unit-level contract (no HTTP) > has the documented 401 contract when no identity is attached 1ms
+ ✓ src/repositories/__tests__/authBoundary.test.ts > requireIdentity — unit-level contract (no HTTP) > dev identity headers are ignored in production (middleware not registered) 1ms
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > date_of_birth column is type 'date' (not 'text')
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > admission_date column is type 'date' (not 'text')
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > discharge_date column is type 'date' (not 'text')
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > sos_patients has ck_sos_patients_status CHECK constraint
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > sos_episodes_of_care has both ck_sos_episodes_status and ck_sos_episodes_date_order
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 6 — rejects organisation with invalid status (constraint: ck_sos_organizations_status)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 6 — accepts organisation with each valid status value
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 7 — rejects facility with invalid status (constraint: ck_sos_facilities_status)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 7 — accepts facility with each valid status value
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 8 — rejects patient with invalid status (constraint: ck_sos_patients_status)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 8 — accepts patient with each valid status value
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 9 — rejects episode with invalid episode_status (constraint: ck_sos_episodes_status)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 9 — accepts episode with each valid episode_status value
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 5 — rejects episode where discharge_date is before admission_date (constraint: ck_sos_episodes_date_order)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 5 — accepts same-day discharge (discharge_date = admission_date)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 5 — accepts null discharge_date (no date_order constraint applies)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 1 — rejects patient whose org does not own the facility (constraint: fk_sos_patients_org_facility)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 1 — accepts patient when org owns the facility (valid matching record)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 3 — rejects episode whose org_id does not match the patient's org_id (constraint: fk_sos_episodes_org_patient)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 4 — rejects episode whose org_id does not match the facility's org_id (constraint: fk_sos_episodes_org_facility)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 4 — accepts episode when org matches both patient and facility
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 2 — rejects staff profile whose org_id does not match the user identity ref's org_id (constraint: fk_sos_staff_profiles_org_user)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 2 — accepts staff profile when org matches the user identity ref
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 10 — rejects duplicate MRN in the same organisation (constraint: idx_sos_patients_org_mrn)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 10 — same MRN in a different organisation is permitted
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 11 — rejects duplicate ext_auth_ref in the same organisation (constraint: idx_sos_user_refs_org_ext_auth_ref)
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 11 — same ext_auth_ref in different organisations is permitted
+ ↓ src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items) > item 11 — null ext_auth_ref is never considered duplicate (partial index)
+ ↓ src/repositories/__tests__/integration.test.ts > organizationRepo > creates an organisation and returns it
+ ↓ src/repositories/__tests__/integration.test.ts > organizationRepo > retrieves an organisation by id
+ ↓ src/repositories/__tests__/integration.test.ts > organizationRepo > returns null for a non-existent organisation
+ ↓ src/repositories/__tests__/integration.test.ts > organizationRepo > lists organisations and includes the test org
+ ↓ src/repositories/__tests__/integration.test.ts > facilityRepo > creates a facility scoped to an organisation
+ ↓ src/repositories/__tests__/integration.test.ts > facilityRepo > retrieves a facility by id within its organisation
+ ↓ src/repositories/__tests__/integration.test.ts > facilityRepo > throws NotFoundError for a facility in the wrong organisation
+ ↓ src/repositories/__tests__/integration.test.ts > facilityRepo > lists facilities for an organisation
+ ↓ src/repositories/__tests__/integration.test.ts > facilityRepo > does not list facilities from other organisations
+ ↓ src/repositories/__tests__/integration.test.ts > patientRepo > creates a patient with all fields
+ ↓ src/repositories/__tests__/integration.test.ts > patientRepo > retrieves a patient within the correct organisation
+ ↓ src/repositories/__tests__/integration.test.ts > patientRepo > throws NotFoundError for patient in wrong organisation
+ ↓ src/repositories/__tests__/integration.test.ts > patientRepo > lists patients within the organisation
+ ↓ src/repositories/__tests__/integration.test.ts > patientRepo > lists patients scoped to a specific facility
+ ↓ src/repositories/__tests__/integration.test.ts > patientRepo > returns empty array for unknown org/facility
+ ↓ src/repositories/__tests__/integration.test.ts > patientRepo > enforces unique MRN per organisation
+ ↓ src/repositories/__tests__/integration.test.ts > episodeRepo > creates an episode linked to a patient
+ ↓ src/repositories/__tests__/integration.test.ts > episodeRepo > retrieves the active episode for a patient
+ ↓ src/repositories/__tests__/integration.test.ts > episodeRepo > returns the episode joined to the patient via getPatient
+ ↓ src/repositories/__tests__/integration.test.ts > episodeRepo > includes episode in listPatients result
+ ↓ src/repositories/__tests__/integration.test.ts > episodeRepo > returns null active episode for a patient without one
+ ↓ src/repositories/__tests__/integration.test.ts > episodeRepo > returns no active episode after org cross-check
+ ↓ src/repositories/__tests__/integration.test.ts > episodeRepo > lists all episodes for a patient
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/repositories/__tests__/constraints.test.ts > Phase 1A Hardening — schema constraints (all 11 required items)
+DatabaseError: Failed to create organization
+ ❯ createOrganization src/repositories/organizationRepo.ts:13:11
+     11|     return rows[0];
+     12|   } catch (err) {
+     13|     throw new DatabaseError("Failed to create organization", err);
+       |           ^
+     14|   }
+     15| }
+ ❯ src/repositories/__tests__/constraints.test.ts:58:18
+
+Caused by: Error: Failed query: insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"
+params: [TEST-f6bea6b0] OrgA,active
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/constraints.test.ts:58:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { query: 'insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"', params: [ '[TEST-f6bea6b0] OrgA', 'active' ] }
+Caused by: error: null value in column "slug" of relation "sos_organizations" violates not-null constraint
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:45:11
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:124:18
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/constraints.test.ts:58:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 342, severity: 'ERROR', code: '23502', detail: 'Failing row contains (256d1ca2-04d3-4e59-8417-e119873a6a5e, [TEST-f6bea6b0] OrgA, active, 2026-08-04 21:58:24.73748+00, 2026-08-04 21:58:24.73748+00, null).', hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: 'public', table: 'sos_organizations', dataType: undefined, constraint: undefined, file: 'execMain.c', routine: 'ExecConstraints' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/repositories/__tests__/integration.test.ts > organizationRepo
+DatabaseError: Failed to create organization
+ ❯ createOrganization src/repositories/organizationRepo.ts:13:11
+     11|     return rows[0];
+     12|   } catch (err) {
+     13|     throw new DatabaseError("Failed to create organization", err);
+       |           ^
+     14|   }
+     15| }
+ ❯ src/repositories/__tests__/integration.test.ts:56:17
+
+Caused by: Error: Failed query: insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"
+params: [TEST-55b39fe0] Phase 1A Org,active
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:56:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { query: 'insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"', params: [ '[TEST-55b39fe0] Phase 1A Org', 'active' ] }
+Caused by: error: null value in column "slug" of relation "sos_organizations" violates not-null constraint
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:45:11
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:124:18
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:56:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 352, severity: 'ERROR', code: '23502', detail: 'Failing row contains (ea18bd06-ce2c-4ba8-b640-0a2945bd9a60, [TEST-55b39fe0] Phase 1A Org, active, 2026-08-04 21:58:24.732051+00, 2026-08-04 21:58:24.732051+00, null).', hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: 'public', table: 'sos_organizations', dataType: undefined, constraint: undefined, file: 'execMain.c', routine: 'ExecConstraints' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/repositories/__tests__/integration.test.ts > facilityRepo
+DatabaseError: Failed to create organization
+ ❯ createOrganization src/repositories/organizationRepo.ts:13:11
+     11|     return rows[0];
+     12|   } catch (err) {
+     13|     throw new DatabaseError("Failed to create organization", err);
+       |           ^
+     14|   }
+     15| }
+ ❯ src/repositories/__tests__/integration.test.ts:95:17
+
+Caused by: Error: Failed query: insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"
+params: [TEST-55b39fe0] Facility Org,active
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:95:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { query: 'insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"', params: [ '[TEST-55b39fe0] Facility Org', 'active' ] }
+Caused by: error: null value in column "slug" of relation "sos_organizations" violates not-null constraint
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:45:11
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:124:18
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:95:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 352, severity: 'ERROR', code: '23502', detail: 'Failing row contains (51e8096b-f5b5-470d-889a-9962dc5bfe13, [TEST-55b39fe0] Facility Org, active, 2026-08-04 21:58:24.749264+00, 2026-08-04 21:58:24.749264+00, null).', hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: 'public', table: 'sos_organizations', dataType: undefined, constraint: undefined, file: 'execMain.c', routine: 'ExecConstraints' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/repositories/__tests__/integration.test.ts > patientRepo
+DatabaseError: Failed to create organization
+ ❯ createOrganization src/repositories/organizationRepo.ts:13:11
+     11|     return rows[0];
+     12|   } catch (err) {
+     13|     throw new DatabaseError("Failed to create organization", err);
+       |           ^
+     14|   }
+     15| }
+ ❯ src/repositories/__tests__/integration.test.ts:144:17
+
+Caused by: Error: Failed query: insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"
+params: [TEST-55b39fe0] Patient Org,active
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:144:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { query: 'insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"', params: [ '[TEST-55b39fe0] Patient Org', 'active' ] }
+Caused by: error: null value in column "slug" of relation "sos_organizations" violates not-null constraint
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:45:11
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:124:18
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:144:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 351, severity: 'ERROR', code: '23502', detail: 'Failing row contains (99a5f522-c314-440b-b5dd-9640ba0fd30b, [TEST-55b39fe0] Patient Org, active, 2026-08-04 21:58:24.760783+00, 2026-08-04 21:58:24.760783+00, null).', hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: 'public', table: 'sos_organizations', dataType: undefined, constraint: undefined, file: 'execMain.c', routine: 'ExecConstraints' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/repositories/__tests__/integration.test.ts > episodeRepo
+DatabaseError: Failed to create organization
+ ❯ createOrganization src/repositories/organizationRepo.ts:13:11
+     11|     return rows[0];
+     12|   } catch (err) {
+     13|     throw new DatabaseError("Failed to create organization", err);
+       |           ^
+     14|   }
+     15| }
+ ❯ src/repositories/__tests__/integration.test.ts:225:17
+
+Caused by: Error: Failed query: insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"
+params: [TEST-55b39fe0] Episode Org,active
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:41:15
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:225:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { query: 'insert into "sos_organizations" ("id", "name", "slug", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default) returning "id", "name", "slug", "status", "created_at", "updated_at"', params: [ '[TEST-55b39fe0] Episode Org', 'active' ] }
+Caused by: error: null value in column "slug" of relation "sos_organizations" violates not-null constraint
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:45:11
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:124:18
+ ❯ NodePgPreparedQuery.queryWithCache ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/session.js:39:16
+ ❯ ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/node-postgres/session.js:117:22
+ ❯ createOrganization src/repositories/organizationRepo.ts:10:18
+ ❯ src/repositories/__tests__/integration.test.ts:225:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 351, severity: 'ERROR', code: '23502', detail: 'Failing row contains (116b3aac-63d4-498f-8880-8c528dd7a502, [TEST-55b39fe0] Episode Org, active, 2026-08-04 21:58:24.771976+00, 2026-08-04 21:58:24.771976+00, null).', hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: 'public', table: 'sos_organizations', dataType: undefined, constraint: undefined, file: 'execMain.c', routine: 'ExecConstraints' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  2 failed | 3 passed (5)
+      Tests  18 passed | 51 skipped (69)
+   Start at  21:58:23
+   Duration  971ms (transform 481ms, setup 0ms, import 1.61s, tests 322ms, environment 0ms)
+
+/home/runner/workspace/lib/db:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/db@0.0.0 test: `vitest run --reporter=verbose`
+Exit status 1
+Exit: 1
+Finished: 2026-08-04T21:58:24Z

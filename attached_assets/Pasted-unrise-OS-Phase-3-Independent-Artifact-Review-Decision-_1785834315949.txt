@@ -1,0 +1,233 @@
+unrise OS — Phase 3 Independent Artifact Review
+
+Decision
+
+PHASE 3 NOT APPROVED FOR MERGE
+
+Reviewed archive:
+
+File: phase-3-clinical-documentation-foundation-review.zip
+
+SHA-256: 6b7ad4f6a4ab09df07eb82d89711806f6f67f767fdab2a002875ed10f9e3d44b
+
+ZIP integrity: PASS
+
+Archive entries reported by unzip -l: 79
+
+Extracted regular files: 67
+
+Passing evidence
+
+ZIP compression integrity passes.
+
+Three Playwright stability logs each report 17 passed and EXIT:0.
+
+Flow logs report:
+
+Flow A: 6 passed
+
+Flow B: 2 passed
+
+Flow C: 3 passed
+
+Flow D: 5 passed
+
+Flow E: 1 passed
+
+Clean empty-database proof reports migrations 0000 through 0006 applied.
+
+The archive contains core schema, repository, service, route, frontend, and test source files.
+
+Broad secret-pattern scan did not identify an obvious embedded credential.
+
+Merge blockers
+
+1. No authentic Playwright trace archives
+
+The archive contains five trace-run text logs, but no Playwright trace.zip files.
+
+No .har, video, or browser trace archive is present. The browser spec says HAR files are created for concurrency, but those files are absent from the review ZIP.
+
+2. Screenshot evidence is missing and is demo-mode evidence
+
+The screenshot manifest lists fourteen screenshot names, but the archive contains only two JPEG files plus a text result.
+
+The two JPEGs are identical. The visible login screenshot displays:
+
+Demo Mode
+
+Fictitious Data Only
+
+Demo-profile selection
+
+The screenshot manifest itself states that screenshots were captured in demo mode.
+
+This does not prove the production-data-mode clinical workflow.
+
+3. “Network traces” are not browser captures
+
+The five JSON files under network-traces/ explicitly state that they were generated from the API integration test suite.
+
+They are not HAR files and are not authentic browser network captures.
+
+4. Permission contract is inconsistent and incorrect
+
+The frontend permission union contains:
+
+clinical_note.sign
+
+clinical_note.export
+
+It omits:
+
+clinical_note.edit_own_draft
+
+clinical_note.sign_own
+
+The packaged server policy still includes clinical_note.audit_view in its permission vocabulary, and one packaged policy version grants it to supervisor/CMO roles.
+
+The approved exact Phase 3 permission contract is therefore not established.
+
+5. Multiple inconsistent source versions are included
+
+Top-level implementation files and source/ copies differ.
+
+Examples include:
+
+Different permissionPolicy.ts versions
+
+Different clinical-note test versions
+
+Stale comments and assertions concerning clinical_note.audit_view
+
+Stale migration commentary
+
+The archive does not identify which copy corresponds to final commit 7c96668.
+
+6. Upgrade migration still requires manual SQL
+
+proof/phase-2-upgrade-proof.txt states that migration 0006 was applied with psql and that a journal row was inserted manually.
+
+That contradicts the required normal-runner Phase 2 upgrade proof.
+
+7. SHA manifest coverage is incomplete
+
+SHA256SUMS.txt contains 29 entries, while the extracted archive contains 67 regular files.
+
+The manifest omits important evidence and code, including:
+
+Stability logs
+
+Trace-flow logs
+
+Playwright configuration
+
+Browser specification
+
+Global setup
+
+Frontend permission files
+
+Role context
+
+Vite test configuration
+
+Readiness duplicates
+
+Manifest coverage is not complete.
+
+8. Required test and build evidence is absent
+
+The archive does not include final logs for:
+
+API Vitest A–D
+
+Sunrise OS Vitest A–D
+
+Cross-suite ordering tests
+
+TypeScript validation
+
+API production build
+
+Sunrise OS production build
+
+Repository secret scan
+
+ZIP secret scan
+
+Only browser stability logs are present.
+
+9. Playwright package is incomplete
+
+playwright.config.ts references:
+
+e2e/global-teardown.ts
+
+e2e/tsconfig.json
+
+Neither file is included in the archive.
+
+The packaged Playwright setup is therefore not independently reproducible from the review contents.
+
+10. Browser setup performs an unscoped destructive cleanup
+
+e2e/global-setup.ts runs:
+
+DELETE FROM sos_rate_limit_windows
+
+against the configured database.
+
+This is not scoped to browser-test keys and is inconsistent with the required narrow cleanup policy.
+
+11. Browser test assertions contain swallowed failures
+
+The browser spec repeatedly uses constructs such as:
+
+.catch(() => {})
+
+after UI and networkidle waits.
+
+These can hide unmet UI-state conditions and weaken evidence reliability.
+
+Required correction
+
+Regenerate one canonical Phase 3 review ZIP that:
+
+Contains one authoritative copy of every source file from final commit 7c96668.
+
+Uses the exact permission set:
+
+clinical_note.create
+
+clinical_note.view
+
+clinical_note.edit_own_draft
+
+clinical_note.sign_own
+
+clinical_note.void
+
+Removes clinical_note.sign, clinical_note.export, and clinical_note.audit_view.
+
+Includes authentic Playwright trace archives for all 17 tests.
+
+Includes authentic HAR/browser-network evidence.
+
+Includes the full set of production-mode screenshots.
+
+Proves that the demo banner is absent.
+
+Includes normal-runner Phase 2 upgrade proof with no manual psql migration execution or journal insertion.
+
+Includes all API, frontend, cross-suite, TypeScript, build, and secret-scan logs.
+
+Includes all Playwright support files needed to rerun the suite.
+
+Uses scoped rate-limit cleanup.
+
+Provides SHA-256 coverage for every archive file except the manifest itself.
+
+Final status
+
+PHASE 3 NOT APPROVED FOR MERGE

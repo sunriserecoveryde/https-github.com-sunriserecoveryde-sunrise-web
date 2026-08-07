@@ -8,6 +8,7 @@ import growRouter from "./grow";
 import anthropicRouter from "./anthropic";
 import complianceRouter from "./compliance";
 import patientsV1Router from "./patientsV1";
+import clinicalNotesV1Router from "./clinicalNotesV1";
 import authV1Router from "./authV1";
 
 const router: IRouter = Router();
@@ -24,5 +25,6 @@ router.use(growRouter);
 router.use("/anthropic", anthropicRouter);
 router.use(complianceRouter);
 router.use(patientsV1Router);
+router.use(clinicalNotesV1Router);
 
 export default router;

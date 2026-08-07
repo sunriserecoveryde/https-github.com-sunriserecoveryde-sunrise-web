@@ -1,0 +1,810 @@
+=== Stability Run A — 2026-08-03T22:28:15Z ===
+[WebServer] 
+  VITE v7.3.6  ready in 280 ms
+
+[WebServer]   ➜  Local:   http://localhost:23456/
+  ➜  Network: http://172.24.0.2:23456/
+[WebServer] 
+> @workspace/api-server@0.0.0 start /home/runner/workspace/artifacts/api-server
+> node --enable-source-maps ./dist/index.mjs
+
+[WebServer] [22:28:18.433] INFO (52206): Server listening
+    port: 8099
+[WebServer] [22:28:18.434] INFO (52206): auditOutboxWorker: starting
+    pollIntervalMs: 5000
+    batchSize: 20
+[browser-seed] Starting browser test fixture seed…
+[browser-seed] Old fixture notes deleted (if any).
+[browser-seed] Signed note ready: 00000000-0000-4000-b000-000000000001 (status=signed, version=2)
+[browser-seed] Draft note ready: 00000000-0000-4000-b000-000000000002 (status=draft, version=1)
+[browser-seed] Browser test fixture seed complete.
+[global-setup] Auth enforcement verified: GET http://localhost:8099/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes → 401 ✓
+[global-setup] Session saved: clinician@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/clinician.json
+[global-setup] Rate limiter confirmed active (default threshold, no bypass): 1 row(s) in sos_rate_limit_windows ✓
+[global-setup] Session saved: nurse@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/nurse.json
+[global-setup] Session saved: org-admin@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/supervisor.json
+[global-setup] Session saved: other-facility@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/other-facility.json
+[global-setup] Session saved: security-admin@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/security-admin.json
+[global-setup] Session saved: hr@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/hr.json
+[global-setup] Session saved: billing@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/billing.json
+[global-setup] Session saved: multi-facility@test.sunrise → /home/runner/workspace/artifacts/sunrise-os/e2e/sessions/multi-facility.json
+[global-setup] All persona sessions created. Tests may proceed.
+[WebServer] [22:28:19.309] INFO (52206): request completed
+    req: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 401
+    }
+    responseTime: 10
+[22:28:19.352] INFO (52206): request completed
+    req: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 8
+[22:28:19.608] INFO (52206): request completed
+    req: {
+      "id": 3,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 242
+[22:28:19.688] INFO (52206): request completed
+    req: {
+      "id": 4,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 4
+[22:28:19.980] INFO (52206): request completed
+    req: {
+      "id": 5,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 279
+[22:28:20.041] INFO (52206): request completed
+    req: {
+      "id": 6,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 5
+[22:28:20.230] INFO (52206): request completed
+    req: {
+      "id": 7,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 176
+[22:28:20.289] INFO (52206): request completed
+    req: {
+      "id": 8,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 4
+[22:28:20.488] INFO (52206): request completed
+    req: {
+      "id": 9,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 187
+[22:28:20.548] INFO (52206): request completed
+    req: {
+      "id": 10,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 4
+[22:28:20.753] INFO (52206): request completed
+    req: {
+      "id": 11,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 192
+[22:28:20.822] INFO (52206): request completed
+    req: {
+      "id": 12,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 5
+[22:28:21.021] INFO (52206): request completed
+    req: {
+      "id": 13,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 185
+[22:28:21.091] INFO (52206): request completed
+    req: {
+      "id": 14,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 5
+[22:28:21.305] INFO (52206): request completed
+    req: {
+      "id": 15,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 200
+[22:28:21.360] INFO (52206): request completed
+    req: {
+      "id": 16,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 3
+
+Running 17 tests using 1 worker
+
+[WebServer] [22:28:21.554] INFO (52206): request completed
+    req: {
+      "id": 17,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 182
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/01-login-page-production-mode.png
+  ✓  1 [chromium] › clinical-notes-p3-browser.spec.ts:170:3 › Flow A — Production login page and clinician login verification › A-1: production login page renders without demo UI (5.7s)
+[WebServer] [22:28:27.812] INFO (52206): request completed
+    req: {
+      "id": 19,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 401
+    }
+    responseTime: 0
+[WebServer] [22:28:27.816] INFO (52206): request completed
+    req: {
+      "id": 18,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 7
+[WebServer] [22:28:29.001] INFO (52206): request completed
+    req: {
+      "id": 21,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 401
+    }
+    responseTime: 1
+[WebServer] [22:28:29.004] INFO (52206): request completed
+    req: {
+      "id": 20,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 5
+[WebServer] [22:28:29.201] INFO (52206): request completed
+    req: {
+      "id": 22,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 5
+[WebServer] [22:28:29.684] INFO (52206): request completed
+    req: {
+      "id": 23,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 480
+[WebServer] [22:28:29.696] INFO (52206): request completed
+    req: {
+      "id": 24,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 9
+[WebServer] [22:28:29.881] INFO (52206): request completed
+    req: {
+      "id": 25,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 6
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/02-clinician-dashboard-after-login.png
+  ✓  2 [chromium] › clinical-notes-p3-browser.spec.ts:183:3 › Flow A — Production login page and clinician login verification › A-2: clinician logs in and reaches authenticated view (2.4s)
+[WebServer] [22:28:31.416] INFO (52206): request completed
+    req: {
+      "id": 26,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 10
+[WebServer] [22:28:31.433] INFO (52206): request completed
+    req: {
+      "id": 27,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 25
+[22:28:31.622] INFO (52206): request completed
+    req: {
+      "id": 28,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 6
+[WebServer] [22:28:33.149] INFO (52206): request completed
+    req: {
+      "id": 29,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 14
+[WebServer] [22:28:33.153] INFO (52206): request completed
+    req: {
+      "id": 30,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 304
+    }
+    responseTime: 17
+[WebServer] [22:29:33.323] INFO (52206): request completed
+    req: {
+      "id": 31,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 20
+  ✘  3 [chromium] › clinical-notes-p3-browser.spec.ts:197:3 › Flow A — Clinician: create, save, and sign a progress note › A-3: Progress Notes tab shows empty state for new patient session (2.0m)
+[WebServer] [22:30:33.945] INFO (52206): request completed
+    req: {
+      "id": 32,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 46
+[WebServer] [22:30:33.951] INFO (52206): request completed
+    req: {
+      "id": 33,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 51
+[22:30:34.147] INFO (52206): request completed
+    req: {
+      "id": 34,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 5
+[WebServer] [22:30:34.785] INFO (52206): request completed
+    req: {
+      "id": 35,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 18
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/01-compose-panel-open-new-note.png
+  ✓  4 [chromium] › clinical-notes-p3-browser.spec.ts:206:3 › Flow A — Clinician: create, save, and sign a progress note › A-4: clinician opens compose panel with '+ New Note' (2.8s)
+[WebServer] [22:30:35.329] INFO (52206): request completed
+    req: {
+      "id": 36,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 18
+[WebServer] [22:30:36.664] INFO (52206): request completed
+    req: {
+      "id": 37,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 31
+[WebServer] [22:30:36.667] INFO (52206): request completed
+    req: {
+      "id": 38,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 33
+[22:30:36.850] INFO (52206): request completed
+    req: {
+      "id": 39,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 5
+[WebServer] [22:30:37.536] INFO (52206): request completed
+    req: {
+      "id": 40,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 17
+[WebServer] [22:30:38.042] INFO (52206): request completed
+    req: {
+      "id": 41,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 17
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/02-draft-note-dirty-before-save.png
+[WebServer] [22:30:38.514] INFO (52206): request completed
+    req: {
+      "id": 42,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 9
+[WebServer] [22:30:38.548] INFO (52206): request completed
+    req: {
+      "id": 43,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 201
+    }
+    responseTime: 31
+[22:30:38.572] INFO (52206): request completed
+    req: {
+      "id": 44,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 19
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/03-draft-saved-note-appears-in-list.png
+[WebServer] [22:30:39.434] INFO (52206): request completed
+    req: {
+      "id": 45,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 12
+[WebServer] [22:30:39.437] INFO (52206): request completed
+    req: {
+      "id": 46,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 15
+  ✘  5 [chromium] › clinical-notes-p3-browser.spec.ts:216:3 › Flow A — Clinician: create, save, and sign a progress note › A-5: clinician types content and saves as draft (18.7s)
+[WebServer] [22:30:56.376] INFO (52206): request completed
+    req: {
+      "id": 47,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 13
+[WebServer] [22:30:56.388] INFO (52206): request completed
+    req: {
+      "id": 48,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 25
+[22:30:56.616] INFO (52206): request completed
+    req: {
+      "id": 49,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 6
+[WebServer] [22:30:57.268] INFO (52206): request completed
+    req: {
+      "id": 50,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 15
+[WebServer] [22:30:57.811] INFO (52206): request completed
+    req: {
+      "id": 51,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 18
+[WebServer] [22:30:58.031] INFO (52206): request completed
+    req: {
+      "id": 52,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 9
+[22:30:58.055] INFO (52206): request completed
+    req: {
+      "id": 53,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 201
+    }
+    responseTime: 17
+[22:30:58.090] INFO (52206): request completed
+    req: {
+      "id": 54,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 16
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/01-draft-persisted-after-navigation.png
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/02-draft-opened-for-signing.png
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/03-note-signed-read-only-state.png
+  ✓  6 [chromium] › clinical-notes-p3-browser.spec.ts:236:3 › Flow A — Clinician: create, save, and sign a progress note › A-6: clinician reloads and draft persists; can edit and sign (13.9s)
+[WebServer] [22:31:08.895] INFO (52206): request completed
+    req: {
+      "id": 55,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 10
+[WebServer] [22:31:08.909] INFO (52206): request completed
+    req: {
+      "id": 56,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 8
+[22:31:08.939] INFO (52206): request completed
+    req: {
+      "id": 57,
+      "method": "PATCH",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/efd421bc-e71e-4d6a-904c-466d7c1ac7de"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 26
+[22:31:09.000] INFO (52206): request completed
+    req: {
+      "id": 58,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 11
+[22:31:09.024] INFO (52206): request completed
+    req: {
+      "id": 59,
+      "method": "POST",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes/efd421bc-e71e-4d6a-904c-466d7c1ac7de/sign"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 18
+[22:31:09.048] INFO (52206): request completed
+    req: {
+      "id": 60,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 24
+[WebServer] [22:31:10.151] INFO (52206): request completed
+    req: {
+      "id": 62,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 401
+    }
+    responseTime: 1
+[WebServer] [22:31:10.161] INFO (52206): request completed
+    req: {
+      "id": 61,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 12
+[22:31:10.339] INFO (52206): request completed
+    req: {
+      "id": 63,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 6
+[WebServer] [22:31:10.532] INFO (52206): request completed
+    req: {
+      "id": 64,
+      "method": "POST",
+      "url": "/api/v1/auth/login"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 190
+[WebServer] [22:31:10.543] INFO (52206): request completed
+    req: {
+      "id": 65,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 8
+[WebServer] [22:31:10.797] INFO (52206): request completed
+    req: {
+      "id": 66,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 6
+[WebServer] [22:31:11.403] INFO (52206): request completed
+    req: {
+      "id": 67,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 12
+[WebServer] [22:31:11.904] INFO (52206): request completed
+    req: {
+      "id": 68,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 14
+[snap] /home/runner/workspace/artifacts/sunrise-os/e2e/screenshots/04-nurse-progress-notes-tab.png
+  ✓  7 [chromium] › clinical-notes-p3-browser.spec.ts:282:3 › Flow B — Nurse: login verification › B-1: nurse logs in and can reach patient chart (3.5s)
+[WebServer] [22:31:13.615] INFO (52206): request completed
+    req: {
+      "id": 69,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 11
+[WebServer] [22:31:13.617] INFO (52206): request completed
+    req: {
+      "id": 70,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 12
+[22:31:13.914] INFO (52206): request completed
+    req: {
+      "id": 71,
+      "method": "GET",
+      "url": "/api/alerts/vitals"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 6
+[WebServer] [22:31:14.453] INFO (52206): request completed
+    req: {
+      "id": 72,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 10
+[WebServer] [22:31:14.987] INFO (52206): request completed
+    req: {
+      "id": 73,
+      "method": "GET",
+      "url": "/api/v1/patients/00000000-0000-4000-a000-000000000099/clinical-notes"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 13
+[WebServer] [22:31:16.047] INFO (52206): request completed
+    req: {
+      "id": 74,
+      "method": "GET",
+      "url": "/api/v1/auth/csrf-token"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 12
+[WebServer] [22:31:16.050] INFO (52206): request completed
+    req: {
+      "id": 75,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 14
+[WebServer] [22:32:16.229] INFO (52206): request completed
+    req: {
+      "id": 76,
+      "method": "GET",
+      "url": "/api/v1/auth/session"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 16

@@ -7,8 +7,11 @@ import { useActiveNotifications } from '../../hooks/useActiveNotifications';
 import { CommandPalette } from './CommandPalette';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
-import { ROLES, ROLE_CATEGORIES } from '../../data/mockRoles';
+import { ROLES, ROLE_CATEGORIES, getRoleById } from '../../data/mockRoles';
 import { resetDemoData } from '../../store/demoStore';
+
+const DATA_MODE = import.meta.env.VITE_SUNRISE_DATA_MODE ?? 'demo';
+const IS_PRODUCTION = DATA_MODE === 'production';
 
 interface Props {
   navigate: (s: Screen, patientId?: string) => void;
@@ -25,7 +28,15 @@ export function Topbar({ navigate, currentScreen }: Props) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const { role, setRoleId } = useRole();
-  const { currentStaff, logout } = useAuth();
+  const { currentStaff, logout, productionSession } = useAuth();
+
+  // In production mode derive the displayed role from the server session's first roleId.
+  // The demo RoleContext always resolves to DEFAULT_ROLE_ID (clinical_supervisor) which does
+  // NOT reflect the authenticated user.  Using productionSession.roleIds[0] via getRoleById()
+  // gives the correct label (e.g. "Certified Clinician" for certified_clinician).
+  const productionRole = IS_PRODUCTION && productionSession?.roleIds?.length
+    ? (getRoleById(productionSession.roleIds[0]) ?? role)
+    : role;
   // Badge count — from the shared selector so Topbar and NotificationPanel
   // always agree. Reactive to the global snooze timer (useNotifNow inside hook).
   const { criticalUnreadCount: unreadCount } = useActiveNotifications();
@@ -109,61 +120,76 @@ export function Topbar({ navigate, currentScreen }: Props) {
         </div>
 
         <div className="flex items-center gap-1">
-          {/* ── Role Switcher ── */}
-          <div className="relative mr-2" ref={rolePickerRef}>
-            <button
-              onClick={() => setShowRolePicker(p => !p)}
-              className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded transition-colors border ${role.color} ${role.borderColor} hover:opacity-90`}
+          {/* ── Role Display / Switcher ── */}
+          {IS_PRODUCTION ? (
+            /* Production mode: static read-only role badge derived from server session.
+               Shows the authenticated user's actual role (e.g. "Certified Clinician"),
+               NOT the demo role-switcher default. No switcher, no demo text. */
+            <div
+              className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded border mr-2 ${productionRole.color} ${productionRole.borderColor}`}
+              data-testid="role-display"
             >
-              <div className={`w-2 h-2 rounded-full ${role.dotColor} shrink-0`} />
-              <span className={`text-sm font-semibold ${role.textColor}`}>{role.shortLabel}</span>
-              <ChevronDown className={`w-4 h-4 ${role.textColor} transition-transform ${showRolePicker ? 'rotate-180' : ''}`} />
-            </button>
+              <div className={`w-2 h-2 rounded-full ${productionRole.dotColor} shrink-0`} />
+              <span className={`text-sm font-semibold ${productionRole.textColor}`} data-testid="role-display-label">{productionRole.shortLabel}</span>
+            </div>
+          ) : (
+            /* Demo mode: interactive role switcher */
+            <div className="relative mr-2" ref={rolePickerRef}>
+              <button
+                onClick={() => setShowRolePicker(p => !p)}
+                data-testid="role-switcher-btn"
+                className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded transition-colors border ${role.color} ${role.borderColor} hover:opacity-90`}
+              >
+                <div className={`w-2 h-2 rounded-full ${role.dotColor} shrink-0`} />
+                <span className={`text-sm font-semibold ${role.textColor}`}>{role.shortLabel}</span>
+                <ChevronDown className={`w-4 h-4 ${role.textColor} transition-transform ${showRolePicker ? 'rotate-180' : ''}`} />
+              </button>
 
-            {showRolePicker && (
-              <div className="absolute top-full right-0 mt-2 w-80 bg-navy border border-navy-light rounded-xl shadow-2xl z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-navy-light flex items-center justify-between">
-                  <span className="text-xs font-bold text-white uppercase tracking-wider">Switch Role</span>
-                  <span className="text-[10px] text-slate-400">Demo — affects navigation &amp; access</span>
+              {showRolePicker && (
+                <div className="absolute top-full right-0 mt-2 w-80 bg-navy border border-navy-light rounded-xl shadow-2xl z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-navy-light flex items-center justify-between">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">Switch Role</span>
+                    <span className="text-[10px] text-slate-400">Demo — affects navigation &amp; access</span>
+                  </div>
+                  <div className="overflow-y-auto max-h-96 py-2">
+                    {ROLE_CATEGORIES.map(cat => {
+                      const catRoles = ROLES.filter(r => r.category === cat);
+                      if (!catRoles.length) return null;
+                      return (
+                        <div key={cat} className="mb-1">
+                          <div className="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{cat}</div>
+                          {catRoles.map(r => (
+                            <button
+                              key={r.id}
+                              onClick={() => handleRoleSelect(r.id)}
+                              className={`w-full flex items-start gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors ${role.id === r.id ? 'bg-white/10' : ''}`}
+                            >
+                              <div className={`w-2 h-2 rounded-full ${r.dotColor} mt-1.5 shrink-0`} />
+                              <div className="flex-1 min-w-0">
+                                <div className={`text-sm font-semibold ${role.id === r.id ? r.textColor : 'text-white'}`}>{r.label}</div>
+                                <div className="text-[10px] text-slate-400 leading-snug">{r.description}</div>
+                              </div>
+                              {role.id === r.id && (
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.color} ${r.textColor} border ${r.borderColor} shrink-0`}>Active</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="px-4 py-2.5 border-t border-navy-light bg-navy">
+                    <button
+                      onClick={() => { navigate('RoleExplorer'); setShowRolePicker(false); }}
+                      className="text-xs text-sunrise-amber hover:underline font-medium"
+                    >
+                      View full permission matrix →
+                    </button>
+                  </div>
                 </div>
-                <div className="overflow-y-auto max-h-96 py-2">
-                  {ROLE_CATEGORIES.map(cat => {
-                    const catRoles = ROLES.filter(r => r.category === cat);
-                    if (!catRoles.length) return null;
-                    return (
-                      <div key={cat} className="mb-1">
-                        <div className="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{cat}</div>
-                        {catRoles.map(r => (
-                          <button
-                            key={r.id}
-                            onClick={() => handleRoleSelect(r.id)}
-                            className={`w-full flex items-start gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors ${role.id === r.id ? 'bg-white/10' : ''}`}
-                          >
-                            <div className={`w-2 h-2 rounded-full ${r.dotColor} mt-1.5 shrink-0`} />
-                            <div className="flex-1 min-w-0">
-                              <div className={`text-sm font-semibold ${role.id === r.id ? r.textColor : 'text-white'}`}>{r.label}</div>
-                              <div className="text-[10px] text-slate-400 leading-snug">{r.description}</div>
-                            </div>
-                            {role.id === r.id && (
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.color} ${r.textColor} border ${r.borderColor} shrink-0`}>Active</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="px-4 py-2.5 border-t border-navy-light bg-navy">
-                  <button
-                    onClick={() => { navigate('RoleExplorer'); setShowRolePicker(false); }}
-                    className="text-xs text-sunrise-amber hover:underline font-medium"
-                  >
-                    View full permission matrix →
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Search / Command Palette */}
           <button

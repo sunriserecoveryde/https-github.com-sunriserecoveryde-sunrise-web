@@ -1,0 +1,34 @@
+=== Playwright TS check ===
+Started: 2026-08-04T21:42:23Z
+e2e/clinical-notes-p3-browser.spec.ts(32,31): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+e2e/clinical-notes-p3-browser.spec.ts(525,29): error TS2345: Argument of type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions' is not assignable to parameter of type 'Page'.
+  Type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions' is missing the following properties from type 'Page': evaluate, evaluateHandle, addInitScript, $, and 89 more.
+e2e/clinical-notes-p3-browser.spec.ts(526,16): error TS2339: Property 'waitForTimeout' does not exist on type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+e2e/clinical-notes-p3-browser.spec.ts(527,16): error TS2345: Argument of type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions' is not assignable to parameter of type 'Page'.
+  Type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions' is missing the following properties from type 'Page': evaluate, evaluateHandle, addInitScript, $, and 89 more.
+e2e/clinical-notes-p3-browser.spec.ts(531,23): error TS2339: Property 'locator' does not exist on type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+e2e/clinical-notes-p3-browser.spec.ts(534,23): error TS2339: Property 'locator' does not exist on type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+e2e/clinical-notes-p3-browser.spec.ts(535,23): error TS2339: Property 'locator' does not exist on type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+e2e/clinical-notes-p3-browser.spec.ts(536,23): error TS2339: Property 'locator' does not exist on type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+e2e/clinical-notes-p3-browser.spec.ts(537,23): error TS2339: Property 'locator' does not exist on type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+e2e/clinical-notes-p3-browser.spec.ts(541,23): error TS2339: Property 'locator' does not exist on type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+e2e/clinical-notes-p3-browser.spec.ts(544,23): error TS2339: Property 'locator' does not exist on type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+e2e/clinical-notes-p3-browser.spec.ts(545,23): error TS2339: Property 'locator' does not exist on type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+e2e/clinical-notes-p3-browser.spec.ts(546,23): error TS2339: Property 'locator' does not exist on type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+e2e/clinical-notes-p3-browser.spec.ts(604,37): error TS2345: Argument of type 'Page' is not assignable to parameter of type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+  Property 'page' is missing in type 'Page' but required in type 'PlaywrightTestArgs'.
+e2e/clinical-notes-p3-browser.spec.ts(619,37): error TS2345: Argument of type 'Page' is not assignable to parameter of type 'PlaywrightTestArgs & PlaywrightTestOptions & PlaywrightWorkerArgs & PlaywrightWorkerOptions'.
+  Property 'page' is missing in type 'Page' but required in type 'PlaywrightTestArgs'.
+e2e/clinical-notes-p3.spec.ts(23,80): error TS2307: Cannot find module '@playwright/test' or its corresponding type declarations.
+e2e/clinical-notes-p3.spec.ts(58,70): error TS7031: Binding element 'request' implicitly has an 'any' type.
+e2e/clinical-notes-p3.spec.ts(58,79): error TS7031: Binding element 'browser' implicitly has an 'any' type.
+e2e/clinical-notes-p3.spec.ts(119,65): error TS7031: Binding element 'request' implicitly has an 'any' type.
+e2e/clinical-notes-p3.spec.ts(119,74): error TS7031: Binding element 'browser' implicitly has an 'any' type.
+e2e/clinical-notes-p3.spec.ts(167,63): error TS7031: Binding element 'request' implicitly has an 'any' type.
+e2e/clinical-notes-p3.spec.ts(167,72): error TS7031: Binding element 'browser' implicitly has an 'any' type.
+e2e/clinical-notes-p3.spec.ts(227,75): error TS7031: Binding element 'request' implicitly has an 'any' type.
+e2e/clinical-notes-p3.spec.ts(248,87): error TS7031: Binding element 'request' implicitly has an 'any' type.
+e2e/global-setup.ts(40,36): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+e2e/global-setup.ts(41,45): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+Exit: 2
+Finished: 2026-08-04T21:42:26Z

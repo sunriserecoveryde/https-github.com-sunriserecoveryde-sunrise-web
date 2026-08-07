@@ -1,0 +1,63 @@
+Phase 3 True Browser Test Closure — Final Evidence
+===================================================
+Date: 2026-08-03
+Branch: feature/phase-3-clinical-documentation-foundation
+
+Playwright Browser UI Test Results (chromium-1080)
+────────────────────────────────────────────────────
+Run 1:  17/17 passed  (1.1 min)
+Run 2:  17/17 passed  (1.1 min)
+Run 3:  17/17 passed  (1.3 min)
+
+Tests by Flow:
+  A-1  production login page renders without demo UI               ✓
+  A-2  clinician logs in and reaches authenticated view             ✓
+  A-3  Progress Notes tab shows empty state for new patient session ✓
+  A-4  clinician opens compose panel with '+ New Note'              ✓
+  A-5  clinician types content and saves as draft                   ✓
+  A-6  clinician reloads and draft persists; can edit and sign      ✓
+  B-1  nurse logs in and can reach patient chart                    ✓
+  B-2  nurse creates a nursing note and signs it                    ✓
+  C-1  supervisor sees Void button on pre-seeded signed note        ✓
+  C-2  void modal opens; short reason is rejected                   ✓
+  C-3  valid void reason enables Confirm; submitting voids the note ✓
+  D-1  other-facility clinician cannot access Facility-1 patient    ✓
+  D-2  security-admin has no patient.chart.view — AccessDenied      ✓
+  D-3  HR has no patient.chart.view — PatientDetail shows AccessDenied ✓
+  D-4  billing staff cannot access Progress Notes compose           ✓
+  D-5  multi-facility clinician cannot edit another author's draft  ✓
+  E-1  two concurrent editors — second write receives stale-version conflict ✓
+
+Vitest Unit + Integration Tests
+────────────────────────────────
+Run 1:  550/550 passed  (19.65s)
+Run 2:  550/550 passed  (clean)
+
+TypeScript Build
+────────────────
+pnpm exec tsc -p tsconfig.json --noEmit → 0 errors ✓
+
+Key bugs resolved for this closure
+────────────────────────────────────
+1. RoleContext.tsx — deriveScreenPermissionFromServerCodes returned 'read' for
+   PatientDetail even when user has clinical_note.create/void/patient.update;
+   fixed to return 'full' when write-level clinical permissions are held.
+
+2. browserTestSeed.ts — onConflictDoNothing left BROWSER_SIGNED_NOTE_ID in
+   voided state after C-3 ran; fixed to DELETE + re-INSERT both fixture notes
+   on every global-setup run so tests always start from a known baseline.
+
+3. openProgressNotesTab (spec helper) — single click + networkidle sometimes
+   dropped the React onClick during a concurrent API re-render; fixed to retry
+   up to 3 times, confirming via waitForSelector('[data-testid="new-note-btn"]').
+
+4. playwright.config.ts — test API server ran without NODE_ENV=test, so the
+   IP-based rate limiter (max=10 / 15-min window) exhausted after ~11 logins.
+   Fixed by adding PHASE2D_RATE_LIMIT_MAX=1000 to the Playwright webServer env.
+
+5. permissions.ts — Phase 3 clinical_note.* codes missing from PermissionCode
+   union type; added all 5 codes (create/view/sign/void/export).
+
+6. E-1 recordHar removal (prior session) — CDP Network.enable deadlock; removed.
+
+7. PatientDetail permission mapping (prior session) — fixed read/full dispatch.
