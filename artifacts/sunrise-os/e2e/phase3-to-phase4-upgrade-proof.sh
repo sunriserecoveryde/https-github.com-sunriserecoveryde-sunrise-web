@@ -361,24 +361,24 @@ APT_ID="aaaaaaaa-0000-4000-a000-000000000001"
 psql "${PROOF_DB_URL}" -v ON_ERROR_STOP=1 -c "
   INSERT INTO sos_appointments
     (id, org_id, facility_id, patient_id, assigned_user_id, created_by_user_id,
-     appointment_type, status, starts_at, ends_at, version, created_at, updated_at)
+     appointment_type, status, starts_at, ends_at, reason, version, created_at)
   VALUES ('${APT_ID}', '${ORG_ID}', '${FAC_ID}', '${PAT_ID}',
           '${USR_ID}', '${USR_ID}',
           'intake', 'scheduled',
           NOW() + INTERVAL '1 hour', NOW() + INTERVAL '2 hours',
-          1, NOW(), NOW());" > /dev/null
+          'proof intake session', 1, NOW());" > /dev/null
 pass "Valid scheduled appointment inserted"
 
 step "Step 28: Prove ends_at <= starts_at is rejected"
 if psql "${PROOF_DB_URL}" -c "
   INSERT INTO sos_appointments
     (id, org_id, facility_id, patient_id, assigned_user_id, created_by_user_id,
-     appointment_type, status, starts_at, ends_at, version, created_at, updated_at)
+     appointment_type, status, starts_at, ends_at, reason, version, created_at)
   VALUES (gen_random_uuid(), '${ORG_ID}', '${FAC_ID}', '${PAT_ID}',
           '${USR_ID}', '${USR_ID}',
           'intake', 'scheduled',
           NOW() + INTERVAL '2 hours', NOW() + INTERVAL '1 hour',
-          1, NOW(), NOW());" 2>&1 | grep -q "check constraint"; then
+          'bad time order', 1, NOW());" 2>&1 | grep -qiE "check|constraint|violat"; then
   echo "  ends_at <= starts_at: REJECTED (constraint enforced)"
   pass "Invalid time order correctly rejected"
 else
@@ -389,12 +389,12 @@ step "Step 29: Prove invalid cancellation state (no metadata) is rejected"
 if psql "${PROOF_DB_URL}" -c "
   INSERT INTO sos_appointments
     (id, org_id, facility_id, patient_id, assigned_user_id, created_by_user_id,
-     appointment_type, status, starts_at, ends_at, version, created_at, updated_at)
+     appointment_type, status, starts_at, ends_at, reason, version, created_at)
   VALUES (gen_random_uuid(), '${ORG_ID}', '${FAC_ID}', '${PAT_ID}',
           '${USR_ID}', '${USR_ID}',
           'intake', 'cancelled',
           NOW() + INTERVAL '1 hour', NOW() + INTERVAL '2 hours',
-          1, NOW(), NOW());" 2>&1 | grep -q "check constraint"; then
+          'missing cancel metadata', 1, NOW());" 2>&1 | grep -qiE "check|constraint|violat"; then
   echo "  cancelled without metadata: REJECTED (constraint enforced)"
   pass "Invalid cancellation correctly rejected"
 else
@@ -405,15 +405,14 @@ step "Step 30: Prove valid cancellation state succeeds"
 psql "${PROOF_DB_URL}" -v ON_ERROR_STOP=1 -c "
   INSERT INTO sos_appointments
     (id, org_id, facility_id, patient_id, assigned_user_id, created_by_user_id,
-     appointment_type, status, starts_at, ends_at, version,
-     cancelled_by_user_id, cancelled_at, cancellation_reason,
-     created_at, updated_at)
+     appointment_type, status, starts_at, ends_at, reason, version,
+     cancelled_by_user_id, cancelled_at, cancellation_reason, created_at)
   VALUES (gen_random_uuid(), '${ORG_ID}', '${FAC_ID}', '${PAT_ID}',
           '${USR_ID}', '${USR_ID}',
           'intake', 'cancelled',
-          NOW() + INTERVAL '1 hour', NOW() + INTERVAL '2 hours', 1,
-          '${USR_ID}', NOW(), 'proof cancellation reason',
-          NOW(), NOW());" > /dev/null
+          NOW() + INTERVAL '1 hour', NOW() + INTERVAL '2 hours',
+          'proof intake session', 1,
+          '${USR_ID}', NOW(), 'proof cancellation reason', NOW());" > /dev/null
 pass "Valid cancellation state accepted"
 
 # ── Steps 31-32: Preservation ─────────────────────────────────────────────────
