@@ -43,6 +43,17 @@ REGEX_PATTERNS = [
     (re.compile(r'(Authorization:\s*)(Bearer\s+\S+)', re.IGNORECASE), r'\1[REDACTED]'),
     # Connect-pg-simple style session: s%3A... or s:...
     (re.compile(r'"value"\s*:\s*"(s%3A[^"]{10,}|s:[A-Za-z0-9\-_+/]{10,})"'), r'"value":"[REDACTED]"'),
+    # Standalone URL-encoded session token appearing anywhere in line (e.g. in trace events)
+    (re.compile(r'\bs%3A[A-Za-z0-9%+/\-_.]{20,}', re.IGNORECASE), '[REDACTED]'),
+    # Standalone raw session token s:<base64>.<sig>
+    (re.compile(r'\bs:[A-Za-z0-9+/\-_]{20,}\.[A-Za-z0-9+/\-_.]{5,}', re.IGNORECASE), '[REDACTED]'),
+]
+
+# Binary-level patterns applied as a final sweep over ALL files (catches binary trace formats)
+BINARY_REDACT_PATTERNS = [
+    (re.compile(rb's%3A[A-Za-z0-9%+/\-_.]{20,}', re.IGNORECASE), b'[REDACTED]'),
+    (re.compile(rb's:[A-Za-z0-9+/\-_]{20,}\.[A-Za-z0-9+/\-_.]{5,}', re.IGNORECASE), b'[REDACTED]'),
+    (re.compile(rb'sos_dev_session=[^\x00-\x1f"\';\]& ]{5,}', re.IGNORECASE), b'sos_dev_session=[REDACTED]'),
 ]
 
 TEXT_EXTENSIONS = {
@@ -205,6 +216,18 @@ def sanitize_trace_zip(input_zip_path: str, output_zip_path: str) -> dict:
                 sanitized = sanitize_text_file(raw)
                 with open(fpath, 'wb') as f:
                     f.write(sanitized)
+
+        # Binary-level final sweep: catch any remaining session tokens in ALL files
+        # (covers binary-format trace files that weren't fully parsed as JSON/text)
+        for fpath, arcname in sorted(file_list):
+            with open(fpath, 'rb') as f:
+                raw = f.read()
+            cleaned = raw
+            for pattern, replacement in BINARY_REDACT_PATTERNS:
+                cleaned = pattern.sub(replacement, cleaned)
+            if cleaned != raw:
+                with open(fpath, 'wb') as f:
+                    f.write(cleaned)
 
         # Repack into output ZIP
         os.makedirs(os.path.dirname(output_zip_path), exist_ok=True)
