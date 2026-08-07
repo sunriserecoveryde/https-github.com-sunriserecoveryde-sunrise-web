@@ -111,8 +111,12 @@ describe("§P4EQ-2 Role matrix — exact scheduling codes (13 roles)", () => {
     expect(appointmentCodes("bht")).toEqual(sortedArray(VIEW_ONLY));
   });
 
-  it("P4EQ-21: aftercare_staff — exactly 1 scheduling code (appointment.view only)", () => {
-    expect(appointmentCodes("aftercare_staff")).toEqual(sortedArray(VIEW_ONLY));
+  it("P4EQ-21: aftercare_staff — exactly 2 scheduling codes (appointment.view + appointment.view_facility_schedule)", () => {
+    // aftercare_staff is caseload-limited (facilityWide: false) — can see the facility
+    // schedule but only the appointments for patients they have explicit access to.
+    expect(appointmentCodes("aftercare_staff")).toEqual(
+      sortedArray(["appointment.view", "appointment.view_facility_schedule"]),
+    );
   });
 
   // ── Zero scheduling access ─────────────────────────────────────────────────
