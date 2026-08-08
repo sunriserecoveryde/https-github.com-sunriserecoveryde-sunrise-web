@@ -37,3 +37,4 @@
 - [Phase 4 v8 closure](phase-4-v8-closure.md) — v8 CLOSED: role matrix fix (aftercare_staff view_facility_schedule removed); 679×4/136×4/48×3; SF-01 uses supervisorAgent+cross-facility; 0007 hash f85f4254; ZIP sha256 6be5feb3
 - [Phase 4 v9 closure](phase-4-v9-closure.md) — v9 CLOSED: ASCII trace paths, SCREENSHOT-INVENTORY.md added, SHA256SUMS.txt, Info-ZIP 226/226 OK; ZIP sha256 4fce7e40; CSRF-in-trace scanner design note
 - [Phase 4 v10 closure](phase-4-v10-closure.md) — v10 CLOSED: CSRF-redacted traces (two-pass sanitizer); strict scanner (no exemptions); 700 internal files; ZIP sha256 76c071e5; dot in CSRF token pitfall documented
+- [Phase 4 audit record](phase-4-audit-record.md) — PERMANENT: merge commit 25c2622, approved code ee1150fd, evidence ZIP sha256 76c071e5; 679/679/48 tests; CLOSED
