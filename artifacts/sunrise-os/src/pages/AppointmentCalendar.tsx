@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { API_BASE } from '../lib/dataMode';
 import { Screen } from '../App';
 import { Calendar as CalendarIcon, Users, User, Plus, Clock, ChevronLeft, ChevronRight, CheckCircle, X } from 'lucide-react';
 import { LockedButton } from '../components/common/LockedButton';
@@ -67,9 +68,42 @@ const DOT_STYLE: Record<Appointment['type'], string> = {
 
 const WEEK_DAYS = ['Mon 7/20', 'Tue 7/21', 'Wed 7/22', 'Thu 7/23', 'Fri 7/24'];
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16];
-const HOUR_LABELS = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
 const CURRENT_DAY = 2; // Wednesday Jul 22 (today in the demo)
 const CURRENT_HOUR = 14; // 2:00 PM
+
+// ── Facility timezone rendering ────────────────────────────────────────────────
+// All appointment times display in the facility's IANA timezone via Intl.DateTimeFormat.
+// The timezone is fetched from the scheduling API — never hardcoded.
+// A safe "UTC" fallback is used only while the API call is in-flight or on failure.
+
+/**
+ * The facility ID for this demo calendar view (Baltimore Treatment Center).
+ * This is an identifier — the actual IANA timezone is fetched dynamically via the API.
+ */
+const DEMO_FACILITY_ID = "00000000-0000-4000-a000-000000000002";
+
+/**
+ * Format a UTC Date object to a human-readable time string using the given IANA timezone.
+ * Uses Intl.DateTimeFormat with an explicit `timeZone` — never relies on browser-local timezone.
+ */
+function formatFacilityTime(date: Date, tz: string, opts?: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour:     "numeric",
+    minute:   "2-digit",
+    hour12:   true,
+    ...opts,
+  }).format(date);
+}
+
+/**
+ * Build the hour-label string for a given integer hour (0–23) in the given IANA timezone.
+ */
+function buildHourLabel(hour: number, tz: string): string {
+  // Construct a reference UTC date for the given hour on a fixed date
+  const ref = new Date(Date.UTC(2026, 6, 22, hour, 0, 0)); // Jul 22, 2026 as stable reference
+  return formatFacilityTime(ref, tz);
+}
 
 // ─── Component ────────────────────────────────────────────────────────────
 
@@ -81,6 +115,33 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
   const [newApptOpen, setNewApptOpen] = useState(false);
   const [apptSaved, setApptSaved] = useState(false);
   const [newAppt, setNewAppt] = useState({ type: 'Individual' as Appointment['type'], day: CURRENT_DAY, start: '09:00', duration: '1', title: '', staff: '', location: '', patientId: '' });
+
+  // ── Facility timezone — fetched from the schedule API, never hardcoded ──────
+  // Initialized to "UTC" as a safe defensive fallback.
+  // Normal production rendering always uses the API-provided IANA timezone.
+  const [facilityTimezone, setFacilityTimezone] = useState<string>("UTC");
+
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    fetch(`${API_BASE}/v1/facilities/${DEMO_FACILITY_ID}/appointments?date=${today}`, {
+      credentials: "include",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { facilityTimezone?: string } | null) => {
+        if (data?.facilityTimezone) setFacilityTimezone(data.facilityTimezone);
+      })
+      .catch(() => {
+        // Safe fallback — UTC is used if the API call fails.
+        // Normal production rendering succeeds and uses the API-provided timezone.
+      });
+  }, []);
+
+  // Rebuild hour labels whenever the facility timezone changes.
+  // This ensures displayed times always reflect the API-provided IANA timezone.
+  const hourLabels = useMemo(
+    () => HOURS.map((h) => buildHourLabel(h, facilityTimezone)),
+    [facilityTimezone],
+  );
 
   function handleSaveAppt() {
     setNewApptOpen(false);
@@ -102,6 +163,14 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
 
   return (
     <div className="flex flex-col gap-5 h-[calc(100vh-var(--topbar-height)-var(--banner-height)-48px)]">
+      {/* Hidden element carries the active facility timezone for automated tests */}
+      <span
+        data-testid="facility-timezone-label"
+        data-timezone={facilityTimezone}
+        aria-hidden="true"
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="flex justify-between items-end flex-shrink-0">
         <div>
@@ -176,7 +245,7 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
                     a.startHour === CURRENT_HOUR ? 'border-l-sunrise-orange bg-orange-50' : 'border-l-slate-300 bg-bg'
                   }`}
                 >
-                  <div className="font-bold text-navy">{HOUR_LABELS[a.startHour - 8]}</div>
+                  <div className="font-bold text-navy">{hourLabels[a.startHour - 8]}</div>
                   <div className="font-medium text-slate truncate">{a.title}</div>
                   <div className="text-slate-light truncate">{a.staff}</div>
                 </div>
@@ -211,7 +280,7 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
             {HOURS.map((hour, hourIdx) => (
               <div key={hourIdx} className="flex border-b border-border" style={{ minHeight: 72 }}>
                 <div className="w-20 border-r border-border p-2 text-[10px] font-medium text-slate text-right bg-white flex-shrink-0 pt-2">
-                  {HOUR_LABELS[hourIdx]}
+                  {hourLabels[hourIdx]}
                 </div>
                 {WEEK_DAYS.map((_, dayIdx) => {
                   const appts = filteredAppts.filter(a => a.day === dayIdx && a.startHour === hour);
@@ -261,7 +330,7 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-slate flex-none" />
-                <span className="text-navy font-medium">{WEEK_DAYS[selectedAppt.day]} · {HOUR_LABELS[selectedAppt.startHour - 8]}</span>
+                <span className="text-navy font-medium">{WEEK_DAYS[selectedAppt.day]} · {hourLabels[selectedAppt.startHour - 8]}</span>
                 <span className="text-slate">({selectedAppt.durationHrs}h)</span>
               </div>
               <div className="flex items-center gap-2">
@@ -606,7 +675,7 @@ export function AppointmentCalendar({ navigate, readOnly }: { navigate: (s: Scre
                 <div>
                   <label className="block text-xs font-semibold text-slate uppercase mb-1">Start Time</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newAppt.start} onChange={e => setNewAppt(a => ({ ...a, start: e.target.value }))}>
-                    {HOUR_LABELS.map((h, i) => <option key={i} value={`${HOURS[i]}:00`}>{h}</option>)}
+                    {hourLabels.map((h, i) => <option key={i} value={`${HOURS[i]}:00`}>{h}</option>)}
                   </select>
                 </div>
                 <div>

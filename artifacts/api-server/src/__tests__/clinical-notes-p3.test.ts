@@ -1231,15 +1231,16 @@ describe("§6 audit — events written and content-free", () => {
 // §7 — Migration verification
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe("§7 migration — no pending migrations after 0006", () => {
-  it("migration-01: exactly 7 migration entries in drizzle.__drizzle_migrations (0000–0006)", async () => {
+describe("§7 migration — no pending migrations after 0007", () => {
+  it("migration-01: exactly 8 migration entries in drizzle.__drizzle_migrations (0000–0007)", async () => {
     // Migration 0006 applied via psql to the production DB (drizzle-kit timestamp ordering
     // issue prevents upgrade-path application; fresh installs via drizzle-kit are unaffected).
     // The journal row for 0006 is inserted explicitly after psql application.
+    // Migration 0007 (scheduling & appointments) added by Phase 4.
     const rows = await db.execute<{ hash: string }>(
       `SELECT hash FROM drizzle.__drizzle_migrations ORDER BY created_at ASC`,
     );
-    expect(rows.rows.length).toBe(7);
+    expect(rows.rows.length).toBe(8);
     // 0006 hash must be present.
     const hashes = rows.rows.map((r) => r.hash);
     expect(hashes).toContain("83072a363b079a404b4286eb1eec2fe637796d0aa905760146cd79db6ed50c0f");

@@ -32,6 +32,12 @@ export const PERMISSION_CODES = [
   "clinical_note.edit_own_draft",
   "clinical_note.sign_own",
   "clinical_note.void",
+  // Phase 4 — Scheduling and Appointments
+  "appointment.create",
+  "appointment.view",
+  "appointment.edit",
+  "appointment.cancel",
+  "appointment.view_facility_schedule",
 ] as const;
 
 export type PermissionCode = (typeof PERMISSION_CODES)[number];

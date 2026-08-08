@@ -53,9 +53,11 @@ describe("Frontend permission contract — Phase 3 exact equality", () => {
     }
   });
 
-  it("PERMISSION_CODES total count is 18 (13 core + 5 clinical note)", () => {
+  it("PERMISSION_CODES total count is 23 (13 core + 5 clinical note + 5 appointment)", () => {
     // Exact total prevents silent additions.
-    expect(PERMISSION_CODES.length).toBe(18);
+    // Phase 4 added 5 appointment codes: appointment.create, appointment.view,
+    // appointment.edit, appointment.cancel, appointment.view_facility_schedule.
+    expect(PERMISSION_CODES.length).toBe(23);
   });
 
   it("hasPermission returns true for approved codes when present", () => {

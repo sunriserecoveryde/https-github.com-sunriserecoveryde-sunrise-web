@@ -44,6 +44,12 @@ export const PERMISSION_CODES = [
   "clinical_note.edit_own_draft",
   "clinical_note.sign_own",
   "clinical_note.void",
+  // Phase 4 — Scheduling and Appointments
+  "appointment.create",
+  "appointment.view",
+  "appointment.edit",
+  "appointment.cancel",
+  "appointment.view_facility_schedule",
 ] as const;
 
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
@@ -90,6 +96,12 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "clinical_note.edit_own_draft",
       "clinical_note.sign_own",
       "clinical_note.void",
+      // Phase 4 — Scheduling and Appointments
+      "appointment.create",
+      "appointment.view",
+      "appointment.edit",
+      "appointment.cancel",
+      "appointment.view_facility_schedule",
     ],
   },
   certified_clinician: {
@@ -109,6 +121,12 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "clinical_note.view",
       "clinical_note.edit_own_draft",
       "clinical_note.sign_own",
+      // Phase 4 — Scheduling and Appointments
+      "appointment.create",
+      "appointment.view",
+      "appointment.edit",
+      "appointment.cancel",
+      "appointment.view_facility_schedule",
     ],
   },
   mh_therapist: {
@@ -128,6 +146,12 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "clinical_note.view",
       "clinical_note.edit_own_draft",
       "clinical_note.sign_own",
+      // Phase 4 — Scheduling and Appointments
+      "appointment.create",
+      "appointment.view",
+      "appointment.edit",
+      "appointment.cancel",
+      "appointment.view_facility_schedule",
     ],
   },
   cmo: {
@@ -176,6 +200,12 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "clinical_note.create",
       "clinical_note.view",
       "clinical_note.sign_own",
+      // Phase 4 — Scheduling and Appointments
+      "appointment.create",
+      "appointment.view",
+      "appointment.edit",
+      "appointment.cancel",
+      "appointment.view_facility_schedule",
     ],
   },
   nursing: {
@@ -193,6 +223,12 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "clinical_note.view",
       "clinical_note.edit_own_draft",
       "clinical_note.sign_own",
+      // Phase 4 — Scheduling and Appointments
+      "appointment.create",
+      "appointment.view",
+      "appointment.edit",
+      "appointment.cancel",
+      "appointment.view_facility_schedule",
     ],
   },
   director_of_operations: {
@@ -231,6 +267,8 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.episode.view",
       // Phase 3 — view-only clinical note access
       "clinical_note.view",
+      // Phase 4 — Scheduling and Appointments (view-only)
+      "appointment.view",
     ],
   },
   billing_staff: {
@@ -261,12 +299,14 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
     permissions: [],  // zero patient access
   },
   aftercare_staff: {
-    facilityWide: false,  // caseload-limited
+    facilityWide: false,  // caseload-limited (requires explicit sos_patient_access row)
     canBeOrgWide: false,
     canBeFacilityScoped: true,
     grantableRoles: [],
     permissions: [
       "patient.list.view",
+      // Phase 4 — Scheduling and Appointments (view-only, caseload-limited)
+      "appointment.view",
     ],
   },
   security_admin: {

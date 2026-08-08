@@ -27,3 +27,13 @@
 - [Phase 3 v10 closure](phase-3-v10-closure.md) — v10 CLOSED: all 7 v9 failures corrected; 573×4/136×4/19×3/cross×6; 0 confirmed secrets; ZIP sha256 274b52fd
 - [Phase 3 v10-final closure](phase-3-v10-final-closure.md) — v10-final: 3 CSRF traces patched; recursive ZIP scanner (20 ZIPs/19 traces/4 HARs); 0 confirmed; ZIP sha256 9fd4213c
 - [Phase 3 audit record](phase-3-audit-record.md) — PERMANENT: merge commit 2a15811, approved code 75701271, evidence ZIP sha256 9fd4213c; 573/573/19 tests; CLOSED
+- [Phase 4 Scheduling](phase-4-scheduling.md) — 668×4/29×3 tests; TS parameter property pitfall; route prefix; outbox no constraint; db rebuild before tsc
+- [Phase 4 v2 closure](phase-4-v2-closure.md) — 668×4/136×4/42×3; UUID c000→a000 fix; DB accumulation fix; listPatientAppointments status+time bucketing; ZIP sha256 b24a7275
+- [Phase 4 v3 closure](phase-4-v3-closure.md) — CLOSED: 668×4/136×4/43×4; migration proof 28/28; 0 secrets; ZIP sha256 421f01ae; screenshots-p4 isolation fix; 8 migrations JSON journal
+- [Phase 4 v4 closure](phase-4-v4-closure.md) — v4 CLOSED: 668×4/136×4/43×3/isolation-8/7-gates; migration proof 22/22; 0 secrets; ZIP sha256 8ba270e0; staff_profiles FK pitfall documented
+- [Phase 4 v5 closure](phase-4-v5-closure.md) — v5 CLOSED: all spec gates + 8/8 cross-suite; 0 secrets; ZIP sha256 a22159d5; trace binary sweep + scanner credential fix documented
+- [Phase 4 v6 closure](phase-4-v6-closure.md) — v6 CLOSED: 678×4/136×4/45×3; 12 new tests; ZIP sha256 3d75009a; sos_roles/created_by_user_id/isNull import pitfalls documented
+- [Phase 4 v7 closure](phase-4-v7-closure.md) — v7 CLOSED: 679×4/136×4/29×4; TZ-UI+SF-01 tests; migration table drizzle.__drizzle_migrations; ZIP sha256 d10d77f3
+- [Phase 4 v8 closure](phase-4-v8-closure.md) — v8 CLOSED: role matrix fix (aftercare_staff view_facility_schedule removed); 679×4/136×4/48×3; SF-01 uses supervisorAgent+cross-facility; 0007 hash f85f4254; ZIP sha256 6be5feb3
+- [Phase 4 v9 closure](phase-4-v9-closure.md) — v9 CLOSED: ASCII trace paths, SCREENSHOT-INVENTORY.md added, SHA256SUMS.txt, Info-ZIP 226/226 OK; ZIP sha256 4fce7e40; CSRF-in-trace scanner design note
+- [Phase 4 v10 closure](phase-4-v10-closure.md) — v10 CLOSED: CSRF-redacted traces (two-pass sanitizer); strict scanner (no exemptions); 700 internal files; ZIP sha256 76c071e5; dot in CSRF token pitfall documented

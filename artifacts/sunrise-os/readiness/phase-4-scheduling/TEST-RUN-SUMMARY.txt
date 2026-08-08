@@ -1,0 +1,29 @@
+Phase 4 — Scheduling and Appointments — Test Run Summary
+Generated: 2026-08-07
+
+API Tests (vitest):
+  Run 1: 668/668 passed (16 test files)
+  Run 2: 668/668 passed
+  Run 3: 668/668 passed
+  Run 4: 668/668 passed
+
+New tests added:
+  - appointments-p4.test.ts           (§1–§10, 62 tests)
+  - permission-contract-p4-exact.test.ts (P4EQ-01–P4EQ-46)
+
+Playwright (true browser, DISABLE_AUTH_FALLBACK=true):
+  Run 1: 29/29 passed (19 clinical-notes + 10 appointment)
+  Run 2: 29/29 passed
+  Run 3: 29/29 passed
+
+Migration proof:
+  - Created disposable DB sos_migration_proof_p4
+  - Applied migrations 0000–0007 (all 8) successfully
+  - Verified sos_appointments (19 columns), 5 indexes, 3 appointment events in ck_sos_auth_audit_event_type
+  - sos_audit_outbox: no event_type check constraint (intentional; outbox worker tests require it)
+  - Dropped proof DB
+
+TypeScript:
+  - lib/db tsc: 0 errors
+  - api-server tsc --noEmit: 0 errors
+  - sunrise-os tsc --noEmit: 0 errors

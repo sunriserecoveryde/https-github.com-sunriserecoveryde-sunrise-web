@@ -13,7 +13,7 @@ import { CustomButtons } from '../components/ui/CustomButtons';
 import {
   ArrowLeft, Activity, FileText, Pill, Users, HeartPulse,
   FlaskConical, BookOpen, FolderOpen, CheckCircle2, XCircle,
-  AlertCircle, Clock, Upload, Download, ClipboardList, Plus, Eye, Pin, PinOff
+  AlertCircle, Clock, Upload, Download, ClipboardList, Plus, Eye, Pin, PinOff, Calendar
 } from 'lucide-react';
 import { Screen } from '../App';
 import { LockedButton } from '../components/common/LockedButton';
@@ -365,6 +365,78 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
   // Note type selector for the compose panel (production mode)
   const [apiNoteType, setApiNoteType] = useState<'progress_note' | 'nursing_note'>('progress_note');
 
+  // ── Appointments — fetch when tab is active (Production mode — Phase 4) ───
+  interface ApiAppointment {
+    id: string;
+    patientId: string;
+    facilityId: string;
+    assignedUserId: string;
+    appointmentType: string;
+    status: 'scheduled' | 'cancelled';
+    startsAt: string;
+    endsAt: string;
+    reason: string;
+    internalNote: string | null;
+    createdByUserId: string;
+    createdAt: string;
+    updatedAt: string | null;
+    cancelledAt: string | null;
+    cancellationReason: string | null;
+    version: number;
+  }
+  interface ApiAppointmentList {
+    upcoming: ApiAppointment[];
+    past: ApiAppointment[];
+  }
+  const [appointments, setAppointments] = useState<ApiAppointmentList>({ upcoming: [], past: [] });
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+  const [appointmentsError, setAppointmentsError] = useState<string | null>(null);
+  const [isCreatingAppointment, setIsCreatingAppointment] = useState(false);
+  const [aptSaving, setAptSaving] = useState(false);
+  const [aptApiError, setAptApiError] = useState<string | null>(null);
+  // New appointment form state
+  const [aptType, setAptType] = useState<string>('individual_therapy');
+  const [aptStartsAt, setAptStartsAt] = useState<string>('');
+  const [aptEndsAt, setAptEndsAt] = useState<string>('');
+  const [aptReason, setAptReason] = useState<string>('');
+  const [aptInternalNote, setAptInternalNote] = useState<string>('');
+  const [aptAssignedUserId, setAptAssignedUserId] = useState<string>('');
+  const [aptFacilityId, setAptFacilityId] = useState<string>('');
+  // Cancel modal state
+  const [cancelModalAptId, setCancelModalAptId] = useState<string | null>(null);
+  const [cancelModalVersion, setCancelModalVersion] = useState<number>(1);
+  const [cancelReason, setCancelReason] = useState<string>('');
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  // Edit appointment modal state (Phase 4)
+  const [editAptId, setEditAptId] = useState<string | null>(null);
+  const [editAptReason, setEditAptReason] = useState<string>('');
+  const [editAptVersion, setEditAptVersion] = useState<number>(1);
+  const [editAptSaving, setEditAptSaving] = useState(false);
+  const [editAptError, setEditAptError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (DATA_MODE !== 'production' || !patientId || activeTab !== 'Appointments') return;
+    let cancelled = false;
+    setAppointmentsLoading(true);
+    setAppointmentsError(null);
+    fetch(`${API_BASE}/v1/patients/${patientId}/appointments`, { headers: DEV_HEADERS })
+      .then(r => r.ok ? r.json() as Promise<{ appointments: ApiAppointmentList }> : Promise.reject(r.status))
+      .then(data => { if (!cancelled) setAppointments(data.appointments); })
+      .catch(() => { if (!cancelled) setAppointmentsError('Unable to load appointments from server.'); })
+      .finally(() => { if (!cancelled) setAppointmentsLoading(false); });
+    return () => { cancelled = true; };
+  }, [patientId, activeTab]);
+
+  // Refresh appointments list after create/cancel
+  const refreshAppointments = () => {
+    if (DATA_MODE !== 'production' || !patientId) return;
+    fetch(`${API_BASE}/v1/patients/${patientId}/appointments`, { headers: DEV_HEADERS })
+      .then(r => r.ok ? r.json() as Promise<{ appointments: ApiAppointmentList }> : Promise.reject(r.status))
+      .then(data => setAppointments(data.appointments))
+      .catch(() => {});
+  };
+
   // ── Supervisor void modal state (Phase 3 §5) ─────────────────────────────
   const [voidModalNoteId, setVoidModalNoteId] = useState<string | null>(null);
   const [voidModalNoteVersion, setVoidModalNoteVersion] = useState<number>(1);
@@ -508,6 +580,7 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
     { id: 'Incidents', icon: <AlertCircle className="w-3.5 h-3.5" /> },
     { id: 'Case Management', icon: <ClipboardList className="w-3.5 h-3.5" /> },
     { id: 'Audit History', icon: <Eye className="w-3.5 h-3.5" /> },
+    { id: 'Appointments', icon: <Calendar className="w-3.5 h-3.5" /> },
   ];
 
   // ── Group attendance generated from LOS ──────────────────────────────────
@@ -2309,6 +2382,383 @@ export function PatientDetail({ patientId, navigate, readOnly }: { patientId: st
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── APPOINTMENTS ─────────────────────────────────────────────────── */}
+        {activeTab === 'Appointments' && (
+          <div className="flex h-full gap-6">
+            {/* List panel */}
+            <div className={`flex-col h-full ${isCreatingAppointment ? 'w-1/3' : 'w-full'}`}>
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-navy">Appointments</h2>
+                {!isCreatingAppointment && (
+                  <LockedButton
+                    locked={readOnly || !(productionSession?.permissionCodes ?? []).includes('appointment.create')}
+                    data-testid="new-appointment-btn"
+                    onClick={() => { setIsCreatingAppointment(true); setAptApiError(null); setAptReason(''); setAptInternalNote(''); setAptStartsAt(''); setAptEndsAt(''); }}
+                    className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors"
+                  >
+                    + New Appointment
+                  </LockedButton>
+                )}
+              </div>
+
+              {/* Loading / error states */}
+              {DATA_MODE === 'production' && appointmentsLoading && (
+                <div className="text-sm text-slate-400 py-4 animate-pulse">Loading appointments…</div>
+              )}
+              {DATA_MODE === 'production' && appointmentsError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2 mb-3">{appointmentsError}</div>
+              )}
+              {aptApiError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2 mb-3">{aptApiError}</div>
+              )}
+
+              {DATA_MODE !== 'production' ? (
+                <div className="text-center py-12 text-slate-400">
+                  <Calendar className="w-8 h-8 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm font-medium">No appointments in demo mode</p>
+                  <p className="text-xs mt-1">Connect to API to view and manage appointments.</p>
+                </div>
+              ) : !appointmentsLoading && appointments.upcoming.length === 0 && appointments.past.length === 0 ? (
+                <div data-testid="apt-empty-state" className="text-center py-12 text-slate-400">
+                  <Calendar className="w-8 h-8 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm font-medium">No appointments scheduled</p>
+                  <p className="text-xs mt-1">Use the button above to schedule this patient's first appointment.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Upcoming */}
+                  {appointments.upcoming.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Upcoming</h3>
+                      <div className="space-y-2">
+                        {appointments.upcoming.map((apt) => (
+                          <div key={apt.id} data-testid={`apt-card-${apt.id}`} className="border border-slate-200 rounded-lg px-4 py-3 bg-white hover:bg-blue-50/30 transition-colors">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded capitalize">
+                                    {apt.appointmentType.replace('_', ' ')}
+                                  </span>
+                                  <span className="text-xs text-slate-400">
+                                    {new Date(apt.startsAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    {' '}
+                                    {new Date(apt.startsAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                    {' – '}
+                                    {new Date(apt.endsAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-navy">{apt.reason}</p>
+                                {apt.internalNote && (
+                                  <p className="text-xs text-slate-500 mt-1 italic">Note: {apt.internalNote}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 ml-3">
+                                {(productionSession?.permissionCodes ?? []).includes('appointment.edit') && (
+                                  <button
+                                    data-testid={`edit-apt-${apt.id}`}
+                                    onClick={() => { setEditAptId(apt.id); setEditAptReason(apt.reason); setEditAptVersion(apt.version); setEditAptError(null); }}
+                                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                                {(productionSession?.permissionCodes ?? []).includes('appointment.cancel') && (
+                                  <button
+                                    data-testid={`cancel-apt-${apt.id}`}
+                                    onClick={() => { setCancelModalAptId(apt.id); setCancelModalVersion(apt.version); setCancelReason(''); setCancelError(null); }}
+                                    className="text-xs text-red-500 hover:text-red-700 font-medium"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Past */}
+                  {appointments.past.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Past</h3>
+                      <div className="space-y-2">
+                        {appointments.past.map((apt) => (
+                          <div key={apt.id} data-testid={`apt-card-past-${apt.id}`} className="border border-slate-100 rounded-lg px-4 py-3 bg-slate-50">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded capitalize ${apt.status === 'cancelled' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
+                                {apt.status === 'cancelled' ? 'Cancelled' : apt.appointmentType.replace('_', ' ')}
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                {new Date(apt.startsAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600">{apt.reason}</p>
+                            {apt.cancellationReason && (
+                              <p className="text-xs text-red-500 mt-1">Cancelled: {apt.cancellationReason}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* New Appointment form panel */}
+            {isCreatingAppointment && (
+              <div className="flex-1 border-l border-slate-200 pl-6 flex flex-col h-full">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-semibold text-navy">New Appointment</h3>
+                  <button onClick={() => { setIsCreatingAppointment(false); setAptApiError(null); }} className="text-slate-400 hover:text-slate-600 text-sm">
+                    ✕ Close
+                  </button>
+                </div>
+
+                <div className="space-y-4 flex-1 overflow-y-auto">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Appointment Type</label>
+                    <select
+                      value={aptType}
+                      onChange={e => setAptType(e.target.value)}
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sunrise-blue"
+                    >
+                      <option value="individual_therapy">Individual Therapy</option>
+                      <option value="medication_management">Medication Management</option>
+                      <option value="intake">Intake</option>
+                      <option value="follow_up">Follow-Up</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Start Date & Time</label>
+                      <input
+                        type="datetime-local"
+                        value={aptStartsAt}
+                        onChange={e => setAptStartsAt(e.target.value)}
+                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sunrise-blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">End Date & Time</label>
+                      <input
+                        type="datetime-local"
+                        value={aptEndsAt}
+                        onChange={e => setAptEndsAt(e.target.value)}
+                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sunrise-blue"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Reason <span className="text-red-500">*</span></label>
+                    <textarea
+                      value={aptReason}
+                      onChange={e => setAptReason(e.target.value)}
+                      rows={2}
+                      placeholder="Clinical reason for this appointment…"
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sunrise-blue resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Internal Note <span className="text-slate-400 text-xs font-normal">(supervisor-visible only)</span></label>
+                    <textarea
+                      value={aptInternalNote}
+                      onChange={e => setAptInternalNote(e.target.value)}
+                      rows={2}
+                      placeholder="Optional internal note — not shown to all staff…"
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sunrise-blue resize-none"
+                    />
+                  </div>
+
+                  {aptApiError && (
+                    <div data-testid="apt-api-error" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{aptApiError}</div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      data-testid="submit-appointment-btn"
+                      disabled={aptSaving || !aptReason.trim() || !aptStartsAt || !aptEndsAt}
+                      onClick={async () => {
+                        if (!aptReason.trim() || !aptStartsAt || !aptEndsAt) return;
+                        setAptSaving(true);
+                        setAptApiError(null);
+                        try {
+                          const csrfRes = await fetch(`${API_BASE}/v1/auth/csrf-token`, { headers: DEV_HEADERS });
+                          const { csrfToken } = await csrfRes.json() as { csrfToken: string };
+                          const startsAtIso = new Date(aptStartsAt).toISOString().replace(/\.\d{3}Z$/, 'Z').replace('Z', '+00:00');
+                          const endsAtIso = new Date(aptEndsAt).toISOString().replace(/\.\d{3}Z$/, 'Z').replace('Z', '+00:00');
+                          const res = await fetch(`${API_BASE}/v1/patients/${patientId}/appointments`, {
+                            method: 'POST',
+                            headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                            body: JSON.stringify({
+                              ...(aptFacilityId ? { facilityId: aptFacilityId } : {}),
+                              assignedUserId: aptAssignedUserId || productionSession?.userId,
+                              appointmentType: aptType,
+                              startsAt: startsAtIso,
+                              endsAt: endsAtIso,
+                              reason: aptReason.trim(),
+                              internalNote: aptInternalNote.trim() || null,
+                            }),
+                          });
+                          if (!res.ok) {
+                            const err = await res.json() as { error?: string };
+                            setAptApiError(err?.error ?? `Server error ${res.status}`);
+                          } else {
+                            setIsCreatingAppointment(false);
+                            setAptReason('');
+                            setAptInternalNote('');
+                            setAptStartsAt('');
+                            setAptEndsAt('');
+                            refreshAppointments();
+                          }
+                        } catch {
+                          setAptApiError('Network error — please try again.');
+                        } finally {
+                          setAptSaving(false);
+                        }
+                      }}
+                      className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light transition-colors disabled:opacity-50"
+                    >
+                      {aptSaving ? 'Saving…' : 'Save Appointment'}
+                    </button>
+                    <button
+                      onClick={() => { setIsCreatingAppointment(false); setAptApiError(null); }}
+                      className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Cancel appointment modal */}
+        {cancelModalAptId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+              <h3 className="text-lg font-bold text-navy mb-1">Cancel Appointment</h3>
+              <p className="text-sm text-slate mb-4">This action is irreversible. Please provide a cancellation reason.</p>
+              <textarea
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+                rows={3}
+                placeholder="Reason for cancellation…"
+                className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 mb-3 resize-none"
+              />
+              {cancelError && <div className="text-sm text-red-600 mb-3">{cancelError}</div>}
+              <div className="flex gap-3">
+                <button
+                  data-testid="confirm-cancel-btn"
+                  disabled={cancelSubmitting || !cancelReason.trim()}
+                  onClick={async () => {
+                    if (!cancelReason.trim() || !cancelModalAptId) return;
+                    setCancelSubmitting(true);
+                    setCancelError(null);
+                    try {
+                      const csrfRes = await fetch(`${API_BASE}/v1/auth/csrf-token`, { headers: DEV_HEADERS });
+                      const { csrfToken } = await csrfRes.json() as { csrfToken: string };
+                      const res = await fetch(`${API_BASE}/v1/appointments/${cancelModalAptId}/cancel`, {
+                        method: 'POST',
+                        headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify({ version: cancelModalVersion, cancellationReason: cancelReason.trim() }),
+                      });
+                      if (!res.ok) {
+                        const err = await res.json() as { error?: string };
+                        setCancelError(err?.error ?? `Server error ${res.status}`);
+                      } else {
+                        setCancelModalAptId(null);
+                        setCancelReason('');
+                        refreshAppointments();
+                      }
+                    } catch {
+                      setCancelError('Network error — please try again.');
+                    } finally {
+                      setCancelSubmitting(false);
+                    }
+                  }}
+                  className="bg-red-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                >
+                  {cancelSubmitting ? 'Cancelling…' : 'Confirm Cancel'}
+                </button>
+                <button
+                  onClick={() => { setCancelModalAptId(null); setCancelError(null); }}
+                  className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit appointment modal (Phase 4) */}
+        {editAptId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+              <h3 className="text-lg font-bold text-navy mb-1">Edit Appointment</h3>
+              <p className="text-sm text-slate mb-4">Update the appointment reason below.</p>
+              <textarea
+                data-testid="edit-apt-reason-input"
+                value={editAptReason}
+                onChange={e => setEditAptReason(e.target.value)}
+                rows={3}
+                placeholder="Appointment reason…"
+                className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 mb-3 resize-none"
+              />
+              {editAptError && <div className="text-sm text-red-600 mb-3">{editAptError}</div>}
+              <div className="flex gap-3">
+                <button
+                  data-testid="confirm-edit-btn"
+                  disabled={editAptSaving || !editAptReason.trim()}
+                  onClick={async () => {
+                    if (!editAptReason.trim() || !editAptId) return;
+                    setEditAptSaving(true);
+                    setEditAptError(null);
+                    try {
+                      const csrfRes = await fetch(`${API_BASE}/v1/auth/csrf-token`, { headers: DEV_HEADERS });
+                      const { csrfToken } = await csrfRes.json() as { csrfToken: string };
+                      const res = await fetch(`${API_BASE}/v1/appointments/${editAptId}`, {
+                        method: 'PATCH',
+                        headers: { ...DEV_HEADERS, 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify({ version: editAptVersion, reason: editAptReason.trim() }),
+                      });
+                      if (!res.ok) {
+                        const err = await res.json() as { error?: string };
+                        setEditAptError(err?.error ?? `Server error ${res.status}`);
+                      } else {
+                        setEditAptId(null);
+                        setEditAptError(null);
+                        refreshAppointments();
+                      }
+                    } catch {
+                      setEditAptError('Network error — please try again.');
+                    } finally {
+                      setEditAptSaving(false);
+                    }
+                  }}
+                  className="bg-sunrise-blue text-white px-4 py-2 rounded text-sm font-medium hover:bg-sunrise-blue-light disabled:opacity-50"
+                >
+                  {editAptSaving ? 'Saving…' : 'Save Changes'}
+                </button>
+                <button
+                  onClick={() => { setEditAptId(null); setEditAptError(null); }}
+                  className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}

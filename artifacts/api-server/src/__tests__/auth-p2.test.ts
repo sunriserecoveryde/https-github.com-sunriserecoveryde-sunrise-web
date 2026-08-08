@@ -25,16 +25,22 @@ import {
 } from "../lib/permissionPolicy";
 
 describe("permissionPolicy", () => {
-  it("exports the 18 canonical PermissionCode values", () => {
+  it("exports the 23 canonical PermissionCode values", () => {
     // Phase 3 added 5 clinical_note.* permission codes (create, view, edit_own_draft,
     // sign_own, void). Original 13 + 5 = 18.
-    // clinical_note.audit_view was removed — no audit UI is implemented in Phase 3.
-    expect(PERMISSION_CODES).toHaveLength(18);
+    // Phase 4 added 5 appointment.* permission codes (create, view, edit, cancel,
+    // view_facility_schedule). 18 + 5 = 23.
+    expect(PERMISSION_CODES).toHaveLength(23);
     expect(PERMISSION_CODES).toContain("patient.list.view");
     expect(PERMISSION_CODES).toContain("organization.admin");
     expect(PERMISSION_CODES).toContain("audit.authentication.view");
     expect(PERMISSION_CODES).toContain("clinical_note.create");
     expect(PERMISSION_CODES).toContain("clinical_note.void");
+    expect(PERMISSION_CODES).toContain("appointment.create");
+    expect(PERMISSION_CODES).toContain("appointment.view");
+    expect(PERMISSION_CODES).toContain("appointment.edit");
+    expect(PERMISSION_CODES).toContain("appointment.cancel");
+    expect(PERMISSION_CODES).toContain("appointment.view_facility_schedule");
   });
 
   it("every role in ROLE_PERMISSIONS has at least one permission", () => {

@@ -66,6 +66,9 @@ const PERSONAS: Array<{ key: keyof typeof SESSION_PATHS; email: string }> = [
   { key: "hr",            email: "hr@test.sunrise"             },
   { key: "billing",       email: "billing@test.sunrise"        },
   { key: "multiFac",      email: "multi-facility@test.sunrise" },
+  // Phase 4: BHT persona for appointment.view-only denial tests.
+  // readonly@test.sunrise holds the bht role at Facility 1.
+  { key: "bht",           email: "readonly@test.sunrise"       },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

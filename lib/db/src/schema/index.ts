@@ -24,3 +24,4 @@ export * from "./compliance";
 export * from "./sunrise-os";
 export * from "./auth-tables";
 export * from "./clinical-notes";
+export * from "./appointments";

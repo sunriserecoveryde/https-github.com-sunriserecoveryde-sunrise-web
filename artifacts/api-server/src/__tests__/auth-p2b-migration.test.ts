@@ -217,13 +217,13 @@ describe("§11.6 sos_rate_limit_windows table structure", () => {
 // ── §11.7 Migration journal integrity ────────────────────────────────────────
 
 describe("§11.7 Migration journal", () => {
-  it("journal file has exactly 7 entries (0000–0006)", () => {
+  it("journal file has exactly 8 entries (0000–0007)", () => {
     const journalPath = path.join(MIGRATION_DIR, "meta/_journal.json");
     expect(fs.existsSync(journalPath)).toBe(true);
     const journal = JSON.parse(fs.readFileSync(journalPath, "utf8")) as {
       entries: { idx: number; tag: string }[];
     };
-    expect(journal.entries).toHaveLength(7);
+    expect(journal.entries).toHaveLength(8);
     expect(journal.entries[0].idx).toBe(0);
     expect(journal.entries[1].idx).toBe(1);
     expect(journal.entries[2].idx).toBe(2);

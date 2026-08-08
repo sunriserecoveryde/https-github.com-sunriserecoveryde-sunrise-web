@@ -53,3 +53,6 @@ Thumbs.db
 
 # Replit uploaded assets
 attached_assets/
+
+# Raw (unsanitized) Playwright HAR artifacts — sanitized copies go into the evidence ZIP
+artifacts/sunrise-os/e2e/har/*.har
