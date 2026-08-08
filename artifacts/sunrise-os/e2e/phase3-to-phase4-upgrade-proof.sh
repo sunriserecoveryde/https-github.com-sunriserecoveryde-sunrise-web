@@ -260,7 +260,7 @@ step "Step 17: Prove only migration 0007 was newly applied during upgrade"
 # patched after initial production deployment.  The proof validates the
 # PROCESS (7→8 rows, only 0007 applied), and the hash below is the one
 # drizzle-kit derives from the CURRENT canonical 0007 file.
-HASH_0007="f9584e3e78fb3880bed1e8fed4514759c38cf0cc9d9de73f0cf7ff078c97a135"
+HASH_0007="f85f4254bc63e9f15dc7f5da1a74425089032c0ca92e2689ec00e8716a17a901"
 ROW8_HASH="$(psql "${PROOF_DB_URL}" -tAc \
   "SELECT hash FROM drizzle.__drizzle_migrations ORDER BY id DESC LIMIT 1;")"
 ROW8_HASH="${ROW8_HASH// /}"
