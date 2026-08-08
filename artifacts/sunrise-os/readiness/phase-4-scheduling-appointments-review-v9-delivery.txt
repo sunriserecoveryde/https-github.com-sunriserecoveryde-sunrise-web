@@ -1,0 +1,18 @@
+# Phase 4 v9 Delivery Manifest
+
+ZIP filename:                  phase-4-scheduling-appointments-review-v9.zip
+ZIP absolute path:             /home/runner/workspace/artifacts/sunrise-os/readiness/phase-4-scheduling-appointments-review-v9.zip
+ZIP size (bytes):              92907037
+ZIP SHA-256:                   4fce7e40ecee0925d91175d0f31949719472061969bced14724a4d8b0838414b
+
+Final-ZIP scan log filename:   phase-4-scheduling-appointments-review-v9-final-zip-scan.log
+Final-ZIP scanner SHA-256:     4fce7e40ecee0925d91175d0f31949719472061969bced14724a4d8b0838414b
+
+Regular file count:            227
+SHA256SUMS.txt entry count:    226
+Standard extraction result:    226/226 OK, sha256sum -c exit 0
+
+Tested commit SHA:             ee1150fd80f8042f4497215628e60e7db5951a85
+Evidence commit SHA:           be00c1ad60399018cc047919e304515e4ff5777b
+
+Scanner SHA matches ZIP SHA:   YES
