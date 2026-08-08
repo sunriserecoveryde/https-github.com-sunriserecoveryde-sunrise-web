@@ -34,3 +34,4 @@
 - [Phase 4 v5 closure](phase-4-v5-closure.md) — v5 CLOSED: all spec gates + 8/8 cross-suite; 0 secrets; ZIP sha256 a22159d5; trace binary sweep + scanner credential fix documented
 - [Phase 4 v6 closure](phase-4-v6-closure.md) — v6 CLOSED: 678×4/136×4/45×3; 12 new tests; ZIP sha256 3d75009a; sos_roles/created_by_user_id/isNull import pitfalls documented
 - [Phase 4 v7 closure](phase-4-v7-closure.md) — v7 CLOSED: 679×4/136×4/29×4; TZ-UI+SF-01 tests; migration table drizzle.__drizzle_migrations; ZIP sha256 d10d77f3
+- [Phase 4 v8 closure](phase-4-v8-closure.md) — v8 CLOSED: role matrix fix (aftercare_staff view_facility_schedule removed); 679×4/136×4/48×3; SF-01 uses supervisorAgent+cross-facility; 0007 hash f85f4254; ZIP sha256 6be5feb3
