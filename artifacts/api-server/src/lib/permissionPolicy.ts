@@ -307,9 +307,6 @@ export const ROLE_PERMISSIONS: Record<string, RoleDefinition> = {
       "patient.list.view",
       // Phase 4 — Scheduling and Appointments (view-only, caseload-limited)
       "appointment.view",
-      // aftercare_staff may view the facility schedule but only sees
-      // patients they have an explicit sos_patient_access grant for.
-      "appointment.view_facility_schedule",
     ],
   },
   security_admin: {
